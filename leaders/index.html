@@ -286,12 +286,106 @@
   .check-item input[type=checkbox] { width:16px; height:16px; accent-color:var(--red); cursor:pointer; flex-shrink:0; }
   .check-item.checked { color:var(--text-muted); text-decoration:line-through; }
 
+  /* ── MOBILE ── */
   @media(max-width:768px) {
-    header { padding:0 20px; } .tab-bar { padding:0 20px; } .content { padding:24px 20px; } .keyword-grid { grid-template-columns:1fr; }
+    /* Header */
+    header { padding:0 18px; height:56px; }
+    .logo-divider { display:none; }
+    .logo-sub { display:none; }
+    .logo-box { width:28px; height:28px; font-size:11px; }
+    .logo-box-outline { width:28px; height:28px; font-size:11px; }
+    .logo-title { font-size:13px; }
+    .badge-leader { display:none; }
+    .lang-btn { padding:4px 10px; font-size:10px; }
+
+    /* Tab bar — horizontal scroll */
+    .tab-bar { padding:0; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+    .tab-bar::-webkit-scrollbar { display:none; }
+    .tab-btn { padding:0 16px; height:46px; font-size:12px; gap:5px; white-space:nowrap; flex-shrink:0; }
+    .tab-btn .tab-icon { font-size:14px; }
+
+    /* Content */
+    .content { padding:24px 18px; }
+    .page-title { font-size:22px; }
+    .page-header { margin-bottom:22px; }
+
+    /* Calendar */
+    .cal-top { flex-direction:column; align-items:flex-start; gap:14px; }
+    .cal-nav { align-self:flex-end; }
+    .cal-month { font-size:17px; min-width:120px; }
+    .cal-cell { min-height:72px; padding:7px 6px; }
+    .cal-day-num { font-size:11px; width:22px; height:22px; }
+    .cal-event { font-size:9.5px; padding:2px 5px; }
+    .cal-weekday { font-size:9px; letter-spacing:0.5px; padding:10px 0; }
+    .cal-legend { gap:10px; padding:10px 14px; flex-wrap:wrap; }
+    .legend-item { font-size:11px; }
+    .cal-hint { display:none; }
+    .add-ev-btn { display:none; }
+
+    /* Modal */
+    .modal-box { width:calc(100vw - 36px); padding:22px 20px; border-radius:16px; }
+
+    /* Tips */
+    .tips-header { padding:14px 16px; }
+    .tips-body { padding:4px 16px 8px; }
+    .tip-ex { margin-left:22px; }
+
+    /* Keyword grid */
+    .keyword-grid { grid-template-columns:1fr; }
+
+    /* Activity */
+    .activity-header { padding:14px 16px; gap:12px; }
+    .activity-icon { width:36px; height:36px; font-size:16px; }
+    .activity-name { font-size:14px; }
+    .activity-body { padding:16px 16px 20px; }
+
+    /* Benefit */
+    .benefit-card { padding:20px 18px; }
+    .benefit-icon { font-size:22px; margin-bottom:8px; }
+    .benefit-title { font-size:13.5px; }
+    .benefit-body { font-size:12px; }
+
+    /* Benefit grids */
+    .benefit-grid-top, .benefit-grid-bottom { grid-template-columns:1fr 1fr !important; }
+
+    /* Checklist grid */
     #checklistGrid { grid-template-columns:1fr; }
+    .check-item { font-size:13px; }
+
+    /* Snack form */
+    .snack-form-grid { grid-template-columns:1fr 1fr !important; }
+    .snack-form-btn { grid-column:1/-1; }
+
+    /* Section label */
+    .sec-label { font-size:9.5px; }
+
+    /* Leader role cards */
+    .role-card-grid { flex-direction:column; }
+
+    /* Steps */
+    .step-title { font-size:13px; }
+    .step-desc { font-size:12px; }
   }
 
-  /* LANG */
+  @media(max-width:480px) {
+    .cal-cell { min-height:58px; padding:5px 4px; }
+    .cal-event { font-size:9px; padding:2px 4px; }
+    .page-title { font-size:20px; }
+    .benefit-card { padding:18px 16px; }
+    .benefit-grid-top, .benefit-grid-bottom { grid-template-columns:1fr !important; }
+    .snack-form-grid { grid-template-columns:1fr !important; }
+  }
+
+  /* ── TOUCH / MOBILE UX ── */
+  @media(hover:none) {
+    .benefit-card:hover { transform:none; box-shadow:none; }
+    .benefit-card:hover::after { transform:scaleX(0); }
+    .keyword-card:hover { transform:none; }
+    .cal-cell:hover { background:#fff; }
+    .add-ev-btn { opacity:1 !important; border-color:var(--red); color:var(--red); }
+  }
+
+  /* ── LANG ── */
   .en { display:none; }
   body.lang-en .ko { display:none; }
   body.lang-en .en { display:block; }
@@ -929,7 +1023,7 @@
     </div>
 
     <!-- 상단 3개 하이라이트 -->
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px" class="benefit-grid-top">
 
       <div class="benefit-card">
         <div class="benefit-num">01</div>
@@ -961,7 +1055,7 @@
     </div>
 
     <!-- 하단 3개 -->
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px" class="benefit-grid-bottom">
 
       <div class="benefit-card">
         <div class="benefit-num">04</div>
@@ -1011,7 +1105,7 @@
 
       <div style="padding:22px 26px">
         <!-- 폼 -->
-        <div style="display:grid;grid-template-columns:160px 120px 1fr auto;gap:10px;align-items:end;margin-bottom:8px">
+        <div class="snack-form-grid" style="display:grid;grid-template-columns:160px 120px 1fr auto;gap:10px;align-items:end;margin-bottom:8px">
           <div>
             <div style="font-size:11px;color:var(--text-muted);margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.8px" class="ko">이름</div>
             <div style="font-size:11px;color:var(--text-muted);margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.8px" class="en">Name</div>
@@ -1031,7 +1125,7 @@
             <div style="font-size:11px;color:var(--text-muted);margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.8px" class="en">Item</div>
             <input id="snackItem" type="text" placeholder="아메리카노, 허니버터칩, 탄산수..." maxlength="40" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;outline:none;font-family:'Noto Sans KR',sans-serif;transition:border-color .2s" onfocus="this.style.borderColor='var(--red)'" onblur="this.style.borderColor='var(--border)'" onkeydown="if(event.key==='Enter')submitSnackRequest()">
           </div>
-          <button onclick="submitSnackRequest()" style="padding:10px 22px;background:var(--red);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:'Noto Sans KR',sans-serif;transition:background .2s" onmouseover="this.style.background='var(--red-dark)'" onmouseout="this.style.background='var(--red)'">
+          <button class="snack-form-btn" onclick="submitSnackRequest()" style="padding:10px 22px;background:var(--red);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:'Noto Sans KR',sans-serif;transition:background .2s" onmouseover="this.style.background='var(--red-dark)'" onmouseout="this.style.background='var(--red)'">
             <span class="ko">요청하기</span><span class="en">Submit</span>
           </button>
         </div>
@@ -1060,7 +1154,7 @@ const HEADERS  = {
   'Authorization': 'Bearer ' + SUPA_KEY,
   'Accept': 'application/json'
 };
-const DEL_PW   = 'leader2025';
+const DEL_PW   = 'thebox123';
 
 async function sbFetch(path, opts={}) {
   const res = await fetch(SUPA_URL+'/rest/v1/'+path, { headers:HEADERS, ...opts });
@@ -1309,6 +1403,7 @@ async function submitSnackRequest() {
   const msg = document.getElementById('snackMsg');
   if (!name) { msg.textContent = '이름을 입력해주세요.'; return; }
   if (!item) { msg.textContent = '원하는 간식/음료를 입력해주세요.'; return; }
+  msg.style.color = 'var(--text-muted)';
   msg.textContent = '저장 중...';
   try {
     await sbFetch('snack_requests', {
@@ -1317,10 +1412,15 @@ async function submitSnackRequest() {
       headers: { ...HEADERS, 'Prefer': 'return=minimal' }
     });
     document.getElementById('snackItem').value = '';
+    msg.style.color = '#3d9e72';
     msg.textContent = '✓ 요청이 등록됐어요!';
-    setTimeout(() => { msg.textContent = ''; }, 2000);
-    loadSnackRequests();
-  } catch(e) { msg.textContent = '오류가 발생했어요. 다시 시도해주세요.'; }
+    setTimeout(() => { msg.textContent = ''; }, 2500);
+    await loadSnackRequests();
+  } catch(e) {
+    console.error(e);
+    msg.style.color = 'var(--red)';
+    msg.textContent = '오류가 발생했어요. 다시 시도해주세요.';
+  }
 }
 
 async function deleteSnackRequest(id) {
