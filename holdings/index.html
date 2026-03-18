@@ -254,10 +254,10 @@ body {
   text-transform: uppercase; color: #BBB; margin-bottom: 7px;
 }
 .table-picker {
-  display: flex; flex-wrap: wrap; gap: 5px;
+  display: flex; flex-wrap: wrap; gap: 4px;
 }
 .table-btn {
-  padding: 4px 9px; border-radius: 6px; font-size: 11px; font-weight: 700;
+  padding: 3px 7px; border-radius: 5px; font-size: 10px; font-weight: 700;
   cursor: pointer; font-family: inherit; border: 1.5px solid transparent;
   transition: all .12s; background: #F5F5F5; color: #888;
 }
@@ -945,14 +945,28 @@ const TABLES = [
   { id:'L3', room:'L', label:'L3' }, { id:'L4', room:'L', label:'L4' },
   { id:'L5', room:'L', label:'L5' }, { id:'L6', room:'L', label:'L6' },
 ];
+// Room 전체 선택용 가상 항목
+const ROOM_ALL = [
+  { id:'ROOM_A', room:'A', label:'ROOM A', isRoomAll: true },
+  { id:'ROOM_B', room:'B', label:'ROOM B', isRoomAll: true },
+  { id:'ROOM_L', room:'L', label:'Lobby',  isRoomAll: true },
+];
 function getRoomClass(room) {
   if (room==='A') return 'room-a';
   if (room==='B') return 'room-b';
   return 'room-l';
 }
 function getTableRoom(tableId) {
+  const ra = ROOM_ALL.find(r => r.id === tableId);
+  if (ra) return ra.room;
   const t = TABLES.find(t=>t.id===tableId);
   return t ? t.room : null;
+}
+function getTableLabel(tableId) {
+  const ra = ROOM_ALL.find(r => r.id === tableId);
+  if (ra) return ra.label;
+  const t = TABLES.find(t=>t.id===tableId);
+  return t ? t.label : tableId;
 }
 let members = [], groups = [], idSeq = 1;
 const uid = () => idSeq++;
@@ -1402,7 +1416,7 @@ function renderGroups() {
         const room = getTableRoom(tid);
         const b = document.createElement('span');
         b.className = 'table-badge ' + (room ? getRoomClass(room) : 'none');
-        b.textContent = tid;
+        b.textContent = getTableLabel(tid);
         tBadgeWrap.appendChild(b);
       });
     }
@@ -1432,23 +1446,60 @@ function renderGroups() {
     ];
     rooms.forEach(room => {
       const rl = document.createElement('div');
-      rl.style.cssText='width:100%;font-size:10px;font-weight:800;color:#BBB;margin:4px 0 2px;letter-spacing:.04em;';
-      rl.textContent = room.label;
+      rl.style.cssText='width:100%;display:flex;align-items:center;gap:5px;margin:7px 0 3px;';
+
+      const rlLabel = document.createElement('span');
+      rlLabel.style.cssText='font-size:10px;font-weight:800;color:#BBB;letter-spacing:.04em;flex:1;';
+      rlLabel.textContent = room.label;
+      rl.appendChild(rlLabel);
       picker.appendChild(rl);
 
       const rowDiv = document.createElement('div');
-      rowDiv.style.cssText='display:flex;flex-wrap:wrap;gap:4px;';
+      rowDiv.style.cssText='display:flex;flex-wrap:wrap;gap:4px;margin-bottom:2px;';
+
+      // ── Room 전체 버튼 (ROOM_A / ROOM_B / Lobby) ──
+      const ra = ROOM_ALL.find(r => r.room === room.key);
+      if (ra) {
+        const isSelAll   = (g.tableIds||[]).includes(ra.id);
+        const usedByOther = groups.some(og => og.id !== g.id && (og.tableIds||[]).includes(ra.id));
+        const allBtn = document.createElement('button');
+        allBtn.className = 'table-btn ' + getRoomClass(room.key) + (isSelAll ? ' selected' : '');
+        allBtn.style.cssText = 'font-weight:900;font-size:10px;padding:3px 9px;';
+        allBtn.textContent = ra.label;
+        if (usedByOther) {
+          allBtn.style.opacity = '.28';
+          allBtn.style.cursor = 'not-allowed';
+          allBtn.title = '다른 반이 사용 중';
+        } else {
+          allBtn.addEventListener('click', () => {
+            if (!g.tableIds) g.tableIds = [];
+            // Room 전체 선택 시 해당 Room의 개별 테이블 선택은 해제
+            const indivIds = TABLES.filter(t => t.room === room.key).map(t => t.id);
+            if (g.tableIds.includes(ra.id)) {
+              g.tableIds = g.tableIds.filter(id => id !== ra.id);
+            } else {
+              g.tableIds = g.tableIds.filter(id => !indivIds.includes(id));
+              g.tableIds.push(ra.id);
+            }
+            renderAll();
+          });
+        }
+        rowDiv.appendChild(allBtn);
+      }
+
+      // ── 개별 테이블 버튼 ──
       room.tables.forEach(t => {
-        // 다른 반이 쓰고 있는지 확인
         const usedByOther = groups.some(og => og.id !== g.id && (og.tableIds||[]).includes(t.id));
+        // Room 전체가 선택된 경우 개별은 비활성
+        const roomAllSel  = (g.tableIds||[]).includes(ra ? ra.id : '');
         const isSelected  = (g.tableIds||[]).includes(t.id);
         const btn = document.createElement('button');
         btn.className = 'table-btn ' + getRoomClass(room.key) + (isSelected ? ' selected' : '');
         btn.textContent = t.label;
-        if (usedByOther) {
+        if (usedByOther || roomAllSel) {
           btn.style.opacity = '.28';
           btn.style.cursor = 'not-allowed';
-          btn.title = '다른 반이 사용 중';
+          btn.title = roomAllSel ? 'Room 전체 선택 중' : '다른 반이 사용 중';
         } else {
           btn.addEventListener('click', () => {
             if (!g.tableIds) g.tableIds = [];
@@ -2190,7 +2241,7 @@ function printAttendance() {
     const korTeachers=g.koreans.filter(k=>k.isTeacher);
     const totalCount= gms.length + g.koreans.length;
     const newPeople = [...gms,...g.koreans].filter(x=>x.isNew);
-    const tableLabel= g.tableIds?.length ? g.tableIds.join(' · ') : '미배정';
+    const tableLabel= g.tableIds?.length ? g.tableIds.map(id=>getTableLabel(id)).join(' · ') : '미배정';
     const leaderName= cleanName(g.name);
 
     const memberTag = (name, isNew, isReturn) => {
@@ -2366,10 +2417,10 @@ function printBoard() {
     let tableCellHtml = '—';
     if (g.tableIds && g.tableIds.length) {
       tableCellHtml = g.tableIds.map(tid => {
-        const t = TABLES.find(x => x.id === tid);
-        if (!t) return tid;
-        const color = t.room==='A' ? '#2040A0' : t.room==='B' ? '#1A6A40' : '#A05010';
-        return `<span style="display:inline-block;background:${color};color:#fff;font-weight:900;font-size:${locPt}pt;padding:3px 12px;border-radius:7px;margin:2px;">${t.label}</span>`;
+        const room = getTableRoom(tid);
+        const color = room==='A' ? '#2040A0' : room==='B' ? '#1A6A40' : '#A05010';
+        const lbl = getTableLabel(tid);
+        return `<span style="display:inline-block;background:${color};color:#fff;font-weight:900;font-size:${locPt}pt;padding:3px 12px;border-radius:7px;margin:2px;">${lbl}</span>`;
       }).join(' ');
     }
 
