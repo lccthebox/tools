@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TheBox Leader Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+KR:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f8f8f8;
+    --surface: #ffffff;
+    --surface2: #f2f2f2;
+    --dark: #111111;
+    --border: rgba(0,0,0,0.07);
+    --border-md: rgba(0,0,0,0.12);
+    --red: #e8192c;
+    --red-dark: #c0101f;
+    --red-soft: rgba(232,25,44,0.07);
+    --text: #111111;
+    --text-muted: #999;
+    --text-sub: #555;
+    --shadow-sm: 0 1px 4px rgba(0,0,0,0.06);
+    --shadow: 0 4px 24px rgba(0,0,0,0.07);
+    --shadow-lg: 0 8px 40px rgba(0,0,0,0.1);
+    --radius: 10px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Noto Sans KR','Inter',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; -webkit-font-smoothing:antialiased; }
+
+  /* ── HEADER ── */
+  header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 56px; height:68px;
+    background:#fff;
+    position:sticky; top:0; z-index:100;
+    border-bottom:1px solid var(--border);
+    box-shadow:0 1px 0 var(--border);
+  }
+  .logo-area { display:flex; align-items:center; gap:14px; }
+  .logo-mark {
+    display:flex; align-items:center; gap:0;
+  }
+  .logo-box {
+    width:32px; height:32px; background:var(--red);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Inter',sans-serif; font-size:13px; font-weight:800; color:#fff;
+    letter-spacing:-0.5px;
+  }
+  .logo-box-outline {
+    width:32px; height:32px; background:#fff; border:2px solid var(--dark);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Inter',sans-serif; font-size:13px; font-weight:800; color:var(--dark);
+    margin-left:-1px;
+  }
+  .logo-divider { width:1px; height:24px; background:var(--border-md); margin:0 16px; }
+  .logo-title { font-family:'Inter',sans-serif; font-size:14px; font-weight:700; color:var(--dark); letter-spacing:-0.2px; }
+  .logo-title span { color:var(--red); }
+  .logo-sub { font-size:10px; color:var(--text-muted); letter-spacing:1.2px; text-transform:uppercase; margin-top:2px; font-family:'DM Mono',monospace; }
+  .header-right { display:flex; align-items:center; gap:10px; }
+  .badge-leader {
+    padding:5px 14px; border:1px solid var(--border-md); border-radius:100px;
+    font-size:10px; color:var(--text-sub); letter-spacing:1.2px; text-transform:uppercase;
+    font-family:'DM Mono',monospace;
+  }
+  .lang-toggle { display:flex; background:var(--surface2); border-radius:6px; padding:3px; gap:2px; }
+  .lang-btn { padding:5px 13px; border-radius:4px; border:none; cursor:pointer; font-family:'DM Mono',monospace; font-size:11px; font-weight:500; background:none; color:var(--text-muted); transition:all .2s; }
+  .lang-btn.active { background:#fff; color:var(--red); box-shadow:0 1px 4px rgba(0,0,0,.1); font-weight:700; }
+
+  /* ── TAB BAR ── */
+  .tab-bar {
+    display:flex; padding:0 56px;
+    background:#fff;
+    border-bottom:1px solid var(--border);
+    gap:0;
+  }
+  .tab-btn {
+    padding:0 24px; height:52px; background:none; border:none; cursor:pointer;
+    font-family:'Noto Sans KR',sans-serif; font-size:13px; font-weight:500;
+    color:var(--text-muted); position:relative; transition:color .2s;
+    display:flex; align-items:center; gap:7px;
+  }
+  .tab-btn .tab-icon { font-size:15px; }
+  .tab-btn::after {
+    content:''; position:absolute; bottom:-1px; left:0; right:0;
+    height:2px; background:var(--red); transform:scaleX(0); transition:transform .25s ease;
+    border-radius:2px;
+  }
+  .tab-btn.active { color:var(--dark); font-weight:600; }
+  .tab-btn.active::after { transform:scaleX(1); }
+  .tab-btn:hover { color:var(--dark); }
+
+  /* ── CONTENT ── */
+  .content { padding:40px 56px; max-width:1100px; margin:0 auto; }
+  .tab-panel { display:none; }
+  .tab-panel.active { display:block; animation:fadeUp .3s ease; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)} }
+
+  .page-header { margin-bottom:32px; }
+  .page-title { font-family:'Inter',sans-serif; font-size:28px; font-weight:800; color:var(--dark); letter-spacing:-0.5px; line-height:1.1; }
+  .page-title em { color:var(--red); font-style:normal; }
+  .page-desc { font-size:13px; color:var(--text-muted); margin-top:6px; }
+
+  /* ── CALENDAR ── */
+  .cal-top { display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:20px; }
+  .cal-nav { display:flex; align-items:center; gap:12px; }
+  .cal-nav-btn {
+    width:36px; height:36px; background:#fff; border:1px solid var(--border-md);
+    border-radius:8px; display:flex; align-items:center; justify-content:center;
+    cursor:pointer; color:var(--text-sub); font-size:18px; transition:all .2s;
+  }
+  .cal-nav-btn:hover { background:var(--red); color:#fff; border-color:var(--red); }
+  .cal-month { font-family:'Inter',sans-serif; font-size:20px; font-weight:800; min-width:140px; text-align:center; letter-spacing:-0.3px; }
+  .cal-wrap { background:#fff; border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow); }
+  .cal-weekdays { display:grid; grid-template-columns:repeat(7,1fr); background:var(--dark); }
+  .cal-weekday { padding:13px 0; text-align:center; font-size:10px; letter-spacing:1.8px; text-transform:uppercase; color:rgba(255,255,255,.45); font-family:'DM Mono',monospace; }
+  .cal-weekday.sun { color:rgba(255,107,122,.9); }
+  .cal-weekday.sat { color:rgba(255,255,255,.7); }
+  .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); }
+  .cal-cell { min-height:108px; padding:10px; border-right:1px solid var(--border); border-bottom:1px solid var(--border); background:#fff; transition:background .15s; position:relative; cursor:pointer; }
+  .cal-cell:nth-child(7n) { border-right:none; }
+  .cal-cell:hover { background:#fafafa; }
+  .cal-cell.empty { background:var(--bg); cursor:default; opacity:.4; }
+  .cal-cell.empty:hover { background:var(--bg); }
+  .cal-day-num { font-family:'DM Mono',monospace; font-size:12px; color:var(--text-muted); width:26px; height:26px; display:flex; align-items:center; justify-content:center; margin-bottom:5px; border-radius:6px; font-weight:500; }
+  .cal-cell.today .cal-day-num { background:var(--red); color:#fff; font-weight:700; }
+  .cal-cell.sun .cal-day-num { color:#e8192c; }
+  .cal-event { font-size:10.5px; padding:3px 8px; border-radius:4px; margin-bottom:3px; line-height:1.4; font-weight:500; display:flex; align-items:center; justify-content:space-between; gap:4px; }
+  .cal-event.q-topic { background:var(--red-soft); color:var(--red); }
+  .cal-event.activity { background:rgba(17,17,17,.05); color:var(--dark); }
+  .cal-event.notice { background:rgba(0,160,100,.07); color:#007a50; }
+  .cal-legend { display:flex; gap:20px; margin-top:14px; padding:13px 18px; background:#fff; border:1px solid var(--border); border-radius:8px; flex-wrap:wrap; align-items:center; }
+  .legend-item { display:flex; align-items:center; gap:7px; font-size:12px; color:var(--text-sub); }
+  .legend-dot { width:8px; height:8px; border-radius:50%; }
+  .cal-hint { margin-left:auto; font-size:11px; color:var(--text-muted); font-family:'DM Mono',monospace; }
+
+  /* sync bar */
+  .cal-sync-bar { display:flex; align-items:center; gap:8px; margin-bottom:16px; font-size:12px; color:var(--text-muted); }
+  .cal-sync-dot { width:6px; height:6px; border-radius:50%; background:#ccc; flex-shrink:0; transition:background .3s; }
+  .cal-sync-dot.ok { background:#3d9e72; }
+  .cal-sync-dot.loading, .cal-sync-dot.saving { background:#f0a500; animation:blink 1s infinite; }
+  .cal-sync-dot.error { background:var(--red); }
+  @keyframes blink { 0%,100%{opacity:1}50%{opacity:.3} }
+
+  /* add / delete buttons */
+  .add-ev-btn { position:absolute; bottom:7px; right:7px; width:20px; height:20px; border:1.5px dashed #ddd; border-radius:5px; background:none; cursor:pointer; font-size:14px; color:#ccc; display:flex; align-items:center; justify-content:center; opacity:0; transition:all .15s; line-height:1; }
+  .cal-cell:hover .add-ev-btn { opacity:1; border-color:var(--red); color:var(--red); }
+  .ev-del-btn { background:none; border:none; cursor:pointer; color:inherit; font-size:11px; opacity:0; flex-shrink:0; line-height:1; padding:0; transition:opacity .15s; }
+  .cal-event:hover .ev-del-btn { opacity:.5; }
+  .ev-del-btn:hover { opacity:1 !important; }
+
+  /* ── SECTION HEADERS ── */
+  .sec-label { font-family:'DM Mono',monospace; font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--red); margin-bottom:16px; display:flex; align-items:center; gap:10px; }
+  .sec-label::after { content:''; flex:1; height:1px; background:var(--border); }
+
+  /* ── TIPS CARD ── */
+  .tips-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; margin-bottom:24px; box-shadow:var(--shadow-sm); }
+  .tips-header { padding:16px 22px; background:#fff; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; cursor:pointer; transition:background .15s; }
+  .tips-header:hover { background:var(--bg); }
+  .tips-header-left { display:flex; align-items:center; gap:10px; }
+  .tips-badge { background:var(--red); color:#fff; font-size:10px; font-weight:700; padding:3px 8px; border-radius:4px; font-family:'DM Mono',monospace; letter-spacing:.5px; }
+  .tips-title { font-size:14px; font-weight:700; color:var(--dark); }
+  .tips-toggle { color:var(--text-muted); font-size:14px; transition:transform .2s; width:28px; height:28px; border-radius:6px; background:var(--surface2); display:flex; align-items:center; justify-content:center; }
+  .tips-card.open .tips-toggle { transform:rotate(180deg); }
+  .tips-body { display:none; padding:4px 22px 8px; }
+  .tips-card.open .tips-body { display:block; }
+  .tip-item { padding:13px 0; border-bottom:1px solid var(--border); font-size:13.5px; line-height:1.65; color:var(--text); }
+  .tip-item:last-child { border-bottom:none; }
+  .tip-row { display:flex; align-items:baseline; gap:12px; }
+  .tip-num { font-family:'DM Mono',monospace; font-size:10px; color:var(--red); font-weight:700; flex-shrink:0; min-width:22px; opacity:.8; }
+  .tip-item strong { color:var(--dark); font-weight:700; }
+  .tip-ex { margin-top:8px; margin-left:34px; padding:9px 14px; background:var(--bg); border-radius:6px; font-size:12px; color:var(--text-sub); line-height:1.65; }
+
+  /* ── KEYWORD GRID ── */
+  .keyword-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  .keyword-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:20px; box-shadow:var(--shadow-sm); transition:all .2s; position:relative; overflow:hidden; }
+  .keyword-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--red); }
+  .keyword-card:hover { transform:translateY(-2px); box-shadow:0 8px 28px rgba(232,25,44,.1); }
+  .kw-label { font-family:'Inter',sans-serif; font-size:14px; font-weight:800; color:var(--dark); margin-bottom:4px; letter-spacing:-.2px; }
+  .kw-hint { font-size:11px; color:var(--text-muted); margin-bottom:12px; }
+  .kw-q { font-size:12.5px; color:var(--text-sub); line-height:1.68; padding-top:12px; border-top:1px solid var(--border); }
+
+  /* ── ACTIVITY CARDS ── */
+  .activity-list { display:flex; flex-direction:column; gap:12px; }
+  .activity-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow-sm); transition:box-shadow .2s; }
+  .activity-card:hover { box-shadow:var(--shadow); }
+  .activity-header { padding:18px 24px; display:flex; align-items:center; gap:16px; cursor:pointer; }
+  .activity-icon { width:42px; height:42px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:19px; flex-shrink:0; }
+  .icon-blue { background:#f0f4ff; } .icon-gold { background:#fff8ee; } .icon-green { background:#edfaf3; } .icon-purple { background:#f5f0ff; }
+  .activity-info { flex:1; }
+  .activity-tag { font-family:'DM Mono',monospace; font-size:9.5px; letter-spacing:1.4px; color:var(--red); text-transform:uppercase; margin-bottom:3px; font-weight:600; }
+  .activity-name { font-family:'Inter',sans-serif; font-size:15px; font-weight:700; color:var(--dark); letter-spacing:-.2px; }
+  .activity-meta { display:flex; gap:12px; margin-top:4px; flex-wrap:wrap; }
+  .meta-chip { font-size:11px; color:var(--text-muted); }
+  .act-toggle { width:30px; height:30px; border-radius:6px; background:var(--surface2); display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:14px; transition:all .2s; flex-shrink:0; }
+  .activity-card.open .act-toggle { transform:rotate(180deg); background:var(--red-soft); color:var(--red); }
+  .activity-card.open .activity-header { border-bottom:1px solid var(--border); }
+  .activity-body { display:none; padding:20px 24px 24px; background:var(--bg); }
+  .activity-card.open .activity-body { display:block; animation:fadeUp .2s ease; }
+
+  /* inner tabs */
+  .act-tabs { display:flex; margin-bottom:20px; border-bottom:1px solid var(--border); }
+  .act-tab-btn { padding:9px 16px; background:none; border:none; cursor:pointer; font-size:12px; font-weight:500; color:var(--text-muted); position:relative; transition:color .2s; font-family:'Noto Sans KR',sans-serif; }
+  .act-tab-btn::after { content:''; position:absolute; bottom:-1px; left:0; right:0; height:2px; background:var(--red); transform:scaleX(0); transition:transform .2s; }
+  .act-tab-btn.active { color:var(--red); font-weight:700; }
+  .act-tab-btn.active::after { transform:scaleX(1); }
+  .act-tab-content { display:none; }
+  .act-tab-content.active { display:block; animation:fadeUp .2s ease; }
+
+  /* steps */
+  .steps-list { display:flex; flex-direction:column; }
+  .step-item { display:flex; gap:16px; padding:14px 0; border-bottom:1px solid var(--border); }
+  .step-item:last-child { border-bottom:none; }
+  .step-num { font-family:'DM Mono',monospace; font-size:11px; color:var(--red); font-weight:700; flex-shrink:0; min-width:22px; padding-top:2px; opacity:.75; }
+  .step-body { flex:1; }
+  .step-title { font-size:13.5px; font-weight:700; color:var(--dark); margin-bottom:2px; }
+  .step-desc { font-size:12.5px; color:var(--text-muted); line-height:1.65; margin-top:3px; }
+  .time-tag { font-family:'DM Mono',monospace; font-size:10px; color:var(--red); background:var(--red-soft); padding:1px 7px; border-radius:4px; margin-left:7px; font-weight:700; }
+
+  /* cue */
+  .cue-box { background:#fff; border:1px solid var(--border); border-left:3px solid var(--red); border-radius:6px; padding:10px 14px; margin-top:10px; }
+  .cue-label { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:1.5px; text-transform:uppercase; color:var(--red); margin-bottom:4px; font-weight:700; opacity:.8; }
+  .cue-text { font-size:12px; color:var(--text-sub); line-height:1.65; }
+
+  /* rule */
+  .rule-box { background:#fff; border:1px solid var(--border); border-left:3px solid var(--red); border-radius:6px; padding:13px 16px; margin-bottom:16px; }
+  .rule-label { font-family:'DM Mono',monospace; font-size:9px; color:var(--red); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:6px; font-weight:700; opacity:.8; }
+  .rule-text { font-size:13px; color:var(--text-sub); line-height:1.7; }
+  .rule-text strong { color:var(--dark); }
+
+  /* q list */
+  .q-list { display:flex; flex-direction:column; }
+  .q-item { padding:13px 0; border-bottom:1px solid var(--border); }
+  .q-item:last-child { border-bottom:none; }
+  .q-en { font-size:13px; font-weight:600; color:var(--dark); margin-bottom:3px; }
+  .q-ko { font-size:11.5px; color:var(--text-muted); }
+
+  /* tips */
+  .act-tips { display:flex; flex-direction:column; }
+  .act-tip-item { display:flex; gap:10px; font-size:13px; color:var(--text-sub); line-height:1.65; padding:12px 0; border-bottom:1px solid var(--border); }
+  .act-tip-item:last-child { border-bottom:none; }
+  .tip-icon { font-size:14px; flex-shrink:0; margin-top:1px; }
+  .act-tip-item strong { color:var(--dark); font-weight:700; }
+  .tip-sub { font-size:11.5px; color:var(--text-muted); margin-top:4px; }
+
+  .materials-row { display:flex; flex-wrap:wrap; gap:7px; margin-top:16px; padding-top:14px; border-top:1px solid var(--border); align-items:center; }
+  .materials-label { font-size:11px; color:var(--text-muted); letter-spacing:1px; text-transform:uppercase; margin-right:4px; font-family:'DM Mono',monospace; }
+  .mat-tag { padding:4px 12px; background:#fff; border:1px solid var(--border-md); border-radius:20px; font-size:11px; color:var(--text-sub); }
+
+  /* ── MODALS ── */
+  #modalBg { position:fixed; inset:0; background:rgba(0,0,0,.35); display:none; align-items:center; justify-content:center; z-index:1000; backdrop-filter:blur(4px); }
+  #modalBg.open { display:flex; }
+  #deleteBg { position:fixed; inset:0; background:rgba(0,0,0,.35); display:none; align-items:center; justify-content:center; z-index:1001; backdrop-filter:blur(4px); }
+  .modal-box { background:#fff; border-radius:14px; padding:28px; width:360px; box-shadow:var(--shadow-lg); }
+  .modal-box h3 { font-family:'Inter',sans-serif; font-size:17px; font-weight:800; margin-bottom:4px; letter-spacing:-.3px; }
+  .modal-date { font-size:12px; color:var(--text-muted); margin-bottom:22px; font-family:'DM Mono',monospace; }
+  .modal-label { display:block; font-size:11px; font-weight:700; color:var(--text-sub); margin-bottom:6px; text-transform:uppercase; letter-spacing:.8px; font-family:'DM Mono',monospace; }
+  .modal-input { width:100%; padding:10px 14px; border:1.5px solid var(--border-md); border-radius:8px; font-size:13px; margin-bottom:16px; outline:none; font-family:'Noto Sans KR',sans-serif; transition:border-color .2s; background:#fff; color:var(--dark); }
+  .modal-input:focus { border-color:var(--red); }
+  .modal-btns { display:flex; gap:8px; margin-top:8px; }
+  .btn-cancel { flex:1; padding:10px; background:var(--surface2); border:none; border-radius:8px; cursor:pointer; font-size:13px; font-weight:500; color:var(--text-sub); font-family:'Noto Sans KR',sans-serif; transition:background .2s; }
+  .btn-cancel:hover { background:#e8e8e8; }
+  .btn-save { flex:2; padding:10px; background:var(--red); color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:13px; font-weight:700; font-family:'Noto Sans KR',sans-serif; transition:background .2s; }
+  .btn-save:hover { background:var(--red-dark); }
+  #delPwErr { color:var(--red); font-size:12px; margin-top:-12px; margin-bottom:12px; min-height:16px; }
+
+  ::-webkit-scrollbar { width:5px; } ::-webkit-scrollbar-track { background:var(--bg); } ::-webkit-scrollbar-thumb { background:#ddd; border-radius:3px; }
+
+  @media(max-width:768px) {
+    header { padding:0 20px; } .tab-bar { padding:0 20px; } .content { padding:24px 20px; } .keyword-grid { grid-template-columns:1fr; }
+  }
+
+  /* LANG */
+  .en { display:none; }
+  body.lang-en .ko { display:none; }
+  body.lang-en .en { display:block; }
+  body.lang-en span.en { display:inline; }
+  body.lang-en span.ko { display:none; }
+</style>
+</head>
+<body>
+
+<!-- ADD EVENT MODAL -->
+<div id="modalBg">
+  <div class="modal-box">
+    <h3 class="ko">일정 추가</h3><h3 class="en" style="display:none">Add Event</h3>
+    <div class="modal-date" id="modalDateLabel"></div>
+    <label class="modal-label ko" style="display:block">내용</label>
+    <label class="modal-label en">Title</label>
+    <input class="modal-input" id="evTitle" type="text" placeholder="예) Keyword Bingo, 스터디 공지..." maxlength="50">
+    <label class="modal-label ko" style="display:block">종류</label>
+    <label class="modal-label en">Type</label>
+    <select class="modal-input" id="evType">
+      <option value="q-topic">Q / 토픽</option>
+      <option value="activity">액티비티</option>
+      <option value="notice">공지 / 이벤트</option>
+    </select>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">취소</button>
+      <button class="btn-save" onclick="saveEvent()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE CONFIRM MODAL -->
+<div id="deleteBg" style="position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;z-index:1001">
+  <div class="modal-box">
+    <h3 class="ko" style="margin-bottom:4px">삭제 확인</h3>
+    <h3 class="en" style="display:none;margin-bottom:4px">Confirm Delete</h3>
+    <div class="modal-date ko" style="display:block">비밀번호를 입력하면 삭제됩니다.</div>
+    <div class="modal-date en">Enter password to delete.</div>
+    <div style="margin-top:16px">
+      <label class="modal-label ko" style="display:block">비밀번호</label>
+      <label class="modal-label en">Password</label>
+      <input class="modal-input" id="delPwInput" type="password" placeholder="••••" maxlength="30">
+      <div id="delPwErr" style="color:var(--red);font-size:12px;margin-top:-10px;margin-bottom:12px;min-height:16px"></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeDeleteModal()">취소</button>
+      <button class="btn-save" onclick="confirmDelete()">삭제</button>
+    </div>
+  </div>
+</div>
+
+<header>
+  <div class="logo-area">
+    <div class="logo-mark">
+      <div class="logo-box">The</div>
+      <div class="logo-box-outline">Box</div>
+    </div>
+    <div class="logo-divider"></div>
+    <div>
+      <div class="logo-title">Leader <span>Guide</span></div>
+      <div class="logo-sub">English Conversation Study</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="lang-toggle">
+      <button class="lang-btn active" id="btn-ko" onclick="setLang('ko')">KO</button>
+      <button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button>
+    </div>
+    <div class="badge-leader">Leader Only</div>
+  </div>
+</header>
+
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('schedule',this)"><span class="tab-icon">📅</span><span class="ko">스케쥴</span><span class="en">Schedule</span></button>
+  <button class="tab-btn" onclick="switchTab('topic',this)"><span class="tab-icon">💬</span><span class="ko">토픽 가이드</span><span class="en">Topic Guide</span></button>
+  <button class="tab-btn" onclick="switchTab('activity',this)"><span class="tab-icon">✏️</span><span class="ko">액티비티 가이드</span><span class="en">Activity Guide</span></button>
+</div>
+
+<div class="content">
+
+  <!-- SCHEDULE -->
+  <div class="tab-panel active" id="tab-schedule">
+    <div class="cal-top">
+      <div class="page-header" style="margin-bottom:0">
+        <div class="page-title"><span class="ko">월별</span><span class="en">Monthly</span> <em>Schedule</em></div>
+        <div class="page-desc ko">날짜를 클릭해서 스케쥴을 추가하세요. 모든 리더가 함께 공유됩니다.</div>
+        <div class="page-desc en">Click a date to add an event. Shared with all leaders.</div>
+      </div>
+      <div class="cal-nav">
+        <button class="cal-nav-btn" onclick="changeMonth(-1)">&#8249;</button>
+        <div class="cal-month" id="monthLabel"></div>
+        <button class="cal-nav-btn" onclick="changeMonth(1)">&#8250;</button>
+      </div>
+    </div>
+    <div class="cal-sync-bar">
+      <div class="cal-sync-dot loading" id="syncDot"></div>
+      <span id="syncMsg" class="ko">불러오는 중...</span>
+      <span id="syncMsgEn" class="en">Loading...</span>
+    </div>
+    <div class="cal-wrap">
+      <div class="cal-weekdays">
+        <div class="cal-weekday sun">Sun</div><div class="cal-weekday">Mon</div><div class="cal-weekday">Tue</div>
+        <div class="cal-weekday">Wed</div><div class="cal-weekday">Thu</div><div class="cal-weekday">Fri</div><div class="cal-weekday sat">Sat</div>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+    </div>
+    <div class="cal-legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div><span class="ko">Q / 토픽</span><span class="en">Q / Topic</span></div>
+      <div class="legend-item"><div class="legend-dot" style="background:#333"></div><span class="ko">액티비티</span><span class="en">Activity</span></div>
+      <div class="legend-item"><div class="legend-dot" style="background:#007a50"></div><span class="ko">공지 / 이벤트</span><span class="en">Notice / Event</span></div>
+      <div class="cal-hint ko">날짜 클릭 → 일정 추가</div>
+      <div class="cal-hint en">Click date → Add event</div>
+    </div>
+  </div>
+
+  <!-- TOPIC GUIDE -->
+  <div class="tab-panel" id="tab-topic">
+    <div class="page-header">
+      <div class="page-title">Topic <em>Guide</em></div>
+      <div class="page-desc ko">Keyword Bingo 토픽과 진행 팁을 확인하세요.</div>
+      <div class="page-desc en">Check Keyword Bingo topics and facilitation tips.</div>
+    </div>
+
+    <div class="tips-card" id="tipsCard">
+      <div class="tips-header" onclick="document.getElementById('tipsCard').classList.toggle('open')">
+        <div class="tips-header-left">
+          <div class="tips-badge">TIPS</div>
+          <span class="tips-title ko">질문할 때 팁</span>
+          <span class="tips-title en">Tips for Asking Questions</span>
+        </div>
+        <div class="tips-toggle">⌄</div>
+      </div>
+      <div class="tips-body">
+        <div class="ko">
+          <div class="tip-item"><div class="tip-row"><span class="tip-num">01</span><span>큰 질문보다 <strong>작고 구체적인 차이점</strong>을 물어보는 쪽으로</span></div></div>
+          <div class="tip-item"><div class="tip-row"><span class="tip-num">02</span><span><strong>심리적 무장해제 유도</strong></span></div><div class="tip-ex">예) "시간을 가장 완벽하게 낭비하는 나만의 방법은?" / "정답은 없지만~", "사람마다 다르겠지만~"</div></div>
+          <div class="tip-item"><div class="tip-row"><span class="tip-num">03</span><span><strong>감정 대신 상황과 생각으로 풀어내게 하기</strong></span></div><div class="tip-ex">예) "기분이 어땠냐"보다 "그 상황을 묘사한다면?", "그때 머릿속에 가장 먼저 든 생각은?"</div></div>
+          <div class="tip-item"><div class="tip-row"><span class="tip-num">04</span><span>경험이 없다고 하면 <strong>What if (만약~) 화법</strong> 빌리기</span></div></div>
+          <div class="tip-item"><div class="tip-row"><span class="tip-num">05</span><span>생각 꺼내기를 어려워하면 <strong>밸런스 게임식으로 도와주기</strong></span></div><div class="tip-ex">예) "A와 B 중에 선택한다면? 왜 이쪽이 더 가깝다고 생각했어요?"</div></div>
+          <div class="tip-item"><div class="tip-row"><span class="tip-num">06</span><span><strong>I don't know 라고 할 때:</strong> "다른 사람 의견 먼저 듣고 다시 돌아올게요" → 한 바퀴 돌고 다시 질문</span></div></div>
+          <div class="tip-item"><div class="tip-row"><span class="tip-num">07</span><span><strong>영어로 표현 못하겠다고 할 때:</strong> "문장 안 만들어도 되니까 단어 3개만 말해봐요"</span></div></div>
+        </div>
+        <div class="en">
+          <div class="tip-item"><div class="tip-row"><span class="tip-num">01</span><span>Ask about <strong>small, specific differences</strong> rather than big questions</span></div></div>
+          <div class="tip-item"><div class="tip-row"><span class="tip-num">02</span><span><strong>Induce psychological disarmament</strong></span></div><div class="tip-ex">Ex) "What's your own way of wasting time most perfectly?" / "There's no right answer, but~"</div></div>
+          <div class="tip-item"><div class="tip-row"><span class="tip-num">03</span><span><strong>Have them explain through situations and thoughts</strong></span></div><div class="tip-ex">Ex) Instead of "How did you feel?", ask "Describe the situation?" or "What was the first thought in your head?"</div></div>
+          <div class="tip-item"><div class="tip-row"><span class="tip-num">04</span><span>If they have no experience, use the <strong>"What if" approach</strong></span></div></div>
+          <div class="tip-item"><div class="tip-row"><span class="tip-num">05</span><span>Help with a <strong>balance game approach</strong> if they find it hard</span></div><div class="tip-ex">Ex) "Between A and B, which would you choose? Why did you think this side was closer?"</div></div>
+          <div class="tip-item"><div class="tip-row"><span class="tip-num">06</span><span><strong>When they say "I don't know":</strong> "Let's hear others' opinions first and come back to you" → go around then return</span></div></div>
+          <div class="tip-item"><div class="tip-row"><span class="tip-num">07</span><span><strong>When they can't express in English:</strong> "You don't have to make a sentence — just say 3 words"</span></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec-label">KEYWORD BINGO</div>
+    <div class="keyword-grid">
+      <div class="keyword-card" style="grid-column:1/-1; text-align:center; padding:40px; color:var(--text-muted); border-style:dashed;">
+        <div style="font-size:28px; margin-bottom:10px;">📋</div>
+        <div class="ko" style="display:block; font-size:13px;">이번 주 키워드 카드가 여기에 추가될 예정입니다.</div>
+        <div class="en" style="font-size:13px;">This week's keyword cards will be added here.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACTIVITY GUIDE -->
+  <div class="tab-panel" id="tab-activity">
+    <div class="page-header">
+      <div class="page-title">Activity <em>Guide</em></div>
+      <div class="page-desc ko">각 액티비티의 진행 방법과 팁을 확인하세요.</div>
+      <div class="page-desc en">Check how to run each activity and leader tips.</div>
+    </div>
+    <div class="activity-list">
+
+      <!-- DEBATE -->
+      <div class="activity-card" id="act-debate">
+        <div class="activity-header" onclick="toggleAct('act-debate')">
+          <div class="activity-icon icon-blue">🗣️</div>
+          <div class="activity-info">
+            <div class="activity-tag">Discussion Activity</div>
+            <div class="activity-name">Debate</div>
+            <div class="activity-meta">
+              <div class="meta-chip">👥 Team A vs Team B</div>
+            </div>
+          </div>
+          <div class="act-toggle">⌄</div>
+        </div>
+        <div class="activity-body">
+          <div class="act-tabs">
+            <button class="act-tab-btn active" onclick="switchActTab(this,'db-flow')"><span class="ko">진행 방법</span><span class="en">How to Run</span></button>
+            <button class="act-tab-btn" onclick="switchActTab(this,'db-tips')"><span class="ko">발화 유도 팁</span><span class="en">Participation Tips</span></button>
+          </div>
+          <div class="act-tab-content active" id="db-flow">
+            <div class="steps-list">
+              <div class="step-item"><div class="step-num">01</div><div class="step-body"><div class="step-title ko">주제 공개 & 팀 나누기</div><div class="step-title en">Reveal Topic & Form Teams</div><div class="step-desc ko">디베이트 주제 공개 후 팀 A, B 손들게 해서 인원 파악. 원어민은 그룹당 1명씩 배치.</div><div class="step-desc en">Reveal topic, have teams A and B raise hands. Distribute native speakers with at least one per group.</div></div></div>
+              <div class="step-item"><div class="step-num">02</div><div class="step-body"><div class="step-title ko">인원 조정</div><div class="step-title en">Adjust Team Numbers</div><div class="step-desc ko">한쪽에 몰릴 경우 "토론의 재미와 밸런스를 위해서"라고 말하며 임의 조정.</div><div class="step-desc en">If numbers are uneven, adjust by saying "for the fun and balance of the debate."</div></div></div>
+              <div class="step-item"><div class="step-num">03</div><div class="step-body"><div class="step-title ko">규칙 안내 & REVOTE 예고</div><div class="step-title en">Explain Rules & Announce Revote</div><div class="step-desc ko">각 팀 인원수 인지, 마지막 REVOTE 미리 공지. 상대방을 설득해서 우리 팀으로 데려오는 게 목표!</div><div class="step-desc en">Note team numbers, announce the REVOTE at the end. Goal: persuade the other side to join your team!</div></div></div>
+              <div class="step-item"><div class="step-num">04</div><div class="step-body"><div class="step-title ko">토론 진행 & 중재</div><div class="step-title en">Run Debate & Mediate</div><div class="step-desc ko">한쪽이 침묵하거나 기울면 개입. "너희 팀 지고 있잖아, 얼른 반박해봐!" 중간중간 "마음 변한 사람?" 물어보며 긴장감 유지.</div><div class="step-desc en">Intervene if one side goes quiet. Keep tension by asking "Is anyone changing their mind?"</div></div></div>
+              <div class="step-item"><div class="step-num">05</div><div class="step-body"><div class="step-title ko">마지막 영업 & 재투표</div><div class="step-title en">Final Pitch & Revote</div><div class="cue-box"><div class="cue-label">Cue</div><div class="cue-text">"Time for your final sales pitch!" → "Time to vote again! Has anyone changed your mind?"</div></div></div></div>
+            </div>
+          </div>
+          <div class="act-tab-content" id="db-tips">
+            <div class="act-tips">
+              <div class="act-tip-item"><span class="tip-icon">💡</span><div><span class="ko">할 말이 없어 보이면 <strong>What if로 상황 제시하기</strong></span><span class="en"><strong>Give a "What if" situation</strong> if they seem stuck</span></div></div>
+              <div class="act-tip-item"><span class="tip-icon">💡</span><div><span class="ko"><strong>남의 의견 빌리게 하기</strong> — 지금까지 설득력 있었던 문장을 고르게 하고 왜 그렇게 생각했는지 물어보기</span><span class="en"><strong>Have them borrow others' opinions</strong> — choose a convincing statement and ask why</span></div></div>
+              <div class="act-tip-item"><span class="tip-icon">💡</span><div><span class="ko">의견이 다 나왔다면 <strong>근본적인 단어로 되돌아가기</strong><div class="tip-sub">예) "여러분, '친구'의 정의는 뭘까요?" 처럼 기본 개념에서 다시 한 바퀴</div></span><span class="en"><strong>Return to fundamental words</strong> when opinions dry up<div class="tip-sub">Ex) "What is everyone's definition of 'friend'?"</div></span></div></div>
+              <div class="act-tip-item"><span class="tip-icon">💡</span><div><span class="ko"><strong>지고 있는 팀의 승부욕 자극</strong> — 한 명씩 집어서 "너의 차례니까 말해봐"</span><span class="en"><strong>Stimulate the competitive spirit</strong> of the losing team — pick each person one by one</span></div></div>
+              <div class="act-tip-item"><span class="tip-icon">💡</span><div><span class="ko"><strong>상대방 팀에게 질문 던지게 하기</strong> — 아무도 안 하면 랜덤으로 한 명 지목</span><span class="en"><strong>Have them throw questions</strong> to the opposing team — pick randomly if no one volunteers</span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TIER LIST -->
+      <div class="activity-card" id="act-tier">
+        <div class="activity-header" onclick="toggleAct('act-tier')">
+          <div class="activity-icon icon-gold">🏆</div>
+          <div class="activity-info">
+            <div class="activity-tag">Ranking Activity</div>
+            <div class="activity-name">Tier List</div>
+            <div class="activity-meta">
+              <div class="meta-chip">👥 <span class="ko">전체</span><span class="en">Full Group</span></div>
+              <div class="meta-chip ko">⏱ 5분 개인 티어 → 팀 스코어</div>
+              <div class="meta-chip en">⏱ 5 min personal → team score</div>
+            </div>
+          </div>
+          <div class="act-toggle">⌄</div>
+        </div>
+        <div class="activity-body">
+          <div class="act-tabs">
+            <button class="act-tab-btn active" onclick="switchActTab(this,'tier-flow')"><span class="ko">진행 방법</span><span class="en">How to Run</span></button>
+            <button class="act-tab-btn" onclick="switchActTab(this,'tier-cues')"><span class="ko">사용할 멘트</span><span class="en">Useful Phrases</span></button>
+            <button class="act-tab-btn" onclick="switchActTab(this,'tier-tips')"><span class="ko">발화 유도 팁</span><span class="en">Participation Tips</span></button>
+          </div>
+          <div class="act-tab-content active" id="tier-flow">
+            <div class="rule-box">
+              <div class="rule-label ko">규칙</div><div class="rule-label en">Rule</div>
+              <div class="rule-text ko">10개 항목에 대해 <strong>S~F 등급 매기기</strong>. 각 등급은 <strong>딱 2개씩만</strong> 줄 수 있음. 제한 시간 5분!</div>
+              <div class="rule-text en">Rate 10 items from <strong>S to F</strong>. Each grade can only be assigned to <strong>exactly 2 items</strong>. 5 minutes!</div>
+            </div>
+            <div class="steps-list">
+              <div class="step-item"><div class="step-num">01</div><div class="step-body"><div class="step-title ko">주제 & 항목 공유</div><div class="step-title en">Share Topic & Items</div><div class="step-desc ko">오늘의 티어리스트 주제와 10가지 항목을 함께 읽음.</div><div class="step-desc en">Read today's tier list topic and 10 items together.</div></div></div>
+              <div class="step-item"><div class="step-num">02</div><div class="step-body"><div class="step-title ko">개인 티어 매기기 <span class="time-tag">5분</span></div><div class="step-title en">Individual Tier Ranking <span class="time-tag">5 min</span></div><div class="cue-box"><div class="cue-label">Cue</div><div class="cue-text ko">"시간은 딱 5분! 고민하지 말고 이끌리는 대로 매겨보세요!"</div><div class="cue-text en">"You have exactly 5 minutes! Don't overthink it, just go with your gut!"</div></div></div></div>
+              <div class="step-item"><div class="step-num">03</div><div class="step-body"><div class="step-title ko">팀 스코어 산출</div><div class="step-title en">Team Score Calculation</div><div class="step-desc ko">S=5점으로 항목별 점수 합산 → 순위 결정 (1,2위 S / 3,4위 A / 5,6위 B / 7,8위 C / 9,10위 F). 양극단(S/F 준 멤버)에게 이유 물어보기.</div><div class="step-desc en">Rate S=5pts, sum scores → rank (1,2nd: S / 3,4th: A / 5,6th: B / 7,8th: C / 9,10th: F). Ask members who gave S/F about their reasons.</div></div></div>
+              <div class="step-item"><div class="step-num">04</div><div class="step-body"><div class="step-title ko">개인 vs 팀 비교 & 마무리</div><div class="step-title en">Personal vs Team Comparison</div><div class="cue-box"><div class="cue-label">Cue</div><div class="cue-text ko">"개인 티어와 팀 결과가 몇 개나 일치하나요?" → Ultimate Mind-reader vs Lone Wolf 찾기</div><div class="cue-text en">"How many items on your personal tier match our team's result?" → Find the Ultimate Mind-reader and Lone Wolf</div></div></div></div>
+            </div>
+          </div>
+          <div class="act-tab-content" id="tier-cues">
+            <div class="q-list">
+              <div class="q-item"><div class="q-en">"You have 10 items. Assign 2 to each tier from S to F. 5 minutes. Go!"</div><div class="q-ko ko">시작 멘트</div></div>
+              <div class="q-item"><div class="q-en">"Who gave an S to item #1? Raise your hand! Tell us why this is an S for you."</div><div class="q-ko ko">투표 유도</div></div>
+              <div class="q-item"><div class="q-en">"No S or F? Then, [member], you gave it a B. Why isn't this good enough to be an S?"</div><div class="q-ko ko">침묵 깨기</div></div>
+              <div class="q-item"><div class="q-en">"Compare your list with our Team Score. How many matched? Who is the 'soulmate' of our team today?"</div><div class="q-ko ko">결과 비교</div></div>
+            </div>
+          </div>
+          <div class="act-tab-content" id="tier-tips">
+            <div class="act-tips">
+              <div class="act-tip-item"><span class="tip-icon">💡</span><div><span class="ko">어떤 <strong>기준(Criterion)</strong>이었는지 물어보기 — S와 A의 차이는 얼마큼이었는지</span><span class="en">Ask what <strong>criterion</strong> they used — what was the difference between S and A?</span></div></div>
+              <div class="act-tip-item"><span class="tip-icon">💡</span><div><span class="ko">한쪽에서만 S/F가 나왔다면, 극단의 밸런스로 꼬리물기<div class="tip-sub">예) "워라밸일 때, 연봉이 2배가 되어도 쉬는 시간이 더 중요하다?"</div></span><span class="en">If only one side gave S/F, follow up with extreme balance<div class="tip-sub">Ex) "Even if salary doubled, is rest time still more important?"</div></span></div></div>
+              <div class="act-tip-item"><span class="tip-icon">💡</span><div><span class="ko"><strong>중간값인 사람들에게:</strong> 어떤 특정 상황이라면 등급이 올라갈 여지가 있느냐? / 에피소드 추가 / S와 F 의견 들은 후 생각이 기울었냐고 묻기</span><span class="en"><strong>For middle-value people:</strong> Is there room for grade improvement in a specific situation? / Add episodes / Ask if opinion leaned toward S or F</span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LOVE NAGGERS -->
+      <div class="activity-card" id="act-love">
+        <div class="activity-header" onclick="toggleAct('act-love')">
+          <div class="activity-icon icon-purple">💌</div>
+          <div class="activity-info">
+            <div class="activity-tag">Discussion Activity</div>
+            <div class="activity-name ko">연애의 참견 (Love Naggers)</div>
+            <div class="activity-name en">Love Naggers</div>
+            <div class="activity-meta">
+              <div class="meta-chip ko">👥 전체, MBTI F/T 분류</div>
+              <div class="meta-chip en">👥 Full Group, MBTI F/T split</div>
+            </div>
+          </div>
+          <div class="act-toggle">⌄</div>
+        </div>
+        <div class="activity-body">
+          <div class="act-tabs">
+            <button class="act-tab-btn active" onclick="switchActTab(this,'love-flow')"><span class="ko">진행 방법</span><span class="en">How to Run</span></button>
+            <button class="act-tab-btn" onclick="switchActTab(this,'love-tips')"><span class="ko">발화 유도 팁</span><span class="en">Participation Tips</span></button>
+          </div>
+          <div class="act-tab-content active" id="love-flow">
+            <div class="steps-list">
+              <div class="step-item"><div class="step-num">01</div><div class="step-body"><div class="step-title ko">사연 함께 읽기 & MBTI 분류</div><div class="step-title en">Read Story & Classify MBTI</div><div class="step-desc ko">사연을 함께 읽고 상황 완벽히 이해. 그룹 MBTI 조사 후 F/T 란에 분류 (답변 결과와 상관없이 원래 MBTI로).</div><div class="step-desc en">Read the story together, ensure full understanding. Survey MBTI and categorize into F/T (use their original MBTI, not their answer).</div></div></div>
+              <div class="step-item"><div class="step-num">02</div><div class="step-body"><div class="step-title ko">실제 경험 연결</div><div class="step-title en">Connect to Real Experience</div><div class="step-desc ko">주제 관련 실제 경험 이야기하도록 유도. 경험 없으면 "나라면 어떤 기분일지"로. 추상적 토론 아닌 데이터 기반으로!</div><div class="step-desc en">Encourage sharing real experiences. If no experience, use "What feelings would you have?" — keep it data-based, not abstract!</div><div class="cue-box"><div class="cue-label">Cue</div><div class="cue-text">"Have you ever been in a similar situation, or is this completely new to you?"</div></div></div></div>
+              <div class="step-item"><div class="step-num">03</div><div class="step-body"><div class="step-title">Solution Pitch</div><div class="step-desc ko">사연자에게 빙의하여 파트너에게 직접 대화하듯 솔루션 제시. 설득력 있는 문장과 적절한 톤 사용. 원어민에게 뉘앙스/말투 교정 받기!</div><div class="step-desc en">Embody the story writer and speak solutions to the partner. Use convincing sentences and appropriate tone. Get nuance corrections from native speakers!</div></div></div>
+              <div class="step-item"><div class="step-num">04</div><div class="step-body"><div class="step-title">Final Prescription</div><div class="step-desc ko">가장 F스러운 답변(근데 MBTI는 T인 사람?), 가장 독특한 답변, 나랑 안 맞는 답변을 뽑으며 마무리. 연인 간 갈등이 왜 시작되는지도 이야기해보기.</div><div class="step-desc en">Highlight: most F-like answer (but T by MBTI?), most unique answer, and one they disagree with. Discuss why conflicts between lovers start.</div></div></div>
+            </div>
+          </div>
+          <div class="act-tab-content" id="love-tips">
+            <div class="act-tips">
+              <div class="act-tip-item"><span class="tip-icon">💡</span><div><span class="ko"><strong>리더의 빌런 역할:</strong> 반대 입장에서 질문 던져주기</span><span class="en"><strong>Leader's villain role:</strong> throw questions from the opposite position</span></div></div>
+              <div class="act-tip-item"><span class="tip-icon">💡</span><div><span class="ko"><strong>단계별 해결책 쌓기:</strong> "오늘 당장 보낼 카톡은?", "주말에 할 행동은?", "앞으로 만들 규칙은?" — '헤어진다' 같은 단답 막기</span><span class="en"><strong>Build step-by-step solutions:</strong> "What text to send today?", "What to do this weekend?", "What rule to make?" — block short answers like "break up"</span></div></div>
+              <div class="act-tip-item"><span class="tip-icon">💡</span><div><span class="ko"><strong>시점 바꾸기:</strong> 사연자 친구 / 상대방 친구 / 제3자 역할로 강제 전환</span><span class="en"><strong>Force perspective shifts:</strong> story writer's friend / other person's friend / third party</span></div></div>
+              <div class="act-tip-item"><span class="tip-icon">💡</span><div><span class="ko"><strong>장점과 단점</strong> 말하게 하기</span><span class="en">Have them state <strong>advantages and disadvantages</strong></span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LIAR GAME -->
+      <div class="activity-card" id="act-liar">
+        <div class="activity-header" onclick="toggleAct('act-liar')">
+          <div class="activity-icon icon-green">🎭</div>
+          <div class="activity-info">
+            <div class="activity-tag">Game Activity</div>
+            <div class="activity-name">Liar Game</div>
+            <div class="activity-meta">
+              <div class="meta-chip">👥 <span class="ko">전체</span><span class="en">Full Group</span></div>
+              <div class="meta-chip ko">🃏 시민 카드 + 라이어 카드</div>
+              <div class="meta-chip en">🃏 Citizen Card + Liar Card</div>
+            </div>
+          </div>
+          <div class="act-toggle">⌄</div>
+        </div>
+        <div class="activity-body">
+          <div class="act-tabs">
+            <button class="act-tab-btn active" onclick="switchActTab(this,'liar-flow')"><span class="ko">진행 방법</span><span class="en">How to Run</span></button>
+            <button class="act-tab-btn" onclick="switchActTab(this,'liar-qs')"><span class="ko">심문 질문 리스트</span><span class="en">Interrogation Questions</span></button>
+          </div>
+          <div class="act-tab-content active" id="liar-flow">
+            <div class="rule-box">
+              <div class="rule-label ko">카드 종류</div><div class="rule-label en">Card Types</div>
+              <div class="rule-text ko"><strong>시민 카드:</strong> 구체적인 경험 키워드 (예: 제주도 여행, 최악의 소개팅, 어제 먹은 마라탕)<br><strong>라이어 카드:</strong> You are the Imposter — 눈치껏 지어내세요!</div>
+              <div class="rule-text en"><strong>Citizen Card:</strong> Specific experience keyword (Ex: Jeju trip, worst blind date, malatang eaten yesterday)<br><strong>Liar Card:</strong> You are the Imposter — fake it cleverly!</div>
+            </div>
+            <div class="steps-list">
+              <div class="step-item"><div class="step-num">01</div><div class="step-body"><div class="step-title ko">카드 배분 & 주제 공지</div><div class="step-title en">Distribute Cards & Announce Topic</div><div class="step-desc ko">카드를 엎어놓고 한 장씩 뽑게 함.</div><div class="step-desc en">Place cards face down and have each person pick one.</div><div class="cue-box"><div class="cue-label">Cue</div><div class="cue-text ko">"오늘 주제는 OO입니다. 시민들은 실제 경험을 말하고, 라이어는 눈치껏 지어내세요."</div><div class="cue-text en">"Today's topic is OO. Citizens share real experiences. The Liar — make it up cleverly."</div></div></div></div>
+              <div class="step-item"><div class="step-num">02</div><div class="step-body"><div class="step-title ko">1단계: 한 문장 묘사</div><div class="step-title en">Stage 1: One-Sentence Description</div><div class="step-desc ko">모든 멤버가 돌아가며 자신의 키워드(경험)를 딱 한 문장으로만 묘사.</div><div class="step-desc en">All members take turns describing their keyword in just one sentence.</div></div></div>
+              <div class="step-item"><div class="step-num">03</div><div class="step-body"><div class="step-title ko">2단계: 서로 심문</div><div class="step-title en">Stage 2: Cross Questioning</div><div class="step-desc ko">멤버들이 서로 질문. <strong>구체적 팩트</strong>를 묻도록 강제!</div><div class="step-desc en">Members ask each other questions. Force them to ask about <strong>specific facts</strong>!</div></div></div>
+              <div class="step-item"><div class="step-num">04</div><div class="step-body"><div class="step-title ko">3단계: 최종 투표</div><div class="step-title en">Stage 3: Final Vote</div><div class="step-desc ko">라이어 지목 → 정체 공개. 라이어가 진짜 키워드를 맞추면 라이어 승리!</div><div class="step-desc en">Vote for the Liar → reveal identity. If the Liar guesses the real keyword — Liar wins!</div><div class="cue-box"><div class="cue-label">Cue</div><div class="cue-text">"Final chance! If you are the Imposter, this is your last chance to defend yourself."</div></div></div></div>
+            </div>
+            <div class="materials-row">
+              <span class="materials-label">📦</span>
+              <div class="mat-tag ko">시민 카드</div><div class="mat-tag en">Citizen Cards</div>
+              <div class="mat-tag ko">라이어 카드</div><div class="mat-tag en">Liar Cards</div>
+              <div class="mat-tag ko">경험 키워드 목록</div><div class="mat-tag en">Keyword List</div>
+            </div>
+          </div>
+          <div class="act-tab-content" id="liar-qs">
+            <div class="q-list">
+              <div class="q-item"><div class="q-en ko">장소, 위치, 비용, 시간, 날씨, 오감 묘사, 동행인 등 허점 찾는 질문</div><div class="q-en en">Find loopholes about location, cost, time, weather, five senses, companions</div></div>
+              <div class="q-item"><div class="q-en ko">"정확히 몇 월에 갔어?", "비행기 값 얼마?", "누구랑 갔어?"</div><div class="q-en en">"Exactly what month did you go?", "How much was the flight?", "Who did you go with?"</div></div>
+              <div class="q-item"><div class="q-en ko">대답이 짧으면 → 가장 좋았던 점과 가장 별로였던 점 (감정 구체화)</div><div class="q-en en">Short answers → ask about the best and worst parts (specify emotions)</div></div>
+              <div class="q-item"><div class="q-en">"Wait, if you were there, you must have seen the [fake detail]. Was it still there?" <span class="ko">(기습 질문)</span><span class="en">(Surprise question)</span></div></div>
+              <div class="q-item"><div class="q-en ko">대화 끊길 때: "Okay, we need more clues! Everyone, ask one specific question about the price or location."</div><div class="q-en en">When conversation stops: "Okay, we need more clues! Everyone, ask one specific question about the price or location."</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MAFIA -->
+      <div class="activity-card" id="act-mafia">
+        <div class="activity-header" onclick="toggleAct('act-mafia')">
+          <div class="activity-icon icon-blue">🕵️</div>
+          <div class="activity-info">
+            <div class="activity-tag">Game Activity</div>
+            <div class="activity-name">Mafia (Alibi Game)</div>
+            <div class="activity-meta">
+              <div class="meta-chip">👥 <span class="ko">전체</span><span class="en">Full Group</span></div>
+              <div class="meta-chip ko">🃏 시민 / 마피아 역할</div>
+              <div class="meta-chip en">🃏 Citizen / Mafia roles</div>
+            </div>
+          </div>
+          <div class="act-toggle">⌄</div>
+        </div>
+        <div class="activity-body">
+          <div class="act-tabs">
+            <button class="act-tab-btn active" onclick="switchActTab(this,'mafia-flow')"><span class="ko">진행 방법</span><span class="en">How to Run</span></button>
+            <button class="act-tab-btn" onclick="switchActTab(this,'mafia-qs')"><span class="ko">심문 질문 리스트</span><span class="en">Interrogation Questions</span></button>
+          </div>
+          <div class="act-tab-content active" id="mafia-flow">
+            <div class="rule-box">
+              <div class="rule-label ko">핵심 원리</div><div class="rule-label en">Key Principle</div>
+              <div class="rule-text ko"><strong>진실을 말하는 사람(시민)</strong>과 <strong>지어내는 사람(마피아)</strong>의 정보량 차이를 이용하는 게임!</div>
+              <div class="rule-text en">Use the <strong>information gap</strong> between people telling the truth (citizens) and those making it up (mafia)!</div>
+            </div>
+            <div class="steps-list">
+              <div class="step-item"><div class="step-num">01</div><div class="step-body"><div class="step-title ko">사건 공지</div><div class="step-title en">Announce the Incident</div><div class="cue-box"><div class="cue-label">Example Scenario</div><div class="cue-text">"Yesterday between 8 PM and 10 PM, someone stole a luxury watch from the gym locker room!"</div></div><div class="step-desc ko">시민: 그 시간에 실제 한 일만 진실로 이야기. 마피아: 무조건 거짓말로 꾸며냄.</div><div class="step-desc en">Citizen: talk only about what they actually did. Mafia: must lie and make everything up.</div></div></div>
+              <div class="step-item"><div class="step-num">02</div><div class="step-body"><div class="step-title ko">알리바이 발표 <span class="time-tag">1분</span></div><div class="step-title en">The Alibi <span class="time-tag">1 min each</span></div><div class="step-desc ko">돌아가며 사건 시간대에 어디서, 누구와, 무엇을 했는지 육하원칙으로 설명.</div><div class="step-desc en">Each person explains where, with whom, and what they did using the 5W1H principle.</div></div></div>
+              <div class="step-item"><div class="step-num">03</div><div class="step-body"><div class="step-title ko">심층 심문</div><div class="step-title en">In-depth Questioning</div><div class="step-desc ko">서로의 알리바이가 진짜인지 꼬치꼬치 캐묻기.</div><div class="step-desc en">Grill each other about whether their alibis are real.</div></div></div>
+              <div class="step-item"><div class="step-num">04</div><div class="step-body"><div class="step-title ko">범인 지목</div><div class="step-title en">Identify the Culprit</div></div></div>
+            </div>
+            <div class="materials-row">
+              <span class="materials-label">📦</span>
+              <div class="mat-tag ko">사건 시나리오 카드</div><div class="mat-tag en">Incident Scenario Card</div>
+              <div class="mat-tag ko">역할 카드 (시민/마피아)</div><div class="mat-tag en">Role Cards (Citizen/Mafia)</div>
+            </div>
+          </div>
+          <div class="act-tab-content" id="mafia-qs">
+            <div class="q-list">
+              <div class="q-item"><div class="q-en ko">"밥을 먹었다고? 무슨 메뉴? 누구랑? 어디서? 얼마 나왔어?"</div><div class="q-en en">"You ate? What menu? With whom? Where? How much was it?"</div></div>
+              <div class="q-item"><div class="q-en ko">"영화? 팝콘 무슨 맛? 자리 어디? 의자 색깔?"</div><div class="q-en en">"Movie? What popcorn flavor? Where was your seat? Chair color?"</div></div>
+              <div class="q-item"><div class="q-en ko">먹은 것, 입은 옷, 본 TV 프로그램 이름 등 아주 사소한 정보 하나하나 캐묻기</div><div class="q-en en">Ask about every small detail — what they ate, what they wore, TV show names</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── Supabase config ──────────────────────────────────────────
+const SUPA_URL = 'https://jlnncawfhcktayoikebo.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impsbm5jYXdmaGNrdGF5b2lrZWJvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4MDk2NjMsImV4cCI6MjA4OTM4NTY2M30.0hsGhEkwYkwKt5oQ9rZXy5U8yRBi2MWCeTgzBHb9fvc';
+const HEADERS  = {
+  'Content-Type': 'application/json',
+  'apikey': SUPA_KEY,
+  'Authorization': 'Bearer ' + SUPA_KEY,
+  'Accept': 'application/json'
+};
+const DEL_PW   = 'leader2025';
+
+async function sbFetch(path, opts={}) {
+  const res = await fetch(SUPA_URL+'/rest/v1/'+path, { headers:HEADERS, ...opts });
+  if (!res.ok) throw new Error(await res.text());
+  return res.status===204 ? null : res.json();
+}
+
+// ── Lang / tabs / activities ──────────────────────────────────
+function setLang(lang) {
+  document.body.classList.toggle('lang-en', lang==='en');
+  document.getElementById('btn-ko').classList.toggle('active', lang==='ko');
+  document.getElementById('btn-en').classList.toggle('active', lang==='en');
+}
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  btn.classList.add('active');
+}
+function toggleAct(id) { document.getElementById(id).classList.toggle('open'); }
+function switchActTab(btn, contentId) {
+  const card = btn.closest('.activity-card');
+  card.querySelectorAll('.act-tab-btn').forEach(b=>b.classList.remove('active'));
+  card.querySelectorAll('.act-tab-content').forEach(c=>c.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(contentId).classList.add('active');
+}
+
+// ── Calendar state ────────────────────────────────────────────
+let currentYear  = new Date().getFullYear();
+let currentMonth = new Date().getMonth()+1;
+let calEvents    = {};
+let selectedDate = null;
+let pendingDeleteId  = null;
+let pendingDeleteKey = null;
+
+// ── Sync status ───────────────────────────────────────────────
+function setSyncStatus(state) {
+  const dot = document.getElementById('syncDot');
+  const msg = document.getElementById('syncMsg');
+  const msgEn = document.getElementById('syncMsgEn');
+  dot.className = 'cal-sync-dot '+state;
+  const labels = {
+    loading: ['불러오는 중...','Loading...'],
+    saving:  ['저장 중...','Saving...'],
+    ok:      ['동기화됨 — 모든 리더와 공유 중','Synced — shared with all leaders'],
+    error:   ['연결 오류. 새로고침 해주세요.','Connection error. Please refresh.']
+  };
+  msg.textContent   = labels[state][0];
+  msgEn.textContent = labels[state][1];
+}
+
+// ── Load events ───────────────────────────────────────────────
+async function loadEvents() {
+  setSyncStatus('loading');
+  try {
+    const data = await sbFetch(
+      `schedule_events?select=id,date_key,text,type&date_key=like.${currentYear}-${currentMonth}-%&order=created_at.asc`
+    );
+    calEvents = {};
+    data.forEach(row => {
+      if (!calEvents[row.date_key]) calEvents[row.date_key]=[];
+      calEvents[row.date_key].push({id:row.id, text:row.text, type:row.type});
+    });
+    setSyncStatus('ok');
+  } catch(e) {
+    console.error(e); setSyncStatus('error');
+  }
+  renderCalendar();
+}
+
+// ── Render ────────────────────────────────────────────────────
+function renderCalendar() {
+  const names=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  document.getElementById('monthLabel').textContent=`${currentYear}년 ${names[currentMonth-1]}`;
+  const first=new Date(currentYear,currentMonth-1,1).getDay();
+  const days=new Date(currentYear,currentMonth,0).getDate();
+  const today=new Date();
+  const grid=document.getElementById('calGrid');
+  grid.innerHTML='';
+  for(let i=0;i<first;i++){const c=document.createElement('div');c.className='cal-cell empty';grid.appendChild(c);}
+  for(let d=1;d<=days;d++){
+    const dow=new Date(currentYear,currentMonth-1,d).getDay();
+    const isToday=today.getFullYear()===currentYear&&today.getMonth()===currentMonth-1&&today.getDate()===d;
+    const cell=document.createElement('div');
+    cell.className='cal-cell'+(dow===0?' sun':'')+(dow===6?' sat':'')+(isToday?' today':'');
+    const num=document.createElement('div');num.className='cal-day-num';num.textContent=d;cell.appendChild(num);
+    const key=`${currentYear}-${currentMonth}-${d}`;
+    (calEvents[key]||[]).forEach(ev=>{
+      const el=document.createElement('div');el.className=`cal-event ${ev.type}`;
+      const txt=document.createElement('span');txt.textContent=ev.text;el.appendChild(txt);
+      const del=document.createElement('button');del.className='ev-del-btn';del.textContent='×';
+      del.onclick=e=>{e.stopPropagation();openDeleteModal(ev.id,key);};
+      el.appendChild(del);cell.appendChild(el);
+    });
+    const addBtn=document.createElement('button');addBtn.className='add-ev-btn';addBtn.textContent='+';
+    addBtn.onclick=e=>{e.stopPropagation();openModal(d);};
+    cell.appendChild(addBtn);
+    cell.addEventListener('click',()=>openModal(d));
+    grid.appendChild(cell);
+  }
+}
+
+function changeMonth(dir){
+  currentMonth+=dir;
+  if(currentMonth>12){currentMonth=1;currentYear++;}
+  if(currentMonth<1){currentMonth=12;currentYear--;}
+  loadEvents();
+}
+
+// ── Add Event Modal ───────────────────────────────────────────
+function openModal(d){
+  selectedDate=`${currentYear}-${currentMonth}-${d}`;
+  const names=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  document.getElementById('modalDateLabel').textContent=`${currentYear}년 ${names[currentMonth-1]} ${d}일`;
+  document.getElementById('evTitle').value='';
+  document.getElementById('evType').value='q-topic';
+  document.getElementById('modalBg').classList.add('open');
+  setTimeout(()=>document.getElementById('evTitle').focus(),80);
+}
+function closeModal(){
+  document.getElementById('modalBg').classList.remove('open');
+  selectedDate=null;
+}
+async function saveEvent(){
+  const text=document.getElementById('evTitle').value.trim();
+  if(!text){document.getElementById('evTitle').focus();return;}
+  const type=document.getElementById('evType').value;
+  const key=selectedDate;
+  setSyncStatus('saving');
+  closeModal();
+  try{
+    const data=await sbFetch('schedule_events',{
+      method:'POST',
+      body:JSON.stringify({date_key:key,text,type}),
+      headers:{...HEADERS,'Prefer':'return=representation'}
+    });
+    if(!calEvents[key])calEvents[key]=[];
+    calEvents[key].push({id:data[0].id,text:data[0].text,type:data[0].type});
+    renderCalendar();setSyncStatus('ok');
+  }catch(e){console.error(e);setSyncStatus('error');}
+}
+
+// ── Delete Modal (비밀번호 확인) ──────────────────────────────
+function openDeleteModal(id, key){
+  pendingDeleteId=id;
+  pendingDeleteKey=key;
+  document.getElementById('delPwInput').value='';
+  document.getElementById('delPwErr').textContent='';
+  document.getElementById('deleteBg').style.display='flex';
+  setTimeout(()=>document.getElementById('delPwInput').focus(),80);
+}
+function closeDeleteModal(){
+  document.getElementById('deleteBg').style.display='none';
+  pendingDeleteId=null;pendingDeleteKey=null;
+}
+async function confirmDelete(){
+  const pw=document.getElementById('delPwInput').value;
+  if(pw!==DEL_PW){
+    document.getElementById('delPwErr').textContent='비밀번호가 틀렸어요.';
+    document.getElementById('delPwInput').value='';
+    document.getElementById('delPwInput').focus();
+    return;
+  }
+  const id=pendingDeleteId, key=pendingDeleteKey;
+  closeDeleteModal();
+  setSyncStatus('saving');
+  try{
+    await sbFetch(`schedule_events?id=eq.${id}`,{method:'DELETE'});
+    calEvents[key]=calEvents[key].filter(e=>e.id!==id);
+    if(calEvents[key].length===0)delete calEvents[key];
+    renderCalendar();setSyncStatus('ok');
+  }catch(e){console.error(e);setSyncStatus('error');}
+}
+
+// ── Keyboard / backdrop ───────────────────────────────────────
+document.getElementById('modalBg').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
+document.getElementById('deleteBg').addEventListener('click',e=>{if(e.target===e.currentTarget)closeDeleteModal();});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){closeModal();closeDeleteModal();}
+});
+document.getElementById('evTitle').addEventListener('keydown',e=>{if(e.key==='Enter')saveEvent();});
+document.getElementById('delPwInput').addEventListener('keydown',e=>{if(e.key==='Enter')confirmDelete();});
+
+// ── Init ──────────────────────────────────────────────────────
+loadEvents();
+</script>
+</body>
+</html>
