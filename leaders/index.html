@@ -683,10 +683,85 @@
         </div>
       </div>
 
+      <!-- MINEFIELD TALK SHOW -->
+      <div class="activity-card" id="act-minefield">
+        <div class="activity-header" onclick="toggleAct('act-minefield')">
+          <div class="activity-icon icon-gold">💣</div>
+          <div class="activity-info">
+            <div class="activity-tag">Game Activity</div>
+            <div class="activity-name">The Minefield Talk Show</div>
+            <div class="activity-meta">
+              <div class="meta-chip">👥 <span class="ko">전체</span><span class="en">Full Group</span></div>
+              <div class="meta-chip ko">⏱ 40분 토크</div>
+              <div class="meta-chip en">⏱ 40-min talk</div>
+            </div>
+          </div>
+          <div class="act-toggle">⌄</div>
+        </div>
+        <div class="activity-body">
+          <div class="act-tabs">
+            <button class="act-tab-btn active" onclick="switchActTab(this,'mine-flow')"><span class="ko">진행 방법</span><span class="en">How to Run</span></button>
+            <button class="act-tab-btn" onclick="switchActTab(this,'mine-rule')"><span class="ko">규칙 & 팁</span><span class="en">Rules & Tips</span></button>
+          </div>
+          <div class="act-tab-content active" id="mine-flow">
+            <div class="rule-box">
+              <div class="rule-label ko">핵심 규칙</div><div class="rule-label en">Key Rule</div>
+              <div class="rule-text ko">금지어를 피해 말하며 <strong>벌점을 적게 받은 사람이 승리!</strong><br>사용 불가 기본 대명사: <strong>I, You, He, She, We, They, It</strong></div>
+              <div class="rule-text en">Avoid forbidden words — <strong>fewest penalty points wins!</strong><br>Banned base pronouns: <strong>I, You, He, She, We, They, It</strong></div>
+            </div>
+            <div class="steps-list">
+              <div class="step-item"><div class="step-num">01</div><div class="step-body">
+                <div class="step-title ko">타겟 & 금지어 작성</div><div class="step-title en">Assign Target & Write Forbidden Word</div>
+                <div class="step-desc ko">모두 둥글게 앉아, 각자 왼쪽 사람을 타겟으로 삼고 그 사람이 무심코 뱉을 만한 영어 금지어 1개를 포스트잇에 적음.</div>
+                <div class="step-desc en">Sit in a circle. Each person targets the person to their left and writes 1 English word that person might accidentally say on a sticky note.</div>
+              </div></div>
+              <div class="step-item"><div class="step-num">02</div><div class="step-body">
+                <div class="step-title ko">이마에 부착</div><div class="step-title en">Stick It on Their Forehead</div>
+                <div class="step-desc ko">타겟(왼쪽 사람)의 이마나 옷에 포스트잇을 붙여줌. <strong>본인은 절대 자신의 금지어를 볼 수 없음!</strong></div>
+                <div class="step-desc en">Stick the note on the target's forehead or shirt. <strong>They cannot see their own forbidden word!</strong></div>
+              </div></div>
+              <div class="step-item"><div class="step-num">03</div><div class="step-body">
+                <div class="step-title ko">토크쇼 시작 <span class="time-tag">40분</span></div><div class="step-title en">Start the Talk Show <span class="time-tag">40 min</span></div>
+                <div class="step-desc ko">진행자가 메인 토크 주제를 던지면 모두 영어로 자유롭게 대화 시작!</div>
+                <div class="step-desc en">Host throws a main talk topic and everyone starts chatting freely in English!</div>
+                <div class="cue-box"><div class="cue-label">주제 예시 / Topic Examples</div><div class="cue-text">"The worst travel experience or the most embarrassing moment in your life."<br>"If you won 10 million dollars today, what is your exact plan for the next 7 days?"</div></div>
+              </div></div>
+              <div class="step-item"><div class="step-num">04</div><div class="step-body">
+                <div class="step-title ko">전담 채점</div><div class="step-title en">Personal Scoring</div>
+                <div class="step-desc ko">각자 <strong>오른쪽 사람(내가 금지어를 써준 사람)</strong>을 집중 감시. 금지어를 뱉을 때마다 조용히 종이에 바를 정(正)자로 벌점 누적.</div>
+                <div class="step-desc en">Each person closely watches the person to their <strong>right (whose word you wrote)</strong>. Each time they say the forbidden word, quietly mark a tally on paper.</div>
+              </div></div>
+              <div class="step-item"><div class="step-num">05</div><div class="step-body">
+                <div class="step-title ko">유도 심문</div><div class="step-title en">Trap Them!</div>
+                <div class="step-desc ko">타겟이 금지어를 말하도록 교묘하게 영어로 질문을 던지고 함정을 팜.</div>
+                <div class="step-desc en">Cleverly ask questions in English to trap your target into saying their forbidden word.</div>
+              </div></div>
+              <div class="step-item"><div class="step-num">06</div><div class="step-body">
+                <div class="step-title ko">게임 종료 & 최종 결과</div><div class="step-title en">Game Over & Results</div>
+                <div class="step-desc ko">제한 시간이 끝나면 각자 누적 벌점 공개. <strong>벌점이 가장 적은 사람이 최종 승리!</strong></div>
+                <div class="step-desc en">When time is up, everyone reveals their penalty count. <strong>Fewest penalties wins!</strong></div>
+              </div></div>
+            </div>
+            <div class="materials-row">
+              <span class="materials-label">📦</span>
+              <div class="mat-tag ko">포스트잇</div><div class="mat-tag en">Sticky Notes</div>
+              <div class="mat-tag ko">채점용 종이 & 펜</div><div class="mat-tag en">Score Sheet & Pen</div>
+              <div class="mat-tag ko">타이머</div><div class="mat-tag en">Timer</div>
+            </div>
+          </div>
+          <div class="act-tab-content" id="mine-rule">
+            <div class="act-tips">
+              <div class="act-tip-item"><span class="tip-icon">💡</span><div><span class="ko"><strong>금지어 선택 팁:</strong> 상대방이 자주 쓰는 단어, 주제와 관련된 단어로 설정하면 더 재밌어요.</span><span class="en"><strong>Word selection tip:</strong> Pick words the person uses often or words related to the topic.</span></div></div>
+              <div class="act-tip-item"><span class="tip-icon">💡</span><div><span class="ko"><strong>유도 질문 예시:</strong> 상대방의 금지어가 "good"이라면 → "So did you enjoy the trip?" (good이 나올 만한 질문)</span><span class="en"><strong>Trap question example:</strong> If their word is "good" → "So did you enjoy the trip?" (likely to trigger "good")</span></div></div>
+              <div class="act-tip-item"><span class="tip-icon">💡</span><div><span class="ko"><strong>진행자 역할:</strong> 주제를 흥미롭게 던지고, 대화가 끊기면 새 질문으로 이어주기. 금지어를 말한 순간 살짝 웃어주는 것도 분위기 UP!</span><span class="en"><strong>Host role:</strong> Keep throwing interesting topics. If conversation stalls, add a new question. React subtly when someone slips!</span></div></div>
+              <div class="act-tip-item"><span class="tip-icon">💡</span><div><span class="ko"><strong>벌점 공정성:</strong> 채점자(오른쪽 사람)만 해당 금지어를 알고 있으므로 자기 점수를 속일 수도 있어요 — 이것도 게임의 일부!</span><span class="en"><strong>Score honesty:</strong> Only the scorer knows the forbidden word, so bluffing is part of the game too!</span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
-
-</div>
 
 <script>
 // ── Supabase config ──────────────────────────────────────────
