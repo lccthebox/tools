@@ -269,8 +269,26 @@
 
   ::-webkit-scrollbar { width:5px; } ::-webkit-scrollbar-track { background:var(--bg); } ::-webkit-scrollbar-thumb { background:#ddd; border-radius:3px; }
 
+  /* BENEFIT CARDS */
+  .benefit-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:24px; position:relative; overflow:hidden; transition:transform .2s, box-shadow .2s; }
+  .benefit-card:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,0,0,.08); }
+  .benefit-num { font-family:'DM Mono',monospace; font-size:11px; color:var(--red); font-weight:700; opacity:.6; margin-bottom:12px; }
+  .benefit-icon { font-size:26px; margin-bottom:12px; display:block; }
+  .benefit-title { font-size:14px; font-weight:700; color:var(--dark); margin-bottom:8px; }
+  .benefit-body { font-size:12.5px; color:var(--text-sub); line-height:1.8; }
+  .benefit-body strong { color:var(--dark); }
+  .benefit-card::after { content:''; position:absolute; bottom:0; left:0; right:0; height:2px; background:var(--red); transform:scaleX(0); transition:transform .2s; transform-origin:left; }
+  .benefit-card:hover::after { transform:scaleX(1); }
+
+  /* CHECKLIST */
+  .check-item { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--border); cursor:pointer; font-size:13px; color:var(--text-sub); line-height:1.4; }
+  .check-item:last-child { border-bottom:none; }
+  .check-item input[type=checkbox] { width:16px; height:16px; accent-color:var(--red); cursor:pointer; flex-shrink:0; }
+  .check-item.checked { color:var(--text-muted); text-decoration:line-through; }
+
   @media(max-width:768px) {
     header { padding:0 20px; } .tab-bar { padding:0 20px; } .content { padding:24px 20px; } .keyword-grid { grid-template-columns:1fr; }
+    #checklistGrid { grid-template-columns:1fr; }
   }
 
   /* LANG */
@@ -360,8 +378,10 @@
 
 <div class="tab-bar">
   <button class="tab-btn active" onclick="switchTab('schedule',this)"><span class="tab-icon">📅</span><span class="ko">스케쥴</span><span class="en">Schedule</span></button>
+  <button class="tab-btn" onclick="switchTab('role',this)"><span class="tab-icon">🎯</span><span class="ko">리더 역할</span><span class="en">Leader Role</span></button>
   <button class="tab-btn" onclick="switchTab('topic',this)"><span class="tab-icon">💬</span><span class="ko">토픽 가이드</span><span class="en">Topic Guide</span></button>
   <button class="tab-btn" onclick="switchTab('activity',this)"><span class="tab-icon">✏️</span><span class="ko">액티비티 가이드</span><span class="en">Activity Guide</span></button>
+  <button class="tab-btn" onclick="switchTab('benefit',this)"><span class="tab-icon">🎁</span><span class="ko">베네핏</span><span class="en">Benefits</span></button>
 </div>
 
 <div class="content">
@@ -405,7 +425,144 @@
     </div>
   </div>
 
-  <!-- TOPIC GUIDE -->
+  <!-- LEADER ROLE -->
+  <div class="tab-panel" id="tab-role">
+    <div class="page-header">
+      <div class="page-title">Leader <em>Role</em></div>
+      <div class="page-desc ko">더박스 리더로서의 역할과 스터디 진행 체크리스트입니다.</div>
+      <div class="page-desc en">Your responsibilities as a TheBox leader and study checklist.</div>
+    </div>
+
+    <div class="sec-label ko">스터디 시스템</div>
+    <div class="sec-label en">Study System</div>
+    <div style="background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:22px 26px;margin-bottom:32px;display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--text-muted);font-family:DM Mono,monospace;min-width:80px;text-transform:uppercase;letter-spacing:1px" class="ko">총 진행시간</span>
+        <span style="font-size:11px;color:var(--text-muted);font-family:DM Mono,monospace;min-width:80px;text-transform:uppercase;letter-spacing:1px" class="en">Total Time</span>
+        <span style="font-size:13px;color:var(--dark);font-weight:600">100<span class="ko">분</span><span class="en">min</span> &nbsp;·&nbsp; Conversation 1 <span class="ko">50분</span><span class="en">50min</span> → Break <span class="ko">10분</span><span class="en">10min</span> → Conversation 2 <span class="ko">40분</span><span class="en">40min</span></span>
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--text-muted);font-family:DM Mono,monospace;min-width:80px;text-transform:uppercase;letter-spacing:1px" class="ko">그룹 구성</span>
+        <span style="font-size:11px;color:var(--text-muted);font-family:DM Mono,monospace;min-width:80px;text-transform:uppercase;letter-spacing:1px" class="en">Group Size</span>
+        <div style="background:var(--red);color:#fff;font-size:13px;font-weight:700;padding:8px 18px;border-radius:6px">
+          <span class="ko">리더 1 + 외국인 멤버 1~2 + 한국인 멤버 4~6</span>
+          <span class="en">Leader 1 + Native 1~2 + Korean Members 4~6</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec-label ko">핵심 역할</div>
+    <div class="sec-label en">Key Responsibilities</div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:32px">
+
+      <div style="background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:18px 22px;display:flex;gap:16px;align-items:flex-start">
+        <div style="width:34px;height:34px;background:var(--red-soft);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0">🤝</div>
+        <div>
+          <div style="font-size:13.5px;font-weight:700;color:var(--dark);margin-bottom:4px" class="ko">멤버 연결 & 분위기 조성</div>
+          <div style="font-size:13.5px;font-weight:700;color:var(--dark);margin-bottom:4px" class="en">Member Connection & Atmosphere</div>
+          <div style="font-size:12.5px;color:var(--text-sub);line-height:1.75" class="ko">처음 온 사람을 기존 멤버들과 자연스럽게 연결. 매주 3~5분 아이스브레이킹 준비 (질문 / 게임 / 빠른 선택 미션). 멤버 간 친밀도 형성 → 스터디 분위기 강화.</div>
+          <div style="font-size:12.5px;color:var(--text-sub);line-height:1.75" class="en">Naturally connect new members with existing ones. Prepare 3~5 min icebreaking each week (questions / games / quick choice). Build member rapport to strengthen the study atmosphere.</div>
+        </div>
+      </div>
+
+      <div style="background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:18px 22px;display:flex;gap:16px;align-items:flex-start">
+        <div style="width:34px;height:34px;background:var(--red-soft);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0">🎙️</div>
+        <div>
+          <div style="font-size:13.5px;font-weight:700;color:var(--dark);margin-bottom:4px" class="ko">대화 흐름 관리</div>
+          <div style="font-size:13.5px;font-weight:700;color:var(--dark);margin-bottom:4px" class="en">Conversation Flow Management</div>
+          <div style="font-size:12.5px;color:var(--text-sub);line-height:1.75" class="ko">말 많은 멤버는 부드럽게 정리하고, 말 적은 멤버에게 기회를 부여. 감정적 표현이나 오해가 생기면 중립적으로 정리. 민감한 주제(정치·종교·갈등)와 사적 질문·국적 편견 표현은 상황 보며 조율.</div>
+          <div style="font-size:12.5px;color:var(--text-sub);line-height:1.75" class="en">Gently manage members who dominate and give quieter members a turn. Neutrally resolve emotional tension or misunderstandings. Adjust sensitive topics (politics, religion) and handle personal or nationality-related bias carefully.</div>
+        </div>
+      </div>
+
+      <div style="background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:18px 22px;display:flex;gap:16px;align-items:flex-start">
+        <div style="width:34px;height:34px;background:var(--red-soft);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0">📋</div>
+        <div>
+          <div style="font-size:13.5px;font-weight:700;color:var(--dark);margin-bottom:4px" class="ko">세션 진행 구조</div>
+          <div style="font-size:13.5px;font-weight:700;color:var(--dark);margin-bottom:4px" class="en">Session Flow</div>
+          <div style="font-size:12.5px;color:var(--text-sub);line-height:1.75" class="ko">첫 번째 세션: <strong>시작 → 아이스브레이킹 → 메인 토픽 → 정리</strong>. 두 번째 세션: 액티비티 또는 심화 토픽으로 이어가기.</div>
+          <div style="font-size:12.5px;color:var(--text-sub);line-height:1.75" class="en">First session: <strong>Open → Icebreaking → Main Topic → Wrap up</strong>. Second session: Activity or deeper topic.</div>
+        </div>
+      </div>
+
+      <div style="background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:18px 22px;display:flex;gap:16px;align-items:flex-start">
+        <div style="width:34px;height:34px;background:var(--red-soft);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0">🌏</div>
+        <div>
+          <div style="font-size:13.5px;font-weight:700;color:var(--dark);margin-bottom:4px" class="ko">아웃팅 주도</div>
+          <div style="font-size:13.5px;font-weight:700;color:var(--dark);margin-bottom:4px" class="en">Leading Outings</div>
+          <div style="font-size:12.5px;color:var(--text-sub);line-height:1.75" class="ko">외국인이 한국에서 경험하고 싶은 것(맛집·시장·카페·문화 체험)을 반영해 기획. 사진 촬영부터 후기 공유까지 전체 리드.</div>
+          <div style="font-size:12.5px;color:var(--text-sub);line-height:1.75" class="en">Plan around experiences native speakers want in Korea (food spots, markets, cafes, cultural activities). Lead from photo taking through to sharing reviews.</div>
+        </div>
+      </div>
+
+      <div style="background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:18px 22px;display:flex;gap:16px;align-items:flex-start">
+        <div style="width:34px;height:34px;background:var(--red-soft);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0">🌱</div>
+        <div>
+          <div style="font-size:13.5px;font-weight:700;color:var(--dark);margin-bottom:4px" class="ko">새 멤버 케어</div>
+          <div style="font-size:13.5px;font-weight:700;color:var(--dark);margin-bottom:4px" class="en">New Member Care</div>
+          <div style="font-size:12.5px;color:var(--text-sub);line-height:1.75" class="ko">새로운 멤버를 우선적으로 챙기고 적응을 도우며, 그룹 톡 초대 등 세부 온보딩 작업 담당.</div>
+          <div style="font-size:12.5px;color:var(--text-sub);line-height:1.75" class="en">Prioritize new members, help them settle in, and handle onboarding tasks like group chat invitation.</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="sec-label ko">스터디 체크리스트</div>
+    <div class="sec-label en">Study Checklist</div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px" id="checklistGrid">
+
+      <div style="background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px">
+        <div style="font-size:11px;font-family:DM Mono,monospace;letter-spacing:1.5px;text-transform:uppercase;color:var(--red);font-weight:700;margin-bottom:14px" class="ko">시작 전</div>
+        <div style="font-size:11px;font-family:DM Mono,monospace;letter-spacing:1.5px;text-transform:uppercase;color:var(--red);font-weight:700;margin-bottom:14px" class="en">Before Start</div>
+        <div class="checklist-items">
+          <label class="check-item"><input type="checkbox"><span class="ko">오늘의 토픽 확인</span><span class="en">Check today's topic</span></label>
+          <label class="check-item"><input type="checkbox"><span class="ko">참여 멤버 리스트 확인</span><span class="en">Check member attendance list</span></label>
+          <label class="check-item"><input type="checkbox"><span class="ko">그룹 미리 구상</span><span class="en">Plan group arrangement</span></label>
+          <label class="check-item"><input type="checkbox"><span class="ko">아이스브레이킹 준비</span><span class="en">Prepare icebreaking</span></label>
+          <label class="check-item"><input type="checkbox"><span class="ko">스터디 오프닝 해주기</span><span class="en">Open the study session</span></label>
+        </div>
+      </div>
+
+      <div style="background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px">
+        <div style="font-size:11px;font-family:DM Mono,monospace;letter-spacing:1.5px;text-transform:uppercase;color:var(--red);font-weight:700;margin-bottom:14px" class="ko">진행 중</div>
+        <div style="font-size:11px;font-family:DM Mono,monospace;letter-spacing:1.5px;text-transform:uppercase;color:var(--red);font-weight:700;margin-bottom:14px" class="en">During Study</div>
+        <div class="checklist-items">
+          <label class="check-item"><input type="checkbox"><span class="ko">모든 테이블 방문 완료</span><span class="en">Visited all tables</span></label>
+          <label class="check-item"><input type="checkbox"><span class="ko">대화 흐름 조절</span><span class="en">Managed conversation flow</span></label>
+          <label class="check-item"><input type="checkbox"><span class="ko">말 적은 멤버 질문 유도</span><span class="en">Prompted quiet members</span></label>
+          <label class="check-item"><input type="checkbox"><span class="ko">신규 멤버 우선 케어</span><span class="en">Prioritized new members</span></label>
+          <label class="check-item"><input type="checkbox"><span class="ko">대화 막힘 개입</span><span class="en">Intervened when stuck</span></label>
+        </div>
+      </div>
+
+      <div style="background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px">
+        <div style="font-size:11px;font-family:DM Mono,monospace;letter-spacing:1.5px;text-transform:uppercase;color:var(--red);font-weight:700;margin-bottom:14px" class="ko">종료 후</div>
+        <div style="font-size:11px;font-family:DM Mono,monospace;letter-spacing:1.5px;text-transform:uppercase;color:var(--red);font-weight:700;margin-bottom:14px" class="en">After Study</div>
+        <div class="checklist-items">
+          <label class="check-item"><input type="checkbox"><span class="ko">신규 멤버 그룹 톡 초대</span><span class="en">Invited new members to group chat</span></label>
+          <label class="check-item"><input type="checkbox"><span class="ko">문제 사항 매니저 공유</span><span class="en">Reported issues to manager</span></label>
+          <label class="check-item"><input type="checkbox"><span class="ko">스터디 종료 안내</span><span class="en">Announced end of study</span></label>
+        </div>
+      </div>
+
+      <div style="background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px">
+        <div style="font-size:11px;font-family:DM Mono,monospace;letter-spacing:1.5px;text-transform:uppercase;color:var(--red);font-weight:700;margin-bottom:14px" class="ko">최종 점검</div>
+        <div style="font-size:11px;font-family:DM Mono,monospace;letter-spacing:1.5px;text-transform:uppercase;color:var(--red);font-weight:700;margin-bottom:14px" class="en">Final Check</div>
+        <div class="checklist-items">
+          <label class="check-item"><input type="checkbox"><span class="ko">특정 멤버 쏠림 없음</span><span class="en">No member monopolized conversation</span></label>
+          <label class="check-item"><input type="checkbox"><span class="ko">모두 최소 1회 발화</span><span class="en">Everyone spoke at least once</span></label>
+          <label class="check-item"><input type="checkbox"><span class="ko">분위기 유지</span><span class="en">Positive atmosphere maintained</span></label>
+        </div>
+      </div>
+
+    </div>
+    <button onclick="resetChecklist()" style="margin-top:16px;padding:9px 20px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;color:var(--text-muted);font-family:Noto Sans KR,sans-serif">
+      <span class="ko">체크리스트 초기화</span><span class="en">Reset Checklist</span>
+    </button>
+
+  </div>
+
+    <!-- TOPIC GUIDE -->
   <div class="tab-panel" id="tab-topic">
     <div class="page-header">
       <div class="page-title">Topic <em>Guide</em></div>
@@ -763,6 +920,136 @@
     </div>
   </div>
 
+  <!-- BENEFIT -->
+  <div class="tab-panel" id="tab-benefit">
+    <div class="page-header">
+      <div class="page-title">Leader <em>Benefits</em></div>
+      <div class="page-desc ko">더박스 리더에게 주어지는 혜택들을 확인하세요.</div>
+      <div class="page-desc en">Check out the benefits provided to TheBox leaders.</div>
+    </div>
+
+    <!-- 상단 3개 하이라이트 -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px">
+
+      <div class="benefit-card">
+        <div class="benefit-num">01</div>
+        <div class="benefit-icon">📚</div>
+        <div class="benefit-title ko">스터디 참여 혜택</div>
+        <div class="benefit-title en">Study Access</div>
+        <div class="benefit-body ko">더박스 스터디 <strong>무제한 참여</strong>. 리딩하지 않는 요일은 '참석한다고만' 알려주면 OK.</div>
+        <div class="benefit-body en"><strong>Unlimited access</strong> to all TheBox studies. On off days, just let us know you're coming.</div>
+      </div>
+
+      <div class="benefit-card">
+        <div class="benefit-num">02</div>
+        <div class="benefit-icon">🎉</div>
+        <div class="benefit-title ko">파티·이벤트 혜택</div>
+        <div class="benefit-title en">Party & Events</div>
+        <div class="benefit-body ko">파티·이벤트 <strong>무료 참석</strong>. 행사 운영 스태프로도 참여 가능 <span style="color:var(--text-muted)">(운영 경험·네트워크 확장)</span></div>
+        <div class="benefit-body en"><strong>Free admission</strong> to all events. Option to join as staff <span style="color:var(--text-muted)">(gain experience & network)</span></div>
+      </div>
+
+      <div class="benefit-card">
+        <div class="benefit-num">03</div>
+        <div class="benefit-icon">📜</div>
+        <div class="benefit-title ko">자격증 및 추천서</div>
+        <div class="benefit-title en">Certificate & Letter</div>
+        <div class="benefit-body ko">글로벌 리더십 <strong>자격증 발급</strong> (1급/2급). <strong>평가서·추천서</strong> 발급 가능 <span style="color:var(--text-muted)">(취업·학교·해외 프로그램)</span></div>
+        <div class="benefit-body en">Global leadership <strong>certificate</strong> (Lv.1/2). <strong>Evaluation & recommendation letter</strong> available.</div>
+      </div>
+
+    </div>
+
+    <!-- 하단 3개 -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px">
+
+      <div class="benefit-card">
+        <div class="benefit-num">04</div>
+        <div class="benefit-icon">🤝</div>
+        <div class="benefit-title ko">커뮤니티 혜택</div>
+        <div class="benefit-title en">Community</div>
+        <div class="benefit-body ko">구리더·현 리더 <strong>커뮤니티</strong> 형성. 상·하반기 <strong>리더 미팅 정기 진행</strong>.</div>
+        <div class="benefit-body en"><strong>Community</strong> with past & current leaders. <strong>Regular meetings</strong> twice a year.</div>
+      </div>
+
+      <div class="benefit-card">
+        <div class="benefit-num">05</div>
+        <div class="benefit-icon">🎖️</div>
+        <div class="benefit-title ko">보상·리워드</div>
+        <div class="benefit-title en">Rewards</div>
+        <div class="benefit-body ko">6개월마다 <strong>기프트카드</strong> 증정. 더박스 굿즈 <strong>원가 제공</strong>. 우수 리더 <strong>포상 시스템</strong> 운영.</div>
+        <div class="benefit-body en"><strong>Gift card</strong> every 6 months. Goods at <strong>cost price</strong>. <strong>Outstanding leader award</strong> system.</div>
+      </div>
+
+      <div class="benefit-card">
+        <div class="benefit-num">06</div>
+        <div class="benefit-icon">🏠</div>
+        <div class="benefit-title ko">리더스룸 제공</div>
+        <div class="benefit-title en">Leaders Room</div>
+        <div class="benefit-body ko">리더 전용 공간 <strong>자유 이용</strong>. 스터디 전후, 일상 중 언제든 편하게 방문해서 사용하세요.</div>
+        <div class="benefit-body en"><strong>Free access</strong> to the exclusive Leaders Room — drop in anytime, any day.</div>
+      </div>
+
+    </div>
+
+    <!-- 간식 음료 요청 (전체 너비) -->
+    <div style="background:#fff;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+      <div style="background:var(--dark);padding:18px 26px;display:flex;align-items:center;gap:12px">
+        <span style="font-size:18px">☕</span>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:#fff" class="ko">간식·음료 혜택 & 요청</div>
+          <div style="font-size:14px;font-weight:700;color:#fff" class="en">Snacks & Drinks Request</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:2px" class="ko">올 때마다 무한 제공 — 원하는 간식이나 음료를 미리 요청해두세요</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:2px" class="en">Unlimited every visit — request your favorites in advance</div>
+        </div>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
+          <span id="snackSyncDot" style="width:6px;height:6px;border-radius:50%;background:#ccc;display:inline-block"></span>
+          <span style="font-size:11px;color:rgba(255,255,255,.4);font-family:'DM Mono',monospace" class="ko">실시간 공유</span>
+          <span style="font-size:11px;color:rgba(255,255,255,.4);font-family:'DM Mono',monospace" class="en">Live sync</span>
+        </div>
+      </div>
+
+      <div style="padding:22px 26px">
+        <!-- 폼 -->
+        <div style="display:grid;grid-template-columns:160px 120px 1fr auto;gap:10px;align-items:end;margin-bottom:8px">
+          <div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.8px" class="ko">이름</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.8px" class="en">Name</div>
+            <input id="snackName" type="text" placeholder="김리더" maxlength="20" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;outline:none;font-family:'Noto Sans KR',sans-serif;transition:border-color .2s" onfocus="this.style.borderColor='var(--red)'" onblur="this.style.borderColor='var(--border)'">
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.8px" class="ko">종류</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.8px" class="en">Type</div>
+            <select id="snackCategory" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;outline:none;font-family:'Noto Sans KR',sans-serif;background:#fff">
+              <option value="snack">간식 / Snack</option>
+              <option value="drink">음료 / Drink</option>
+              <option value="etc">기타 / Other</option>
+            </select>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.8px" class="ko">원하는 간식 또는 음료</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.8px" class="en">Item</div>
+            <input id="snackItem" type="text" placeholder="아메리카노, 허니버터칩, 탄산수..." maxlength="40" style="width:100%;padding:10px 13px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;outline:none;font-family:'Noto Sans KR',sans-serif;transition:border-color .2s" onfocus="this.style.borderColor='var(--red)'" onblur="this.style.borderColor='var(--border)'" onkeydown="if(event.key==='Enter')submitSnackRequest()">
+          </div>
+          <button onclick="submitSnackRequest()" style="padding:10px 22px;background:var(--red);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:'Noto Sans KR',sans-serif;transition:background .2s" onmouseover="this.style.background='var(--red-dark)'" onmouseout="this.style.background='var(--red)'">
+            <span class="ko">요청하기</span><span class="en">Submit</span>
+          </button>
+        </div>
+        <div id="snackMsg" style="font-size:12px;color:var(--red);min-height:18px;margin-bottom:20px"></div>
+
+        <!-- 목록 -->
+        <div style="border-top:1px solid var(--border);padding-top:18px">
+          <div style="font-size:11px;font-family:'DM Mono',monospace;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);font-weight:700;margin-bottom:12px" class="ko">이번 달 요청 목록</div>
+          <div style="font-size:11px;font-family:'DM Mono',monospace;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);font-weight:700;margin-bottom:12px" class="en">This Month's Requests</div>
+          <div id="snackList"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
 <script>
 // ── Supabase config ──────────────────────────────────────────
 const SUPA_URL = 'https://jlnncawfhcktayoikebo.supabase.co';
@@ -972,8 +1259,82 @@ document.addEventListener('keydown',e=>{
 document.getElementById('evTitle').addEventListener('keydown',e=>{if(e.key==='Enter')saveEvent();});
 document.getElementById('delPwInput').addEventListener('keydown',e=>{if(e.key==='Enter')confirmDelete();});
 
+// ── Checklist ─────────────────────────────────────────────────
+document.querySelectorAll('.check-item input').forEach(cb => {
+  cb.addEventListener('change', () => {
+    cb.closest('.check-item').classList.toggle('checked', cb.checked);
+  });
+});
+function resetChecklist() {
+  document.querySelectorAll('.check-item input').forEach(cb => {
+    cb.checked = false;
+    cb.closest('.check-item').classList.remove('checked');
+  });
+}
+
+// ── Snack Requests ────────────────────────────────────────────
+async function loadSnackRequests() {
+  const dot = document.getElementById('snackSyncDot');
+  const list = document.getElementById('snackList');
+  if (!dot || !list) return;
+  dot.style.background = '#f0a500';
+  try {
+    const data = await sbFetch('snack_requests?select=id,leader_name,item,category,created_at&order=created_at.desc');
+    dot.style.background = '#3d9e72';
+    if (data.length === 0) {
+      list.innerHTML = '<div style="font-size:13px;color:var(--text-muted);padding:20px 0;text-align:center" class="ko">아직 요청이 없어요</div><div style="font-size:13px;color:var(--text-muted);padding:20px 0;text-align:center" class="en">No requests yet</div>';
+      return;
+    }
+    const catLabel = { snack:'간식', drink:'음료', etc:'기타' };
+    const catColor = { snack:'var(--red)', drink:'#1d6fd8', etc:'#6d28d9' };
+    list.innerHTML = data.map(r => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:${catColor[r.category]}18;color:${catColor[r.category]}">${catLabel[r.category]||r.category}</span>
+          <span style="font-size:13px;font-weight:600;color:var(--dark)">${r.item}</span>
+          <span style="font-size:11.5px;color:var(--text-muted)">${r.leader_name}</span>
+        </div>
+        <button onclick="deleteSnackRequest('${r.id}')" style="background:none;border:none;cursor:pointer;color:#ccc;font-size:14px;padding:2px 4px" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='#ccc'">×</button>
+      </div>
+    `).join('');
+  } catch(e) {
+    dot.style.background = 'var(--red)';
+  }
+}
+
+async function submitSnackRequest() {
+  const name = document.getElementById('snackName').value.trim();
+  const item = document.getElementById('snackItem').value.trim();
+  const category = document.getElementById('snackCategory').value;
+  const msg = document.getElementById('snackMsg');
+  if (!name) { msg.textContent = '이름을 입력해주세요.'; return; }
+  if (!item) { msg.textContent = '원하는 간식/음료를 입력해주세요.'; return; }
+  msg.textContent = '저장 중...';
+  try {
+    await sbFetch('snack_requests', {
+      method: 'POST',
+      body: JSON.stringify({ leader_name: name, item, category }),
+      headers: { ...HEADERS, 'Prefer': 'return=minimal' }
+    });
+    document.getElementById('snackItem').value = '';
+    msg.textContent = '✓ 요청이 등록됐어요!';
+    setTimeout(() => { msg.textContent = ''; }, 2000);
+    loadSnackRequests();
+  } catch(e) { msg.textContent = '오류가 발생했어요. 다시 시도해주세요.'; }
+}
+
+async function deleteSnackRequest(id) {
+  const pw = prompt('비밀번호를 입력하세요');
+  if (pw !== DEL_PW) { alert('비밀번호가 틀렸어요.'); return; }
+  try {
+    await sbFetch(`snack_requests?id=eq.${id}`, { method: 'DELETE' });
+    loadSnackRequests();
+  } catch(e) { alert('삭제 중 오류가 발생했어요.'); }
+}
+
 // ── Init ──────────────────────────────────────────────────────
 loadEvents();
+loadSnackRequests();
 </script>
 </body>
 </html>
