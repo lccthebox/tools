@@ -298,11 +298,19 @@
     .badge-leader { display:none; }
     .lang-btn { padding:4px 10px; font-size:10px; }
 
-    /* Tab bar — horizontal scroll */
-    .tab-bar { padding:0; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+    /* Tab bar — horizontal scroll only, no vertical bounce */
+    .tab-bar {
+      padding:0;
+      overflow-x:auto;
+      overflow-y:hidden;
+      -webkit-overflow-scrolling:touch;
+      scrollbar-width:none;
+      overscroll-behavior-x:contain;
+      touch-action:pan-x;
+    }
     .tab-bar::-webkit-scrollbar { display:none; }
-    .tab-btn { padding:0 16px; height:46px; font-size:12px; gap:5px; white-space:nowrap; flex-shrink:0; }
-    .tab-btn .tab-icon { font-size:14px; }
+    .tab-btn { padding:0 14px; height:44px; font-size:12px; gap:5px; white-space:nowrap; flex-shrink:0; }
+    .tab-btn .tab-icon { font-size:13px; }
 
     /* Content */
     .content { padding:24px 18px; }
@@ -348,9 +356,10 @@
     /* Benefit grids */
     .benefit-grid-top, .benefit-grid-bottom { grid-template-columns:1fr 1fr !important; }
 
-    /* Checklist grid */
-    #checklistGrid { grid-template-columns:1fr; }
-    .check-item { font-size:13px; }
+    /* Checklist — 1열, 글씨 정리 */
+    #checklistGrid { grid-template-columns:1fr !important; gap:10px; }
+    .check-item { font-size:13px; padding:10px 0; align-items:flex-start; }
+    .check-item input[type=checkbox] { width:17px; height:17px; flex-shrink:0; margin-top:2px; }
 
     /* Snack form */
     .snack-form-grid { grid-template-columns:1fr 1fr !important; }
@@ -1401,16 +1410,17 @@ async function submitSnackRequest() {
   const item = document.getElementById('snackItem').value.trim();
   const category = document.getElementById('snackCategory').value;
   const msg = document.getElementById('snackMsg');
-  if (!name) { msg.textContent = '이름을 입력해주세요.'; return; }
-  if (!item) { msg.textContent = '원하는 간식/음료를 입력해주세요.'; return; }
+  if (!name) { msg.style.color='var(--red)'; msg.textContent = '이름을 입력해주세요.'; return; }
+  if (!item) { msg.style.color='var(--red)'; msg.textContent = '원하는 간식/음료를 입력해주세요.'; return; }
   msg.style.color = 'var(--text-muted)';
   msg.textContent = '저장 중...';
   try {
-    await sbFetch('snack_requests', {
+    const res = await fetch(SUPA_URL+'/rest/v1/snack_requests', {
       method: 'POST',
-      body: JSON.stringify({ leader_name: name, item, category }),
-      headers: { ...HEADERS, 'Prefer': 'return=minimal' }
+      headers: { ...HEADERS, 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ leader_name: name, item, category })
     });
+    if (!res.ok) throw new Error(await res.text());
     document.getElementById('snackItem').value = '';
     msg.style.color = '#3d9e72';
     msg.textContent = '✓ 요청이 등록됐어요!';
