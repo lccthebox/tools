@@ -401,6 +401,7 @@
   body.lang-en span.en { display:inline; }
   body.lang-en span.ko { display:none; }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 <body>
 
@@ -1155,26 +1156,11 @@
 
 <script>
 // ── Supabase config ──────────────────────────────────────────
-const SUPA_URL = '/supabase';
+const SUPA_URL = 'https://jlnncawfhcktayoikebo.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impsbm5jYXdmaGNrdGF5b2lrZWJvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4MDk2NjMsImV4cCI6MjA4OTM4NTY2M30.0hsGhEkwYkwKt5oQ9rZXy5U8yRBi2MWCeTgzBHb9fvc';
-const HEADERS  = {
-  'Content-Type': 'application/json',
-  'apikey': SUPA_KEY,
-  'Authorization': 'Bearer ' + SUPA_KEY,
-  'Accept': 'application/json'
-};
 const DEL_PW = 'thebox123';
-
-async function sbFetch(path, opts={}) {
-  const { headers: extraHeaders, ...restOpts } = opts;
-  const url = SUPA_URL + '/rest/v1/' + path;
-  const res = await fetch(url, {
-    headers: { ...HEADERS, ...(extraHeaders||{}) },
-    ...restOpts
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res.status===204 ? null : res.json();
-}
+const { createClient } = supabase;
+const db = createClient(SUPA_URL, SUPA_KEY);
 
 // ── Lang / tabs / activities ──────────────────────────────────
 function setLang(lang) {
@@ -1225,13 +1211,16 @@ function setSyncStatus(state) {
 async function loadEvents() {
   setSyncStatus('loading');
   try {
-    const data = await sbFetch(
-      `schedule_events?select=id,date_key,text,type,author,event_time&date_key=like.${currentYear}-${currentMonth}-%&order=created_at.asc`
-    );
+    const { data, error } = await db
+      .from('schedule_events')
+      .select('id,date_key,text,type,author,event_time')
+      .like('date_key', `${currentYear}-${currentMonth}-%`)
+      .order('created_at', { ascending: true });
+    if (error) throw error;
     calEvents = {};
     data.forEach(row => {
-      if (!calEvents[row.date_key]) calEvents[row.date_key]=[];
-      calEvents[row.date_key].push({id:row.id,text:row.text,type:row.type,author:row.author,event_time:row.event_time});
+      if (!calEvents[row.date_key]) calEvents[row.date_key] = [];
+      calEvents[row.date_key].push({ id:row.id, text:row.text, type:row.type, author:row.author, event_time:row.event_time });
     });
     setSyncStatus('ok');
   } catch(e) {
@@ -1315,11 +1304,11 @@ async function saveEvent(){
   setSyncStatus('saving');
   closeModal();
   try{
-    const data=await sbFetch('schedule_events',{
-      method:'POST',
-      body:JSON.stringify({date_key:key,text,type,author,event_time}),
-      headers:{...HEADERS,'Prefer':'return=representation'}
-    });
+    const { data, error } = await db
+      .from('schedule_events')
+      .insert({ date_key:key, text, type, author, event_time })
+      .select();
+    if (error) throw error;
     if(!calEvents[key])calEvents[key]=[];
     calEvents[key].push({id:data[0].id,text:data[0].text,type:data[0].type,author:data[0].author,event_time:data[0].event_time});
     renderCalendar();setSyncStatus('ok');
@@ -1351,7 +1340,8 @@ async function confirmDelete(){
   closeDeleteModal();
   setSyncStatus('saving');
   try{
-    await sbFetch(`schedule_events?id=eq.${id}`,{method:'DELETE'});
+    const { error } = await db.from('schedule_events').delete().eq('id', id);
+    if (error) throw error;
     calEvents[key]=calEvents[key].filter(e=>e.id!==id);
     if(calEvents[key].length===0)delete calEvents[key];
     renderCalendar();setSyncStatus('ok');
@@ -1387,10 +1377,14 @@ async function loadSnackRequests() {
   if (!dot || !list) return;
   dot.style.background = '#f0a500';
   try {
-    const data = await sbFetch('snack_requests?select=id,leader_name,item,category,created_at&order=created_at.desc');
+    const { data, error } = await db
+      .from('snack_requests')
+      .select('id,leader_name,item,category,created_at')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
     dot.style.background = '#3d9e72';
     if (data.length === 0) {
-      list.innerHTML = '<div style="font-size:13px;color:var(--text-muted);padding:20px 0;text-align:center" class="ko">아직 요청이 없어요</div><div style="font-size:13px;color:var(--text-muted);padding:20px 0;text-align:center" class="en">No requests yet</div>';
+      list.innerHTML = '<div style="font-size:13px;color:var(--text-muted);padding:20px 0;text-align:center">아직 요청이 없어요</div>';
       return;
     }
     const catLabel = { snack:'간식', drink:'음료', etc:'기타' };
@@ -1402,10 +1396,11 @@ async function loadSnackRequests() {
           <span style="font-size:13px;font-weight:600;color:var(--dark)">${r.item}</span>
           <span style="font-size:11.5px;color:var(--text-muted)">${r.leader_name}</span>
         </div>
-        <button onclick="deleteSnackRequest('${r.id}')" style="background:none;border:none;cursor:pointer;color:#ccc;font-size:14px;padding:2px 4px" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='#ccc'">×</button>
+        <button onclick="deleteSnackRequest('${r.id}')" style="background:none;border:none;cursor:pointer;color:#ccc;font-size:16px;padding:2px 6px" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='#ccc'">×</button>
       </div>
     `).join('');
   } catch(e) {
+    console.error(e);
     dot.style.background = 'var(--red)';
   }
 }
@@ -1415,26 +1410,19 @@ async function submitSnackRequest() {
   const item = document.getElementById('snackItem').value.trim();
   const category = document.getElementById('snackCategory').value;
   const msg = document.getElementById('snackMsg');
-  if (!name) { msg.style.color='var(--red)'; msg.textContent = '이름을 입력해주세요.'; return; }
-  if (!item) { msg.style.color='var(--red)'; msg.textContent = '원하는 간식/음료를 입력해주세요.'; return; }
-  msg.style.color = 'var(--text-muted)';
-  msg.textContent = '저장 중...';
+  if (!name) { msg.style.color='var(--red)'; msg.textContent='이름을 입력해주세요.'; return; }
+  if (!item) { msg.style.color='var(--red)'; msg.textContent='원하는 간식/음료를 입력해주세요.'; return; }
+  msg.style.color='var(--text-muted)'; msg.textContent='저장 중...';
   try {
-    const res = await fetch(SUPA_URL+'/rest/v1/snack_requests', {
-      method: 'POST',
-      headers: { ...HEADERS, 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ leader_name: name, item, category })
-    });
-    if (!res.ok) throw new Error(await res.text());
-    document.getElementById('snackItem').value = '';
-    msg.style.color = '#3d9e72';
-    msg.textContent = '✓ 요청이 등록됐어요!';
-    setTimeout(() => { msg.textContent = ''; }, 2500);
+    const { error } = await db.from('snack_requests').insert({ leader_name:name, item, category });
+    if (error) throw error;
+    document.getElementById('snackItem').value='';
+    msg.style.color='#3d9e72'; msg.textContent='✓ 요청이 등록됐어요!';
+    setTimeout(()=>{ msg.textContent=''; }, 2500);
     await loadSnackRequests();
   } catch(e) {
     console.error(e);
-    msg.style.color = 'var(--red)';
-    msg.textContent = '오류가 발생했어요. 다시 시도해주세요.';
+    msg.style.color='var(--red)'; msg.textContent='오류가 발생했어요. 다시 시도해주세요.';
   }
 }
 
@@ -1442,7 +1430,8 @@ async function deleteSnackRequest(id) {
   const pw = prompt('비밀번호를 입력하세요');
   if (pw !== DEL_PW) { alert('비밀번호가 틀렸어요.'); return; }
   try {
-    await sbFetch(`snack_requests?id=eq.${id}`, { method: 'DELETE' });
+    const { error } = await db.from('snack_requests').delete().eq('id', id);
+    if (error) throw error;
     loadSnackRequests();
   } catch(e) { alert('삭제 중 오류가 발생했어요.'); }
 }
