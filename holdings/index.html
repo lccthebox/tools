@@ -555,11 +555,20 @@ body {
 .print-hdr { display: none; margin-bottom: 14px; }
 .print-hdr h2 { font-size: 16px; font-weight: 900; }
 .print-hdr p  { font-size: 12px; color: #666; margin-top: 3px; }
+
+/* ── 토스트 알림 ── */
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+  background: #111; color: #fff; padding: 10px 20px; border-radius: 999px;
+  font-size: 13px; font-weight: 600; z-index: 9999;
+  opacity: 0; transition: all 0.3s ease; white-space: nowrap;
+  box-shadow: 0 4px 16px rgba(0,0,0,.25);
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 </style>
 </head>
 <body>
-
-<div class="hdr">
+<div class="toast" id="toastEl"></div>
   <div class="hdr-inner">
     <div class="logo">더박스<small>운영 도구</small></div>
     <div class="tab-btns">
@@ -1598,7 +1607,7 @@ function renderStats(){
   document.getElementById('stAll').textContent = '전체 ' + all + '명';
 }
 
-function renderAll(){ renderPool(); renderGroups(); renderStats(); }
+function renderAll(){ renderPool(); renderGroups(); renderStats(); saveState(); }
 
 /* ── 자동 배치 ── */
 document.getElementById('btnAuto').addEventListener('click',()=>{
@@ -1614,8 +1623,11 @@ document.getElementById('btnAuto').addEventListener('click',()=>{
 
 /* ── 초기화 ── */
 document.getElementById('btnReset').addEventListener('click',()=>{
-  if(!confirm('전체 초기화할까요?')) return;
-  members=[]; groups=[]; idSeq=1; renderAll();
+  if(!confirm('전체 초기화할까요? 저장된 데이터도 삭제됩니다.')) return;
+  members=[]; groups=[]; idSeq=1;
+  try { localStorage.removeItem(SAVE_KEY); } catch(e) {}
+  generateGroups(); renderAll();
+  showToast('↺ 초기화 완료');
 });
 
 /* ═══════════════════════════════════════
@@ -2329,27 +2341,50 @@ function printBoard() {
   })();
 
   const gc = groups.length;
-  // A3 가로 273mm 사용, 제목50+헤더18 = 68, 나머지 205mm / 반 수
-  const rowPct = Math.floor(205 / gc);
+
+  // A3 landscape 실사용 높이: 297mm - margin 20mm = 277mm
+  // 제목행: ~42mm, 헤더행: ~14mm → 데이터 영역: 221mm
+  const dataAreaMm = 221;
+  const rowHeightMm = Math.floor(dataAreaMm / gc);
+
+  // 행 수에 따라 글자 크기 유동 계산
+  // 기준: 3행 → 리더 38pt / 멤버 34pt,  8행 → 리더 18pt / 멤버 16pt
+  // 선형 보간으로 부드럽게 조절
+  const clamp = (v, mn, mx) => Math.min(Math.max(v, mn), mx);
+  const leaderPt = clamp(Math.round(38 - (gc - 3) * 3.2), 14, 42);
+  const memPt    = clamp(Math.round(34 - (gc - 3) * 2.8), 12, 38);
+  const locPt    = clamp(Math.round(leaderPt * 0.78), 11, 32);
+  const badgePt  = clamp(Math.round(memPt * 0.55), 8, 18);
+  const headerPt = clamp(Math.round(12 - (gc - 3) * 0.4), 9, 14);
+  const titlePt  = clamp(Math.round(30 - (gc - 3) * 0.8), 20, 34);
 
   let rows = '';
-  groups.forEach((g, i) => {
-    const tableLabel = g.tableIds && g.tableIds.length ? g.tableIds.join(' ') : '—';
+  groups.forEach((g) => {
     const leaderName = cleanName(g.name);
-    const bg = '#ffffff';
+
+    // 테이블 배지 - Room A/B/Lobby 색상 구분
+    let tableCellHtml = '—';
+    if (g.tableIds && g.tableIds.length) {
+      tableCellHtml = g.tableIds.map(tid => {
+        const t = TABLES.find(x => x.id === tid);
+        if (!t) return tid;
+        const color = t.room==='A' ? '#2040A0' : t.room==='B' ? '#1A6A40' : '#A05010';
+        return `<span style="display:inline-block;background:${color};color:#fff;font-weight:900;font-size:${locPt}pt;padding:3px 12px;border-radius:7px;margin:2px;">${t.label}</span>`;
+      }).join(' ');
+    }
 
     const memberHtml = g.koreans.map(k => {
       const fn = firstNameOnly(k.name);
-      const nb = k.isNew    ? '<sup style="background:#F0A800;color:#fff;font-size:8pt;font-weight:900;padding:1px 6px;border-radius:3px;margin-left:4px;">NEW</sup>' : '';
-      const rb = k.isReturn ? '<sup style="background:#22A06B;color:#fff;font-size:8pt;font-weight:900;padding:1px 6px;border-radius:3px;margin-left:4px;">복귀</sup>' : '';
+      const nb = k.isNew    ? `<sup style="background:#F0A800;color:#fff;font-size:${badgePt}pt;font-weight:900;padding:1px 5px;border-radius:3px;margin-left:3px;">NEW</sup>` : '';
+      const rb = k.isReturn ? `<sup style="background:#22A06B;color:#fff;font-size:${badgePt}pt;font-weight:900;padding:1px 5px;border-radius:3px;margin-left:3px;">복귀</sup>` : '';
       return '<span style="white-space:nowrap">'+fn+nb+rb+'</span>';
-    }).join('<span style="color:#CCC;margin:0 10px;font-weight:300"> / </span>');
+    }).join('<span style="color:#CCC;margin:0 8px;font-weight:300"> / </span>');
 
-    rows += '<tr style="background:'+bg+';height:'+rowPct+'mm;">'
-      +'<td class="c-leader">'+leaderName+'</td>'
-      +'<td class="c-loc">'+tableLabel+'</td>'
-      +'<td class="c-mem">'+(memberHtml||'<span style="color:#CCC">—</span>')+'</td>'
-      +'</tr>';
+    rows += `<tr style="background:#ffffff;height:${rowHeightMm}mm;">`
+      +`<td class="c-leader" style="font-size:${leaderPt}pt;">${leaderName}</td>`
+      +`<td class="c-loc">${tableCellHtml}</td>`
+      +`<td class="c-mem" style="font-size:${memPt}pt;">${memberHtml||'<span style="color:#CCC">—</span>'}</td>`
+      +`</tr>`;
   });
 
   const html = `<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><title>게시판</title>
@@ -2359,7 +2394,6 @@ function printBoard() {
 html, body { font-family:'Noto Sans KR',Arial,sans-serif; background:#fff; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
 @page { size:A3 landscape; margin:10mm; }
 
-/* 전체를 273mm 안에 강제 */
 .wrap {
   width:100%;
   height:277mm;
@@ -2372,13 +2406,13 @@ html, body { font-family:'Noto Sans KR',Arial,sans-serif; background:#fff; -webk
   display:flex;
   align-items:flex-end;
   justify-content:space-between;
-  padding-bottom:8px;
+  padding-bottom:6px;
   border-bottom:4px solid #111;
-  margin-bottom:6px;
+  margin-bottom:5px;
   flex-shrink:0;
 }
-.title { font-size:30pt; font-weight:900; color:#111; line-height:1; }
-.date  { font-size:13pt; font-weight:700; color:#888; }
+.title { font-size:${titlePt}pt; font-weight:900; color:#111; line-height:1; }
+.date  { font-size:${Math.round(titlePt*0.42)}pt; font-weight:700; color:#888; }
 
 table {
   width:100%;
@@ -2389,43 +2423,38 @@ table {
 thead tr { background:#215E99; }
 thead th {
   color:#fff;
-  font-size:12pt;
+  font-size:${headerPt}pt;
   font-weight:900;
-  padding:8px 16px;
+  padding:6px 14px;
   text-align:center;
   border:2px solid #215E99;
-  height:16mm;
+  height:14mm;
 }
 .th-l   { width:15%; }
-.th-loc { width:12%; }
-.th-m   { width:73%; text-align:left; padding-left:20px; }
+.th-loc { width:13%; }
+.th-m   { width:72%; text-align:left; padding-left:18px; }
 
-/* 데이터 셀 - height는 tr에 설정, td는 vertical-align만 */
 td {
   vertical-align:middle;
   border:1.5px solid #DCE8FF;
   overflow:hidden;
 }
 .c-leader {
-  font-size:28pt;
   font-weight:900;
   color:#111;
   text-align:center;
-  padding:6px 10px;
+  padding:4px 8px;
 }
 .c-loc {
-  font-size:22pt;
   font-weight:800;
   color:#CC0000;
   text-align:center;
-  padding:6px 10px;
-  letter-spacing:0.05em;
+  padding:4px 8px;
 }
 .c-mem {
-  font-size:28pt;
   font-weight:700;
   color:#111;
-  padding:6px 20px;
+  padding:4px 16px;
   line-height:1.3;
 }
 </style></head>
@@ -2447,12 +2476,86 @@ td {
   openPrintWindow(html);
 }
 
+/* ── 토스트 ── */
+let _toastTimer = null;
+function showToast(msg, duration=2800) {
+  const el = document.getElementById('toastEl');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), duration);
+}
+
+/* ══════════════════════════════════════
+   자동저장 / 불러오기 (localStorage)
+   키: thebox_grouping_state
+══════════════════════════════════════ */
+const SAVE_KEY = 'thebox_grouping_state';
+
+function saveState() {
+  if (typeof SAVE_KEY === 'undefined') return;
+  try {
+    const state = {
+      members,
+      groups,
+      idSeq,
+      presetDay,
+      presetTime,
+      savedAt: Date.now()
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+  } catch(e) { /* 저장 실패 시 무시 */ }
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return false;
+    const state = JSON.parse(raw);
+    // 24시간 지난 데이터는 무시
+    if (Date.now() - state.savedAt > 24 * 60 * 60 * 1000) {
+      localStorage.removeItem(SAVE_KEY);
+      return false;
+    }
+    members  = state.members  || [];
+    groups   = state.groups   || [];
+    idSeq    = state.idSeq    || (members.length + groups.length + 10);
+    presetDay  = state.presetDay  || null;
+    presetTime = state.presetTime || null;
+    return true;
+  } catch(e) { return false; }
+}
+
 (function(){
   const now=new Date(), days=['일','월','화','수','목','금','토'], kor=days[now.getDay()];
   document.getElementById('holdingDayPill').textContent=kor+'요일';
   document.getElementById('printTitle').textContent='더박스 — '+kor+'요일 반 편성표';
   document.getElementById('printDate').textContent=now.getFullYear()+'년 '+(now.getMonth()+1)+'월 '+now.getDate()+'일';
-  generateGroups(); renderAll();
+
+  const restored = loadState();
+  const hasData = restored && (members.length > 0 || groups.some(g => g.koreans.length > 0 || g.memberIds.length > 0));
+
+  if (!hasData) {
+    generateGroups();
+  }
+  renderAll();
+
+  // 저장된 요일/시간대 UI 복원
+  if (hasData) {
+    if (presetDay) {
+      document.querySelectorAll('[data-pday]').forEach(b => {
+        b.classList.toggle('sel-native', b.dataset.pday === presetDay);
+      });
+    }
+    if (presetTime) {
+      document.querySelectorAll('[data-ptime]').forEach(b => {
+        b.classList.toggle('sel-native', b.dataset.ptime === presetTime);
+      });
+    }
+    updatePresetPreview();
+    showToast('💾 이전 편성 데이터를 불러왔습니다.');
+  }
+
   hInitDayTabs(kor);
 })();
 </script>
