@@ -1161,12 +1161,18 @@ const HEADERS  = {
   'Content-Type': 'application/json',
   'apikey': SUPA_KEY,
   'Authorization': 'Bearer ' + SUPA_KEY,
-  'Accept': 'application/json'
+  'Accept': 'application/json',
+  'X-Client-Info': 'supabase-js/2.0.0'
 };
 const DEL_PW   = 'thebox123';
 
 async function sbFetch(path, opts={}) {
-  const res = await fetch(SUPA_URL+'/rest/v1/'+path, { headers:HEADERS, ...opts });
+  const { headers: extraHeaders, ...restOpts } = opts;
+  const res = await fetch(SUPA_URL+'/rest/v1/'+path, {
+    headers: { ...HEADERS, ...(extraHeaders||{}) },
+    mode: 'cors',
+    ...restOpts
+  });
   if (!res.ok) throw new Error(await res.text());
   return res.status===204 ? null : res.json();
 }
