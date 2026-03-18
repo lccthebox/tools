@@ -1155,21 +1155,21 @@
 
 <script>
 // ── Supabase config ──────────────────────────────────────────
-const SUPA_URL = 'https://jlnncawfhcktayoikebo.supabase.co';
-const SUPA_KEY = 'sb_publishable_SAtTcJfaFY1gjowiTJuBSQ_0N4MX97N';
+const SUPA_URL = '/supabase';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impsbm5jYXdmaGNrdGF5b2lrZWJvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4MDk2NjMsImV4cCI6MjA4OTM4NTY2M30.0hsGhEkwYkwKt5oQ9rZXy5U8yRBi2MWCeTgzBHb9fvc';
 const HEADERS  = {
   'Content-Type': 'application/json',
   'apikey': SUPA_KEY,
   'Authorization': 'Bearer ' + SUPA_KEY,
   'Accept': 'application/json'
 };
-const DEL_PW   = 'thebox123';
+const DEL_PW = 'thebox123';
 
 async function sbFetch(path, opts={}) {
   const { headers: extraHeaders, ...restOpts } = opts;
-  const res = await fetch(SUPA_URL+'/rest/v1/'+path, {
+  const url = SUPA_URL + '/rest/v1/' + path;
+  const res = await fetch(url, {
     headers: { ...HEADERS, ...(extraHeaders||{}) },
-    mode: 'cors',
     ...restOpts
   });
   if (!res.ok) throw new Error(await res.text());
