@@ -3,40 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Box AI Master 2026 v4.0</title>
+    <title>The Box AI Master v5.0 - Error Fix</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         :root { --thebox-orange: #ff6b35; --naver-green: #03C75A; --bg: #f8f9fa; }
-        body { font-family: 'Pretendard', -apple-system, sans-serif; background: var(--bg); margin: 0; display: flex; height: 100vh; color: #333; }
-        
-        /* Sidebar */
-        .sidebar { width: 360px; background: white; border-right: 1px solid #eee; padding: 30px 20px; display: flex; flex-direction: column; box-shadow: 10px 0 30px rgba(0,0,0,0.02); overflow-y: auto; }
-        .logo { font-size: 1.6rem; font-weight: 900; color: var(--thebox-orange); letter-spacing: -1.5px; margin-bottom: 25px; }
-        
+        body { font-family: 'Pretendard', sans-serif; background: var(--bg); margin: 0; display: flex; height: 100vh; color: #333; }
+        .sidebar { width: 360px; background: white; border-right: 1px solid #eee; padding: 30px 20px; display: flex; flex-direction: column; overflow-y: auto; }
+        .logo { font-size: 1.6rem; font-weight: 900; color: var(--thebox-orange); margin-bottom: 25px; }
         .tab-container { display: flex; gap: 8px; margin-bottom: 25px; background: #f0f0f0; padding: 5px; border-radius: 12px; }
-        .tab { flex: 1; text-align: center; padding: 12px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 700; color: #888; transition: 0.3s; }
+        .tab { flex: 1; text-align: center; padding: 12px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 700; color: #888; }
         .tab.active { background: white; color: var(--thebox-orange); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-        
-        /* Idea Bank Area */
         .idea-bank { background: #fff9f5; border: 1.5px solid #ffe8d9; border-radius: 15px; padding: 15px; margin-bottom: 20px; }
-        .idea-bank h4 { margin: 0 0 10px 0; font-size: 0.9rem; color: var(--thebox-orange); display: flex; align-items: center; gap: 5px; }
-        .btn-idea { width: 100%; padding: 10px; background: white; border: 1px solid #ffe8d9; border-radius: 8px; color: #666; font-size: 0.85rem; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        .btn-idea:hover { background: var(--thebox-orange); color: white; }
+        .btn-idea { width: 100%; padding: 10px; background: white; border: 1px solid #ffe8d9; border-radius: 8px; font-weight: bold; cursor: pointer; }
         #ideaList { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
-        .idea-tag { background: white; border: 1px solid #eee; padding: 6px 10px; border-radius: 6px; font-size: 0.75rem; cursor: pointer; transition: 0.2s; color: #555; }
-        .idea-tag:hover { border-color: var(--thebox-orange); color: var(--thebox-orange); }
-
+        .idea-tag { background: white; border: 1px solid #eee; padding: 6px 10px; border-radius: 6px; font-size: 0.75rem; cursor: pointer; }
         .input-group { margin-bottom: 20px; }
-        label { display: block; font-size: 0.85rem; font-weight: 800; margin-bottom: 8px; color: #444; }
         input { width: 100%; padding: 14px; border: 2px solid #eee; border-radius: 12px; font-size: 0.95rem; box-sizing: border-box; }
-        
         .btn-run { width: 100%; padding: 18px; background: var(--thebox-orange); color: white; border: none; border-radius: 12px; font-weight: 800; font-size: 1.1rem; cursor: pointer; }
-        
-        /* Main Content */
         .main-content { flex: 1; padding: 40px; overflow-y: auto; background: #fff; }
-        .card { background: white; padding: 35px; border-radius: 25px; border: 1px solid #f0f0f0; box-shadow: 0 10px 40px rgba(0,0,0,0.02); margin-bottom: 25px; }
-        #editor { min-height: 800px; line-height: 2.1; font-size: 1.15rem; outline: none; white-space: pre-wrap; word-break: break-all; }
-        #status { font-size: 0.85rem; padding: 15px; border-radius: 10px; margin-top: 20px; display: none; }
+        .card { background: white; padding: 35px; border-radius: 25px; border: 1px solid #f0f0f0; box-shadow: 0 10px 40px rgba(0,0,0,0.02); }
+        #editor { min-height: 700px; line-height: 2.1; font-size: 1.15rem; outline: none; white-space: pre-wrap; }
+        /* 에러 메시지 스타일 */
+        #status { font-size: 0.85rem; padding: 15px; border-radius: 10px; margin-top: 20px; white-space: pre-wrap; word-break: break-all; display: none; }
         .img-slot { background: #f9fafc; border: 1.5px dashed #e0e0e0; padding: 40px; text-align: center; color: #888; margin: 30px 0; border-radius: 20px; }
     </style>
 </head>
@@ -44,88 +32,92 @@
 
 <div class="sidebar">
     <div class="logo">📦 THE BOX AI</div>
-    
     <div class="tab-container">
         <div class="tab active" id="tabTheBox" onclick="switchTab('thebox')">더박스 모드</div>
         <div class="tab" id="tabGeneral" onclick="switchTab('general')">자유 키워드</div>
     </div>
 
     <div class="idea-bank">
-        <h4><i class="fa-solid fa-lightbulb"></i> 아이디어 뱅크</h4>
+        <h4>💡 아이디어 뱅크</h4>
         <button class="btn-idea" onclick="getKeywords()">✨ 오늘의 꿀키워드 추천받기</button>
-        <div id="ideaList">
-            <span style="font-size: 0.7rem; color: #aaa;">추천 버튼을 누르면 황금 키워드가 나타납니다.</span>
-        </div>
+        <div id="ideaList"></div>
     </div>
 
     <div class="input-group">
-        <label id="kwLabel">타겟 키워드 입력</label>
-        <input type="text" id="targetKeyword" placeholder="예: 대구 동성로 맛집 추천">
+        <label>타겟 키워드</label>
+        <input type="text" id="targetKeyword" placeholder="키워드를 입력하세요">
     </div>
 
-    <button id="mainBtn" class="btn-run" onclick="generateContent()">리얼 원고 생성 시작</button>
+    <button id="mainBtn" class="btn-run" onclick="generateContent()">원고 생성 시작</button>
+    
     <div id="status"></div>
 </div>
 
 <div class="main-content">
     <div class="card">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 25px; border-bottom: 1px solid #eee; padding-bottom: 15px;">
-            <h3 id="editorTitle">✍️ 리얼 원고 미리보기</h3>
-            <button onclick="copyDraft()" style="background:#222; color:white; border:none; padding:12px 24px; border-radius:12px; cursor:pointer; font-weight:800; font-size:0.95rem;">원고 전체 복사</button>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 25px;">
+            <h3>✍️ 리얼 원고 미리보기</h3>
+            <button onclick="copyDraft()" style="background:#222; color:white; border:none; padding:10px 20px; border-radius:10px; cursor:pointer;">복사하기</button>
         </div>
-        <div id="editor" contenteditable="true">키워드를 선택하거나 입력한 뒤 생성 버튼을 눌러주세요.</div>
+        <div id="editor" contenteditable="true">키워드를 입력하고 생성을 눌러주세요.</div>
     </div>
 </div>
 
 <script>
+    // 사용자님이 주신 키 (다시 한번 확인해 주세요!)
     const API_KEY = "AIzaSyD031G9zn3-zn3yAX0c7yFjhHwM5tyrenM";
-    const MODEL_NAME = "gemini-1.5-flash"; // 가장 안정적인 모델명으로 복구
+    
+    // 2026년 기준 모델명 후보들입니다. (첫 번째가 안되면 두 번째로 자동 시도함)
+    const MODELS = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-pro"];
     let currentMode = 'thebox';
 
     function switchTab(mode) {
         currentMode = mode;
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        const btn = document.getElementById('mainBtn');
-        if(mode === 'thebox') {
-            document.getElementById('tabTheBox').classList.add('active');
-            btn.style.background = "#ff6b35";
-            btn.innerText = "더박스 원고 생성";
-        } else {
-            document.getElementById('tabGeneral').classList.add('active');
-            btn.style.background = "#03C75A";
-            btn.innerText = "자유 원고 생성";
-        }
+        document.getElementById(mode === 'thebox' ? 'tabTheBox' : 'tabGeneral').classList.add('active');
+        document.getElementById('mainBtn').style.background = mode === 'thebox' ? "#ff6b35" : "#03C75A";
     }
 
-    // [추가] 키워드 추천 기능
+    // 공통 호출 함수 (에러 핸들링 강화)
+    async function callGemini(prompt) {
+        for (let model of MODELS) {
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${API_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+                const data = await response.json();
+                
+                if (data.error) {
+                    console.error(`Model ${model} failed:`, data.error.message);
+                    continue; // 다음 모델로 시도
+                }
+                return data.candidates[0].content.parts[0].text;
+            } catch (e) {
+                console.error(`Model ${model} fetch error:`, e);
+            }
+        }
+        throw new Error("모든 모델 호출에 실패했습니다. API 키가 만료되었거나 권한이 없을 수 있습니다.");
+    }
+
     async function getKeywords() {
         const ideaList = document.getElementById('ideaList');
-        ideaList.innerHTML = "<span style='font-size:0.7rem; color:#ff6b35;'>실시간 트렌드 분석 중...</span>";
-
-        const prompt = `2026년 3월 한국 트렌드를 반영해서, 네이버 블로그에 썼을 때 유입량이 많을 만한 '블루오션 키워드' 8개를 추천해줘. 
-        생활정보, 대구 지역 정보, 자기계발, 2030 관심사 위주로. 
-        각 키워드는 콤마(,)로만 구분해서 딱 단어만 보내줘.`;
-
+        ideaList.innerHTML = "분석 중...";
         try {
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-            });
-            const data = await response.json();
-            const text = data.candidates[0].content.parts[0].text;
-            const keywords = text.split(',');
-
+            const prompt = "2026년 3월 한국 트렌드 반영, 네이버 블로그용 블루오션 키워드 8개 추천해줘. 콤마로만 구분해.";
+            const res = await callGemini(prompt);
+            const kws = res.split(',');
             ideaList.innerHTML = "";
-            keywords.forEach(kw => {
-                const span = document.createElement('span');
-                span.className = 'idea-tag';
-                span.innerText = kw.trim();
-                span.onclick = () => { document.getElementById('targetKeyword').value = kw.trim(); };
-                ideaList.appendChild(span);
+            kws.forEach(k => {
+                const s = document.createElement('span');
+                s.className = 'idea-tag';
+                s.innerText = k.trim();
+                s.onclick = () => document.getElementById('targetKeyword').value = k.trim();
+                ideaList.appendChild(s);
             });
         } catch (e) {
-            ideaList.innerHTML = "<span style='color:red; font-size:0.7rem;'>키워드 로드 실패</span>";
+            ideaList.innerHTML = "로드 실패: " + e.message;
         }
     }
 
@@ -134,39 +126,30 @@
         const status = document.getElementById('status');
         const editor = document.getElementById('editor');
 
-        if(!kw) return alert('키워드를 입력하거나 추천 태그를 클릭해 주세요!');
+        if(!kw) return alert('키워드를 입력해 주세요!');
 
         status.style.display = 'block';
         status.style.background = '#f0f7ff';
         status.style.color = '#0056b3';
-        status.innerHTML = "🌀 2026 최신 로직 반영 중... (광고 티 제거 중)";
+        status.innerHTML = "🌀 2026 로직 분석 및 원고 생성 중...";
 
-        const systemPrompt = currentMode === 'thebox' 
-            ? `너는 대구 '더박스' 영어회화 커뮤니티의 찐팬이야. [${kw}] 키워드를 활용해서 '내돈내산' 느낌의 정성스러운 후기를 써줘. 동성로 위치, 원어민 리더와의 대화 분위기를 강조하되 광고 말투(~하셨나요?)는 절대 금지! 2030 감성으로 친근하게.`
-            : `너는 2030 파워블로거야. [${kw}] 키워드로 광고 느낌 싹 뺀 리얼한 정보를 담은 포스팅을 써줘.`;
-
-        const fullPrompt = `${systemPrompt}\n\n1. 제목 3개 추천\n2. 본문(공백 제외 1,800자 이상, [사진: 장면 설명] 6개 이상, 정보 요약 표 포함)\n3. 댓글 유도 마무리.\n###원고 구분자 뒤에 작성해줘.`;
+        const prompt = currentMode === 'thebox'
+            ? `너는 대구 '더박스' 영어회화 커뮤니티의 찐팬이야. [${kw}] 키워드로 '내돈내산' 후기 1,800자 써줘. 구어체 사용, 광고 말투 금지. ###원고 구분자 뒤에 작성해.`
+            : `2030 파워블로거 말투로 [${kw}] 리얼 후기 1,800자 써줘. ###원고 구분자 뒤에 작성해.`;
 
         try {
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contents: [{ parts: [{ text: fullPrompt }] }] })
-            });
-
-            const data = await response.json();
-            const text = data.candidates[0].content.parts[0].text;
-            const content = text.split('###원고')[1] || text;
-
+            const res = await callGemini(prompt);
+            const content = res.split('###원고')[1] || res;
             let formatted = content.trim().replace(/\n/g, '<br>');
             formatted = formatted.replace(/\[사진:.*?\]/g, m => `<div class="img-slot"><i class="fa-regular fa-image"></i><br>${m}</div>`);
-            
             editor.innerHTML = formatted;
-            status.innerHTML = "✅ 원고 생성 완료!";
             status.style.background = '#f6ffed';
             status.style.color = '#389e0d';
-        } catch (error) {
-            status.innerHTML = `❌ 에러: ${error.message}`;
+            status.innerHTML = "✅ 생성 완료!";
+        } catch (e) {
+            status.style.background = '#fff1f0';
+            status.style.color = '#cf1322';
+            status.innerHTML = "❌ 에러: " + e.message;
         }
     }
 
@@ -177,9 +160,8 @@
         window.getSelection().removeAllRanges();
         window.getSelection().addRange(range);
         document.execCommand('copy');
-        alert('복사되었습니다! ✨');
+        alert('복사되었습니다!');
     }
 </script>
-
 </body>
 </html>
