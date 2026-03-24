@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 블로그 전략가 - Naver Edition</title>
+    <style>
+        :root { --naver-green: #03C75A; --bg-gray: #f5f6f7; }
+        body { font-family: 'Pretendard', sans-serif; background-color: var(--bg-gray); margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; display: grid; grid-template-columns: 1fr 2fr; gap: 20px; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        h2 { color: var(--naver-green); font-size: 1.2rem; margin-top: 0; }
+        input, textarea { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: var(--naver-green); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .keyword-tag { display: inline-block; background: #e8f5e9; color: #2e7d32; padding: 5px 10px; border-radius: 20px; font-size: 0.85rem; margin: 5px; }
+        .status { font-size: 0.9rem; color: #666; margin-top: 10px; }
+        #preview { white-space: pre-wrap; line-height: 1.6; border: 1px solid #eee; padding: 15px; min-height: 400px; }
+    </style>
+</head>
+<body>
+
+    <h1 style="text-align:center; color:#333;">🚀 블로그 포스팅 전략 대시보드</h1>
+
+    <div class="container">
+        <div class="card">
+            <h2>🔍 키워드 분석기</h2>
+            <input type="text" id="targetKeyword" placeholder="메인 키워드를 입력하세요 (예: 제주도 맛집)">
+            <button onclick="analyzeKeyword()">실시간 분석 요청</button>
+            
+            <div id="keywordResults" style="margin-top:20px;">
+                <p class="status">분석을 시작하면 여기에 꿀키워드가 나타납니다.</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>✍️ 최신 로직 반영 초안</h2>
+            <div id="preview" contenteditable="true">
+                이곳에 생성된 블로그 글이 나타납니다. 2026년형 D.I.A+ 로직에 맞춰 구조화된 글이 제공될 예정입니다.
+            </div>
+            <button style="margin-top:10px; background:#444;" onclick="copyText()">원고 복사하기</button>
+        </div>
+    </div>
+
+    <script>
+        function analyzeKeyword() {
+            const kw = document.getElementById('targetKeyword').value;
+            alert('입력하신 [' + kw + '] 키워드를 기반으로 제가 실시간 검색량과 발행량을 대조하여 최적의 조합을 추천해 드릴게요! (채팅창 확인)');
+        }
+        function copyText() {
+            const text = document.getElementById('preview').innerText;
+            navigator.clipboard.writeText(text);
+            alert('원고가 복사되었습니다!');
+        }
+    </script>
+</body>
+</html>
