@@ -613,7 +613,44 @@ body {
   font-family: inherit; transition: all .12s;
 }
 .rec-filter-btn.active { background: #111; border-color: #111; color: #fff; }
-</style>
+.rec-view-btn {
+  padding: 7px 18px; border-radius: 8px; font-size: 13px; font-weight: 700;
+  border: 1.5px solid #E0E0E0; background: #fff; color: #888;
+  cursor: pointer; font-family: inherit; transition: all .12s;
+}
+.rec-view-btn:hover { border-color: #BBB; color: #333; }
+.rec-view-btn.active { background: #111; border-color: #111; color: #fff; }
+
+/* ── 통계 탭 ── */
+.stats-section { margin-bottom: 24px; }
+.stats-section-title {
+  font-size: 13px; font-weight: 800; color: #888;
+  text-transform: uppercase; letter-spacing: .05em;
+  padding: 6px 0; margin-bottom: 8px;
+  border-bottom: 2px solid #111;
+}
+.stats-tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.stats-tbl th {
+  background: #111; color: #fff; font-size: 11px; font-weight: 700;
+  padding: 8px 12px; text-align: center; white-space: nowrap;
+}
+.stats-tbl th:first-child { text-align: left; }
+.stats-tbl td {
+  padding: 8px 12px; border-bottom: 1px solid #F0F0F0;
+  text-align: center; color: #333;
+}
+.stats-tbl td:first-child { text-align: left; font-weight: 700; color: #111; }
+.stats-tbl tr:hover td { background: #FAFAFA; }
+.stats-tbl tr:last-child td { border-bottom: none; }
+.stats-num { font-weight: 700; }
+.stats-num.high { color: #B04020; }
+.stats-num.low  { color: #1A7A50; }
+.stats-avg { color: #888; font-size: 11px; }
+.stats-slot-label {
+  display: inline-block; font-size: 10px; font-weight: 700;
+  background: #F0F0F0; color: #666; padding: 1px 6px;
+  border-radius: 4px; margin-right: 4px;
+}</style>
 </head>
 <body>
 <div class="toast" id="toastEl"></div>
@@ -637,11 +674,7 @@ body {
       <button class="hbtn hi no-print" id="btnHoldingSave">💾 오늘 기록 저장</button>
       <button class="hbtn no-print" id="btnHoldingClear">↺ 오늘 초기화</button>
     </div>
-    <div class="hbtns" id="recordsBtns" style="display:none;">
-      <button class="hbtn no-print" id="btnExportJSON">⬇ JSON 내보내기</button>
-      <button class="hbtn no-print" id="btnImportJSON">⬆ JSON 가져오기</button>
-      <input type="file" id="importFileInput" accept=".json" style="display:none;">
-    </div>
+    <div class="hbtns" id="recordsBtns" style="display:none;"></div>
   </div>
 </div>
 
@@ -962,24 +995,38 @@ body {
 <!-- ═══════════════ 기록 탭 ═══════════════ -->
 <div id="recordsTab" style="display:none;max-width:1100px;margin:0 auto;padding:16px 16px 60px;">
 
-  <!-- 상단 요약 통계 -->
-  <div id="recSummaryBar" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;"></div>
-
-  <!-- 필터 바 -->
-  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
-    <div style="font-size:12px;font-weight:700;color:#888;">슬롯</div>
-    <div id="recSlotFilter" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
-    <div style="flex:1;"></div>
-    <input id="recSearchInp" placeholder="날짜·반 이름 검색…" style="padding:7px 11px;border:1px solid #E0E0E0;border-radius:7px;font-size:12px;font-family:inherit;background:#FAFAFA;color:#111;outline:none;width:180px;">
+  <!-- 뷰 전환 토글 -->
+  <div style="display:flex;gap:6px;margin-bottom:16px;border-bottom:1px solid #F0F0F0;padding-bottom:12px;">
+    <button id="recViewLog" class="rec-view-btn active" onclick="switchRecView('log')">📋 기록</button>
+    <button id="recViewStats" class="rec-view-btn" onclick="switchRecView('stats')">📈 통계</button>
   </div>
 
-  <!-- 기록 리스트 -->
-  <div id="recList"></div>
+  <!-- ── 기록 뷰 ── -->
+  <div id="recViewLogArea">
+    <div id="recSummaryBar" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;"></div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+      <div style="font-size:12px;font-weight:700;color:#888;">슬롯</div>
+      <div id="recSlotFilter" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
+      <div style="flex:1;"></div>
+      <input id="recSearchInp" placeholder="날짜·반 이름 검색…" style="padding:7px 11px;border:1px solid #E0E0E0;border-radius:7px;font-size:12px;font-family:inherit;background:#FAFAFA;color:#111;outline:none;width:180px;">
+    </div>
+    <div id="recList"></div>
+    <div id="recEmpty" style="text-align:center;color:#CCC;font-size:14px;padding:60px 0;display:none;">
+      저장된 기록이 없습니다.<br>
+      <span style="font-size:12px;margin-top:6px;display:block;">홀딩 체크 탭에서 <strong style="color:#888;">💾 오늘 기록 저장</strong>을 눌러주세요.</span>
+    </div>
+  </div>
 
-  <!-- 비어있을 때 -->
-  <div id="recEmpty" style="text-align:center;color:#CCC;font-size:14px;padding:60px 0;display:none;">
-    저장된 기록이 없습니다.<br>
-    <span style="font-size:12px;margin-top:6px;display:block;">홀딩 체크 탭에서 <strong style="color:#888;">💾 오늘 기록 저장</strong>을 눌러주세요.</span>
+  <!-- ── 통계 뷰 ── -->
+  <div id="recViewStatsArea" style="display:none;">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">
+      <div style="font-size:12px;font-weight:700;color:#888;">월 선택</div>
+      <div id="statsMonthFilter" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
+    </div>
+    <div id="statsTable"></div>
+    <div id="statsEmpty" style="text-align:center;color:#CCC;font-size:14px;padding:60px 0;display:none;">
+      저장된 기록이 없습니다.
+    </div>
   </div>
 
 </div><!-- /recordsTab -->
@@ -1905,11 +1952,20 @@ function switchTab(tab) {
   document.getElementById('tabGrouping').classList.toggle('active', tab==='grouping');
   document.getElementById('tabHolding').classList.toggle('active',  tab==='holding');
   document.getElementById('tabRecords').classList.toggle('active',  tab==='records');
-  // 매뉴얼 탭이면 헤더 버튼 영역 모두 숨기기
   document.getElementById('groupingBtns').style.display = tab==='grouping' ? '' : 'none';
   document.getElementById('holdingBtns').style.display  = tab==='holding'  ? '' : 'none';
   document.getElementById('recordsBtns').style.display  = tab==='records'  ? '' : 'none';
   if (tab==='records') renderRecords();
+}
+
+let _recView = 'log';
+function switchRecView(view) {
+  _recView = view;
+  document.getElementById('recViewLog').classList.toggle('active',   view==='log');
+  document.getElementById('recViewStats').classList.toggle('active', view==='stats');
+  document.getElementById('recViewLogArea').style.display   = view==='log'   ? '' : 'none';
+  document.getElementById('recViewStatsArea').style.display = view==='stats' ? '' : 'none';
+  if (view==='stats') renderStats();
 }
 
 /* ── 요일 탭 ── */
@@ -2916,54 +2972,141 @@ function renderRecSummary(recs) {
   `).join('');
 }
 
-/* ── JSON 내보내기 (구글 시트에서 불러와서 파일로 저장) ── */
-document.getElementById('btnExportJSON').addEventListener('click', async () => {
-  showToast('⏳ 불러오는 중…');
-  const recs = await loadRecords();
-  if (!recs.length) { showToast('⚠ 저장된 기록이 없습니다.'); return; }
-  const json = JSON.stringify({ version: 1, exportedAt: Date.now(), records: recs }, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  const now = new Date();
-  a.href = url;
-  a.download = `thebox_records_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-  showToast('⬇ JSON 파일을 내보냈습니다.');
-});
-
-/* ── JSON 가져오기 (파일 → 구글 시트에 업로드) ── */
-document.getElementById('btnImportJSON').addEventListener('click', () => {
-  document.getElementById('importFileInput').click();
-});
-document.getElementById('importFileInput').addEventListener('change', async e => {
-  const file = e.target.files[0]; if (!file) return;
-  const reader = new FileReader();
-  reader.onload = async ev => {
-    try {
-      const data = JSON.parse(ev.target.result);
-      const imported = data.records || (Array.isArray(data) ? data : null);
-      if (!imported) throw new Error('형식 오류');
-      showToast(`⏳ ${imported.length}개 기록 업로드 중…`);
-      for (const rec of imported) {
-        await saveRecordToSheet(rec);
-      }
-      renderRecords();
-      showToast(`✅ ${imported.length}개 기록을 가져왔습니다.`);
-    } catch(err) {
-      alert('파일을 읽을 수 없습니다. 올바른 JSON 파일인지 확인해주세요.');
-    }
-    e.target.value = '';
-  };
-  reader.readAsText(file);
-});
-
 /* ── 기록 탭 검색 ── */
 document.getElementById('recSearchInp').addEventListener('input', () => renderRecords());
 
 /* ── 오늘 기록 저장 버튼 ── */
 document.getElementById('btnHoldingSave').addEventListener('click', saveHoldingRecord);
+
+/* ══════════════════════════════════════
+   📈 통계 탭
+══════════════════════════════════════ */
+let statsMonthSel = 'all';
+
+async function renderStats() {
+  const tblEl   = document.getElementById('statsTable');
+  const emptyEl = document.getElementById('statsEmpty');
+  const filterEl= document.getElementById('statsMonthFilter');
+  tblEl.innerHTML = '<div style="text-align:center;padding:40px;color:#BBB;font-size:13px;">⏳ 불러오는 중…</div>';
+  emptyEl.style.display = 'none';
+
+  const recs = await loadRecords();
+  if (!recs.length) { tblEl.innerHTML=''; emptyEl.style.display=''; return; }
+
+  // 월 목록
+  const months = [...new Set(recs.map(r=>r.dateKey.slice(0,7)))].sort((a,b)=>b.localeCompare(a));
+
+  // 월 필터 버튼
+  filterEl.innerHTML = '';
+  ['all', ...months].forEach(m => {
+    const btn = document.createElement('button');
+    btn.className = 'rec-filter-btn' + (statsMonthSel===m ? ' active' : '');
+    btn.textContent = m === 'all' ? '전체' : m.replace('-', '년 ').replace(/^(\d+년 )0?(\d+)$/, '$1$2월');
+    btn.addEventListener('click', () => { statsMonthSel=m; renderStats(); });
+    filterEl.appendChild(btn);
+  });
+
+  // 필터
+  const filtered = statsMonthSel === 'all' ? recs : recs.filter(r => r.dateKey.startsWith(statsMonthSel));
+
+  // 반별 집계: { "슬롯키|반이름" → { holding:[], attend:[], days:Set } }
+  const classMap = new Map();
+  filtered.forEach(r => {
+    r.classes.forEach(c => {
+      const key = `${r.slotKey}|${c.className}`;
+      if (!classMap.has(key)) classMap.set(key, { slotKey: r.slotKey, slotLabel: r.slotLabel, className: c.className, holdingCounts:[], attendCounts:[], days: new Set() });
+      const entry = classMap.get(key);
+      entry.holdingCounts.push(c.holding ? c.holding.length : 0);
+      entry.attendCounts.push(Number(c.attend)||0);
+      entry.days.add(r.dateKey);
+    });
+  });
+
+  if (!classMap.size) { tblEl.innerHTML=''; emptyEl.style.display=''; return; }
+
+  // 슬롯별로 묶기
+  const slotOrder = H_SLOTS.map(s=>s.key);
+  const slotGroups = new Map();
+  classMap.forEach((v, k) => {
+    if (!slotGroups.has(v.slotKey)) slotGroups.set(v.slotKey, []);
+    slotGroups.get(v.slotKey).push(v);
+  });
+
+  tblEl.innerHTML = '';
+
+  // 슬롯 순서대로 렌더
+  slotOrder.forEach(slotKey => {
+    if (!slotGroups.has(slotKey)) return;
+    const entries = slotGroups.get(slotKey);
+    const slot = H_SLOTS.find(s=>s.key===slotKey);
+
+    const section = document.createElement('div');
+    section.className = 'stats-section';
+
+    const title = document.createElement('div');
+    title.className = 'stats-section-title';
+    title.textContent = slot?.baseLabel || slotKey;
+    section.appendChild(title);
+
+    const tbl = document.createElement('table');
+    tbl.className = 'stats-tbl';
+    tbl.innerHTML = `
+      <thead><tr>
+        <th>반</th>
+        <th>기록 횟수</th>
+        <th>홀딩 합계</th>
+        <th>홀딩 평균</th>
+        <th>참석 합계</th>
+        <th>참석 평균</th>
+      </tr></thead>
+      <tbody id="tbody_${slotKey}"></tbody>
+    `;
+
+    const tbody = tbl.querySelector('tbody');
+    const avg = arr => arr.length ? (arr.reduce((a,b)=>a+b,0)/arr.length) : 0;
+
+    entries.forEach(e => {
+      const hSum  = e.holdingCounts.reduce((a,b)=>a+b,0);
+      const aSum  = e.attendCounts.reduce((a,b)=>a+b,0);
+      const hAvg  = avg(e.holdingCounts).toFixed(1);
+      const aAvg  = avg(e.attendCounts).toFixed(1);
+      const cnt   = e.days.size;
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${e.className}</td>
+        <td>${cnt}회</td>
+        <td class="stats-num">${hSum}</td>
+        <td class="stats-num ${parseFloat(hAvg)>=2?'high':''}">${hAvg}</td>
+        <td class="stats-num">${aSum}</td>
+        <td class="stats-num ${parseFloat(aAvg)>=5?'low':''}">${aAvg}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    // 합계 행
+    const totalHSum = entries.reduce((s,e)=>s+e.holdingCounts.reduce((a,b)=>a+b,0),0);
+    const totalASum = entries.reduce((s,e)=>s+e.attendCounts.reduce((a,b)=>a+b,0),0);
+    const totalCnt  = new Set(filtered.filter(r=>r.slotKey===slotKey).map(r=>r.dateKey)).size;
+    const totalHAvg = totalCnt ? (totalHSum/totalCnt).toFixed(1) : '0.0';
+    const totalAAvg = totalCnt ? (totalASum/totalCnt).toFixed(1) : '0.0';
+
+    const tfr = document.createElement('tr');
+    tfr.style.cssText = 'background:#F5F5F5;font-weight:800;';
+    tfr.innerHTML = `
+      <td style="color:#555;">합계 / 평균</td>
+      <td>${totalCnt}회</td>
+      <td class="stats-num">${totalHSum}</td>
+      <td class="stats-num">${totalHAvg}</td>
+      <td class="stats-num">${totalASum}</td>
+      <td class="stats-num">${totalAAvg}</td>
+    `;
+    tbody.appendChild(tfr);
+
+    section.appendChild(tbl);
+    tblEl.appendChild(section);
+  });
+}
 
 /* ══════════════════════════════════════
    자동저장 / 불러오기 (localStorage)
