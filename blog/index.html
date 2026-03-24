@@ -3,31 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TheBox Blog AI v13.0</title>
+    <title>TheBox Blog AI - Master</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        :root { --thebox: #ff6b35; --naver: #03C75A; --bg: #f5f7f9; }
+        :root { --thebox: #ff6b35; --naver: #03C75A; --bg: #f8fafb; }
         body { font-family: 'Pretendard', sans-serif; background: var(--bg); margin: 0; display: flex; height: 100vh; color: #1a1a1b; }
         
         /* Sidebar */
         .sidebar { width: 380px; background: white; border-right: 1px solid #e1e4e8; padding: 40px 25px; display: flex; flex-direction: column; overflow-y: auto; }
         .logo { font-size: 1.8rem; font-weight: 900; color: var(--thebox); letter-spacing: -1.5px; margin-bottom: 5px; }
-        .tagline { font-size: 0.8rem; color: #999; margin-bottom: 25px; font-weight: 500; }
+        .tagline { font-size: 0.8rem; color: #999; margin-bottom: 25px; font-weight: 600; }
         
         .tab-container { display: flex; gap: 8px; margin-bottom: 25px; background: #eee; padding: 5px; border-radius: 14px; }
-        .tab { flex: 1; text-align: center; padding: 12px; border-radius: 10px; cursor: pointer; font-size: 0.85rem; font-weight: 800; color: #888; }
+        .tab { flex: 1; text-align: center; padding: 12px; border-radius: 10px; cursor: pointer; font-size: 0.85rem; font-weight: 800; color: #888; transition: 0.3s; }
         .tab.active { background: white; color: var(--thebox); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         
+        /* Idea Bank */
         .idea-bank { background: #fffcf0; border: 1.5px solid #ffecb3; border-radius: 18px; padding: 20px; margin-bottom: 25px; }
-        .btn-idea { width: 100%; padding: 14px; background: white; border: 1px solid #ffecb3; border-radius: 12px; color: #b7791f; font-weight: 800; cursor: pointer; font-size: 0.95rem; }
+        .btn-idea { width: 100%; padding: 14px; background: white; border: 1.5px solid #ffecb3; border-radius: 12px; color: #b7791f; font-weight: 800; cursor: pointer; font-size: 0.95rem; }
         #ideaList { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px; }
         .idea-tag { background: white; border: 1px solid #eee; padding: 8px 14px; border-radius: 10px; font-size: 0.8rem; cursor: pointer; font-weight: 600; }
+        .idea-tag:hover { border-color: var(--thebox); color: var(--thebox); }
 
-        input[type="text"] { width: 100%; padding: 18px; border: 2.5px solid #eee; border-radius: 16px; font-size: 1.05rem; box-sizing: border-box; outline: none; margin-bottom: 20px; }
+        .input-group { margin-bottom: 20px; }
+        label { font-size: 0.85rem; font-weight: 800; display: block; margin-bottom: 8px; }
+        input[type="text"] { width: 100%; padding: 18px; border: 2.5px solid #eee; border-radius: 16px; font-size: 1.05rem; box-sizing: border-box; outline: none; transition: 0.3s; }
         input[type="text"]:focus { border-color: var(--thebox); }
         
-        .btn-run { width: 100%; padding: 22px; background: var(--thebox); color: white; border: none; border-radius: 16px; font-weight: 900; font-size: 1.2rem; cursor: pointer; transition: 0.3s; box-shadow: 0 8px 20px rgba(255,107,53,0.25); }
-        .btn-run:hover { transform: translateY(-4px); }
+        .btn-run { width: 100%; padding: 22px; background: var(--thebox); color: white; border: none; border-radius: 16px; font-weight: 900; font-size: 1.2rem; cursor: pointer; transition: 0.3s; box-shadow: 0 8px 20px rgba(255,107,53,0.15); }
+        .btn-run:hover { transform: translateY(-3px); box-shadow: 0 12px 25px rgba(255,107,53,0.2); }
 
         /* Main Content */
         .main-content { flex: 1; padding: 50px; overflow-y: auto; background: #fff; }
@@ -35,7 +39,10 @@
         #editor { min-height: 800px; line-height: 2.3; font-size: 1.2rem; outline: none; white-space: pre-wrap; color: #2d3436; }
         
         #status { font-size: 0.9rem; padding: 18px; border-radius: 14px; margin-top: 20px; display: none; font-weight: 600; line-height: 1.6; }
-        .naver-quote { border-left: 6px solid var(--naver); background: #f8f9fa; padding: 25px; margin: 35px 0; border-radius: 0 15px 15px 0; }
+        .naver-quote { border-left: 6px solid var(--naver); background: #f8f9fa; padding: 25px; margin: 35px 0; border-radius: 0 15px 15px 0; font-style: normal; font-weight: 500; }
+        .naver-table { width: 100%; border-collapse: collapse; margin: 25px 0; font-size: 0.95rem; }
+        .naver-table th, .naver-table td { border: 1px solid #eee; padding: 12px; text-align: center; }
+        .naver-table th { background: #fbfbfb; font-weight: 800; }
         .img-slot { background: #f8fafc; border: 2px dashed #e2e8f0; padding: 50px; text-align: center; color: #94a3b8; margin: 40px 0; border-radius: 24px; font-weight: 700; }
     </style>
 </head>
@@ -43,21 +50,21 @@
 
 <div class="sidebar">
     <div class="logo">📦 TheBox Blog AI</div>
-    <div class="tagline">v13.0 Stable (2026 Edition)</div>
+    <div class="tagline">v19.0 - Daegu Dongseong-ro Specialist</div>
     
     <div class="tab-container">
-        <div class="tab active" id="tabTheBox" onclick="switchTab('thebox')">더박스 모드</div>
-        <div class="tab" id="tabGeneral" onclick="switchTab('general')">자유 키워드</div>
+        <div class="tab active" id="tabTheBox" onclick="switchTab('thebox')">더박스 전문 모드</div>
+        <div class="tab" id="tabGeneral" onclick="switchTab('general')">자유 키워드 모드</div>
     </div>
 
     <div class="idea-bank">
-        <button class="btn-idea" onclick="getKeywords()">✨ 키워드 추천</button>
+        <button class="btn-idea" onclick="getKeywords()">💡 키워드 추천받기</button>
         <div id="ideaList"></div>
     </div>
 
     <div class="input-group">
-        <label style="font-size: 0.85rem; font-weight: 800; display: block; margin-bottom: 8px;">키워드 입력</label>
-        <input type="text" id="targetKeyword" placeholder="예: 대구 동성로 영어회화 내돈내산">
+        <label id="kwLabel">타겟 키워드 입력</label>
+        <input type="text" id="targetKeyword" placeholder="예: 대구 직장인 영어회화 후기">
     </div>
 
     <button id="mainBtn" class="btn-run" onclick="generateContent()">원고 생성하기 🔥</button>
@@ -70,54 +77,42 @@
             <h2 style="margin:0; font-weight:900; font-size:1.5rem;">✍️ 블로그 원고 미리보기</h2>
             <button onclick="copyDraft()" style="background:#1a1a1b; color:white; border:none; padding:14px 28px; border-radius:14px; cursor:pointer; font-weight:800;">원고 전체 복사</button>
         </div>
-        <div id="editor" contenteditable="true">원고가 이곳에 생성됩니다. 2026년 네이버 최신 로직을 반영합니다.</div>
+        <div id="editor" contenteditable="true">원고가 이곳에 생성됩니다. <br>더박스의 모든 정보가 최신 로직으로 녹아납니다.</div>
     </div>
 </div>
 
 <script>
-    // 사용자님의 최신 API 키
     const API_KEY = "AIzaSyBxiB6ZlvBDSyQwsftz_QzOkJ4E8IesAT4";
-    
-    // 2026년 기준 모델 리스트 (첫 번째 실패 시 두 번째 시도)
-    const MODELS = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-pro"];
     let currentMode = 'thebox';
 
     function switchTab(mode) {
         currentMode = mode;
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.getElementById(mode === 'thebox' ? 'tabTheBox' : 'tabGeneral').classList.add('active');
-        document.getElementById('mainBtn').style.background = mode === 'thebox' ? "#ff6b35" : "#03C75A";
+        const btn = document.getElementById('mainBtn');
+        btn.style.background = mode === 'thebox' ? "#ff6b35" : "#03C75A";
+        btn.innerText = "리얼 원고 생성하기 🔥";
     }
 
     async function requestAI(prompt) {
-        let lastError = "";
-        for (const model of MODELS) {
-            // v1beta 대신 정식 v1 엔드포인트 사용
-            const url = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${API_KEY}`;
-            try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-                });
-                const data = await response.json();
-                if (data.error) {
-                    lastError = data.error.message;
-                    continue; // 다음 모델로 재시도
-                }
-                return data.candidates[0].content.parts[0].text;
-            } catch (e) {
-                lastError = e.message;
-            }
-        }
-        throw new Error(`모든 모델 호출 실패: ${lastError}`);
+        // 권한이 확인된 v1beta 경로와 gemini-1.5-flash 모델 사용
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        });
+        const data = await response.json();
+        if (data.error) throw new Error(data.error.message);
+        return data.candidates[0].content.parts[0].text;
     }
 
     async function getKeywords() {
         const ideaList = document.getElementById('ideaList');
-        ideaList.innerHTML = "분석 중...";
+        ideaList.innerHTML = "<span style='font-size:0.8rem; color: #ff6b35;'>2026 트렌드 분석 중...</span>";
         try {
-            const res = await requestAI("2026년 3월 기준, 유입량이 좋은 네이버 블로그 꿀키워드 8개 추천해줘. 콤마로만 구분.");
+            const prompt = "2026년 3월 기준, 대구 기반 생활/자기계발 키워드 중 검색량은 많지만 문서수는 적은 황금키워드 8개 추천해줘. 콤마로만 구분.";
+            const res = await requestAI(prompt);
             const kws = res.split(',');
             ideaList.innerHTML = "";
             kws.forEach(k => {
@@ -127,9 +122,7 @@
                 s.onclick = () => { document.getElementById('targetKeyword').value = s.innerText; };
                 ideaList.appendChild(s);
             });
-        } catch (e) { 
-            ideaList.innerHTML = `<span style="color:red; font-size:0.75rem;">에러: ${e.message}</span>`;
-        }
+        } catch (e) { ideaList.innerHTML = "로드 실패"; }
     }
 
     async function generateContent() {
@@ -142,33 +135,48 @@
         status.style.display = 'block';
         status.style.background = '#eef2ff';
         status.style.color = '#4338ca';
-        status.innerHTML = "🌀 <b>TheBox Blog AI (2026 Stable)</b> 엔진 가동 중...";
+        status.innerHTML = "🌀 <b>TheBox Blog AI</b> 가동 중... (데이터 통합 분석)";
 
-        const prompt = `
-        너는 대구 '더박스(The Box)'의 찐팬 블로거야. 매번 다른 상황을 설정해서 [${kw}] 원고를 써줘.
-        
-        [지침]
-        1. 말투: ~했어요, ~하더라구요 식의 친근한 2030 말투. 광고체 절대 금지.
-        2. 로직: 네이버 D.I.A+ 로직 반영, 직접 경험한 듯한 서사 중심.
-        3. 더박스 정보: 중앙로역 1분 거리, 원어민 리더 커뮤니티, 아카데미 레벨제 등 디테일 포함.
-        4. 구성: 인용구(>), 표, 이미지 삽입 가이드를 적재적소에 배치.
-        5. 분량: 1,800자 이상 아주 상세하게. 가독성 좋게 엔터 자주 칠 것.
+        const systemPrompt = currentMode === 'thebox' 
+            ? `너는 대구 동성로 '더박스(The Box)'의 찐팬 블로거야. iloveboradori와 theboxblog의 감성을 섞어서 원고를 써줘.
+               - 핵심정보: 중앙로역 1번 출구 1분 거리, 원어민 리더 커뮤니티(스터디) vs 정규 수업(아카데미), 레벨 1~5 맞춤 배정, 소셜 활동(파티/여행).
+               - 말투: ~했어요, ~하더라구요 식의 2030 구어체. 절대 광고체(~하셨나요?) 금지!
+               - 구성: 매번 다른 페르소나(퇴근 후 직장인, 방학 맞은 대학생 등)를 설정하여 중복 방지.`
+            : `너는 2030 파워블로거야. [${kw}] 주제로 직접 경험한 듯한 리얼 후기를 써줘. 광고 느낌 없이 정보와 감성을 섞어서.`;
 
-        ###원고 구분자 뒤에 작성해줘.
+        const fullPrompt = `
+            ${systemPrompt}
+            [${kw}]를 메인 키워드로 원고를 작성해줘.
+            1. 제목 3개 추천 (궁금증 유발)
+            2. 본문: 공백 제외 2,000자 내외, 엔터 많이 쳐서 가독성 확보.
+            3. 네이버 기능 삽입 가이드: 
+               - 인용구(>) 3개 이상 사용
+               - 스터디/아카데미 스케줄이나 레벨 정보를 담은 [표] 1개 포함
+               - 하단에 인스타그램(@thebox_daegu)이나 가이드북 링크 자연스럽게 삽입
+               - [사진: OO 하는 장면] 가이드 6개 이상 배치
+            ###원고 구분자 뒤에 작성해.
         `;
 
         try {
-            const res = await requestAI(prompt);
+            const res = await requestAI(fullPrompt);
             const content = res.split('###원고')[1] || res;
             
             let formatted = content.trim().replace(/\n/g, '<br>');
             formatted = formatted.replace(/> (.*?)(<br>|$)/g, '<div class="naver-quote">“$1”</div>');
             formatted = formatted.replace(/\[사진:.*?\]/g, m => `<div class="img-slot"><i class="fa-regular fa-image" style="font-size:2rem; display:block; margin-bottom:12px;"></i>${m}</div>`);
             
+            // 표 형식 변환 (마크다운 표 처리)
+            if(formatted.includes('|')) {
+                formatted = formatted.replace(/\|(.+)\|/g, (match) => {
+                    const cells = match.split('|').filter(c => c.trim().length > 0);
+                    return `<table class="naver-table"><tr>${cells.map(c => `<td>${c}</td>`).join('')}</tr></table>`;
+                });
+            }
+
             editor.innerHTML = formatted;
             status.style.background = '#f0fdf4';
             status.style.color = '#15803d';
-            status.innerHTML = "✅ 원고 생성이 완료되었습니다!";
+            status.innerHTML = "✅ 원고 생성 완료! 복사해서 블로그에 올려보세요. ✨";
         } catch (e) {
             status.style.background = '#fef2f2';
             status.style.color = '#b91c1c';
@@ -183,7 +191,7 @@
         window.getSelection().removeAllRanges();
         window.getSelection().addRange(range);
         document.execCommand('copy');
-        alert('원고가 클립보드에 복사되었습니다! ✨');
+        alert('원고 전체 복사 완료! ✨');
     }
 </script>
 </body>
