@@ -2633,7 +2633,13 @@ async function loadRecords() {
     const res = await fetch(GS_URL);
     const data = await res.json();
     if (!data.ok) return [];
-    return data.records.sort((a,b) => b.savedAt - a.savedAt);
+    return data.records
+      .map(r => ({
+        ...r,
+        // 구글 시트가 날짜를 Date 문자열로 변환하는 경우 YYYY-MM-DD로 정규화
+        dateKey: String(r.dateKey).slice(0, 10),
+      }))
+      .sort((a,b) => b.savedAt - a.savedAt);
   } catch(e) { return []; }
 }
 
@@ -2744,28 +2750,31 @@ async function renderRecords() {
   }
   emptyEl.style.display = 'none';
 
-  // ── 월별 그룹핑 ──
+  // ── 월 → 날짜 → 슬롯 3단 그룹핑 ──
   const monthMap = new Map();
   filtered.forEach(r => {
     const mKey = r.dateKey.slice(0, 7);
-    if (!monthMap.has(mKey)) monthMap.set(mKey, []);
-    monthMap.get(mKey).push(r);
+    if (!monthMap.has(mKey)) monthMap.set(mKey, new Map());
+    const dayMap = monthMap.get(mKey);
+    if (!dayMap.has(r.dateKey)) dayMap.set(r.dateKey, []);
+    dayMap.get(r.dateKey).push(r);
   });
 
   const months = [...monthMap.keys()].sort((a,b) => b.localeCompare(a));
 
   months.forEach(mKey => {
     const [yr, mo] = mKey.split('-');
-    const monthRecs = monthMap.get(mKey);
+    const dayMap = monthMap.get(mKey);
+    const monthRecs = [...dayMap.values()].flat();
 
     const section = document.createElement('div');
     section.style.cssText = 'margin-bottom:20px;';
 
-    const mAttend    = monthRecs.reduce((s,r)=>s+r.classes.reduce((ss,c)=>ss+c.attend,0),0);
-    const mHolding   = monthRecs.reduce((s,r)=>s+r.classes.reduce((ss,c)=>ss+c.holding.length,0),0);
-    const mMembers   = monthRecs.reduce((s,r)=>s+r.classes.reduce((ss,c)=>ss+c.korMembers.length,0),0);
-    const mTeachers  = monthRecs.reduce((s,r)=>s+r.classes.reduce((ss,c)=>ss+c.korTeachers.length,0),0);
-    const mDays      = new Set(monthRecs.map(r=>r.dateKey)).size;
+    const mAttend   = monthRecs.reduce((s,r)=>s+r.classes.reduce((ss,c)=>ss+c.attend,0),0);
+    const mHolding  = monthRecs.reduce((s,r)=>s+r.classes.reduce((ss,c)=>ss+c.holding.length,0),0);
+    const mMembers  = monthRecs.reduce((s,r)=>s+r.classes.reduce((ss,c)=>ss+c.korMembers.length,0),0);
+    const mTeachers = monthRecs.reduce((s,r)=>s+r.classes.reduce((ss,c)=>ss+c.korTeachers.length,0),0);
+    const mDays     = dayMap.size;
 
     const mHead = document.createElement('div');
     mHead.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid #111;flex-wrap:wrap;';
@@ -2779,68 +2788,96 @@ async function renderRecords() {
     `;
     section.appendChild(mHead);
 
-    monthRecs.sort((a,b) => b.dateKey.localeCompare(a.dateKey));
-    monthRecs.forEach(rec => {
-      const card = document.createElement('div');
-      card.className = 'rec-day-card';
+    // 날짜 내림차순
+    const sortedDays = [...dayMap.keys()].sort((a,b) => b.localeCompare(a));
 
-      const totalHolding  = rec.classes.reduce((s,c)=>s+c.holding.length,0);
-      const totalAttend   = rec.classes.reduce((s,c)=>s+c.attend,0);
-      const totalKor      = rec.classes.reduce((s,c)=>s+c.korMembers.length,0);
-      const totalTeachers = rec.classes.reduce((s,c)=>s+c.korTeachers.length,0);
+    sortedDays.forEach(dateKey => {
+      const dayRecs = dayMap.get(dateKey).sort((a,b) => a.slotKey.localeCompare(b.slotKey));
+      const firstRec = dayRecs[0];
 
-      const head = document.createElement('div');
-      head.className = 'rec-day-head';
-      head.innerHTML = `
-        <span class="rec-day-date">${rec.dateLabel} <span style="font-size:12px;font-weight:600;color:#888;">${rec.dayLabel}</span></span>
-        <span class="rec-day-slot">${rec.slotLabel}</span>
+      // 날짜 카드 (펼치면 슬롯들이 나옴)
+      const dayCard = document.createElement('div');
+      dayCard.className = 'rec-day-card';
+
+      const dAttend   = dayRecs.reduce((s,r)=>s+r.classes.reduce((ss,c)=>ss+c.attend,0),0);
+      const dHolding  = dayRecs.reduce((s,r)=>s+r.classes.reduce((ss,c)=>ss+c.holding.length,0),0);
+      const dMembers  = dayRecs.reduce((s,r)=>s+r.classes.reduce((ss,c)=>ss+c.korMembers.length,0),0);
+      const dTeachers = dayRecs.reduce((s,r)=>s+r.classes.reduce((ss,c)=>ss+c.korTeachers.length,0),0);
+
+      const dayHead = document.createElement('div');
+      dayHead.className = 'rec-day-head';
+      dayHead.innerHTML = `
+        <span class="rec-day-date">${firstRec.dateLabel} <span style="font-size:12px;font-weight:600;color:#888;">${firstRec.dayLabel}</span></span>
         <div class="rec-day-chips">
-          <span class="schip" style="border-color:#A8DFC4;color:#1A7A50;background:#F0FBF5;">참여 ${totalAttend}명</span>
-          <span class="schip" style="border-color:#F0B898;color:#B04020;background:#FFF5F0;">홀딩 ${totalHolding}명</span>
-          <span class="schip" style="border-color:#C0CCEE;color:#2040A0;background:#EEF3FF;">멤버 ${totalKor}명</span>
-          ${totalTeachers ? `<span class="schip" style="border-color:#C090E0;color:#6020A0;background:#F5EEFF;">쌤 ${totalTeachers}명</span>` : ''}
+          <span class="schip" style="border-color:#A8DFC4;color:#1A7A50;background:#F0FBF5;">참여 ${dAttend}명</span>
+          <span class="schip" style="border-color:#F0B898;color:#B04020;background:#FFF5F0;">홀딩 ${dHolding}명</span>
+          <span class="schip" style="border-color:#C0CCEE;color:#2040A0;background:#EEF3FF;">멤버 ${dMembers}명</span>
+          ${dTeachers ? `<span class="schip" style="border-color:#C090E0;color:#6020A0;background:#F5EEFF;">쌤 ${dTeachers}명</span>` : ''}
         </div>
-        <button class="rec-del-btn" style="float:none;margin:0;" title="이 기록 삭제">🗑</button>
         <span class="rec-day-arrow">▼</span>
       `;
+      dayHead.addEventListener('click', () => dayCard.classList.toggle('open'));
 
-      head.querySelector('.rec-del-btn').addEventListener('click', async e => {
-        e.stopPropagation();
-        if (!confirm(`${rec.dateLabel} ${rec.slotLabel} 기록을 삭제할까요?`)) return;
-        showToast('🗑 삭제 중…');
-        await deleteRecordFromSheet(rec.dateKey, rec.slotKey);
-        renderRecords();
+      const dayBody = document.createElement('div');
+      dayBody.className = 'rec-day-body';
+      dayBody.style.cssText = 'padding:0;';
+
+      // 슬롯 단위로 구분
+      dayRecs.forEach(rec => {
+        const slotWrap = document.createElement('div');
+        slotWrap.style.cssText = 'border-top:1px solid #F0F0F0;';
+
+        const slotHead = document.createElement('div');
+        slotHead.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 14px;background:#FAFAFA;flex-wrap:wrap;';
+
+        const sAttend   = rec.classes.reduce((s,c)=>s+c.attend,0);
+        const sHolding  = rec.classes.reduce((s,c)=>s+c.holding.length,0);
+        const sMembers  = rec.classes.reduce((s,c)=>s+c.korMembers.length,0);
+        const sTeachers = rec.classes.reduce((s,c)=>s+c.korTeachers.length,0);
+
+        slotHead.innerHTML = `
+          <span class="rec-day-slot">${rec.slotLabel}</span>
+          <span class="schip" style="border-color:#A8DFC4;color:#1A7A50;background:#F0FBF5;font-size:10px;">참여 ${sAttend}명</span>
+          <span class="schip" style="border-color:#F0B898;color:#B04020;background:#FFF5F0;font-size:10px;">홀딩 ${sHolding}명</span>
+          ${sMembers  ? `<span class="schip" style="border-color:#C0CCEE;color:#2040A0;background:#EEF3FF;font-size:10px;">멤버 ${sMembers}명</span>` : ''}
+          ${sTeachers ? `<span class="schip" style="border-color:#C090E0;color:#6020A0;background:#F5EEFF;font-size:10px;">쌤 ${sTeachers}명</span>` : ''}
+          <button class="rec-del-btn" style="margin-left:auto;" title="이 슬롯 기록 삭제">🗑</button>
+        `;
+        slotHead.querySelector('.rec-del-btn').addEventListener('click', async e => {
+          e.stopPropagation();
+          if (!confirm(`${rec.dateLabel} ${rec.slotLabel} 기록을 삭제할까요?`)) return;
+          showToast('🗑 삭제 중…');
+          await deleteRecordFromSheet(rec.dateKey, rec.slotKey);
+          renderRecords();
+        });
+
+        const grid = document.createElement('div');
+        grid.className = 'rec-class-grid';
+        grid.style.cssText = 'padding:10px 14px;';
+
+        rec.classes.forEach(cls => {
+          if (!cls.holding.length && !cls.korMembers.length && !cls.korTeachers.length && !cls.attend && !cls.tutor) return;
+          const cc = document.createElement('div');
+          cc.className = 'rec-class-card';
+          let html = `<div class="rec-class-name">${cls.className}</div>`;
+          if (cls.attend)             html += `<div class="rec-class-row">참여 <span>${cls.attend}명</span></div>`;
+          if (cls.tutor)              html += `<div class="rec-class-row">튜터 <span>${cls.tutor}명</span></div>`;
+          if (cls.holding.length)     html += `<div class="rec-class-row">홀딩 <span>${cls.holding.join(', ')}</span></div>`;
+          if (cls.korMembers.length)  html += `<div class="rec-class-row">멤버 <span>${cls.korMembers.join(', ')}</span></div>`;
+          if (cls.korTeachers.length) html += `<div class="rec-class-row" style="border-top:1px dashed #E8E8E8;margin-top:4px;padding-top:4px;">쌤 <span style="color:#6020A0;">${cls.korTeachers.join(', ')}</span></div>`;
+          if (cls.memo)               html += `<div class="rec-memo">${cls.memo}</div>`;
+          cc.innerHTML = html;
+          grid.appendChild(cc);
+        });
+
+        slotWrap.appendChild(slotHead);
+        slotWrap.appendChild(grid);
+        dayBody.appendChild(slotWrap);
       });
 
-      head.addEventListener('click', e => {
-        if (e.target.closest('.rec-del-btn')) return;
-        card.classList.toggle('open');
-      });
-
-      const body = document.createElement('div');
-      body.className = 'rec-day-body';
-      const grid = document.createElement('div');
-      grid.className = 'rec-class-grid';
-
-      rec.classes.forEach(cls => {
-        if (!cls.holding.length && !cls.korMembers.length && !cls.korTeachers.length && !cls.attend && !cls.tutor) return;
-        const cc = document.createElement('div');
-        cc.className = 'rec-class-card';
-        let html = `<div class="rec-class-name">${cls.className}</div>`;
-        if (cls.attend)             html += `<div class="rec-class-row">참여 <span>${cls.attend}명</span></div>`;
-        if (cls.tutor)              html += `<div class="rec-class-row">튜터 <span>${cls.tutor}명</span></div>`;
-        if (cls.holding.length)     html += `<div class="rec-class-row">홀딩 <span>${cls.holding.join(', ')}</span></div>`;
-        if (cls.korMembers.length)  html += `<div class="rec-class-row">멤버 <span>${cls.korMembers.join(', ')}</span></div>`;
-        if (cls.korTeachers.length) html += `<div class="rec-class-row" style="border-top:1px dashed #E8E8E8;margin-top:4px;padding-top:4px;">쌤 <span style="color:#6020A0;">${cls.korTeachers.join(', ')}</span></div>`;
-        if (cls.memo)               html += `<div class="rec-memo">${cls.memo}</div>`;
-        cc.innerHTML = html;
-        grid.appendChild(cc);
-      });
-
-      body.appendChild(grid);
-      card.appendChild(head);
-      card.appendChild(body);
-      section.appendChild(card);
+      dayCard.appendChild(dayHead);
+      dayCard.appendChild(dayBody);
+      section.appendChild(dayCard);
     });
 
     listEl.appendChild(section);
