@@ -49,6 +49,8 @@ body {
 .tbtn:hover { border-color: #BBB; color: #333; }
 .tbtn.sel-native   { background: #F0FBF5; border-color: #7BCCA0; color: #1A7A50; font-weight: 800; }
 .tbtn.sel-nonnative{ background: #FFF5F0; border-color: #F0A080; color: #B04020; font-weight: 800; }
+/* 요일·시간대 프리셋 선택 전용 (sel-native와 분리) */
+.tbtn.sel-preset { background: #111; border-color: #111; color: #fff; font-weight: 800; }
 
 /* ── 입력 공통 ── */
 .inp { border: 1px solid #E0E0E0; border-radius: 7px; font-size: 13px; font-family: inherit; background: #FAFAFA; color: #111; outline: none; padding: 9px 11px; width: 100%; }
@@ -565,16 +567,64 @@ body {
   box-shadow: 0 4px 16px rgba(0,0,0,.25);
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── 기록 탭 ── */
+.rec-day-card {
+  background: #fff; border: 1.5px solid #E5E5E5; border-radius: 12px;
+  margin-bottom: 12px; overflow: hidden;
+}
+.rec-day-head {
+  display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+  cursor: pointer; user-select: none; background: #FAFAFA;
+  border-bottom: 1px solid #F0F0F0;
+}
+.rec-day-head:hover { background: #F5F5F5; }
+.rec-day-date { font-size: 15px; font-weight: 900; color: #111; }
+.rec-day-slot { font-size: 11px; font-weight: 700; color: #888; background: #F0F0F0; padding: 2px 8px; border-radius: 999px; }
+.rec-day-chips { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
+.rec-day-arrow { font-size: 10px; color: #CCC; transition: transform .15s; }
+.rec-day-card.open .rec-day-arrow { transform: rotate(180deg); }
+.rec-day-body { display: none; padding: 12px 16px; }
+.rec-day-card.open .rec-day-body { display: block; }
+.rec-class-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.rec-class-card {
+  background: #FAFAFA; border: 1px solid #E5E5E5; border-radius: 9px; padding: 10px 12px;
+}
+.rec-class-name { font-size: 13px; font-weight: 800; color: #111; margin-bottom: 6px; }
+.rec-class-row { font-size: 11px; color: #666; margin-bottom: 3px; line-height: 1.5; }
+.rec-class-row span { font-weight: 700; color: #333; }
+.rec-del-btn {
+  padding: 3px 9px; border: 1px solid #F0C0C0; background: #fff; color: #C00;
+  border-radius: 5px; font-size: 11px; font-weight: 700; cursor: pointer;
+  font-family: inherit; float: right; margin-top: -2px;
+}
+.rec-del-btn:hover { background: #FFF0F0; }
+.rec-memo { font-size: 11px; color: #888; margin-top: 5px; font-style: italic; }
+.rec-stat-pill {
+  background: #fff; border: 1.5px solid #E0E0E0; border-radius: 10px;
+  padding: 10px 16px; display: flex; flex-direction: column; gap: 2px; min-width: 90px;
+}
+.rec-stat-label { font-size: 10px; font-weight: 700; color: #AAA; text-transform: uppercase; letter-spacing: .04em; }
+.rec-stat-value { font-size: 22px; font-weight: 900; color: #111; }
+.rec-stat-sub { font-size: 11px; color: #888; }
+.rec-filter-btn {
+  padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 700;
+  border: 1.5px solid #E0E0E0; background: #fff; color: #888; cursor: pointer;
+  font-family: inherit; transition: all .12s;
+}
+.rec-filter-btn.active { background: #111; border-color: #111; color: #fff; }
 </style>
 </head>
 <body>
 <div class="toast" id="toastEl"></div>
+<div class="hdr">
   <div class="hdr-inner">
     <div class="logo">더박스<small>운영 도구</small></div>
     <div class="tab-btns">
       <button class="tab-btn" id="tabManual" onclick="switchTab('manual')">📖 매뉴얼</button>
       <button class="tab-btn" id="tabHolding" onclick="switchTab('holding')">📌 홀딩 체크</button>
       <button class="tab-btn active" id="tabGrouping" onclick="switchTab('grouping')">📋 반 편성</button>
+      <button class="tab-btn" id="tabRecords" onclick="switchTab('records')">📊 기록</button>
     </div>
     <div class="hbtns" id="groupingBtns">
       <button class="hbtn no-print" id="btnAuto">⚡ 자동배치</button>
@@ -584,7 +634,13 @@ body {
     </div>
     <div class="hbtns" id="holdingBtns" style="display:none;">
       <span class="day-pill" id="holdingDayPill">--</span>
+      <button class="hbtn hi no-print" id="btnHoldingSave">💾 오늘 기록 저장</button>
       <button class="hbtn no-print" id="btnHoldingClear">↺ 오늘 초기화</button>
+    </div>
+    <div class="hbtns" id="recordsBtns" style="display:none;">
+      <button class="hbtn no-print" id="btnExportJSON">⬇ JSON 내보내기</button>
+      <button class="hbtn no-print" id="btnImportJSON">⬆ JSON 가져오기</button>
+      <input type="file" id="importFileInput" accept=".json" style="display:none;">
     </div>
   </div>
 </div>
@@ -903,6 +959,31 @@ body {
 
 </div><!-- /holdingTab -->
 
+<!-- ═══════════════ 기록 탭 ═══════════════ -->
+<div id="recordsTab" style="display:none;max-width:1100px;margin:0 auto;padding:16px 16px 60px;">
+
+  <!-- 상단 요약 통계 -->
+  <div id="recSummaryBar" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;"></div>
+
+  <!-- 필터 바 -->
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+    <div style="font-size:12px;font-weight:700;color:#888;">슬롯</div>
+    <div id="recSlotFilter" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
+    <div style="flex:1;"></div>
+    <input id="recSearchInp" placeholder="날짜·반 이름 검색…" style="padding:7px 11px;border:1px solid #E0E0E0;border-radius:7px;font-size:12px;font-family:inherit;background:#FAFAFA;color:#111;outline:none;width:180px;">
+  </div>
+
+  <!-- 기록 리스트 -->
+  <div id="recList"></div>
+
+  <!-- 비어있을 때 -->
+  <div id="recEmpty" style="text-align:center;color:#CCC;font-size:14px;padding:60px 0;display:none;">
+    저장된 기록이 없습니다.<br>
+    <span style="font-size:12px;margin-top:6px;display:block;">홀딩 체크 탭에서 <strong style="color:#888;">💾 오늘 기록 저장</strong>을 눌러주세요.</span>
+  </div>
+
+</div><!-- /recordsTab -->
+
 <script>
 /* ── 컨텍스트 메뉴 (전역) ── */
 let _ctxMenu = null;
@@ -1092,12 +1173,12 @@ let presetTime = null;
 
 function selectPresetDay(btn) {
   document.querySelectorAll('[data-pday]').forEach(b => b.className='tbtn');
-  btn.className = 'tbtn sel-native';
+  btn.className = 'tbtn sel-preset';
   presetDay = btn.dataset.pday;
   // 주말이면 시간대 자동으로 오후로 고정
   if (presetDay === '토일') {
     document.querySelectorAll('[data-ptime]').forEach(b => {
-      b.className = b.dataset.ptime==='오후' ? 'tbtn sel-native' : 'tbtn';
+      b.className = b.dataset.ptime==='오후' ? 'tbtn sel-preset' : 'tbtn';
     });
     presetTime = '오후';
   }
@@ -1106,7 +1187,7 @@ function selectPresetDay(btn) {
 }
 function selectPresetTime(btn) {
   document.querySelectorAll('[data-ptime]').forEach(b => b.className='tbtn');
-  btn.className = 'tbtn sel-native';
+  btn.className = 'tbtn sel-preset';
   presetTime = btn.dataset.ptime;
   updatePresetPreview();
   applyPreset();
@@ -1819,11 +1900,16 @@ function switchTab(tab) {
   document.getElementById('manualTab').classList.toggle('active',   tab==='manual');
   document.getElementById('groupingTab').classList.toggle('active', tab==='grouping');
   document.getElementById('holdingTab').classList.toggle('active',  tab==='holding');
+  document.getElementById('recordsTab').style.display = tab==='records' ? '' : 'none';
   document.getElementById('tabManual').classList.toggle('active',   tab==='manual');
   document.getElementById('tabGrouping').classList.toggle('active', tab==='grouping');
   document.getElementById('tabHolding').classList.toggle('active',  tab==='holding');
+  document.getElementById('tabRecords').classList.toggle('active',  tab==='records');
+  // 매뉴얼 탭이면 헤더 버튼 영역 모두 숨기기
   document.getElementById('groupingBtns').style.display = tab==='grouping' ? '' : 'none';
   document.getElementById('holdingBtns').style.display  = tab==='holding'  ? '' : 'none';
+  document.getElementById('recordsBtns').style.display  = tab==='records'  ? '' : 'none';
+  if (tab==='records') renderRecords();
 }
 
 /* ── 요일 탭 ── */
@@ -2538,6 +2624,299 @@ function showToast(msg, duration=2800) {
 }
 
 /* ══════════════════════════════════════
+   📊 기록 시스템 — Google Sheets 연동
+══════════════════════════════════════ */
+const GS_URL = 'https://script.google.com/macros/s/AKfycbzf1AhSOwtxoyIcA8X-CWLIrA5dR_Wb00S0PgKkwM-09jHX-xCGCMQLwpL3iNvXyHFAew/exec';
+
+async function loadRecords() {
+  try {
+    const res = await fetch(GS_URL);
+    const data = await res.json();
+    if (!data.ok) return [];
+    return data.records.sort((a,b) => b.savedAt - a.savedAt);
+  } catch(e) { return []; }
+}
+
+async function saveRecordToSheet(record) {
+  await fetch(GS_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'save', record }),
+  });
+}
+
+async function deleteRecordFromSheet(dateKey, slotKey) {
+  await fetch(GS_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'delete', dateKey, slotKey }),
+  });
+}
+
+/* 오늘 기록 저장 */
+async function saveHoldingRecord() {
+  const slot = H_SLOTS.find(s => s.key === hActiveSlot);
+  if (!slot) return;
+  const classes = holdingData[hActiveSlot];
+  const hasData = classes.some(c =>
+    c.members.length || c.korMembers.length || c.korTeachers.length ||
+    Number(c.attend) > 0 || Number(c.tutor) > 0
+  );
+  if (!hasData) { showToast('⚠ 저장할 데이터가 없습니다.'); return; }
+
+  const now = new Date();
+  const dateKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  const dateLabel = `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일`;
+  const dayNames = ['일','월','화','수','목','금','토'];
+  const dayLabel = dayNames[now.getDay()]+'요일';
+
+  const record = {
+    dateKey,
+    dateLabel,
+    dayLabel,
+    slotKey: hActiveSlot,
+    slotLabel: slot.baseLabel,
+    savedAt: Date.now(),
+    classes: classes.map(c => ({
+      className: c.className,
+      holding: c.members.map(m => typeof m==='string' ? m : m.name),
+      korMembers: (c.korMembers||[]).map(m => typeof m==='string' ? m : m.name),
+      korTeachers: (c.korTeachers||[]).map(m => typeof m==='string' ? m : m.name),
+      attend: Number(c.attend)||0,
+      tutor: Number(c.tutor)||0,
+      memo: c.memo||''
+    }))
+  };
+
+  showToast('💾 저장 중…');
+  try {
+    await saveRecordToSheet(record);
+    showToast(`✅ ${dateLabel} ${slot.baseLabel} 기록이 저장되었습니다.`);
+  } catch(e) {
+    showToast('❌ 저장 실패. 네트워크를 확인해주세요.');
+  }
+}
+
+/* ── 기록 탭 렌더 ── */
+let recFilterSlot = 'all';
+
+async function renderRecords() {
+  const listEl = document.getElementById('recList');
+  const emptyEl = document.getElementById('recEmpty');
+  const bar = document.getElementById('recSummaryBar');
+
+  // 로딩 표시
+  listEl.innerHTML = '<div style="text-align:center;padding:40px;color:#BBB;font-size:13px;">⏳ 기록 불러오는 중…</div>';
+  emptyEl.style.display = 'none';
+  bar.innerHTML = '';
+
+  const recs = await loadRecords();
+  const searchQ = (document.getElementById('recSearchInp')?.value||'').trim().toLowerCase();
+
+  // 슬롯 필터 버튼
+  const filterWrap = document.getElementById('recSlotFilter');
+  filterWrap.innerHTML = '';
+  const allSlots = ['all', ...H_SLOTS.map(s=>s.key)];
+  const allLabels = { all:'전체', ...Object.fromEntries(H_SLOTS.map(s=>[s.key, s.baseLabel])) };
+  allSlots.forEach(k => {
+    const btn = document.createElement('button');
+    btn.className = 'rec-filter-btn' + (recFilterSlot===k ? ' active' : '');
+    btn.textContent = allLabels[k];
+    btn.addEventListener('click', () => { recFilterSlot=k; renderRecords(); });
+    filterWrap.appendChild(btn);
+  });
+
+  // 필터링
+  let filtered = recs.filter(r => {
+    if (recFilterSlot !== 'all' && r.slotKey !== recFilterSlot) return false;
+    if (searchQ) {
+      const hay = (r.dateLabel + r.slotLabel + r.classes.map(c=>c.className).join(' ')).toLowerCase();
+      if (!hay.includes(searchQ)) return false;
+    }
+    return true;
+  });
+
+  renderRecSummary(filtered);
+
+  listEl.innerHTML = '';
+
+  if (!filtered.length) {
+    emptyEl.style.display = '';
+    return;
+  }
+  emptyEl.style.display = 'none';
+
+  // ── 월별 그룹핑 ──
+  const monthMap = new Map();
+  filtered.forEach(r => {
+    const mKey = r.dateKey.slice(0, 7);
+    if (!monthMap.has(mKey)) monthMap.set(mKey, []);
+    monthMap.get(mKey).push(r);
+  });
+
+  const months = [...monthMap.keys()].sort((a,b) => b.localeCompare(a));
+
+  months.forEach(mKey => {
+    const [yr, mo] = mKey.split('-');
+    const monthRecs = monthMap.get(mKey);
+
+    const section = document.createElement('div');
+    section.style.cssText = 'margin-bottom:20px;';
+
+    const mAttend  = monthRecs.reduce((s,r)=>s+r.classes.reduce((ss,c)=>ss+c.attend,0),0);
+    const mHolding = monthRecs.reduce((s,r)=>s+r.classes.reduce((ss,c)=>ss+c.holding.length,0),0);
+    const mDays    = new Set(monthRecs.map(r=>r.dateKey)).size;
+
+    const mHead = document.createElement('div');
+    mHead.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid #111;flex-wrap:wrap;';
+    mHead.innerHTML = `
+      <span style="font-size:17px;font-weight:900;color:#111;">${yr}년 ${parseInt(mo)}월</span>
+      <span class="schip" style="border-color:#E5E5E5;color:#555;">${mDays}일 기록</span>
+      <span class="schip" style="border-color:#A8DFC4;color:#1A7A50;background:#F0FBF5;">참여 ${mAttend}명</span>
+      <span class="schip" style="border-color:#F0B898;color:#B04020;background:#FFF5F0;">홀딩 ${mHolding}명</span>
+    `;
+    section.appendChild(mHead);
+
+    monthRecs.sort((a,b) => b.dateKey.localeCompare(a.dateKey));
+    monthRecs.forEach(rec => {
+      const card = document.createElement('div');
+      card.className = 'rec-day-card';
+
+      const totalHolding = rec.classes.reduce((s,c)=>s+c.holding.length,0);
+      const totalAttend  = rec.classes.reduce((s,c)=>s+c.attend,0);
+      const totalKor     = rec.classes.reduce((s,c)=>s+c.korMembers.length+c.korTeachers.length,0);
+
+      const head = document.createElement('div');
+      head.className = 'rec-day-head';
+      head.innerHTML = `
+        <span class="rec-day-date">${rec.dateLabel} <span style="font-size:12px;font-weight:600;color:#888;">${rec.dayLabel}</span></span>
+        <span class="rec-day-slot">${rec.slotLabel}</span>
+        <div class="rec-day-chips">
+          <span class="schip" style="border-color:#A8DFC4;color:#1A7A50;background:#F0FBF5;">참여 ${totalAttend}명</span>
+          <span class="schip" style="border-color:#F0B898;color:#B04020;background:#FFF5F0;">홀딩 ${totalHolding}명</span>
+          <span class="schip" style="border-color:#C0CCEE;color:#2040A0;background:#EEF3FF;">한국인 ${totalKor}명</span>
+        </div>
+        <button class="rec-del-btn" style="float:none;margin:0;" title="이 기록 삭제">🗑</button>
+        <span class="rec-day-arrow">▼</span>
+      `;
+
+      head.querySelector('.rec-del-btn').addEventListener('click', async e => {
+        e.stopPropagation();
+        if (!confirm(`${rec.dateLabel} ${rec.slotLabel} 기록을 삭제할까요?`)) return;
+        showToast('🗑 삭제 중…');
+        await deleteRecordFromSheet(rec.dateKey, rec.slotKey);
+        renderRecords();
+      });
+
+      head.addEventListener('click', e => {
+        if (e.target.closest('.rec-del-btn')) return;
+        card.classList.toggle('open');
+      });
+
+      const body = document.createElement('div');
+      body.className = 'rec-day-body';
+      const grid = document.createElement('div');
+      grid.className = 'rec-class-grid';
+
+      rec.classes.forEach(cls => {
+        if (!cls.holding.length && !cls.korMembers.length && !cls.korTeachers.length && !cls.attend && !cls.tutor) return;
+        const cc = document.createElement('div');
+        cc.className = 'rec-class-card';
+        let html = `<div class="rec-class-name">${cls.className}</div>`;
+        if (cls.attend)             html += `<div class="rec-class-row">참여 <span>${cls.attend}명</span></div>`;
+        if (cls.tutor)              html += `<div class="rec-class-row">튜터 <span>${cls.tutor}명</span></div>`;
+        if (cls.holding.length)     html += `<div class="rec-class-row">홀딩 <span>${cls.holding.join(', ')}</span></div>`;
+        if (cls.korMembers.length)  html += `<div class="rec-class-row">한국인 <span>${cls.korMembers.join(', ')}</span></div>`;
+        if (cls.korTeachers.length) html += `<div class="rec-class-row">쌤 <span>${cls.korTeachers.join(', ')}</span></div>`;
+        if (cls.memo)               html += `<div class="rec-memo">${cls.memo}</div>`;
+        cc.innerHTML = html;
+        grid.appendChild(cc);
+      });
+
+      body.appendChild(grid);
+      card.appendChild(head);
+      card.appendChild(body);
+      section.appendChild(card);
+    });
+
+    listEl.appendChild(section);
+  });
+}
+
+function renderRecSummary(recs) {
+  const bar = document.getElementById('recSummaryBar');
+  if (!recs.length) { bar.innerHTML=''; return; }
+
+  const totalDays   = new Set(recs.map(r=>r.dateKey)).size;
+  const totalMonths = new Set(recs.map(r=>r.dateKey.slice(0,7))).size;
+  const totalAttend = recs.reduce((s,r)=>s+r.classes.reduce((ss,c)=>ss+c.attend,0),0);
+  const totalHolding= recs.reduce((s,r)=>s+r.classes.reduce((ss,c)=>ss+c.holding.length,0),0);
+  const avgAttend   = totalDays ? Math.round(totalAttend / totalDays) : 0;
+
+  const pills = [
+    { label: '기간', value: totalMonths+'개월', sub: totalDays+'일 기록' },
+    { label: '총 참여', value: totalAttend+'명', sub: '전체 합산' },
+    { label: '일평균 참여', value: avgAttend+'명', sub: '참여 평균' },
+    { label: '총 홀딩', value: totalHolding+'명', sub: '전체 합산' },
+  ];
+
+  bar.innerHTML = pills.map(p=>`
+    <div class="rec-stat-pill">
+      <div class="rec-stat-label">${p.label}</div>
+      <div class="rec-stat-value">${p.value}</div>
+      <div class="rec-stat-sub">${p.sub}</div>
+    </div>
+  `).join('');
+}
+
+/* ── JSON 내보내기 (구글 시트에서 불러와서 파일로 저장) ── */
+document.getElementById('btnExportJSON').addEventListener('click', async () => {
+  showToast('⏳ 불러오는 중…');
+  const recs = await loadRecords();
+  if (!recs.length) { showToast('⚠ 저장된 기록이 없습니다.'); return; }
+  const json = JSON.stringify({ version: 1, exportedAt: Date.now(), records: recs }, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const now = new Date();
+  a.href = url;
+  a.download = `thebox_records_${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('⬇ JSON 파일을 내보냈습니다.');
+});
+
+/* ── JSON 가져오기 (파일 → 구글 시트에 업로드) ── */
+document.getElementById('btnImportJSON').addEventListener('click', () => {
+  document.getElementById('importFileInput').click();
+});
+document.getElementById('importFileInput').addEventListener('change', async e => {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      const imported = data.records || (Array.isArray(data) ? data : null);
+      if (!imported) throw new Error('형식 오류');
+      showToast(`⏳ ${imported.length}개 기록 업로드 중…`);
+      for (const rec of imported) {
+        await saveRecordToSheet(rec);
+      }
+      renderRecords();
+      showToast(`✅ ${imported.length}개 기록을 가져왔습니다.`);
+    } catch(err) {
+      alert('파일을 읽을 수 없습니다. 올바른 JSON 파일인지 확인해주세요.');
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+});
+
+/* ── 기록 탭 검색 ── */
+document.getElementById('recSearchInp').addEventListener('input', () => renderRecords());
+
+/* ── 오늘 기록 저장 버튼 ── */
+document.getElementById('btnHoldingSave').addEventListener('click', saveHoldingRecord);
+
+/* ══════════════════════════════════════
    자동저장 / 불러오기 (localStorage)
    키: thebox_grouping_state
 ══════════════════════════════════════ */
@@ -2595,12 +2974,12 @@ function loadState() {
   if (hasData) {
     if (presetDay) {
       document.querySelectorAll('[data-pday]').forEach(b => {
-        b.classList.toggle('sel-native', b.dataset.pday === presetDay);
+        b.classList.toggle('sel-preset', b.dataset.pday === presetDay);
       });
     }
     if (presetTime) {
       document.querySelectorAll('[data-ptime]').forEach(b => {
-        b.classList.toggle('sel-native', b.dataset.ptime === presetTime);
+        b.classList.toggle('sel-preset', b.dataset.ptime === presetTime);
       });
     }
     updatePresetPreview();
