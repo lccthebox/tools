@@ -2761,9 +2761,11 @@ async function renderRecords() {
     const section = document.createElement('div');
     section.style.cssText = 'margin-bottom:20px;';
 
-    const mAttend  = monthRecs.reduce((s,r)=>s+r.classes.reduce((ss,c)=>ss+c.attend,0),0);
-    const mHolding = monthRecs.reduce((s,r)=>s+r.classes.reduce((ss,c)=>ss+c.holding.length,0),0);
-    const mDays    = new Set(monthRecs.map(r=>r.dateKey)).size;
+    const mAttend    = monthRecs.reduce((s,r)=>s+r.classes.reduce((ss,c)=>ss+c.attend,0),0);
+    const mHolding   = monthRecs.reduce((s,r)=>s+r.classes.reduce((ss,c)=>ss+c.holding.length,0),0);
+    const mMembers   = monthRecs.reduce((s,r)=>s+r.classes.reduce((ss,c)=>ss+c.korMembers.length,0),0);
+    const mTeachers  = monthRecs.reduce((s,r)=>s+r.classes.reduce((ss,c)=>ss+c.korTeachers.length,0),0);
+    const mDays      = new Set(monthRecs.map(r=>r.dateKey)).size;
 
     const mHead = document.createElement('div');
     mHead.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid #111;flex-wrap:wrap;';
@@ -2772,6 +2774,8 @@ async function renderRecords() {
       <span class="schip" style="border-color:#E5E5E5;color:#555;">${mDays}일 기록</span>
       <span class="schip" style="border-color:#A8DFC4;color:#1A7A50;background:#F0FBF5;">참여 ${mAttend}명</span>
       <span class="schip" style="border-color:#F0B898;color:#B04020;background:#FFF5F0;">홀딩 ${mHolding}명</span>
+      ${mMembers  ? `<span class="schip" style="border-color:#C0CCEE;color:#2040A0;background:#EEF3FF;">멤버 ${mMembers}명</span>` : ''}
+      ${mTeachers ? `<span class="schip" style="border-color:#C090E0;color:#6020A0;background:#F5EEFF;">쌤 ${mTeachers}명</span>` : ''}
     `;
     section.appendChild(mHead);
 
@@ -2780,9 +2784,10 @@ async function renderRecords() {
       const card = document.createElement('div');
       card.className = 'rec-day-card';
 
-      const totalHolding = rec.classes.reduce((s,c)=>s+c.holding.length,0);
-      const totalAttend  = rec.classes.reduce((s,c)=>s+c.attend,0);
-      const totalKor     = rec.classes.reduce((s,c)=>s+c.korMembers.length+c.korTeachers.length,0);
+      const totalHolding  = rec.classes.reduce((s,c)=>s+c.holding.length,0);
+      const totalAttend   = rec.classes.reduce((s,c)=>s+c.attend,0);
+      const totalKor      = rec.classes.reduce((s,c)=>s+c.korMembers.length,0);
+      const totalTeachers = rec.classes.reduce((s,c)=>s+c.korTeachers.length,0);
 
       const head = document.createElement('div');
       head.className = 'rec-day-head';
@@ -2792,7 +2797,8 @@ async function renderRecords() {
         <div class="rec-day-chips">
           <span class="schip" style="border-color:#A8DFC4;color:#1A7A50;background:#F0FBF5;">참여 ${totalAttend}명</span>
           <span class="schip" style="border-color:#F0B898;color:#B04020;background:#FFF5F0;">홀딩 ${totalHolding}명</span>
-          <span class="schip" style="border-color:#C0CCEE;color:#2040A0;background:#EEF3FF;">한국인 ${totalKor}명</span>
+          <span class="schip" style="border-color:#C0CCEE;color:#2040A0;background:#EEF3FF;">멤버 ${totalKor}명</span>
+          ${totalTeachers ? `<span class="schip" style="border-color:#C090E0;color:#6020A0;background:#F5EEFF;">쌤 ${totalTeachers}명</span>` : ''}
         </div>
         <button class="rec-del-btn" style="float:none;margin:0;" title="이 기록 삭제">🗑</button>
         <span class="rec-day-arrow">▼</span>
@@ -2824,8 +2830,8 @@ async function renderRecords() {
         if (cls.attend)             html += `<div class="rec-class-row">참여 <span>${cls.attend}명</span></div>`;
         if (cls.tutor)              html += `<div class="rec-class-row">튜터 <span>${cls.tutor}명</span></div>`;
         if (cls.holding.length)     html += `<div class="rec-class-row">홀딩 <span>${cls.holding.join(', ')}</span></div>`;
-        if (cls.korMembers.length)  html += `<div class="rec-class-row">한국인 <span>${cls.korMembers.join(', ')}</span></div>`;
-        if (cls.korTeachers.length) html += `<div class="rec-class-row">쌤 <span>${cls.korTeachers.join(', ')}</span></div>`;
+        if (cls.korMembers.length)  html += `<div class="rec-class-row">멤버 <span>${cls.korMembers.join(', ')}</span></div>`;
+        if (cls.korTeachers.length) html += `<div class="rec-class-row" style="border-top:1px dashed #E8E8E8;margin-top:4px;padding-top:4px;">쌤 <span style="color:#6020A0;">${cls.korTeachers.join(', ')}</span></div>`;
         if (cls.memo)               html += `<div class="rec-memo">${cls.memo}</div>`;
         cc.innerHTML = html;
         grid.appendChild(cc);
