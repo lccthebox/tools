@@ -3,151 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Box & General Blog AI Master</title>
+    <title>The Box AI Master - Debug Mode</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         :root { --thebox-orange: #ff6b35; --naver-green: #03C75A; --bg: #f8f9fa; }
         body { font-family: 'Pretendard', -apple-system, sans-serif; background: var(--bg); margin: 0; display: flex; height: 100vh; color: #333; }
-        
-        /* Sidebar */
         .sidebar { width: 350px; background: white; border-right: 1px solid #eee; padding: 35px 25px; display: flex; flex-direction: column; box-shadow: 10px 0 30px rgba(0,0,0,0.02); }
         .logo { font-size: 1.7rem; font-weight: 900; color: var(--thebox-orange); letter-spacing: -1.5px; margin-bottom: 30px; }
-        
-        /* Tab System */
         .tab-container { display: flex; gap: 10px; margin-bottom: 25px; background: #f0f0f0; padding: 5px; border-radius: 12px; }
-        .tab { flex: 1; text-align: center; padding: 12px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 700; transition: 0.3s; color: #888; }
+        .tab { flex: 1; text-align: center; padding: 12px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 700; color: #888; transition: 0.3s; }
         .tab.active { background: white; color: var(--thebox-orange); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-        
         .input-group { margin-bottom: 20px; }
         label { display: block; font-size: 0.9rem; font-weight: 800; margin-bottom: 8px; color: #444; }
-        input { width: 100%; padding: 15px; border: 2px solid #eee; border-radius: 12px; font-size: 1rem; box-sizing: border-box; transition: 0.3s; }
-        input:focus { border-color: var(--thebox-orange); outline: none; background: white; }
-        
-        .btn-run { width: 100%; padding: 18px; background: var(--thebox-orange); color: white; border: none; border-radius: 12px; font-weight: 800; font-size: 1.1rem; cursor: pointer; transition: 0.3s; margin-top: 10px; }
-        .btn-run.general { background: var(--naver-green); }
-        .btn-run:hover { transform: translateY(-3px); opacity: 0.9; }
-
-        /* Main Content */
+        input { width: 100%; padding: 15px; border: 2px solid #eee; border-radius: 12px; font-size: 1rem; box-sizing: border-box; }
+        .btn-run { width: 100%; padding: 18px; background: var(--thebox-orange); color: white; border: none; border-radius: 12px; font-weight: 800; font-size: 1.1rem; cursor: pointer; margin-top: 10px; }
         .main-content { flex: 1; padding: 40px; overflow-y: auto; background: #fff; }
         .card { background: white; padding: 30px; border-radius: 25px; border: 1px solid #f0f0f0; box-shadow: 0 10px 40px rgba(0,0,0,0.02); margin-bottom: 25px; }
-        h3 { margin-top: 0; font-size: 1.3rem; font-weight: 900; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
-        
-        #editor { min-height: 800px; line-height: 2.1; font-size: 1.15rem; color: #333; outline: none; white-space: pre-wrap; }
-        .img-slot { background: #fdfdfd; border: 2px dashed #e0e0e0; padding: 40px; text-align: center; color: #999; margin: 30px 0; border-radius: 20px; font-size: 1rem; }
-        
-        /* Status Bar */
-        #status { font-size: 0.85rem; background: #f8f9fa; padding: 15px; border-radius: 10px; border-left: 4px solid var(--thebox-orange); margin-top: 20px; color: #666; line-height: 1.6; }
-        .loader { display: none; border: 3px solid #f3f3f3; border-top: 3px solid white; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; margin-left: 10px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #editor { min-height: 600px; line-height: 2.1; font-size: 1.15rem; outline: none; white-space: pre-wrap; }
+        #status { font-size: 0.85rem; background: #fff1f0; padding: 15px; border-radius: 10px; border-left: 4px solid #ff4d4f; margin-top: 20px; color: #cf1322; display: none; }
+        .img-slot { background: #f9fafc; border: 1.5px dashed #d9d9d9; padding: 30px; text-align: center; color: #888; margin: 25px 0; border-radius: 15px; }
     </style>
 </head>
 <body>
 
 <div class="sidebar">
     <div class="logo">📦 THE BOX AI</div>
-    
     <div class="tab-container">
         <div class="tab active" id="tabTheBox" onclick="switchTab('thebox')">더박스 모드</div>
         <div class="tab" id="tabGeneral" onclick="switchTab('general')">자유 키워드</div>
     </div>
-
     <div class="input-group">
-        <label id="kwLabel">더박스 관련 키워드</label>
-        <input type="text" id="targetKeyword" placeholder="예: 대구 직장인 영어회화">
+        <label id="kwLabel">더박스 타겟 키워드</label>
+        <input type="text" id="targetKeyword" placeholder="예: 대구 영어회화 추천">
     </div>
-
-    <button id="mainBtn" class="btn-run" onclick="generateContent()">
-        <span id="btnText">더박스 원고 생성</span>
-        <div id="loader" class="loader"></div>
-    </button>
-
-    <div id="status">대기 중... 어떤 키워드로 써볼까요? ✨</div>
-    
-    <div style="margin-top:auto; font-size:0.7rem; color: #ddd;">API Key: Active / Mode: <span id="modeStatus">The Box</span></div>
+    <button id="mainBtn" class="btn-run" onclick="generateContent()">원고 생성 시작</button>
+    <div id="status"></div>
 </div>
 
 <div class="main-content">
-    <div id="analysisPanel" class="card" style="display:none;">
-        <h3>📊 AI 로직 분석 & 황금 키워드</h3>
-        <div id="analysisResult" style="color:#666; font-size:1rem;"></div>
-    </div>
-
     <div class="card">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 25px;">
-            <h3 id="editorTitle">✍️ 더박스 맞춤형 리얼 원고</h3>
-            <button onclick="copyDraft()" style="background:#333; color:white; border:none; padding:12px 20px; border-radius:12px; cursor:pointer; font-weight:800; font-size:0.9rem;">원고 복사</button>
+            <h3 id="editorTitle">✍️ 리얼 원고 미리보기</h3>
+            <button onclick="copyDraft()" style="background:#222; color:white; border:none; padding:10px 20px; border-radius:10px; cursor:pointer; font-weight:bold;">복사하기</button>
         </div>
         <div id="editor" contenteditable="true">원고가 생성되면 여기에 표시됩니다.</div>
     </div>
 </div>
 
 <script>
+    // 사용자님이 주신 키를 다시 확인해서 넣었습니다.
     const API_KEY = "AIzaSyD031G9zn3-zn3yAX0c7yFjhHwM5tyrenM";
     let currentMode = 'thebox';
 
     function switchTab(mode) {
         currentMode = mode;
-        const btn = document.getElementById('mainBtn');
-        const kwLabel = document.getElementById('kwLabel');
-        const modeStatus = document.getElementById('modeStatus');
-        
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        
         if(mode === 'thebox') {
             document.getElementById('tabTheBox').classList.add('active');
-            btn.className = "btn-run";
-            btn.innerHTML = '<span id="btnText">더박스 원고 생성</span><div id="loader" class="loader"></div>';
-            kwLabel.innerText = "더박스 관련 키워드";
-            modeStatus.innerText = "The Box Specialist";
-            document.getElementById('editorTitle').innerText = "✍️ 더박스 맞춤형 리얼 원고";
+            document.getElementById('kwLabel').innerText = "더박스 타겟 키워드";
         } else {
             document.getElementById('tabGeneral').classList.add('active');
-            btn.className = "btn-run general";
-            btn.innerHTML = '<span id="btnText">자유 원고 생성</span><div id="loader" class="loader"></div>';
-            kwLabel.innerText = "일반 자유 키워드";
-            modeStatus.innerText = "General Mode";
-            document.getElementById('editorTitle').innerText = "✍️ 자유 주제 리얼 원고";
+            document.getElementById('kwLabel').innerText = "자유 키워드";
         }
     }
 
     async function generateContent() {
         const kw = document.getElementById('targetKeyword').value;
         const status = document.getElementById('status');
-        const loader = document.getElementById('loader');
+        const editor = document.getElementById('editor');
 
         if(!kw) return alert('키워드를 입력해 주세요!');
 
-        loader.style.display = 'inline-block';
-        status.innerHTML = `🌀 ${currentMode === 'thebox' ? '더박스 최신 DB 분석 중...' : '트렌드 데이터 분석 중...'}<br>🌀 네이버 상단 노출 로직 매칭 중...<br>🌀 2030 감성으로 원고 다듬는 중...`;
+        status.style.display = 'block';
+        status.style.background = '#f0f7ff';
+        status.style.color = '#0056b3';
+        status.style.borderLeftColor = '#0056b3';
+        status.innerHTML = "🌀 2026 최신 로직으로 원고 작성 중... 잠시만 기다려주세요.";
 
-        // 모드별 프롬프트 설정
-        let systemPrompt = "";
-        if(currentMode === 'thebox') {
-            systemPrompt = `
-                너는 대구 영어회화 '더박스(The Box)'의 찐팬이자 30대 파워블로거야. 더박스에 대해선 모르는 게 없어.
-                더박스의 특징: 1. 원어민 리더와 함께하는 리얼 회화 2. 동성로 중앙로역 근처 3. 학원 같지 않은 카페/커뮤니티 분위기 4. 레벨 테스트 후 맞춤 그룹 배정 5. 다양한 소셜 활동.
-                키워드 [${kw}]를 더박스와 자연스럽게 연결해서 '내돈내산' 느낌의 후기를 써줘.
-                말투: "했거든요!", "진짜 대박인 게..", "하더라구요~" 같은 트렌디한 구어체. 절대 광고 대행사 말투 금지!
-            `;
-        } else {
-            systemPrompt = `
-                너는 2030 트렌드에 민감한 잡식성 파워블로거야. 키워드 [${kw}]에 대해 직접 경험하고 조사한 리얼 후기를 써줘.
-                광고 느낌 싹 빼고, 친구한테 카톡하듯 친근하면서도 정보는 꽉 찬 말투로 작성해.
-            `;
-        }
+        const systemPrompt = currentMode === 'thebox' 
+            ? `너는 대구 동성로 '더박스(The Box)'의 찐팬 블로거야. 더박스는 원어민 리더들과 파티처럼 즐겁게 대화하는 커뮤니티형 학원이지. 키워드 [${kw}]를 더박스 체험담으로 풀어내줘. 말투는 2030 감성으로 친근하게, 엔터 많이 쳐서 모바일 최적화해줘. 광고체(~하셨나요?) 절대 금지!`
+            : `너는 2030 파워블로거야. 키워드 [${kw}]에 대해 광고 느낌 싹 빼고 리얼한 정보를 담은 포스팅을 써줘.`;
 
-        const fullPrompt = `
-            ${systemPrompt}
-            
-            [공통 지침]
-            1. 제목: 클릭 유발 감성 제목 3개 추천.
-            2. 도입: "요즘 ~하셨죠?" 같은 뻔한 광고체 금지. 본인의 상황 공감으로 시작.
-            3. 구조: 가독성 좋게 엔터 많이! 모바일 최적화! 1,800자 이상 아주 상세하게.
-            4. 시각화: [사진: OO 하는 구체적인 장면] 가이드 6개 이상, [표: 상세 요약 정보] 1개 포함.
-            5. 결론: 댓글 유도 질문으로 마무리.
-
-            응답은 '###분석', '###원고' 구분자를 써줘.
-        `;
+        const fullPrompt = `${systemPrompt}\n\n1. 제목 3개 추천\n2. 본문(1,800자 이상, [사진: 구체적장면] 가이드 6개 포함, 정보 요약 표 포함)\n3. 댓글 유도 마무리.\n###원고 구분자 뒤에 써줘.`;
 
         try {
             const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
@@ -157,26 +94,30 @@
             });
 
             const data = await response.json();
+
+            if (data.error) {
+                throw new Error(`[API 에러] ${data.error.message} (코드: ${data.error.status})`);
+            }
+
             const text = data.candidates[0].content.parts[0].text;
+            const content = text.split('###원고')[1] || text;
 
-            const analysis = text.split('###분석')[1]?.split('###원고')[0] || "분석 완료";
-            const content = text.split('###원고')[1] || "원고 생성 실패";
-
-            document.getElementById('analysisPanel').style.display = 'block';
-            document.getElementById('analysisResult').innerText = analysis.trim();
+            let formatted = content.trim().replace(/\n/g, '<br>');
+            formatted = formatted.replace(/\[사진:.*?\]/g, m => `<div class="img-slot"><i class="fa-regular fa-image"></i><br>${m}</div>`);
             
-            let formattedContent = content.trim().replace(/\n/g, '<br>');
-            formattedContent = formattedContent.replace(/\[사진:.*?\]/g, match => `<div class="img-slot"><i class="fa-regular fa-image"></i><br>${match}</div>`);
-            formattedContent = formattedContent.replace(/\[표:.*?\]/g, match => `<div style="background:#f0f7ff; border:1px solid #cce5ff; padding:15px; border-radius:10px; margin:20px 0;"><strong>📊 정보 요약 (표로 만드세요):</strong><br>${match}</div>`);
-            
-            document.getElementById('editor').innerHTML = formattedContent;
-            status.innerHTML = "✅ 원고 완성! 네이버 에디터에 붙여넣기만 하세요! ✨";
+            editor.innerHTML = formatted;
+            status.innerHTML = "✅ 원고 생성 완료!";
+            status.style.background = '#f6ffed';
+            status.style.color = '#389e0d';
+            status.style.borderLeftColor = '#52c41a';
 
         } catch (error) {
             console.error(error);
-            status.innerHTML = "❌ 에러 발생! 잠시 후 다시 시도해 주세요.";
-        } finally {
-            loader.style.display = 'none';
+            status.style.display = 'block';
+            status.style.background = '#fff1f0';
+            status.style.color = '#cf1322';
+            status.style.borderLeftColor = '#ff4d4f';
+            status.innerHTML = `❌ 에러 발생: ${error.message}<br><br>팁: F12를 눌러 'Console' 탭을 확인해 보세요.`;
         }
     }
 
@@ -187,7 +128,7 @@
         window.getSelection().removeAllRanges();
         window.getSelection().addRange(range);
         document.execCommand('copy');
-        alert('원고 전체 복사 완료! 네이버 블로그 스마트에디터에 붙여넣으세요! ✨');
+        alert('복사되었습니다! 네이버 블로그에 붙여넣으세요.');
     }
 </script>
 
