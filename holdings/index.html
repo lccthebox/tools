@@ -2634,11 +2634,17 @@ async function loadRecords() {
     const data = await res.json();
     if (!data.ok) return [];
     return data.records
-      .map(r => ({
-        ...r,
-        // 구글 시트가 날짜를 Date 문자열로 변환하는 경우 YYYY-MM-DD로 정규화
-        dateKey: String(r.dateKey).slice(0, 10),
-      }))
+      .map(r => {
+        // dateKey를 KST 기준 YYYY-MM-DD로 정규화
+        let dateKey = String(r.dateKey);
+        if (dateKey.length > 10) {
+          // ISO 문자열이나 Date 형태면 KST(+9)로 변환
+          const d = new Date(dateKey);
+          d.setHours(d.getHours() + 9);
+          dateKey = d.toISOString().slice(0, 10);
+        }
+        return { ...r, dateKey };
+      })
       .sort((a,b) => b.savedAt - a.savedAt);
   } catch(e) { return []; }
 }
@@ -2807,7 +2813,7 @@ async function renderRecords() {
       const dayHead = document.createElement('div');
       dayHead.className = 'rec-day-head';
       dayHead.innerHTML = `
-        <span class="rec-day-date">${firstRec.dateLabel} <span style="font-size:12px;font-weight:600;color:#888;">${firstRec.dayLabel}</span></span>
+        <span class="rec-day-date">${dateKey}</span>
         <div class="rec-day-chips">
           <span class="schip" style="border-color:#A8DFC4;color:#1A7A50;background:#F0FBF5;">참여 ${dAttend}명</span>
           <span class="schip" style="border-color:#F0B898;color:#B04020;background:#FFF5F0;">홀딩 ${dHolding}명</span>
