@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>더박스 어학원 오시는 길</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --red:#E8382A;--red-dark:#C0281C;--red-pale:#FFF1F0;
+  --ink:#1C1C1E;--ink2:#3A3A3C;--muted:#8E8E93;
+  --border:#E5E5EA;--surface:#F5F5F7;--white:#FFFFFF;
+  --green-pale:#EDFBF3;--green-dark:#1A7A34;
+  --yellow-pale:#FFFBF0;--blue-pale:#EEF4FF;
+}
+html{scroll-behavior:smooth}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--white);color:var(--ink);-webkit-font-smoothing:antialiased}
+
+.hero{position:relative;width:100%;height:420px;overflow:hidden;background:#2C2C2E}
+.hero-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 40%}
+.hero-fade{
+  position:absolute;inset:0;
+  background:linear-gradient(to bottom,rgba(0,0,0,.15) 0%,rgba(0,0,0,.05) 35%,rgba(255,255,255,0) 55%,rgba(255,255,255,.78) 78%,rgba(255,255,255,1) 100%)
+}
+.hero-content{position:absolute;bottom:28px;left:0;right:0;padding:0 24px;text-align:center}
+.hero-eyebrow{display:inline-block;background:var(--red);color:white;font-size:11px;font-weight:700;letter-spacing:2.5px;padding:5px 14px;border-radius:20px;margin-bottom:14px}
+.hero-title{font-size:clamp(32px,8vw,50px);font-weight:900;color:var(--ink);letter-spacing:-2px;line-height:1.05;margin-bottom:8px}
+.hero-title em{color:var(--red);font-style:normal}
+.hero-sub{font-size:13px;color:var(--muted);font-weight:400}
+
+.wrap{max-width:680px;margin:0 auto;padding:0 16px 80px}
+.section{margin-top:32px}
+.section-label{font-size:11px;font-weight:700;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:12px;padding-left:2px}
+.card{background:var(--white);border-radius:20px;overflow:hidden;border:1px solid var(--border)}
+
+.addr-row{padding:20px 20px 0;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.addr-main{font-size:16px;font-weight:700}
+.addr-sub{font-size:13px;color:var(--muted);margin-top:3px}
+.copy-pill{display:flex;align-items:center;gap:5px;background:var(--surface);border:none;border-radius:20px;padding:8px 14px;font-size:12px;font-weight:700;color:var(--ink2);cursor:pointer;white-space:nowrap;font-family:'Noto Sans KR',sans-serif;flex-shrink:0;transition:background .15s}
+.copy-pill:hover{background:#DDDDE0}
+
+.map-frame{margin:16px 20px 0;border-radius:14px;overflow:hidden;border:1px solid var(--border);background:#e8e8e8;height:240px}
+.map-frame iframe{width:100%;height:240px;border:none;display:block}
+
+.nav-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:14px 20px 20px}
+.nav-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:14px 8px;border-radius:14px;text-decoration:none;border:none;cursor:pointer;font-family:'Noto Sans KR',sans-serif;font-size:12px;font-weight:700;transition:opacity .15s,transform .12s}
+.nav-btn:hover{opacity:.82;transform:translateY(-1px)}
+.nav-btn:active{transform:scale(.97)}
+.nav-icon{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center}
+.btn-naver{background:#E8F7EE;color:#1A7A34}.btn-naver .nav-icon{background:#03C75A}
+.btn-kakao{background:#FFFAE6;color:#7A5800}.btn-kakao .nav-icon{background:#FEE500}
+.btn-google{background:#EAF2FF;color:#1A4FA0}.btn-google .nav-icon{background:#4285F4}
+
+.elev-card{background:var(--white);border-radius:20px;overflow:hidden;border:2px solid var(--red)}
+.elev-header{background:var(--red);padding:16px 20px;display:flex;align-items:center;gap:10px}
+.elev-hicon{width:36px;height:36px;background:rgba(255,255,255,.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.elev-htxt{color:white}
+.elev-htxt strong{font-size:15px;font-weight:700;display:block}
+.elev-htxt span{font-size:12px;opacity:.8}
+.elev-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border)}
+.elev-cell{background:var(--white);padding:22px 16px;text-align:center}
+.elev-icon-wrap{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:24px}
+.ok .elev-icon-wrap{background:var(--green-pale)}.no .elev-icon-wrap{background:var(--red-pale)}
+.elev-name{font-size:13px;font-weight:700;margin-bottom:3px}
+.ok .elev-name{color:var(--green-dark)}.no .elev-name{color:var(--red-dark)}
+.elev-desc{font-size:12px;color:var(--muted);line-height:1.5}
+.elev-badge{display:inline-block;margin-top:8px;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700}
+.ok .elev-badge{background:var(--green-pale);color:var(--green-dark)}
+.no .elev-badge{background:var(--red-pale);color:var(--red-dark)}
+.elev-tip{padding:14px 18px;background:var(--yellow-pale);display:flex;gap:10px;align-items:flex-start;border-top:1px solid #FFE5B4}
+.elev-tip-ico{font-size:15px;flex-shrink:0;margin-top:2px}
+.elev-tip p{font-size:13px;color:#5C3A00;line-height:1.65}
+.elev-tip strong{font-weight:700;color:#3A2200}
+
+.ttabs{display:flex;gap:6px;padding:16px 20px 0}
+.ttab{padding:7px 16px;border-radius:20px;border:1px solid var(--border);background:transparent;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:all .15s}
+.ttab.on{background:var(--ink);color:white;border-color:var(--ink)}
+.tpanel{display:none;padding:12px 20px 20px}.tpanel.on{display:block}
+.titem{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--border)}
+.titem:last-child{border:none;padding-bottom:0}
+.tbadge{padding:5px 10px;border-radius:8px;font-size:11px;font-weight:700;white-space:nowrap;flex-shrink:0}
+.tbadge.sub{background:#E6F1FF;color:#0050CC}.tbadge.bus{background:var(--green-pale);color:var(--green-dark)}
+.tinfo{flex:1}.tinfo b{display:block;font-size:14px;font-weight:700}.tinfo small{font-size:12px;color:var(--muted)}
+.twalk{background:var(--surface);border-radius:20px;padding:4px 11px;font-size:11px;font-weight:700;color:var(--ink2);white-space:nowrap;flex-shrink:0}
+
+.park-notice{margin:16px 20px 0;padding:12px 14px;background:var(--surface);border-radius:12px;font-size:12px;color:var(--muted);line-height:1.55;display:flex;gap:8px;align-items:flex-start}
+.park-group{padding:0 20px 20px}
+.park-glabel{font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted);text-transform:uppercase;padding:18px 0 10px;border-bottom:1px solid var(--border);margin-bottom:2px}
+.pitem{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--border)}
+.pitem:last-child{border:none;padding-bottom:0}
+.pitem.star{background:var(--yellow-pale);margin:0 -20px;padding:14px 20px;border-bottom:1px solid #FFE5B4}
+.pitem.star:last-child{border-bottom:none}
+.pwalk{width:42px;height:42px;border-radius:50%;background:var(--surface);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--ink2);align-self:flex-start;margin-top:1px}
+.pitem.star .pwalk{background:#FFE8A0;color:#7A5800}
+.pinfo{flex:1;min-width:0}
+.pname{font-size:14px;font-weight:700;display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px}
+.sbadge{background:var(--red);color:white;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px}
+.paddr{font-size:12px;color:var(--muted);margin-bottom:4px}
+.pfee{font-size:12px;color:var(--ink2);line-height:1.65}
+.ptag{display:inline-block;border-radius:4px;font-size:10px;font-weight:700;padding:2px 7px;margin-right:3px}
+.ptag.free{background:var(--green-pale);color:var(--green-dark)}
+.ptag.partner{background:var(--blue-pale);color:#0050CC}
+.park-note{margin:12px 0 0;padding:10px 12px;background:var(--surface);border-radius:10px;font-size:11px;color:var(--muted);line-height:1.5}
+
+.call-card{background:var(--ink);border-radius:20px;padding:30px 24px;text-align:center}
+.call-label{font-size:13px;color:#8E8E93;margin-bottom:12px}
+.call-btn{display:inline-flex;align-items:center;gap:8px;background:var(--red);color:white;text-decoration:none;padding:15px 36px;border-radius:50px;font-size:20px;font-weight:700;letter-spacing:.5px;transition:background .15s}
+.call-btn:hover{background:var(--red-dark)}
+.call-hint{font-size:12px;color:#636366;margin-top:10px}
+
+footer{background:var(--ink);padding:24px 20px;text-align:center;font-size:12px;color:#636366;border-top:1px solid #2C2C2E}
+footer strong{color:#AEAEB2}
+
+#toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(10px);background:rgba(28,28,30,.92);color:white;padding:10px 22px;border-radius:30px;font-size:13px;font-weight:600;opacity:0;pointer-events:none;z-index:999;transition:all .25s;white-space:nowrap}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media(max-width:460px){.elev-grid{grid-template-columns:1fr}.hero{height:360px}.hero-title{letter-spacing:-1px}}
+</style>
+</head>
+<body>
+
+<!-- HERO
+  이미지 파일명: hero-bg.jpg
+  HTML 파일과 같은 폴더(GitHub 동일 경로)에 올려주세요
+  권장: 1200x800px 이상, 건물 외관 또는 강의실 사진
+-->
+<div class="hero">
+  <img class="hero-img" src="hero-bg.jpg" alt="더박스 어학원" onerror="this.style.opacity=0"/>
+  <div class="hero-fade"></div>
+  <div class="hero-content">
+    <div class="hero-eyebrow">오시는 길</div>
+    <div class="hero-title">더박스 <em>어학원</em></div>
+    <div class="hero-sub">대구광역시 중구 동성로 2 · 협성빌딩 6~8층</div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="section">
+    <div class="section-label">위치</div>
+    <div class="card">
+      <div class="addr-row">
+        <div>
+          <div class="addr-main">대구광역시 중구 동성로 2</div>
+          <div class="addr-sub">협성빌딩 6층 ~ 8층</div>
+        </div>
+        <button class="copy-pill" onclick="copyAddr()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          주소 복사
+        </button>
+      </div>
+      <div class="map-frame">
+        <!-- map.kakao.com → '더박스 어학원' 검색 → 공유 → 지도 퍼가기 → src 교체 -->
+        <iframe src="https://map.kakao.com/link/map/더박스어학원,35.8698,128.5955/embed" allowfullscreen loading="lazy" title="더박스 어학원 위치"></iframe>
+      </div>
+      <div class="nav-row">
+        <a class="nav-btn btn-naver" href="#" onclick="goNav('naver');return false">
+          <div class="nav-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="white"><path d="M16.273 12.845L7.376 0H0v24h7.727V11.155L16.624 24H24V0h-7.727z"/></svg></div>
+          네이버 지도
+        </a>
+        <a class="nav-btn btn-kakao" href="#" onclick="goNav('kakao');return false">
+          <div class="nav-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="#3C1E1E"><path d="M12 3C6.477 3 2 6.477 2 10.84c0 2.764 1.56 5.196 3.93 6.67L5.04 21l4.12-2.71A11.3 11.3 0 0012 18.68c5.523 0 10-3.477 10-7.84S17.523 3 12 3z"/></svg></div>
+          카카오맵
+        </a>
+        <a class="nav-btn btn-google" href="https://www.google.com/maps/search/?api=1&query=대구+중구+동성로+2+협성빌딩" target="_blank">
+          <div class="nav-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="white"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></div>
+          구글 지도
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">입구 안내</div>
+    <div class="elev-card">
+      <div class="elev-header">
+        <div class="elev-hicon">🛗</div>
+        <div class="elev-htxt">
+          <strong>엘리베이터 이용 안내 — 필독</strong>
+          <span>입구 두 곳 중 한 곳에만 엘리베이터가 있습니다</span>
+        </div>
+      </div>
+      <div class="elev-grid">
+        <div class="elev-cell ok">
+          <div class="elev-icon-wrap">✅</div>
+          <div class="elev-name">동성로 메인골목 입구</div>
+          <div class="elev-desc">카페 봄봄 옆</div>
+          <div class="elev-badge">엘리베이터 있음</div>
+        </div>
+        <div class="elev-cell no">
+          <div class="elev-icon-wrap">🚫</div>
+          <div class="elev-name">통신골목 입구 (KT 쪽)</div>
+          <div class="elev-desc">비상계단만 있음</div>
+          <div class="elev-badge">엘리베이터 없음</div>
+        </div>
+      </div>
+      <div class="elev-tip">
+        <div class="elev-tip-ico">💡</div>
+        <p><strong>동성로 메인골목 방향</strong>으로 들어오세요. 입구 우측에 <strong>CAFE 봄봄</strong>이 보이면 정확한 입구입니다.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">대중교통</div>
+    <div class="card">
+      <div class="ttabs">
+        <button class="ttab on" onclick="switchT('sub',this)">지하철</button>
+        <button class="ttab" onclick="switchT('bus',this)">버스</button>
+      </div>
+      <div id="tp-sub" class="tpanel on">
+        <div class="titem">
+          <span class="tbadge sub">1호선</span>
+          <div class="tinfo"><b>반월당역</b><small>13번 · 14번 출구</small></div>
+          <span class="twalk">도보 2분</span>
+        </div>
+        <div class="titem">
+          <span class="tbadge sub">1호선</span>
+          <div class="tinfo"><b>중앙로역</b><small>1번 출구</small></div>
+          <span class="twalk">도보 4~5분</span>
+        </div>
+      </div>
+      <div id="tp-bus" class="tpanel">
+        <div class="titem">
+          <span class="tbadge bus">버스</span>
+          <div class="tinfo"><b>동성로 약령시 정류장</b><small>인근 버스 정류장</small></div>
+          <span class="twalk">도보 2분</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">주변 주차장</div>
+    <div class="card">
+      <div class="park-notice">
+        <span style="font-size:15px;flex-shrink:0">🚗</span>
+        <span>어학원 전용 주차장이 없습니다. 아래 공영·민영 주차장을 이용해 주세요.</span>
+      </div>
+      <div class="park-group">
+        <div class="park-glabel">공영 주차장</div>
+        <div class="pitem">
+          <div class="pwalk">9분</div>
+          <div class="pinfo">
+            <div class="pname">약령시 서문 공영주차장</div>
+            <div class="paddr">중구 남성로 33</div>
+            <div class="pfee">30분 500원 / 60분 1,250원<br><span class="ptag free">무료</span>평일 18시 이후 · 주말·공휴일</div>
+          </div>
+        </div>
+        <div class="pitem">
+          <div class="pwalk">11분</div>
+          <div class="pinfo">
+            <div class="pname">동부교육청 남편 노상 주차장</div>
+            <div class="paddr">중구 남산동 632-22</div>
+            <div class="pfee"><span class="ptag free">무료</span>평일 6시 이후 / 주말·공휴일 24시간</div>
+          </div>
+        </div>
+        <div class="pitem">
+          <div class="pwalk">12분</div>
+          <div class="pinfo">
+            <div class="pname">국체 보상 공원 주차장</div>
+            <div class="paddr">중구 국체보상로 670</div>
+            <div class="pfee">기본 30분 600원 / 추가 10분 300원 / 일주차 5,000원</div>
+          </div>
+        </div>
+        <div class="pitem">
+          <div class="pwalk">15분</div>
+          <div class="pinfo">
+            <div class="pname">성내 공영 주차장</div>
+            <div class="paddr">중구 국체보상로131길 3</div>
+            <div class="pfee">30분 1,000원 / 1시간 2,500원 / 일주차 10,000원</div>
+          </div>
+        </div>
+
+        <div class="park-glabel" style="margin-top:4px">민영 주차장</div>
+        <div class="pitem star">
+          <div class="pwalk">1분</div>
+          <div class="pinfo">
+            <div class="pname">유니온스퀘어 주차장 <span class="sbadge">가장 가까움</span></div>
+            <div class="paddr">중구 동성로1길 15 B2F</div>
+            <div class="pfee">30분 2,000원 / 60분 4,000원</div>
+          </div>
+        </div>
+        <div class="pitem">
+          <div class="pwalk">2분</div>
+          <div class="pinfo">
+            <div class="pname">세종로 민영주차장</div>
+            <div class="paddr">중구 중앙대로77길 6</div>
+            <div class="pfee">30분 1,000원 / 60분 2,500원</div>
+          </div>
+        </div>
+        <div class="pitem">
+          <div class="pwalk">-</div>
+          <div class="pinfo">
+            <div class="pname">반월당 메트로주차장</div>
+            <div class="paddr">중구 달구벌대로 2100</div>
+            <div class="pfee">30분 2,000원 / +10분 500원 / 일주차 15,000원<br><span class="ptag partner">제휴무료</span>동아쇼핑 · 대현대 · 더현대CGV 이용 시</div>
+          </div>
+        </div>
+        <div class="park-note">※ 주차 요금·운영 시간은 변경될 수 있습니다. 방문 전 확인을 권장합니다.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="call-card">
+      <div class="call-label">오시는 길이 헷갈리시면 전화주세요</div>
+      <a class="call-btn" href="tel:053-428-5091">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/></svg>
+        053-428-5091
+      </a>
+      <div class="call-hint">전화 상담도 가능합니다</div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <strong>더박스 어학원</strong> · 대구광역시 중구 동성로 2 협성빌딩 6~8층<br>
+  <span style="font-size:11px;display:block;margin-top:4px">주차 정보는 변경될 수 있으니 방문 전 확인 바랍니다.</span>
+</footer>
+
+<div id="toast"></div>
+
+<script>
+function copyAddr(){
+  const t='대구광역시 중구 동성로 2';
+  navigator.clipboard.writeText(t).catch(()=>{
+    const el=document.createElement('textarea');
+    el.value=t;document.body.appendChild(el);el.select();
+    document.execCommand('copy');document.body.removeChild(el);
+  });
+  showToast('주소를 복사했습니다');
+}
+function showToast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),2000);
+}
+function switchT(id,btn){
+  document.querySelectorAll('.tpanel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.ttab').forEach(b=>b.classList.remove('on'));
+  document.getElementById('tp-'+id).classList.add('on');
+  btn.classList.add('on');
+}
+function goNav(type){
+  const lat=35.8698,lng=128.5955,name='더박스 어학원';
+  let app,web;
+  if(type==='naver'){
+    app='naver.maps://route/public?dlat='+lat+'&dlng='+lng+'&dname='+encodeURIComponent(name);
+    web='https://map.naver.com/v5/search/'+encodeURIComponent('대구 중구 동성로 2 협성빌딩');
+  }else{
+    app='kakaomap://look?p='+lat+','+lng;
+    web='https://map.kakao.com/link/search/'+encodeURIComponent('더박스 어학원');
+  }
+  const t=Date.now(),f=document.createElement('iframe');
+  f.style.display='none';f.src=app;document.body.appendChild(f);
+  setTimeout(()=>{if(Date.now()-t<1500)window.open(web,'_blank');document.body.removeChild(f);},1100);
+}
+</script>
+</body>
+</html>
