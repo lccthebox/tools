@@ -1021,6 +1021,89 @@
         </div>
       </div>
 
+      <!-- BLIND DIRECTOR -->
+      <div class="activity-card" id="act-blind">
+        <div class="activity-header" onclick="toggleAct('act-blind')">
+          <div class="activity-icon icon-purple">🎨</div>
+          <div class="activity-info">
+            <div class="activity-tag">Drawing Activity</div>
+            <div class="activity-name">The Blind Director</div>
+            <div class="activity-meta">
+              <div class="meta-chip">👥 <span class="ko">전체</span><span class="en">Full Group</span></div>
+              <div class="meta-chip ko">🖊️ 화가 1명 + 감독들</div>
+              <div class="meta-chip en">🖊️ 1 Artist + Directors</div>
+            </div>
+          </div>
+          <div class="act-toggle">⌄</div>
+        </div>
+        <div class="activity-body">
+          <div class="act-tabs">
+            <button class="act-tab-btn active" onclick="switchActTab(this,'blind-flow')"><span class="ko">진행 방법</span><span class="en">How to Run</span></button>
+            <button class="act-tab-btn" onclick="switchActTab(this,'blind-tips')"><span class="ko">발화 유도 팁</span><span class="en">Director's Cut Tips</span></button>
+          </div>
+          <div class="act-tab-content active" id="blind-flow">
+            <div class="rule-box">
+              <div class="rule-label ko">핵심 원리</div><div class="rule-label en">Key Concept</div>
+              <div class="rule-text ko"><strong>화가(Artist)</strong>는 등을 돌려 화면을 못 보고, <strong>감독들(Directors)</strong>이 오직 영어로만 그림을 지시! 화가도 영어로만 질문 가능.</div>
+              <div class="rule-text en"><strong>Artist</strong> sits with back turned. <strong>Directors</strong> describe the image in English only — Artist can only ask questions in English!</div>
+            </div>
+            <div class="steps-list">
+              <div class="step-item"><div class="step-num">01</div><div class="step-body">
+                <div class="step-title ko">역할 분담</div><div class="step-title en">Assign Roles</div>
+                <div class="step-desc ko">1명이 펜을 쥔 <strong>화가(Artist)</strong>, 나머지는 모두 <strong>감독(Directors)</strong>.</div>
+                <div class="step-desc en">1 person is the <strong>Artist</strong> (holds the pen), everyone else is a <strong>Director</strong>.</div>
+              </div></div>
+              <div class="step-item"><div class="step-num">02</div><div class="step-body">
+                <div class="step-title ko">자리 배치</div><div class="step-title en">Seating</div>
+                <div class="step-desc ko">화가는 다른 사람들의 스마트폰 화면을 볼 수 없도록 <strong>등을 돌리거나 벽을 보고</strong> 앉습니다.</div>
+                <div class="step-desc en">The Artist sits facing the wall so they <strong>cannot see anyone's screen</strong>.</div>
+              </div></div>
+              <div class="step-item"><div class="step-num">03</div><div class="step-body">
+                <div class="step-title ko">그림 공개</div><div class="step-title en">Reveal the Image</div>
+                <div class="step-desc ko">진행자가 <strong>감독들에게만</strong> '기상천외한 이미지' 하나를 보여줍니다.</div>
+                <div class="step-desc en">The host shows <strong>only the Directors</strong> one wild, unexpected image.</div>
+              </div></div>
+              <div class="step-item"><div class="step-num">04</div><div class="step-body">
+                <div class="step-title ko">아수라장 지시 시작 <span class="time-tag">5분</span></div><div class="step-title en">Chaos Directing <span class="time-tag">5 min</span></div>
+                <div class="step-desc ko">타이머가 켜지는 순간, 감독들이 일제히 오직 영어로만 화가에게 그림을 설명!</div>
+                <div class="step-desc en">When the timer starts, all Directors simultaneously describe the image in English only!</div>
+                <div class="cue-box"><div class="cue-label">Director Examples</div><div class="cue-text">"Draw a huge circle in the middle!" / "No, a little bit higher! Add two eyes!"</div></div>
+              </div></div>
+              <div class="step-item"><div class="step-num">05</div><div class="step-body">
+                <div class="step-title ko">화가의 반격 (질문 필수)</div><div class="step-title en">Artist Fights Back</div>
+                <div class="step-desc ko">이상한 지시가 들어오면 화가는 <strong>무조건 영어로 질문</strong>하며 그림을 구체화해야 합니다.</div>
+                <div class="step-desc en">When confused, the Artist <strong>must ask questions in English</strong> to clarify.</div>
+                <div class="cue-box"><div class="cue-label">Artist Example</div><div class="cue-text">"Wait, how big are the eyes? Like an apple?" (잠깐, 눈이 얼마나 커? 사과만 해?)</div></div>
+              </div></div>
+              <div class="step-item"><div class="step-num">06</div><div class="step-body">
+                <div class="step-title ko">결작 공개</div><div class="step-title en">The Big Reveal</div>
+                <div class="step-desc ko">5분 후 화가가 뒤를 돌아 원본 그림과 자신이 그린 '괴작'을 비교하며 다 같이 빵 터집니다!</div>
+                <div class="step-desc en">Artist turns around and compares the original with their "masterpiece" — everyone loses it!</div>
+              </div></div>
+              <div class="step-item"><div class="step-num">07</div><div class="step-body">
+                <div class="step-title ko">역할 교체</div><div class="step-title en">Switch Roles</div>
+                <div class="step-desc ko">화가를 다른 사람으로 교체하고 새로운 그림으로 다음 라운드 시작!</div>
+                <div class="step-desc en">Switch the Artist and start the next round with a new image!</div>
+              </div></div>
+            </div>
+            <div class="materials-row">
+              <span class="materials-label">📦</span>
+              <div class="mat-tag ko">종이 & 펜</div><div class="mat-tag en">Paper & Pen</div>
+              <div class="mat-tag ko">기상천외한 이미지</div><div class="mat-tag en">Wild Images</div>
+              <div class="mat-tag ko">타이머</div><div class="mat-tag en">Timer</div>
+            </div>
+          </div>
+          <div class="act-tab-content" id="blind-tips">
+            <div class="act-tips">
+              <div class="act-tip-item"><span class="tip-icon">💡</span><div><span class="ko"><strong>라운드 2 — 신체 부위 금지:</strong> Eye, Hand, Leg 같은 직접적인 단어 사용 불가. 예: 다리 → "The thing used for walking"</span><span class="en"><strong>Round 2 — Body parts banned:</strong> No direct body words (Eye, Hand, Leg). e.g. Leg → "The thing used for walking"</span></div></div>
+              <div class="act-tip-item"><span class="tip-icon">💡</span><div><span class="ko"><strong>라운드 3 — 방향치 모드:</strong> Left, Right, Up, Down 사용 금지. 오직 North, South, East, West로만!</span><span class="en"><strong>Round 3 — Compass-only:</strong> No Left/Right/Up/Down. Only North, South, East, West!</span></div></div>
+              <div class="act-tip-item"><span class="tip-icon">💡</span><div><span class="ko"><strong>라운드 4 — 한 단어 릴레이:</strong> 감독들이 동시에 말하지 못하고, 돌아가면서 딱 한 단어씩만 말해서 문장을 완성! (이거 진짜 환장합니다!)</span><span class="en"><strong>Round 4 — One-word relay:</strong> Directors take turns adding ONE word at a time to build a sentence. (Absolute chaos!)</span></div></div>
+              <div class="act-tip-item"><span class="tip-icon">💡</span><div><span class="ko"><strong>이미지 선택 팁:</strong> 복잡하고 황당한 이미지일수록 재밌어요. 구글에서 "weird surreal illustration" 검색 추천!</span><span class="en"><strong>Image tip:</strong> The weirder and more complex, the better. Search "weird surreal illustration" on Google!</span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
