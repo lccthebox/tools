@@ -177,7 +177,7 @@ textarea.finput{resize:vertical;min-height:60px}
 .r-callback{background:#fce8f3;color:#b03a7a}
 .r-noshow{background:var(--bg3);color:var(--text3)}
 .consult-memo{background:var(--bg3);border-radius:var(--r);padding:8px 11px;font-size:12.5px;color:var(--text2);line-height:1.6;margin-top:7px;border-left:2px solid var(--accent)}
-.consult-next{background:rgba(255,235,59,0.5);border-radius:var(--r);padding:6px 11px;font-size:12px;color:#000;margin-top:7px;border-left:2px solid rgba(255,235,59,0.8)}
+.consult-next{background:rgba(255,235,59,0.2);border-radius:var(--r);padding:6px 11px;font-size:12px;color:#000;margin-top:7px;border-left:2px solid rgba(255,235,59,0.8)}
 .exp-row{display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid var(--border)}
 .exp-row:last-child{border-bottom:none}
 .exp-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
@@ -234,6 +234,12 @@ textarea.finput{resize:vertical;min-height:60px}
 .login-btn{width:100%;background:var(--accent);border:none;border-radius:var(--r);padding:10px;font-size:13.5px;font-weight:600;color:#fff;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:background .12s}
 .login-btn:hover{background:var(--accent-hover)}
 .login-err{font-size:11.5px;color:var(--red);margin-top:7px;min-height:18px}
+.login-status{display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;color:var(--text3);margin-top:12px;opacity:0.8}
+.status-dot{width:6px;height:6px;border-radius:50%;background:#ccc}
+.status-dot.online{background:var(--teal)}
+.status-dot.offline{background:var(--red)}
+.status-dot.loading{background:var(--amber);animation:pulse 1s infinite alternate}
+@keyframes pulse{from{opacity:0.4}to{opacity:1}}
 .dash-teacher-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);overflow-x:auto;margin:-14px -15px 12px}
 .dash-teacher-tabs::-webkit-scrollbar{height:3px}
 .dash-teacher-tabs::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
@@ -263,10 +269,13 @@ textarea.finput{resize:vertical;min-height:60px}
         <button onclick="showSignupPanel()" style="background:none;border:none;font-size:12px;color:var(--accent);cursor:pointer;font-family:'Noto Sans KR',sans-serif">
           계정 가입 신청 →
         </button>
-        <button onclick="resetManagersToDefault()" style="background:none;border:none;font-size:11px;color:var(--text3);cursor:pointer;text-decoration:underline">
-          기본 계정 안내
-        </button>
       </div>
+    </div>
+    
+    <!-- 상태 표시 -->
+    <div class="login-status" id="login-status-wrap">
+      <div class="status-dot loading" id="login-status-dot"></div>
+      <span id="login-status-text">서버 연결 확인 중...</span>
     </div>
 
     <!-- 가입 신청 패널 -->
@@ -356,7 +365,7 @@ textarea.finput{resize:vertical;min-height:60px}
     </div>
 
     <!-- 관리 -->
-    <div class="sb-sec">관리</div>
+    <div class="sb-sec" id="sb-sec-admin">관리</div>
     <div class="sb-item" data-page="trial" id="sb-trial">
       <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
       청강 관리
@@ -366,10 +375,6 @@ textarea.finput{resize:vertical;min-height:60px}
       상담 관리
       <span class="ndot" id="consult-dot" style="display:none"></span>
     </div>
-    <div class="sb-item" data-page="studyPayments" id="sb-study-payments2" style="display:none">
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="4" width="12" height="8" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M2 7h12" stroke="currentColor" stroke-width="1.3"/></svg>
-      스터디 수강료 관리
-    </div>
     <div class="sb-item" data-page="payments" id="sb-payments">
       <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="4" width="12" height="8" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M2 7h12" stroke="currentColor" stroke-width="1.3"/></svg>
       아카데미 수강료 관리
@@ -378,6 +383,14 @@ textarea.finput{resize:vertical;min-height:60px}
       <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M5 5h6M5 8h6M5 11h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
       데일리 리포트
     </div>
+    <div class="sb-item" data-page="report" id="sb-report">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="3" height="10" rx="1" fill="currentColor" opacity=".4"/><rect x="6.5" y="5" width="3" height="7" rx="1" fill="currentColor" opacity=".6"/><rect x="11" y="1" width="3" height="11" rx="1" fill="currentColor" opacity=".9"/><path d="M2 14h12" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      통계
+    </div>
+    <div class="sb-item" data-page="accounts" id="sb-accounts">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="6" cy="5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M1 13c0-2.2 2.2-3.5 5-3.5s5 1.3 5 3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M12 7v4M10 9h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      계정 관리
+    </div>
 
     <!-- 문서발급 -->
     <div class="sb-item" data-page="docs" id="sb-docs">
@@ -385,15 +398,6 @@ textarea.finput{resize:vertical;min-height:60px}
       문서 발급
     </div>
 
-    <!-- 통계 / 계정관리 -->
-    <div class="sb-item" data-page="report" id="sb-report" style="display:none">
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="3" height="10" rx="1" fill="currentColor" opacity=".4"/><rect x="6.5" y="5" width="3" height="7" rx="1" fill="currentColor" opacity=".6"/><rect x="11" y="1" width="3" height="11" rx="1" fill="currentColor" opacity=".9"/><path d="M2 14h12" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-      통계
-    </div>
-    <div class="sb-item" data-page="accounts" id="sb-accounts" style="display:none">
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="6" cy="5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M1 13c0-2.2 2.2-3.5 5-3.5s5 1.3 5 3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M12 7v4M10 9h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-      계정 관리
-    </div>
     <div class="sb-footer">
       더박스 어학원 · v1.6<br>
       <button onclick="backupData()" style="background:none;border:none;color:var(--text3);font-size:10px;cursor:pointer;padding:2px 0;text-decoration:underline">💾 데이터 백업</button>
@@ -1195,11 +1199,25 @@ let currentManager=null;
 let selectedManagerId='admin'; // 기본 admin 계정
 
 // 권한 체크
-const isDirector=()=>['관리자','원장'].includes(currentManager?.role) || currentManager?.name==='원장';
-const isAdmin=()=>['관리자','원장'].includes(currentManager?.role) || currentManager?.name==='원장';
-const isManager=()=>currentManager?.role==='매니저';
-const hasStatsAccess=()=>currentManager?.role==='관리자';
-const isTeacher=()=>currentManager?.role==='강사';
+const IS_ADMIN_ROLES = ['관리자', '원장', 'admin', 'director'];
+const IS_MANAGER_ROLES = ['매니저', 'manager', '관리자', 'admin', '원장', 'director'];
+const IS_TEACHER_ROLES = ['강사', 'teacher'];
+
+const isAdmin=()=>{
+  if(!currentManager) return false;
+  const r = (currentManager.role || '').toLowerCase();
+  return IS_ADMIN_ROLES.includes(r) || currentManager.name === '원장' || currentManager.userid === 'admin';
+};
+const isManager=()=>{
+  if(!currentManager) return false;
+  const r = (currentManager.role || '').toLowerCase();
+  return IS_MANAGER_ROLES.includes(r);
+};
+const isTeacher=()=>{
+  if(!currentManager) return false;
+  const r = (currentManager.role || '').toLowerCase();
+  return IS_TEACHER_ROLES.includes(r);
+};
 
 // 세부 권한 체크
 const canAccessTrial=()=>!isTeacher();
@@ -1209,11 +1227,11 @@ const canAccessDaily=()=>!isTeacher();
 const canAccessStats=()=>isAdmin();
 const canAccessAccounts=()=>isAdmin();
 const canAccessDocs=()=>!isTeacher();
-const canEditStudentPay=()=>!isTeacher();
-const canDeleteStudent=()=>!isTeacher();
-const canExtendStudent=()=>!isTeacher();
-const canRefundStudent=()=>!isTeacher();
-const canHoldStudent=()=>!isTeacher();
+const canEditStudentPay=()=>isAdmin() || isManager();
+const canDeleteStudent=()=>isAdmin();
+const canExtendStudent=()=>isAdmin() || isManager();
+const canRefundStudent=()=>isAdmin();
+const canHoldStudent=()=>isAdmin() || isManager();
 
 function getFilteredStudents(){
   if(isTeacher()) return S.students.filter(s=>s.teacher===currentManager?.name || getClasses(s).some(c=>c.teacher===currentManager?.name));
@@ -1230,51 +1248,69 @@ function getFilteredConsults(){
 
 // storage에서 매니저 목록 로드 - 완전 방어적으로
 async function loadManagers(){
+  const statusTxt = document.getElementById('login-status-text');
+  const dot = document.getElementById('login-status-dot');
+  
+  if(statusTxt) statusTxt.textContent = '데이터 동기화 중...';
+  if(dot) { dot.className = 'status-dot loading'; }
+
   // Load pending first
   await loadPending().catch(()=>{});
 
-  // Firebase에서 매니저 먼저 로드
+  let loadSuccess = false;
+
+  // Firebase에서 매니저 로드 (Timeout 10s 적용)
   if(fbSyncEnabled && typeof fbDb !== 'undefined'){
     try{
-      const snap = await fbDb.ref('thebox_managers').get();
-      if(snap.exists()&&Array.isArray(snap.val())&&snap.val().length>0){
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Firebase 연결 시간 초과 (10s)')), 10000)
+      );
+      
+      const snap = await Promise.race([
+        fbDb.ref('thebox_managers').get(),
+        timeoutPromise
+      ]);
+
+      if(snap && snap.exists() && Array.isArray(snap.val()) && snap.val().length > 0){
         MANAGERS = snap.val();
+        // admin 등 기본 계정 누락 방보
         DEFAULT_MANAGERS.forEach(def=>{
-          if(!MANAGERS.find(m=>m.id===def.id)) MANAGERS.push(def);
+          if(!MANAGERS.find(m=>m.userid===def.userid)) MANAGERS.push(def);
         });
         try{await window.storage.set(MKEY,JSON.stringify(MANAGERS));}catch(e){}
-        selectedManagerId=MANAGERS[0]?.id||'mgr1';
-        initLoginScreen();
-        return;
+        loadSuccess = true;
+        if(statusTxt) statusTxt.textContent = '클라우드와 연결됨';
+        if(dot) dot.className = 'status-dot online';
+      } else {
+        console.warn('Firebase snap does not exist or empty');
       }
-    }catch(e){ console.warn('Firebase loadManagers error:', e.message); }
+    }catch(e){ 
+      console.warn('Firebase loadManagers error:', e.message);
+      if(statusTxt) statusTxt.textContent = '로컬 모드 (서버 연결 실패)';
+      if(dot) dot.className = 'status-dot offline';
+    }
   }
 
-  try{
-    const r=await window.storage.get(MKEY);
-    if(r&&r.value){
-      const parsed=JSON.parse(r.value);
-      if(Array.isArray(parsed)&&parsed.length>0){
-        MANAGERS=parsed;
-        // DEFAULT_MANAGERS 중 없는 id가 있으면 추가 (구버전 데이터 호환)
-        DEFAULT_MANAGERS.forEach(def=>{
-          if(!MANAGERS.find(m=>m.id===def.id)) MANAGERS.push(def);
-        });
-        await saveManagers().catch(()=>{});
+  if(!loadSuccess){
+    // 로컬 스토리지 시도
+    try{
+      const r=await window.storage.get(MKEY);
+      if(r&&r.value){
+        MANAGERS=JSON.parse(r.value);
+        if(!MANAGERS.find(m=>m.userid==='admin')) MANAGERS.unshift(DEFAULT_MANAGERS[0]);
       } else {
-        MANAGERS=[...DEFAULT_MANAGERS];
-        await saveManagers().catch(()=>{});
+        MANAGERS=DEFAULT_MANAGERS;
       }
-    } else {
-      MANAGERS=[...DEFAULT_MANAGERS];
-      await saveManagers().catch(()=>{});
+      if(statusTxt && !statusTxt.textContent.includes('연결')) statusTxt.textContent = '로컬 캐시 데이터 로드됨';
+    }catch(e){
+      MANAGERS=DEFAULT_MANAGERS;
+      if(statusTxt) statusTxt.textContent = '기본 데이터 로드됨';
     }
-  } catch(e){
-    MANAGERS=[...DEFAULT_MANAGERS];
-    await saveManagers().catch(()=>{});
   }
-  selectedManagerId=MANAGERS[0]?.id||'mgr1';
+
+  selectedManagerId=MANAGERS[0]?.id||'admin';
   initLoginScreen();
+  tryRestoreSession();
 }
 
 async function saveManagers(){
@@ -1283,11 +1319,6 @@ async function saveManagers(){
   if(fbSyncEnabled && typeof fbDb !== 'undefined'){
     try{await fbDb.ref('thebox_managers').set(MANAGERS);}catch(e){}
   }
-}
-
-// 비상 초기화
-async function resetManagersToDefault(){
-  alert('기본 관리자 계정 정보:\n\n아이디: admin\n비밀번호: 1234\n\n이 계정으로 로그인하세요.');
 }
 
 // ══ 로그인 ══
@@ -1308,17 +1339,29 @@ function selectManager(id){
   selectedManagerId=id;
   document.querySelectorAll('.manager-btn').forEach(b=>b.classList.remove('selected'));
   document.getElementById('mbtn-'+id)?.classList.add('selected');
+  
+  // 선택한 매니저 정보를 입력창에 반영
+  const mgr = MANAGERS.find(m => m.id === id);
+  if(mgr){
+    const idEl = document.getElementById('login-userid');
+    if(idEl) idEl.value = mgr.userid || mgr.id;
+    // 패스워드 창에 포커스 (UX 개선)
+    const pwEl = document.getElementById('login-pw-input');
+    if(pwEl) pwEl.focus();
+  }
 }
 
 function showSignupPanel(){
   document.getElementById('login-panel').style.display='none';
   document.getElementById('signup-panel').style.display='block';
   document.getElementById('signup-err').textContent='';
+  document.getElementById('login-status-wrap').style.display='none';
 }
 function showLoginPanel(){
   document.getElementById('signup-panel').style.display='none';
   document.getElementById('login-panel').style.display='block';
   document.getElementById('login-err').textContent='';
+  document.getElementById('login-status-wrap').style.display='flex';
 }
 
 async function doSignup(){
@@ -1433,8 +1476,11 @@ async function doLogin(){
     // 비밀번호 체크
     if(mgr.pw && mgr.pw !== pw){
       if(err){err.style.color='var(--red)';err.textContent='비밀번호가 올바르지 않습니다.';}
+      console.warn('Login failed: Invalid password for', userid);
       return;
     }
+    
+    console.log('Login success:', mgr.userid || mgr.id, mgr.name);
     
     // 로그인 이력 기록 (Firebase 사용자만)
     if(mgr.userid && fbDb){
@@ -1468,14 +1514,9 @@ async function doLogin(){
     if(err)err.textContent='';
     currentManager=mgr;
     
-    // localStorage에 세션 저장
+    // localStorage에 세션 저장 (로그인 유지용)
     try{
-      localStorage.setItem('currentUser', JSON.stringify({userid:mgr.userid||mgr.id, loginAt:new Date().toISOString()}));
-    }catch(e){}
-    
-    // sessionStorage에도 세션 저장 (새로고침 대응)
-    try{
-      sessionStorage.setItem('thebox_session', JSON.stringify({managerId:mgr.id, page:'dashboard'}));
+      localStorage.setItem('thebox_session', JSON.stringify({managerId:mgr.userid||mgr.id, page:'dashboard', loginAt:new Date().toISOString()}));
     }catch(e){}
     
     document.getElementById('login-screen').style.display='none';
@@ -1492,38 +1533,7 @@ async function doLogin(){
     if(tn)tn.textContent=mgr.name||(mgr.userid||'');
 
     // 사이드바 메뉴 권한별 표시
-    document.getElementById('sb-report').style.display=canAccessStats()?'flex':'none';
-    const sbAcc=document.getElementById('sb-accounts');
-    if(sbAcc)sbAcc.style.display=canAccessAccounts()?'flex':'none';
-    const sbTrial=document.getElementById('sb-trial');
-    if(sbTrial)sbTrial.style.display=canAccessTrial()?'flex':'none';
-    const sbConsult=document.getElementById('sb-consult');
-    if(sbConsult)sbConsult.style.display=canAccessConsult()?'flex':'none';
-    const sbPayments=document.getElementById('sb-payments');
-    if(sbPayments)sbPayments.style.display=canAccessPayments()?'flex':'none';
-    const sbDaily=document.getElementById('sb-daily');
-    if(sbDaily)sbDaily.style.display=canAccessDaily()?'flex':'none';
-
-    const showStudy=!isTeacher();
-    const sbSecStudy=document.getElementById('sb-sec-study');
-    if(sbSecStudy)sbSecStudy.style.display=showStudy?'block':'none';
-    ['sb-study-dashboard','sb-study-groups','sb-study-admin','sb-study-payments','sb-study-staff'].forEach(id=>{
-      const el=document.getElementById(id);
-      if(el)el.style.display=showStudy?'flex':'none';
-    });
-
-    const sbStudyPay2=document.getElementById('sb-study-payments2');
-    if(sbStudyPay2)sbStudyPay2.style.display=(isManager())?'flex':'none';
-
-    const topConsultBtn=document.getElementById('topbar-consult-btn');
-    if(topConsultBtn)topConsultBtn.style.display=canAccessConsult()?'inline-flex':'none';
-
-    const sbDocs=document.getElementById('sb-docs');
-    if(sbDocs)sbDocs.style.display=isTeacher()?'none':'flex';
-
-    if(isTeacher()) activeTeacher=mgr.name;
-
-    if(isTeacher()) setTimeout(()=>goPage('teachers'),100);
+    applyMenuPermissions();
 
     loadReminders().catch(()=>{});
     loadData();
@@ -1536,7 +1546,10 @@ async function doLogin(){
 
 function doLogout(){
   currentManager=null;
-  try{sessionStorage.removeItem('thebox_session');}catch(e){}
+  try{
+    localStorage.removeItem('thebox_session');
+    sessionStorage.removeItem('thebox_session');
+  }catch(e){}
   const loginErr=document.getElementById('login-err');
   if(loginErr)loginErr.textContent='';
   document.getElementById('main-shell').style.display='none';
@@ -2022,10 +2035,12 @@ function goPage(n){
   document.getElementById('page-'+n)?.classList.add('on');
   document.querySelector(`[data-page="${n}"]`)?.classList.add('on');
   document.getElementById('page-title').textContent=PTITLES[n]||n;
-  // 세션 저장
+  // 세션 저장 (localStorage에도 저장하여 F5 시 페이지 유지)
   try{
     if(currentManager){
-      sessionStorage.setItem('thebox_session', JSON.stringify({managerId:currentManager.id, page:n}));
+      const s = {managerId: currentManager.userid || currentManager.id, page: n};
+      localStorage.setItem('thebox_session', JSON.stringify(s));
+      sessionStorage.setItem('thebox_session', JSON.stringify(s));
     }
   }catch(e){}
   renderAll();
@@ -2380,15 +2395,19 @@ async function loadGcal(){
       if(!isAllDay){
         const s=new Date(ev.start.dateTime);
         const e=new Date(ev.end.dateTime);
-        timeStr=`${String(s.getHours()).padStart(2,'0')}:${String(s.getMinutes()).padStart(2,'0')} ~ ${String(e.getHours()).padStart(2,'0')}:${String(e.getMinutes()).padStart(2,'0')}`;
+        const st = `${String(s.getHours()).padStart(2,'0')}:${String(s.getMinutes()).padStart(2,'0')}`;
+        const et = `${String(e.getHours()).padStart(2,'0')}:${String(e.getMinutes()).padStart(2,'0')}`;
+        timeStr = `<span style="font-weight:700;color:var(--text);background:var(--bg3);padding:1px 4px;border-radius:4px">${st}</span> ~ <span style="font-weight:700;color:var(--text);background:var(--bg3);padding:1px 4px;border-radius:4px">${et}</span>`;
       }
       const GCAL_COLORS=['#7986cb','#33b679','#8e24aa','#e67c73','#f6c026','#f5511d','#039be5','#616161','#3f51b5','#0b8043','#d50000'];
-      const barColor = isConsult ? '#e03131' : (ev.colorId?GCAL_COLORS[parseInt(ev.colorId)-1]||'var(--accent)':'var(--accent)');
-      return`<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+      const barColor = isConsult ? 'rgba(255,235,59,0.8)' : (ev.colorId?GCAL_COLORS[parseInt(ev.colorId)-1]||'var(--accent)':'var(--accent)');
+      const bgColor = isConsult ? 'rgba(255,235,59,0.2)' : 'transparent';
+      const titleColor = isConsult ? '#000' : 'var(--text)';
+      return`<div style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-bottom:1px solid var(--border);background:${bgColor};border-radius:6px;margin-bottom:4px">
         <div style="width:3px;min-height:36px;border-radius:2px;background:${barColor};flex-shrink:0;margin-top:2px"></div>
         <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:600;color:${isConsult?'var(--red)':'var(--text)'};margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${ev.summary||'(제목 없음)'}</div>
-          <div style="font-size:11px;color:var(--text3)">${timeStr}${ev.location?` · 📍${ev.location}`:''}</div>
+          <div style="font-size:13.5px;font-weight:600;color:${titleColor};margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${ev.summary||'(제목 없음)'}</div>
+          <div style="font-size:12px;color:${isConsult?'#333':'var(--text3)'};font-weight:${isConsult?'500':'400'}">${timeStr}${ev.location?` · 📍${ev.location}`:''}</div>
           ${ev.description?`<div style="font-size:11px;color:var(--text3);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${ev.description.replace(/<[^>]*>/g,'')}</div>`:''}
         </div>
       </div>`;
@@ -2402,11 +2421,22 @@ async function loadGcal(){
       const consultEl = document.getElementById('dash-today-consults');
       const countEl   = document.getElementById('dash-today-consult-count');
       if(consultEl){
+        // 기존 캘린더 상담 일정 제거 (중복 방지)
+        const existingCalendar = consultEl.querySelector('[data-gcal-consult]');
+        if(existingCalendar) existingCalendar.remove();
+        
         const gcalConsultHtml = consultEvents.map(ev=>evHtml(ev,true)).join('');
         // 기존 상담 목록 뒤에 추가 (구분선 포함)
         const divider = '<div style="font-size:10px;color:var(--text);padding:4px 12px;background:rgba(255,220,0,0.5)">📅 캘린더 상담 일정</div>';
-        consultEl.insertAdjacentHTML('beforeend', divider + `<div style="padding:0 4px">${gcalConsultHtml}</div>`);
+        consultEl.insertAdjacentHTML('beforeend', `<div data-gcal-consult>${divider}<div style="padding:0 4px">${gcalConsultHtml}</div></div>`);
         if(countEl) countEl.textContent = `(캘린더 +${consultEvents.length}건)`;
+      }
+    } else {
+      // 상담 이벤트가 없으면 기존 캘린더 상담 제거
+      const consultEl = document.getElementById('dash-today-consults');
+      if(consultEl){
+        const existingCalendar = consultEl.querySelector('[data-gcal-consult]');
+        if(existingCalendar) existingCalendar.remove();
       }
     }
 
@@ -3434,7 +3464,17 @@ function addSecondTrial(id){
 // ══ 신규 상담 빠른 등록 ══
 function openQuickConsult(){
   const overlay=document.getElementById('modal-overlay');
-  document.getElementById('modal-title').textContent='+ 신규 상담 등록';
+  const title=document.getElementById('modal-title');
+  const form=document.getElementById('modal-form');
+  const modalEl=overlay?.querySelector('.modal');
+
+  if(title) title.textContent='+ 신규 상담 등록';
+  if(form) form.className=''; // fg 클래스 제거 (2열 그리드 해제)
+  if(modalEl){
+    modalEl.style.width='720px';
+    modalEl.style.maxWidth='98vw';
+  }
+
   const to=['원어민스터디', ...TEACHERS].map(t=>`<option value="${t}">${t}</option>`).join('');
   const srcOpts=['네이버','인스타그램','구글','지하철·오프라인광고','주변인 소개','예전 수강생','기타SNS','당근','직접 방문','기타'];
   const purposeOpts=['워킹홀리데이/이민','유학·교환학생','취업준비','직장·비즈니스','취미·자기계발','여행','대학수업·전공','기타'];
@@ -3449,8 +3489,8 @@ function openQuickConsult(){
   const nextWeek=new Date();nextWeek.setDate(nextWeek.getDate()+7);
   const nextWeekStr=nextWeek.toISOString().slice(0,10);
 
-  document.getElementById('modal-form').innerHTML=`
-    <div style="display:flex;flex-direction:column;gap:12px;max-height:65vh;overflow-y:auto;padding-right:5px">
+  if(form) form.innerHTML=`
+    <div style="display:flex;flex-direction:column;gap:12px;padding-right:5px">
       <!-- 1. 기본 인적사항 -->
       <fieldset style="border:1px solid var(--border2);border-radius:var(--r);padding:12px;margin:0">
         <legend style="font-size:11px;font-weight:700;color:var(--text3);padding:0 5px">기본 인적사항</legend>
@@ -4832,10 +4872,32 @@ function consultForm(c){
 
     <!-- 시스템별 상세정보 (Branching) -->
     <div id="section-academy" class="fgroup full" style="display:${(sys==='아카데미'||sys==='아카데미+스터디')?'block':'none'}; border:1px dashed var(--border); padding:10px; border-radius:var(--r); margin-bottom:10px">
-      <div style="font-size:11px; font-weight:700; color:var(--text3); margin-bottom:8px">🏛️ 아카데미 상세</div>
-      <div class="fg">
-        <div class="fgroup"><label class="flabel">희망 강사</label><select class="finput" id="f-teacher"><option value="">미정</option>${to}</select></div>
-        <div class="fgroup"><label class="flabel">관심 수업반</label><input class="finput" id="f-interest" value="${c?.interest||''}" placeholder="예: 월수 오전 초급"></div>
+      <div style="font-size:11px; font-weight:700; color:var(--text3); margin-bottom:12px">🏛️ 아카데미 상세</div>
+      <div class="fg" style="gap:14px">
+        <div class="fgroup"><label class="flabel">안내강의 1 (필수)</label>
+          <select class="finput" id="f-teacher" onchange="onTeacherChange(this.value, 'f-interest-select')">
+            <option value="">미정</option>${to}
+          </select>
+        </div>
+        <div class="fgroup"><label class="flabel">수업반 1</label>
+          <select class="finput" id="f-interest-select">
+            <option value="">강사 선택 시 표시</option>
+            ${c?.interest ? `<option value="${c.interest}" selected>${c.interest}</option>` : ''}
+          </select>
+          <input type="hidden" id="f-interest" value="${c?.interest||''}">
+        </div>
+      </div>
+      <div class="fg" style="gap:14px; margin-top:10px">
+        <div class="fgroup"><label class="flabel">안내강의 2 (선택)</label>
+          <select class="finput" id="f-teacher2" onchange="onTeacherChange(this.value, 'f-interest-select2')">
+            <option value="">선택 안 함</option>${to}
+          </select>
+        </div>
+        <div class="fgroup"><label class="flabel">수업반 2</label>
+          <select class="finput" id="f-interest-select2">
+            <option value="">선택 안 함</option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -7452,12 +7514,14 @@ async function loadGcalStudy(){
         const s=new Date(ev.start.dateTime),e2=new Date(ev.end.dateTime);
         timeStr=`${String(s.getHours()).padStart(2,'0')}:${String(s.getMinutes()).padStart(2,'0')} ~ ${String(e2.getHours()).padStart(2,'0')}:${String(e2.getMinutes()).padStart(2,'0')}`;
       }
-      const barColor=isConsult?'#e03131':'var(--accent)';
-      return`<div style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
+      const barColor=isConsult?'rgba(255,235,59,0.8)':'var(--accent)';
+      const bgColor = isConsult ? 'rgba(255,235,59,0.2)' : 'transparent';
+      const titleColor = isConsult ? '#000' : 'var(--text)';
+      return`<div style="display:flex;align-items:flex-start;gap:8px;padding:8px;border-bottom:1px solid var(--border);background:${bgColor};border-radius:6px;margin-bottom:3px">
         <div style="width:3px;min-height:32px;border-radius:2px;background:${barColor};flex-shrink:0;margin-top:2px"></div>
         <div style="flex:1;min-width:0">
-          <div style="font-size:12px;font-weight:600;color:${isConsult?'var(--red)':'var(--text)'}">${ev.summary||'(제목 없음)'}</div>
-          <div style="font-size:11px;color:var(--text3)">${timeStr}</div>
+          <div style="font-size:12.5px;font-weight:600;color:${titleColor}">${ev.summary||'(제목 없음)'}</div>
+          <div style="font-size:11.5px;color:${isConsult?'#333':'var(--text3)'};font-weight:${isConsult?'500':'400'}">${timeStr}</div>
         </div>
       </div>`;
     }).join('');
@@ -7548,7 +7612,13 @@ function renderStudyGroups(groups){
                 <td onclick="event.stopPropagation()">
                   <input type="checkbox" class="study-member-chk" data-gid="${g.id}" data-mid="${m.id}">
                 </td>
-                <td style="font-weight:600;white-space:nowrap">${m.name}${tutorTag}${holdTag}</td>
+                <td style="font-weight:600;white-space:nowrap">
+                  <div style="display:flex;align-items:center;gap:4px">
+                    ${m.name}${tutorTag}${holdTag}
+                    <button class="btn btn-sm" style="padding:1px 4px;font-size:10px;border:none;background:none;color:var(--text3);margin-left:auto" 
+                      onclick="event.stopPropagation();delStudyMember('${g.id}','${m.id}')" title="멤버삭제">✕</button>
+                  </div>
+                </td>
                 <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text2)">${m.phone||'-'}</td>
                 <td style="font-size:11px">${m.startDate||'-'}</td>
                 <td style="text-align:center">${m.isTutor?'—':m.months||'-'}</td>
@@ -8301,40 +8371,101 @@ function delStudyIndiv(id){
 }
 
 // 앱 시작 - DOM 완전히 로드된 후 실행
-document.addEventListener('DOMContentLoaded', ()=>{
-  loadManagers().catch(e=>{
+document.addEventListener('DOMContentLoaded', async ()=>{
+  try {
+    await loadManagers();
+  } catch(e) {
     console.warn('loadManagers 에러:', e);
     MANAGERS=[...DEFAULT_MANAGERS];
     selectedManagerId=MANAGERS[0].id;
     initLoginScreen();
+    // loadManagers 실패 시에만 여기서 세션 복원
     tryRestoreSession();
-  });
+  }
+  // tryRestoreSession은 loadManagers 완료 후 내부에서 호출됨
+  
   try{initShortcuts();}catch(e){console.warn('단축키 초기화 실패:', e);}
 });
 
 // 새로고침 시 세션 복원
 function tryRestoreSession(){
+  console.group('Session Restore Check');
   try{
-    const saved = sessionStorage.getItem('thebox_session');
-    if(!saved) return;
-    const {managerId, page} = JSON.parse(saved);
-    const mgr = MANAGERS.find(m=>m.id===managerId);
-    if(!mgr) return;
-    // 로그인 상태 복원
-    currentManager = mgr;
-    document.getElementById('login-screen').style.display='none';
-    document.getElementById('main-shell').style.display='flex';
-    const av=document.getElementById('topbar-avatar');
-    if(av){av.textContent=(mgr.name||mgr.userid||'?')[0];av.style.background=mgr.color+'22';av.style.borderColor=mgr.color;av.style.color=mgr.color;}
-    const tn=document.getElementById('topbar-name');
-    if(tn)tn.textContent=mgr.name||(mgr.userid||'');
-    // 사이드바 권한 재적용
-    applyMenuPermissions();
-    loadReminders().catch(()=>{});
-    loadData().then(()=>{
-      if(page) setTimeout(()=>goPage(page),200);
-    });
-  }catch(e){ sessionStorage.removeItem('thebox_session'); }
+    const stored = localStorage.getItem('thebox_session') || sessionStorage.getItem('thebox_session');
+    if(!stored) {
+      console.log('No saved session found.');
+      console.groupEnd();
+      return;
+    }
+    
+    const {managerId, page} = JSON.parse(stored);
+    console.log('Loaded session info:', {managerId, page});
+    
+    // MANAGERS 배열에서 먼저 찾기
+    let mgr = MANAGERS.find(m=> (m.userid && m.userid===managerId) || (m.id && m.id===managerId));
+    
+    // MANAGERS에 없으면 Firebase users에서 찾기 (Firebase 가입 계정)
+    if(!mgr && fbDb){
+      console.log('Not in MANAGERS, checking Firebase users...');
+      fbDb.ref('users/' + managerId).once('value').then(snap=>{
+        const user = snap.val();
+        if(user && user.status === 'approved'){
+          _restoreSessionWithMgr(user, page);
+        } else {
+          console.warn('Firebase user not found or not approved:', managerId);
+          localStorage.removeItem('thebox_session');
+          sessionStorage.removeItem('thebox_session');
+        }
+      }).catch(e=>{
+        console.warn('Firebase session restore failed:', e);
+        localStorage.removeItem('thebox_session');
+        sessionStorage.removeItem('thebox_session');
+      });
+      console.groupEnd();
+      return;
+    }
+    
+    if(!mgr) {
+      console.warn('Session manager not found:', managerId);
+      localStorage.removeItem('thebox_session');
+      sessionStorage.removeItem('thebox_session');
+      console.groupEnd();
+      return;
+    }
+    
+    console.log('Found manager:', mgr.name, '(role:', mgr.role, ')');
+    _restoreSessionWithMgr(mgr, page);
+  }catch(e){ 
+    console.error('Session restore failed with exception:', e);
+    localStorage.removeItem('thebox_session');
+    sessionStorage.removeItem('thebox_session'); 
+  }
+  console.groupEnd();
+}
+
+function _restoreSessionWithMgr(mgr, page){
+  currentManager = mgr;
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('main-shell').style.display='flex';
+  
+  const av=document.getElementById('topbar-avatar');
+  if(av){
+    av.textContent=(mgr.name||mgr.userid||'?')[0];
+    av.style.background=(mgr.color||'#6058e8')+'22';
+    av.style.borderColor=(mgr.color||'#6058e8');
+    av.style.color=(mgr.color||'#6058e8');
+  }
+  const tn=document.getElementById('topbar-name');
+  if(tn)tn.textContent=mgr.name||(mgr.userid||'');
+  
+  applyMenuPermissions();
+  loadReminders().catch(()=>{});
+  loadData().then(()=>{
+    if(page && page !== 'dashboard') {
+      setTimeout(()=>goPage(page), 200);
+    }
+  });
+  console.log('Session perfectly restored for:', mgr.name);
 }
 
 function applyMenuPermissions(){
