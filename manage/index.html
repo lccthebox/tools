@@ -1230,7 +1230,16 @@ function getFilteredConsults(){
 
 // Firebase에서 승인된 사용자 로드
 async function loadManagers(){
+  // 일단 기본 계정으로 시작
+  MANAGERS = [...DEFAULT_MANAGERS];
+  
   try {
+    // Firebase가 준비되지 않았으면 기본 계정 사용
+    if(!fbDb) {
+      console.warn('Firebase not ready, using default managers');
+      return;
+    }
+    
     // 기본 admin 계정이 없으면 생성
     const adminSnap = await fbDb.ref('users/admin').once('value');
     if(!adminSnap.exists()){
@@ -1243,19 +1252,23 @@ async function loadManagers(){
         color:'#6058e8',
         createdAt:new Date().toISOString()
       });
+      console.log('Admin account created in Firebase');
     }
     
     // 모든 승인된 사용자 로드
     const usersSnap = await fbDb.ref('users').once('value');
-    const users = usersSnap.val() || {};
-    MANAGERS = Object.values(users).filter(u => u.status === 'approved');
+    const users = usersSnap.val();
     
-    if(MANAGERS.length === 0){
-      MANAGERS = [...DEFAULT_MANAGERS];
+    if(users && typeof users === 'object'){
+      const approved = Object.values(users).filter(u => u && u.status === 'approved');
+      if(approved.length > 0){
+        MANAGERS = approved;
+        console.log('Loaded managers from Firebase:', MANAGERS.length);
+      }
     }
   } catch(e) {
     console.error('Load managers error:', e);
-    MANAGERS = [...DEFAULT_MANAGERS];
+    // 에러가 나도 기본 계정은 사용 가능
   }
 }
 
@@ -1355,13 +1368,25 @@ async function doLogin(){
   }
 
   try {
-    // Firebase에서 사용자 확인
-    const userSnap = await fbDb.ref(`users/${userid}`).once('value');
-    const user = userSnap.val();
+    let user = null;
     
+    // Firebase에서 사용자 확인 시도
+    if(fbDb){
+      try {
+        const userSnap = await fbDb.ref(`users/${userid}`).once('value');
+        user = userSnap.val();
+      } catch(fbError) {
+        console.warn('Firebase login error, trying local:', fbError);
+      }
+    }
+    
+    // Firebase에서 못 찾으면 로컬 MANAGERS에서 찾기
     if(!user){
-      if(err){err.style.color='var(--red)';err.textContent='존재하지 않는 아이디입니다.';}
-      return;
+      user = MANAGERS.find(m => m.userid === userid);
+      if(!user){
+        if(err){err.style.color='var(--red)';err.textContent='존재하지 않는 아이디입니다.';}
+        return;
+      }
     }
     
     // 비밀번호 확인
@@ -1370,13 +1395,13 @@ async function doLogin(){
       return;
     }
     
-    // 승인 상태 확인
-    if(user.status === 'pending'){
+    // 승인 상태 확인 (Firebase 사용자만)
+    if(user.status && user.status === 'pending'){
       if(err){err.style.color='var(--amber)';err.textContent='관리자 승인 대기 중입니다.';}
       return;
     }
     
-    if(user.status === 'rejected'){
+    if(user.status && user.status === 'rejected'){
       if(err){err.style.color='var(--red)';err.textContent='가입이 거부된 계정입니다.';}
       return;
     }
@@ -1388,7 +1413,9 @@ async function doLogin(){
     // localStorage에 세션 저장
     try {
       localStorage.setItem('currentUser', JSON.stringify({userid:user.userid, loginAt:new Date().toISOString()}));
-    } catch(e) {}
+    } catch(e) {
+      console.warn('localStorage save failed:', e);
+    }
     
     document.getElementById('login-screen').style.display='none';
     document.getElementById('main-shell').style.display='flex';
@@ -1409,13 +1436,19 @@ async function doLogin(){
     if(isTeacher()) activeTeacher=user.name;
     
     // 데이터 로드
-    loadReminders().catch(()=>{});
-    await loadData();
-    renderCurrentPage();
+    try{
+      loadReminders().catch(()=>{});
+      await loadData();
+      renderCurrentPage();
+    }catch(dataErr){
+      console.error('Data load error:', dataErr);
+      // 데이터 로드 실패해도 로그인은 유지
+      renderCurrentPage();
+    }
     
   } catch(e) {
     console.error('Login error:', e);
-    if(err){err.style.color='var(--red)';err.textContent='로그인 중 오류가 발생했습니다.';}
+    if(err){err.style.color='var(--red)';err.textContent='로그인 중 오류가 발생했습니다: ' + e.message;}
   }
 }
 
@@ -7715,12 +7748,24 @@ async function tryRestoreSession(){
     if(!saved) return;
     
     const {userid} = JSON.parse(saved);
+    let user = null;
     
-    // Firebase에서 사용자 정보 다시 로드
-    const userSnap = await fbDb.ref(`users/${userid}`).once('value');
-    const user = userSnap.val();
+    // Firebase에서 사용자 정보 다시 로드 시도
+    if(fbDb){
+      try {
+        const userSnap = await fbDb.ref(`users/${userid}`).once('value');
+        user = userSnap.val();
+      } catch(fbError) {
+        console.warn('Firebase restore error, trying local:', fbError);
+      }
+    }
     
-    if(!user || user.status !== 'approved') {
+    // Firebase에서 못 찾으면 로컬 MANAGERS에서 찾기
+    if(!user){
+      user = MANAGERS.find(m => m.userid === userid);
+    }
+    
+    if(!user || (user.status && user.status !== 'approved')) {
       localStorage.removeItem('currentUser');
       return;
     }
@@ -7742,10 +7787,16 @@ async function tryRestoreSession(){
     
     // 사이드바 권한 재적용
     applyMenuPermissions();
-    loadReminders().catch(()=>{});
-    loadData().then(()=>{
+    
+    try{
+      loadReminders().catch(()=>{});
+      loadData().then(()=>{
+        renderCurrentPage();
+      });
+    }catch(dataErr){
+      console.error('Data restore error:', dataErr);
       renderCurrentPage();
-    });
+    }
   }catch(e){ 
     console.error('Session restore error:', e);
     localStorage.removeItem('currentUser'); 
