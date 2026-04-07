@@ -1185,7 +1185,7 @@ const MKEY='thebox2_managers_v1'; // 매니저 계정 별도 저장
 const PKEY='thebox2_pending'; // 가입 대기 계정
 let PENDING=[]; // 가입 승인 대기 목록
 
-// 기본 관리자 계정
+// 기본 관리자 계정 (admin/1234)
 const DEFAULT_MANAGERS=[
   {id:'admin', userid:'admin', name:'관리자', role:'관리자', pw:'1234', color:'#6058e8'},
 ];
@@ -1228,55 +1228,66 @@ function getFilteredConsults(){
   return S.consults;
 }
 
-// Firebase에서 승인된 사용자 로드
+// storage에서 매니저 목록 로드 - 완전 방어적으로
 async function loadManagers(){
-  // 일단 기본 계정으로 시작
-  MANAGERS = [...DEFAULT_MANAGERS];
-  
-  try {
-    // Firebase가 준비되지 않았으면 기본 계정 사용
-    if(!fbDb) {
-      console.warn('Firebase not ready, using default managers');
-      return;
-    }
-    
-    // 기본 admin 계정이 없으면 생성
-    const adminSnap = await fbDb.ref('users/admin').once('value');
-    if(!adminSnap.exists()){
-      await fbDb.ref('users/admin').set({
-        userid:'admin',
-        name:'관리자', 
-        pw:'1234',
-        role:'관리자',
-        status:'approved',
-        color:'#6058e8',
-        createdAt:new Date().toISOString()
-      });
-      console.log('Admin account created in Firebase');
-    }
-    
-    // 모든 승인된 사용자 로드
-    const usersSnap = await fbDb.ref('users').once('value');
-    const users = usersSnap.val();
-    
-    if(users && typeof users === 'object'){
-      const approved = Object.values(users).filter(u => u && u.status === 'approved');
-      if(approved.length > 0){
-        MANAGERS = approved;
-        console.log('Loaded managers from Firebase:', MANAGERS.length);
+  // Load pending first
+  await loadPending().catch(()=>{});
+
+  // Firebase에서 매니저 먼저 로드
+  if(fbSyncEnabled && typeof fbDb !== 'undefined'){
+    try{
+      const snap = await fbDb.ref('thebox_managers').get();
+      if(snap.exists()&&Array.isArray(snap.val())&&snap.val().length>0){
+        MANAGERS = snap.val();
+        DEFAULT_MANAGERS.forEach(def=>{
+          if(!MANAGERS.find(m=>m.id===def.id)) MANAGERS.push(def);
+        });
+        try{await window.storage.set(MKEY,JSON.stringify(MANAGERS));}catch(e){}
+        selectedManagerId=MANAGERS[0]?.id||'mgr1';
+        initLoginScreen();
+        return;
       }
+    }catch(e){ console.warn('Firebase loadManagers error:', e.message); }
+  }
+
+  try{
+    const r=await window.storage.get(MKEY);
+    if(r&&r.value){
+      const parsed=JSON.parse(r.value);
+      if(Array.isArray(parsed)&&parsed.length>0){
+        MANAGERS=parsed;
+        // DEFAULT_MANAGERS 중 없는 id가 있으면 추가 (구버전 데이터 호환)
+        DEFAULT_MANAGERS.forEach(def=>{
+          if(!MANAGERS.find(m=>m.id===def.id)) MANAGERS.push(def);
+        });
+        await saveManagers().catch(()=>{});
+      } else {
+        MANAGERS=[...DEFAULT_MANAGERS];
+        await saveManagers().catch(()=>{});
+      }
+    } else {
+      MANAGERS=[...DEFAULT_MANAGERS];
+      await saveManagers().catch(()=>{});
     }
-  } catch(e) {
-    console.error('Load managers error:', e);
-    // 에러가 나도 기본 계정은 사용 가능
+  } catch(e){
+    MANAGERS=[...DEFAULT_MANAGERS];
+    await saveManagers().catch(()=>{});
+  }
+  selectedManagerId=MANAGERS[0]?.id||'mgr1';
+  initLoginScreen();
+}
+
+async function saveManagers(){
+  try{await window.storage.set(MKEY,JSON.stringify(MANAGERS));}catch(e){}
+  // Firebase에도 매니저 목록 저장
+  if(fbSyncEnabled && typeof fbDb !== 'undefined'){
+    try{await fbDb.ref('thebox_managers').set(MANAGERS);}catch(e){}
   }
 }
 
-
-
 // 비상 초기화
 async function resetManagersToDefault(){
-  alert('기본 관리자 계정\n\n아이디: admin\n비밀번호: 1234\n\n이 계정으로 로그인하세요.\n\n추가 계정은 "계정 가입 신청"을 통해 생성하고\n로그인 후 관리자가 승인할 수 있습니다.');
+  alert('기본 관리자 계정 정보:\n\n아이디: admin\n비밀번호: 1234\n\n이 계정으로 로그인하세요.');
 }
 
 // ══ 로그인 ══
@@ -1316,30 +1327,43 @@ async function doSignup(){
   const pw=document.getElementById('su-pw')?.value||'';
   const pw2=document.getElementById('su-pw2')?.value||'';
   const err=document.getElementById('signup-err');
-  
   if(!userid){if(err)err.textContent='아이디를 입력해주세요.';return;}
   if(!name){if(err)err.textContent='이름을 입력해주세요.';return;}
   if(!pw||pw.length<4){if(err)err.textContent='비밀번호는 4자 이상이어야 합니다.';return;}
   if(pw!==pw2){if(err)err.textContent='비밀번호가 일치하지 않습니다.';return;}
   
-  // 아이디 중복 확인 (Firebase)
   try {
+    // Firebase에 중복 확인
     const userSnap = await fbDb.ref(`users/${userid}`).once('value');
     if(userSnap.exists()){
       if(err)err.textContent='이미 사용 중인 아이디입니다.';
       return;
     }
     
-    // Firebase에 가입 신청 저장
-    await fbDb.ref(`users/${userid}`).set({
-      userid,
-      name,
-      pw,
-      role:'매니저', // default role
+    // Firebase에 영구 저장
+    const userData = {
+      userid: userid,
+      name: name,
+      pw: pw,
+      role: '매니저',
+      color: '#0ea87a',
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      signupIP: 'web',
+      loginHistory: [] // 로그인 이력 배열
+    };
+    
+    await fbDb.ref(`users/${userid}`).set(userData);
+    
+    // 로컬 PENDING도 업데이트 (호환성)
+    PENDING.push({
+      id:'pnd'+Date.now(),
+      userid,name,pw,
+      role:'매니저',
       color:'#0ea87a',
-      status:'pending', // pending, approved, rejected
-      createdAt:new Date().toISOString()
+      requestedAt:new Date().toISOString()
     });
+    try{await window.storage.set(PKEY,JSON.stringify(PENDING));}catch(e){}
     
     showLoginPanel();
     const loginErr=document.getElementById('login-err');
@@ -1351,11 +1375,16 @@ async function doSignup(){
     document.getElementById('su-pw2').value='';
   } catch(e) {
     console.error('Signup error:', e);
-    if(err)err.textContent='가입 신청 중 오류가 발생했습니다.';
+    if(err)err.textContent='가입 신청 중 오류가 발생했습니다: ' + e.message;
   }
 }
 
-// loadPending는 더 이상 필요 없음 - Firebase에서 직접 로드
+async function loadPending(){
+  try{
+    const r=await window.storage.get(PKEY);
+    if(r&&r.value) PENDING=JSON.parse(r.value)||[];
+  }catch(e){PENDING=[];}
+}
 
 async function doLogin(){
   const userid=(document.getElementById('login-userid')?.value||'').trim();
@@ -1368,131 +1397,146 @@ async function doLogin(){
   }
 
   try {
-    let user = null;
+    let mgr = null;
     
-    // Firebase에서 사용자 확인 시도
+    // Firebase에서 사용자 확인
     if(fbDb){
-      try {
-        const userSnap = await fbDb.ref(`users/${userid}`).once('value');
-        user = userSnap.val();
-      } catch(fbError) {
-        console.warn('Firebase login error, trying local:', fbError);
+      const userSnap = await fbDb.ref(`users/${userid}`).once('value');
+      const user = userSnap.val();
+      
+      if(user){
+        // 승인 상태 확인
+        if(user.status === 'pending'){
+          if(err){err.style.color='var(--amber)';err.textContent='관리자 승인 대기 중입니다.';}
+          return;
+        }
+        if(user.status === 'rejected'){
+          if(err){err.style.color='var(--red)';err.textContent='가입이 거부된 계정입니다.';}
+          return;
+        }
+        mgr = user;
       }
     }
     
-    // Firebase에서 못 찾으면 로컬 MANAGERS에서 찾기
-    if(!user){
-      user = MANAGERS.find(m => m.userid === userid);
-      if(!user){
-        if(err){err.style.color='var(--red)';err.textContent='존재하지 않는 아이디입니다.';}
-        return;
-      }
+    // Firebase에 없으면 로컬 MANAGERS에서 찾기 (기본 계정)
+    if(!mgr){
+      mgr = MANAGERS.find(m => m.userid === userid)
+           || MANAGERS.find(m => m.id === userid)
+           || MANAGERS.find(m => m.name === userid);
+    }
+
+    if(!mgr){
+      if(err){err.style.color='var(--red)';err.textContent='아이디를 찾을 수 없습니다.';}
+      return;
     }
     
-    // 비밀번호 확인
-    if(user.pw && user.pw !== pw){
+    // 비밀번호 체크
+    if(mgr.pw && mgr.pw !== pw){
       if(err){err.style.color='var(--red)';err.textContent='비밀번호가 올바르지 않습니다.';}
       return;
     }
     
-    // 승인 상태 확인 (Firebase 사용자만)
-    if(user.status && user.status === 'pending'){
-      if(err){err.style.color='var(--amber)';err.textContent='관리자 승인 대기 중입니다.';}
-      return;
+    // 로그인 이력 기록 (Firebase 사용자만)
+    if(mgr.userid && fbDb){
+      try {
+        const loginRecord = {
+          timestamp: new Date().toISOString(),
+          device: navigator.userAgent,
+          ip: 'web'
+        };
+        
+        // loginHistory 배열에 추가
+        const historyRef = fbDb.ref(`users/${mgr.userid}/loginHistory`);
+        const historySnap = await historyRef.once('value');
+        const history = historySnap.val() || [];
+        history.push(loginRecord);
+        
+        // 최근 100개만 유지
+        if(history.length > 100){
+          history.splice(0, history.length - 100);
+        }
+        
+        await historyRef.set(history);
+        
+        // lastLogin 업데이트
+        await fbDb.ref(`users/${mgr.userid}/lastLogin`).set(new Date().toISOString());
+      } catch(historyErr){
+        console.warn('Login history save failed:', historyErr);
+      }
     }
     
-    if(user.status && user.status === 'rejected'){
-      if(err){err.style.color='var(--red)';err.textContent='가입이 거부된 계정입니다.';}
-      return;
-    }
-    
-    // 로그인 성공
     if(err)err.textContent='';
-    currentManager = user;
+    currentManager=mgr;
     
     // localStorage에 세션 저장
-    try {
-      localStorage.setItem('currentUser', JSON.stringify({userid:user.userid, loginAt:new Date().toISOString()}));
-    } catch(e) {
-      console.warn('localStorage save failed:', e);
-    }
+    try{
+      localStorage.setItem('currentUser', JSON.stringify({userid:mgr.userid||mgr.id, loginAt:new Date().toISOString()}));
+    }catch(e){}
     
     document.getElementById('login-screen').style.display='none';
     document.getElementById('main-shell').style.display='flex';
 
     const av=document.getElementById('topbar-avatar');
     if(av){
-      av.textContent=(user.name||user.userid||'?')[0];
-      av.style.background=(user.color||'#6058e8')+'22';
-      av.style.borderColor=(user.color||'#6058e8');
-      av.style.color=(user.color||'#6058e8');
+      av.textContent=(mgr.name||mgr.userid||'?')[0];
+      av.style.background=mgr.color+'22';
+      av.style.borderColor=mgr.color;
+      av.style.color=mgr.color;
     }
     const tn=document.getElementById('topbar-name');
-    if(tn)tn.textContent=user.name||(user.userid||'');
+    if(tn)tn.textContent=mgr.name||(mgr.userid||'');
 
     // 사이드바 메뉴 권한별 표시
-    applyMenuPermissions();
+    document.getElementById('sb-report').style.display=canAccessStats()?'flex':'none';
+    const sbAcc=document.getElementById('sb-accounts');
+    if(sbAcc)sbAcc.style.display=canAccessAccounts()?'flex':'none';
+    const sbTrial=document.getElementById('sb-trial');
+    if(sbTrial)sbTrial.style.display=canAccessTrial()?'flex':'none';
+    const sbConsult=document.getElementById('sb-consult');
+    if(sbConsult)sbConsult.style.display=canAccessConsult()?'flex':'none';
+    const sbPayments=document.getElementById('sb-payments');
+    if(sbPayments)sbPayments.style.display=canAccessPayments()?'flex':'none';
+    const sbDaily=document.getElementById('sb-daily');
+    if(sbDaily)sbDaily.style.display=canAccessDaily()?'flex':'none';
 
-    if(isTeacher()) activeTeacher=user.name;
+    const showStudy=!isTeacher();
+    const sbSecStudy=document.getElementById('sb-sec-study');
+    if(sbSecStudy)sbSecStudy.style.display=showStudy?'block':'none';
+    ['sb-study-dashboard','sb-study-groups','sb-study-admin','sb-study-payments','sb-study-staff'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el)el.style.display=showStudy?'flex':'none';
+    });
+
+    const sbStudyPay2=document.getElementById('sb-study-payments2');
+    if(sbStudyPay2)sbStudyPay2.style.display=(isManager())?'flex':'none';
+
+    const topConsultBtn=document.getElementById('topbar-consult-btn');
+    if(topConsultBtn)topConsultBtn.style.display=canAccessConsult()?'inline-flex':'none';
+
+    const sbDocs=document.getElementById('sb-docs');
+    if(sbDocs)sbDocs.style.display=isTeacher()?'none':'flex';
+
+    if(isTeacher()) activeTeacher=mgr.name;
+
+    if(isTeacher()) setTimeout(()=>goPage('teachers'),100);
+
+    loadReminders().catch(()=>{});
+    loadData();
     
-    // 데이터 로드
-    try{
-      loadReminders().catch(()=>{});
-      await loadData();
-      renderCurrentPage();
-    }catch(dataErr){
-      console.error('Data load error:', dataErr);
-      // 데이터 로드 실패해도 로그인은 유지
-      renderCurrentPage();
-    }
-    
-  } catch(e) {
+  } catch(e){
     console.error('Login error:', e);
-    if(err){err.style.color='var(--red)';err.textContent='로그인 중 오류가 발생했습니다: ' + e.message;}
+    if(err){err.style.color='var(--red)';err.textContent='로그인 오류: ' + e.message;}
   }
-}
-
-// 메뉴 권한 적용
-function applyMenuPermissions(){
-  document.getElementById('sb-report').style.display=canAccessStats()?'flex':'none';
-  const sbAcc=document.getElementById('sb-accounts');
-  if(sbAcc)sbAcc.style.display=canAccessAccounts()?'flex':'none';
-  const sbTrial=document.getElementById('sb-trial');
-  if(sbTrial)sbTrial.style.display=canAccessTrial()?'flex':'none';
-  const sbConsult=document.getElementById('sb-consult');
-  if(sbConsult)sbConsult.style.display=canAccessConsult()?'flex':'none';
-  const sbPayments=document.getElementById('sb-payments');
-  if(sbPayments)sbPayments.style.display=canAccessPayments()?'flex':'none';
-  const sbDaily=document.getElementById('sb-daily');
-  if(sbDaily)sbDaily.style.display=canAccessDaily()?'flex':'none';
-
-  const showStudy=!isTeacher();
-  const sbSecStudy=document.getElementById('sb-sec-study');
-  if(sbSecStudy)sbSecStudy.style.display=showStudy?'block':'none';
-  ['sb-study-dashboard','sb-study-groups','sb-study-admin','sb-study-payments','sb-study-staff'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el)el.style.display=showStudy?'flex':'none';
-  });
-
-  const sbStudyPay2=document.getElementById('sb-study-payments2');
-  if(sbStudyPay2)sbStudyPay2.style.display=(isManager())?'flex':'none';
-
-  const topConsultBtn=document.getElementById('topbar-consult-btn');
-  if(topConsultBtn)topConsultBtn.style.display=canAccessConsult()?'inline-flex':'none';
-
-  const sbDocs=document.getElementById('sb-docs');
-  if(sbDocs)sbDocs.style.display=isTeacher()?'none':'flex';
-  
-  if(isTeacher() && currentManager) activeTeacher=currentManager.name;
 }
 
 function doLogout(){
   currentManager=null;
-  try{localStorage.removeItem('currentUser');}catch(e){}
+  try{sessionStorage.removeItem('thebox_session');}catch(e){}
   const loginErr=document.getElementById('login-err');
   if(loginErr)loginErr.textContent='';
   document.getElementById('main-shell').style.display='none';
   document.getElementById('login-screen').style.display='flex';
+  initLoginScreen();
 }
 
 
@@ -2244,9 +2288,28 @@ let gcalConfig={apiKey:'',calendarId:''};
 
 async function loadGcalConfig(){
   try{
+    // Firebase에서 공유 설정 먼저 확인
+    if(fbDb){
+      try{
+        const configSnap = await fbDb.ref('settings/gcalConfig').once('value');
+        const fbConfig = configSnap.val();
+        if(fbConfig && fbConfig.apiKey && fbConfig.calendarId){
+          gcalConfig = {apiKey: fbConfig.apiKey, calendarId: fbConfig.calendarId};
+          // 로컬에도 저장 (캐시)
+          await window.storage.set(GCAL_KEY, JSON.stringify(gcalConfig));
+          return;
+        }
+      } catch(e){
+        console.warn('Firebase gcal load error:', e);
+      }
+    }
+    
+    // Firebase에 없으면 로컬 스토리지에서 로드
     const r=await window.storage.get(GCAL_KEY);
     if(r&&r.value)gcalConfig=JSON.parse(r.value);
-  }catch(e){}
+  }catch(e){
+    console.error('Gcal config load error:', e);
+  }
 }
 
 async function loadGcal(){
@@ -2325,7 +2388,7 @@ async function loadGcal(){
       if(consultEl){
         const gcalConsultHtml = consultEvents.map(ev=>evHtml(ev,true)).join('');
         // 기존 상담 목록 뒤에 추가 (구분선 포함)
-        const divider = '<div style="font-size:10px;color:var(--text3);padding:4px 12px;background:var(--red-light)">📅 캘린더 상담 일정</div>';
+        const divider = '<div style="font-size:10px;color:var(--text);padding:4px 12px;background:rgba(255,220,0,0.5)">📅 캘린더 상담 일정</div>';
         consultEl.insertAdjacentHTML('beforeend', divider + `<div style="padding:0 4px">${gcalConsultHtml}</div>`);
         if(countEl) countEl.textContent = `(캘린더 +${consultEvents.length}건)`;
       }
@@ -2381,7 +2444,26 @@ async function saveGcalConfig(){
   const apiKey=document.getElementById('f-gcal-key')?.value.trim()||'';
   const calendarId=document.getElementById('f-gcal-calid')?.value.trim()||'';
   gcalConfig={apiKey,calendarId};
+  
+  // 로컬 스토리지 저장 (호환성)
   try{await window.storage.set(GCAL_KEY,JSON.stringify(gcalConfig));}catch(e){}
+  
+  // Firebase에 저장 (모든 사용자 공유)
+  if(fbDb){
+    try{
+      await fbDb.ref('settings/gcalConfig').set({
+        apiKey: apiKey,
+        calendarId: calendarId,
+        updatedBy: currentManager?.userid || 'admin',
+        updatedAt: new Date().toISOString()
+      });
+      showToast('✅ 구글 캘린더 설정이 저장되었습니다 (모든 사용자 공유)');
+    } catch(e){
+      console.error('Firebase save error:', e);
+      showToast('⚠️ Firebase 저장 실패 (로컬만 저장됨)');
+    }
+  }
+  
   closeModal();
   loadGcal();
 }
@@ -2389,9 +2471,22 @@ async function saveGcalConfig(){
 function saveGcalUrl(){saveGcalConfig();}
 
 async function clearGcal(){
-  if(!confirm('캘린더 연동을 해제하시겠습니까?'))return;
+  if(!confirm('캘린더 연동을 해제하시겠습니까?\n(모든 사용자에게 적용됩니다)'))return;
   gcalConfig={apiKey:'',calendarId:''};
+  
+  // 로컬 스토리지 삭제
   try{await window.storage.delete(GCAL_KEY);}catch(e){}
+  
+  // Firebase 삭제
+  if(fbDb){
+    try{
+      await fbDb.ref('settings/gcalConfig').remove();
+      showToast('✅ 구글 캘린더 연동이 해제되었습니다');
+    } catch(e){
+      console.error('Firebase delete error:', e);
+    }
+  }
+  
   closeModal();
   loadGcal();
 }
@@ -5934,6 +6029,7 @@ function dailyCalNext(){ dailyCalDate.setMonth(dailyCalDate.getMonth()+1); rende
 
 function renderDailyCalendar(){
   const grid = document.getElementById('daily-cal-grid');
+  const eventsEl = document.getElementById('daily-cal-events');
   if(!grid) return;
   
   const year = dailyCalDate.getFullYear();
@@ -5952,13 +6048,35 @@ function renderDailyCalendar(){
     const curDateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const isToday = curDateStr === todayStr;
     const hasNotes = S.dailyNotes.some(n => n.date === curDateStr);
+    const hasEvents = (S.sharedEvents || []).some(e => e.date === curDateStr);
     
-    html += `<div onclick="setDailyDate('${curDateStr}')" style="aspect-ratio:1; display:flex; flex-direction:column; align-items:center; justify-content:center; border-radius:4px; font-size:12px; cursor:pointer; ${isToday?'background:var(--accent);color:white;font-weight:700':hasNotes?'background:var(--accent-light);color:var(--accent)':''}">${d}
-      ${hasNotes && !isToday ? '<div style="width:3px;height:3px;background:var(--accent);border-radius:50%;margin-top:1px"></div>' : ''}
+    html += `<div onclick="setDailyDate('${curDateStr}')" style="aspect-ratio:1; display:flex; flex-direction:column; align-items:center; justify-content:center; border-radius:4px; font-size:12px; cursor:pointer; ${isToday?'background:var(--accent);color:white;font-weight:700':hasNotes||hasEvents?'background:var(--accent-light);color:var(--accent)':''}">${d}
+      ${(hasNotes || hasEvents) && !isToday ? '<div style="width:3px;height:3px;background:var(--accent);border-radius:50%;margin-top:1px"></div>' : ''}
     </div>`;
   }
   html += `</div>`;
   grid.innerHTML = html;
+  
+  // 선택된 날짜의 공유 일정 표시
+  if(eventsEl){
+    const dateStr = dailyCalDate.toISOString().slice(0,10);
+    const dateEvents = (S.sharedEvents || []).filter(e => e.date === dateStr);
+    
+    if(dateEvents.length > 0){
+      eventsEl.innerHTML = `
+        <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:6px">${dateStr} 공유 일정</div>
+        ${dateEvents.map(e => `
+          <div style="padding:6px 8px;background:rgba(255,220,0,0.3);border-radius:var(--r);margin-bottom:4px">
+            <div style="font-weight:600;font-size:12px">${e.title}</div>
+            ${e.time ? `<div style="font-size:10px;color:var(--text3);margin-top:2px">${e.time}</div>` : ''}
+            <div style="font-size:9px;color:var(--text3);margin-top:2px">등록: ${e.createdBy}</div>
+          </div>
+        `).join('')}
+      `;
+    } else {
+      eventsEl.innerHTML = '';
+    }
+  }
 }
 
 function setDailyDate(dateStr){
@@ -6083,42 +6201,49 @@ async function renderAccounts(){
   const el=document.getElementById('page-accounts');
   if(!el)return;
 
-  // Firebase에서 승인 대기 목록 로드
-  let PENDING = [];
+  // ─── Firebase에서 승인 대기 목록 로드 ───
+  let pendingUsers = [];
   try {
-    const usersSnap = await fbDb.ref('users').once('value');
-    const users = usersSnap.val() || {};
-    PENDING = Object.values(users).filter(u => u.status === 'pending');
-  } catch(e) {
+    if(fbDb){
+      const usersSnap = await fbDb.ref('users').once('value');
+      const users = usersSnap.val() || {};
+      pendingUsers = Object.values(users).filter(u => u.status === 'pending');
+    }
+  } catch(e){
     console.error('Load pending error:', e);
   }
 
-  // ─── 가입 대기 섹션 ───
+  // 로컬 PENDING도 합쳐서 표시 (호환성)
+  const allPending = [...pendingUsers];
+  PENDING.forEach(p => {
+    if(!allPending.find(u => u.userid === p.userid)){
+      allPending.push(p);
+    }
+  });
+
   const teacherOpts = TEACHERS.map(t=>`<option value="${t}">${t}</option>`).join('');
 
-  const pendingSection = PENDING.length ? `
+  const pendingSection = allPending.length ? `
     <div class="card" style="margin-bottom:18px;border:1.5px solid var(--amber)">
       <div class="card-head" style="background:var(--amber-light)">
-        <span class="card-title" style="color:var(--amber)">⏳ 가입 승인 대기 (${PENDING.length}건)</span>
+        <span class="card-title" style="color:var(--amber)">⏳ 가입 승인 대기 (${allPending.length}건)</span>
       </div>
       <div class="card-body" style="padding:0">
         <table class="sheet-table">
           <thead><tr>
-            <th>아이디</th><th>이름 (신청)</th><th>신청일</th>
-            <th>역할 설정</th><th>강사 연결 <span style="font-size:10px;font-weight:400;color:var(--text3)">(역할=강사 시)</span></th><th>관리</th>
+            <th>아이디</th><th>이름</th><th>신청일</th>
+            <th>역할 설정</th><th>강사 연결</th><th>관리</th>
           </tr></thead>
           <tbody>
-            ${PENDING.map(p=>`<tr>
+            ${allPending.map(p=>`<tr>
               <td style="font-family:'DM Mono',monospace;font-size:12px">${p.userid}</td>
               <td style="font-weight:600">${p.name}</td>
-              <td style="font-size:11px;color:var(--text3)">${p.createdAt?.slice(0,10)||'-'}</td>
+              <td style="font-size:11px;color:var(--text3)">${(p.createdAt||p.requestedAt||'').slice(0,10)||'-'}</td>
               <td>
-                <select id="pnd-role-${p.userid}" class="fsel" style="font-size:12px"
-                  onchange="pndRoleChange('${p.userid}',this.value)">
+                <select id="pnd-role-${p.userid}" class="fsel" style="font-size:12px">
                   <option value="강사" ${(p.role||'강사')==='강사'?'selected':''}>강사</option>
                   <option value="매니저" ${p.role==='매니저'?'selected':''}>매니저</option>
                   <option value="관리자" ${p.role==='관리자'?'selected':''}>관리자</option>
-                  <option value="원장" ${p.role==='원장'?'selected':''}>원장</option>
                 </select>
               </td>
               <td id="pnd-teacher-cell-${p.userid}">
@@ -6126,13 +6251,10 @@ async function renderAccounts(){
                   <option value="">— 강사 선택 —</option>
                   ${teacherOpts}
                 </select>
-                <div style="font-size:10px;color:var(--text3);margin-top:3px">
-                  선택 시 해당 강사명으로 계정 이름이 설정됩니다
-                </div>
               </td>
               <td style="display:flex;gap:6px">
-                <button class="btn btn-sm btn-teal" onclick="approvePending('${p.userid}')">✅ 승인</button>
-                <button class="btn btn-sm btn-danger" onclick="rejectPending('${p.userid}')">✕ 거절</button>
+                <button class="btn btn-sm btn-teal" onclick="approvePendingUser('${p.userid}')">✅ 승인</button>
+                <button class="btn btn-sm btn-danger" onclick="rejectPendingUser('${p.userid}')">✕ 거절</button>
               </td>
             </tr>`).join('')}
           </tbody>
@@ -6151,7 +6273,7 @@ async function renderAccounts(){
         </div>
         <div class="card-body" style="padding:0">
           <table class="sheet-table">
-            <thead><tr><th>아이디</th><th>이름</th><th>역할</th><th>관리</th></tr></thead>
+            <thead><tr><th>아이디</th><th>이름</th><th>역할</th><th>마지막 로그인</th><th>관리</th></tr></thead>
             <tbody>
               ${MANAGERS.map((m,i)=>`<tr>
                 <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text3)">${m.userid||m.id}</td>
@@ -6162,7 +6284,9 @@ async function renderAccounts(){
                   </div>
                 </td>
                 <td>${roleBadge(m.role)}</td>
+                <td style="font-size:11px;color:var(--text3)">${m.lastLogin ? new Date(m.lastLogin).toLocaleString('ko-KR').slice(0,-3) : '-'}</td>
                 <td style="display:flex;gap:5px">
+                  <button class="btn btn-sm" onclick="showLoginHistory('${m.userid||m.id}')" title="로그인 이력">📊</button>
                   <button class="btn btn-sm" onclick="openAccountModal('${m.id}')">편집</button>
                   ${MANAGERS.filter(x=>x.role==='관리자').length>1||m.role!=='관리자'?
                     `<button class="btn btn-sm btn-danger" onclick="delAccount('${m.id}')">삭제</button>`:
@@ -6202,6 +6326,20 @@ async function renderAccounts(){
           }).join('')}
         </div>
       </div>
+    </div>
+    
+    <!-- 계정 변경 히스토리 -->
+    <div class="card" style="margin-top:18px">
+      <div class="card-head">
+        <span class="card-title">📜 계정 변경 히스토리</span>
+        <button class="btn btn-sm" onclick="loadAccountHistory()">🔄 새로고침</button>
+      </div>
+      <div class="card-body" style="padding:0;max-height:400px;overflow-y:auto">
+        <div id="account-history-list" style="padding:12px;font-size:12px;color:var(--text3)">
+          히스토리를 불러오는 중...
+        </div>
+      </div>
+    </div>
     </div>`;
 
   el.innerHTML = `<div class="alert-bar alert-amber" style="margin-bottom:16px">
@@ -6209,6 +6347,9 @@ async function renderAccounts(){
     관리자 전용 메뉴입니다. 저장 즉시 반영됩니다.
   </div>
   ${pendingSection}${accountsSection}`;
+  
+  // 히스토리 로드
+  loadAccountHistory();
 }
 
 function roleBadge(role){
@@ -6222,49 +6363,108 @@ function pndRoleChange(pid, role){
   if(cell) cell.style.opacity = role==='강사' ? '1' : '0.3';
 }
 
-async function approvePending(userid){
-  try {
-    const userSnap = await fbDb.ref(`users/${userid}`).once('value');
-    const p = userSnap.val();
-    if(!p) return;
-    
-    const role=document.getElementById('pnd-role-'+userid)?.value||'매니저';
-    const COLORS=['#5c52e8','#0ea87a','#d4820a','#c4387e','#1a78c2','#8e42c8'];
-    const color = p.color || COLORS[MANAGERS.length%COLORS.length];
+async function approvePending(pid){
+  const p=PENDING.find(x=>x.id===pid);
+  if(!p)return;
+  const role=document.getElementById('pnd-role-'+pid)?.value||'매니저';
+  const COLORS=['#5c52e8','#0ea87a','#d4820a','#c4387e','#1a78c2','#8e42c8'];
+  p.color=p.color||COLORS[MANAGERS.length%COLORS.length];
 
-    // ─── 강사 역할이면 연결된 강사명을 계정 이름으로 사용 ───
-    let displayName = p.name; // 기본: 신청 시 입력한 이름
-    if(role==='강사'){
-      const linkedTeacher = document.getElementById('pnd-teacher-'+userid)?.value||'';
-      if(linkedTeacher){
-        displayName = linkedTeacher; // 강사 목록의 이름으로 덮어씀
-      } else {
-        // 강사 선택 안 했으면 경고 후 계속 진행 여부 확인
-        const proceed = confirm(
-          `강사를 연결하지 않았습니다.\n연결하지 않으면 "${p.name}" 이름으로 계정이 생성되며,\n이 이름이 강사 목록의 강사명과 정확히 일치해야 본인 수강생만 조회됩니다.\n\n계속 진행하시겠습니까?`
-        );
-        if(!proceed) return;
-      }
+  // ─── 강사 역할이면 연결된 강사명을 계정 이름으로 사용 ───
+  let displayName = p.name; // 기본: 신청 시 입력한 이름
+  if(role==='강사'){
+    const linkedTeacher = document.getElementById('pnd-teacher-'+pid)?.value||'';
+    if(linkedTeacher){
+      displayName = linkedTeacher; // 강사 목록의 이름으로 덮어씀
+    } else {
+      // 강사 선택 안 했으면 경고 후 계속 진행 여부 확인
+      const proceed = confirm(
+        `강사를 연결하지 않았습니다.\n연결하지 않으면 "${p.name}" 이름으로 계정이 생성되며,\n이 이름이 강사 목록의 강사명과 정확히 일치해야 본인 수강생만 조회됩니다.\n\n계속 진행하시겠습니까?`
+      );
+      if(!proceed) return;
     }
+  }
 
-    // Firebase에서 사용자 상태 업데이트
+  const newMgr={
+    id:'mgr'+Date.now(),
+    userid:p.userid,
+    name:displayName,   // ← 강사 연결 시 강사명, 아니면 신청 이름
+    role,
+    pw:p.pw,
+    color:p.color
+  };
+  MANAGERS.push(newMgr);
+  PENDING=PENDING.filter(x=>x.id!==pid);
+
+  // 강사 역할이고 TEACHER_INFO에 없으면 자동 등록
+  if(role==='강사'&&!TEACHER_INFO[displayName]){
+    TEACHER_INFO[displayName]={color:p.color,bg:p.color+'22',desc:'신규 강사',classes:{}};
+    if(!TEACHERS.includes(displayName))TEACHERS.push(displayName);
+  }
+
+  await saveManagers().catch(()=>{});
+  try{await window.storage.set(PKEY,JSON.stringify(PENDING));}catch(e){}
+  if(fbSyncEnabled&&typeof fbDb!=='undefined'){try{await fbDb.ref('thebox_pending').set(PENDING);}catch(e){}}
+  renderAccounts();initLoginScreen();renderAll();
+  showToast(`✅ ${displayName} 님 계정이 승인되었습니다 (${role})`);
+}
+
+async function rejectPending(pid){
+  const p=PENDING.find(x=>x.id===pid);
+  if(!p||!confirm(`"${p.name}" 님의 가입 신청을 거절하시겠습니까?`))return;
+  PENDING=PENDING.filter(x=>x.id!==pid);
+  try{await window.storage.set(PKEY,JSON.stringify(PENDING));}catch(e){}
+  renderAccounts();
+  showToast(`✕ 가입 신청이 거절되었습니다`);
+}
+
+// ─── Firebase 기반 승인/거절 함수 ───
+async function approvePendingUser(userid){
+  try {
+    const role = document.getElementById('pnd-role-'+userid)?.value || '매니저';
+    const linkedTeacher = document.getElementById('pnd-teacher-'+userid)?.value || '';
+    const COLORS = ['#5c52e8','#0ea87a','#d4820a','#c4387e','#1a78c2','#8e42c8'];
+    
+    const userSnap = await fbDb.ref(`users/${userid}`).once('value');
+    const user = userSnap.val();
+    if(!user) return;
+    
+    let displayName = user.name;
+    let color = user.color || COLORS[MANAGERS.length % COLORS.length];
+    
+    if(role === '강사' && linkedTeacher){
+      displayName = linkedTeacher;
+    }
+    
+    // Firebase에서 승인 처리
     await fbDb.ref(`users/${userid}`).update({
       name: displayName,
       role: role,
       color: color,
-      status: 'approved'
+      status: 'approved',
+      approvedAt: new Date().toISOString(),
+      approvedBy: currentManager?.userid || 'admin'
     });
-
-    // 강사 역할이고 TEACHER_INFO에 없으면 자동 등록
-    if(role==='강사'&&!TEACHER_INFO[displayName]){
-      TEACHER_INFO[displayName]={color:color,bg:color+'22',desc:'신규 강사',classes:{}};
-      if(!TEACHERS.includes(displayName))TEACHERS.push(displayName);
+    
+    // 강사인 경우 TEACHER_INFO 등록
+    if(role === '강사' && !TEACHER_INFO[displayName]){
+      TEACHER_INFO[displayName] = {color: color, bg: color+'22', desc: '신규 강사', classes: {}};
+      if(!TEACHERS.includes(displayName)) TEACHERS.push(displayName);
     }
-
-    // MANAGERS 배열 업데이트
-    await loadManagers();
+    
+    // 로컬 MANAGERS 업데이트
+    const newMgr = {
+      id: 'mgr'+Date.now(),
+      userid: userid,
+      name: displayName,
+      role: role,
+      pw: user.pw,
+      color: color
+    };
+    MANAGERS.push(newMgr);
+    await saveManagers().catch(()=>{});
+    
     renderAccounts();
-    renderAll();
     showToast(`✅ ${displayName} 님 계정이 승인되었습니다 (${role})`);
   } catch(e) {
     console.error('Approve error:', e);
@@ -6272,26 +6472,143 @@ async function approvePending(userid){
   }
 }
 
-async function rejectPending(userid){
+async function rejectPendingUser(userid){
   try {
     const userSnap = await fbDb.ref(`users/${userid}`).once('value');
-    const p = userSnap.val();
-    if(!p || !confirm(`"${p.name}" 님의 가입 신청을 거절하시겠습니까?`)) return;
+    const user = userSnap.val();
+    if(!user || !confirm(`"${user.name}" 님의 가입 신청을 거절하시겠습니까?`)) return;
     
-    // Firebase에서 사용자 상태 업데이트
     await fbDb.ref(`users/${userid}`).update({
-      status: 'rejected'
+      status: 'rejected',
+      rejectedAt: new Date().toISOString(),
+      rejectedBy: currentManager?.userid || 'admin'
     });
     
     renderAccounts();
-    showToast(`❌ ${p.name} 님의 가입 신청이 거절되었습니다`);
+    showToast(`❌ ${user.name} 님의 가입 신청이 거절되었습니다`);
   } catch(e) {
     console.error('Reject error:', e);
     showToast('❌ 거절 중 오류가 발생했습니다');
   }
 }
-  renderAccounts();
-  showToast(`✕ 가입 신청이 거절되었습니다`);
+
+// ─── 로그인 이력 표시 ───
+async function showLoginHistory(userid){
+  try {
+    const userSnap = await fbDb.ref(`users/${userid}`).once('value');
+    const user = userSnap.val();
+    
+    if(!user){
+      showToast('사용자 정보를 찾을 수 없습니다');
+      return;
+    }
+    
+    const history = user.loginHistory || [];
+    const overlay = document.getElementById('modal-overlay');
+    document.getElementById('modal-title').textContent = `📊 ${user.name}님 로그인 이력`;
+    
+    let historyHtml = '';
+    if(history.length === 0){
+      historyHtml = '<div style="padding:40px;text-align:center;color:var(--text3)">로그인 이력이 없습니다</div>';
+    } else {
+      historyHtml = `
+        <div style="max-height:400px;overflow-y:auto">
+          <table class="sheet-table">
+            <thead>
+              <tr>
+                <th>번호</th>
+                <th>로그인 시각</th>
+                <th>디바이스</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${history.slice().reverse().map((log, idx) => `
+                <tr>
+                  <td style="text-align:center">${history.length - idx}</td>
+                  <td style="font-size:12px">${new Date(log.timestamp).toLocaleString('ko-KR')}</td>
+                  <td style="font-size:11px;color:var(--text3);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${log.device || '-'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top:12px;padding:10px;background:var(--bg3);border-radius:var(--r);font-size:11px;color:var(--text3)">
+          <div>총 로그인 횟수: <strong style="color:var(--accent)">${history.length}회</strong></div>
+          <div>가입일: ${user.createdAt ? new Date(user.createdAt).toLocaleDateString('ko-KR') : '-'}</div>
+          <div>마지막 로그인: ${user.lastLogin ? new Date(user.lastLogin).toLocaleString('ko-KR') : '-'}</div>
+        </div>
+      `;
+    }
+    
+    document.getElementById('modal-form').innerHTML = historyHtml;
+    document.getElementById('modal-footer').innerHTML = `
+      <button class="btn" onclick="closeModal()">닫기</button>
+    `;
+    overlay.classList.add('show');
+  } catch(e) {
+    console.error('Login history error:', e);
+    showToast('로그인 이력을 불러오는 중 오류가 발생했습니다');
+  }
+}
+
+// ─── 계정 변경 히스토리 로드 ───
+async function loadAccountHistory(){
+  const listEl = document.getElementById('account-history-list');
+  if(!listEl) return;
+  
+  try {
+    if(!fbDb){
+      listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3)">Firebase가 연결되지 않았습니다</div>';
+      return;
+    }
+    
+    const historySnap = await fbDb.ref('accountHistory').orderByChild('at').limitToLast(50).once('value');
+    const historyData = historySnap.val();
+    
+    if(!historyData){
+      listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3)">변경 히스토리가 없습니다</div>';
+      return;
+    }
+    
+    // 배열로 변환하고 최신순 정렬
+    const historyArray = Object.entries(historyData).map(([key, val]) => ({...val, key}));
+    historyArray.sort((a, b) => (b.at || '').localeCompare(a.at || ''));
+    
+    let html = '<table class="sheet-table" style="font-size:12px"><thead><tr><th>시각</th><th>유형</th><th>아이디</th><th>변경내용</th><th>처리자</th></tr></thead><tbody>';
+    
+    historyArray.forEach(h => {
+      const typeLabel = h.type === 'create' ? '생성' : h.type === 'edit' ? '수정' : '삭제';
+      const typeColor = h.type === 'create' ? 'var(--teal)' : h.type === 'edit' ? 'var(--accent)' : 'var(--red)';
+      const timeStr = h.at ? new Date(h.at).toLocaleString('ko-KR').slice(0, -3) : '-';
+      
+      let changeDetails = '';
+      if(h.type === 'create'){
+        changeDetails = `${h.data?.name || h.name} (${h.data?.role || h.role})`;
+      } else if(h.type === 'edit'){
+        const changes = [];
+        if(h.before?.name !== h.after?.name) changes.push(`이름: ${h.before?.name} → ${h.after?.name}`);
+        if(h.before?.role !== h.after?.role) changes.push(`역할: ${h.before?.role} → ${h.after?.role}`);
+        changeDetails = changes.join(', ') || '정보 수정';
+      } else if(h.type === 'delete'){
+        changeDetails = `${h.name} (${h.role}) 삭제`;
+      }
+      
+      html += `<tr>
+        <td style="font-size:11px;color:var(--text3)">${timeStr}</td>
+        <td><span style="color:${typeColor};font-weight:600">${typeLabel}</span></td>
+        <td style="font-family:'DM Mono',monospace;font-size:11px">${h.userid}</td>
+        <td style="font-size:11px">${changeDetails}</td>
+        <td style="font-size:11px;color:var(--text3)">${h.by || h.deletedBy || h.createdBy || '-'}</td>
+      </tr>`;
+    });
+    
+    html += '</tbody></table>';
+    listEl.innerHTML = html;
+    
+  } catch(e) {
+    console.error('Load history error:', e);
+    listEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--red)">히스토리 로드 중 오류 발생</div>';
+  }
 }
 
 function openTeacherManageModal(teacherName){
@@ -6400,24 +6717,100 @@ function openAccountModal(id){
   document.getElementById('modal-overlay').classList.add('show');
 }
 
-function saveAccount(id){
+async function saveAccount(id){
   const userid=(document.getElementById('f-acc-userid')?.value||'').trim();
   const name=document.getElementById('f-acc-name')?.value.trim();
   const role=document.getElementById('f-acc-role')?.value||'매니저';
   const pw=document.getElementById('f-acc-pw')?.value;
   const pw2=document.getElementById('f-acc-pw2')?.value;
   const color=document.getElementById('f-acc-color')?.value||'#5c52e8';
+  
   if(!name){alert('이름을 입력해주세요.');return;}
   if(!userid){alert('아이디를 입력해주세요.');return;}
   if(pw&&pw!==pw2){alert('비밀번호가 일치하지 않습니다.');return;}
+  
+  let historyData = null;
+  
   if(id){
+    // 수정
     const m=MANAGERS.find(x=>x.id===id);
-    if(m){m.userid=userid;m.name=name;m.role=role;m.color=color;if(pw)m.pw=pw;}
+    if(m){
+      historyData = {
+        type: 'edit',
+        userid: m.userid,
+        before: {...m},
+        after: {userid, name, role, color}
+      };
+      
+      m.userid=userid;
+      m.name=name;
+      m.role=role;
+      m.color=color;
+      if(pw)m.pw=pw;
+      
+      // Firebase 사용자 정보도 업데이트
+      if(fbDb && m.userid){
+        try {
+          const updates = {
+            name: name,
+            role: role,
+            color: color,
+            updatedBy: currentManager?.userid || 'admin',
+            updatedAt: new Date().toISOString()
+          };
+          if(pw) updates.pw = pw;
+          await fbDb.ref(`users/${m.userid}`).update(updates);
+        } catch(e){
+          console.error('Firebase update error:', e);
+        }
+      }
+    }
   }else{
+    // 신규 추가
     if(!pw){alert('비밀번호를 입력해주세요.');return;}
     if(MANAGERS.find(m=>m.userid===userid)){alert('이미 사용 중인 아이디입니다.');return;}
+    
+    historyData = {
+      type: 'create',
+      userid: userid,
+      data: {userid, name, role, color}
+    };
+    
     MANAGERS.push({id:'mgr'+Date.now(),userid,name,role,pw,color});
+    
+    // Firebase에도 추가
+    if(fbDb){
+      try {
+        await fbDb.ref(`users/${userid}`).set({
+          userid: userid,
+          name: name,
+          pw: pw,
+          role: role,
+          color: color,
+          status: 'approved',
+          createdBy: currentManager?.userid || 'admin',
+          createdAt: new Date().toISOString(),
+          loginHistory: []
+        });
+      } catch(e){
+        console.error('Firebase create error:', e);
+      }
+    }
   }
+  
+  // 히스토리 기록
+  if(historyData && fbDb){
+    try {
+      await fbDb.ref(`accountHistory`).push({
+        ...historyData,
+        by: currentManager?.userid || 'admin',
+        at: new Date().toISOString()
+      });
+    } catch(e){
+      console.error('History save error:', e);
+    }
+  }
+  
   // 강사 역할이면 TEACHER_INFO에 자동 등록
   if(role==='강사' && !TEACHER_INFO[name]){
     TEACHER_INFO[name]={
@@ -6429,15 +6822,43 @@ function saveAccount(id){
     if(!TEACHERS.includes(name))TEACHERS.push(name);
     buildFilters();
   }
+  
   saveManagers();closeModal();renderAccounts();initLoginScreen();renderAll();
+  showToast('✅ 계정이 저장되었습니다');
 }
 
-function delAccount(id){
+async function delAccount(id){
   const m=MANAGERS.find(x=>x.id===id);
   if(!m||!confirm(`"${m.name}" 계정을 삭제하시겠습니까?`))return;
   if(m.id===currentManager?.id){alert('현재 로그인 중인 계정은 삭제할 수 없습니다.');return;}
+  
+  // 히스토리 기록
+  try {
+    if(fbDb && m.userid){
+      await fbDb.ref(`accountHistory`).push({
+        type: 'delete',
+        userid: m.userid,
+        name: m.name,
+        role: m.role,
+        deletedBy: currentManager?.userid || 'admin',
+        deletedAt: new Date().toISOString(),
+        data: m
+      });
+      
+      // Firebase 사용자도 삭제
+      await fbDb.ref(`users/${m.userid}`).update({
+        status: 'deleted',
+        deletedBy: currentManager?.userid || 'admin',
+        deletedAt: new Date().toISOString()
+      });
+    }
+  } catch(e){
+    console.error('History save error:', e);
+  }
+  
   MANAGERS=MANAGERS.filter(x=>x.id!==id);
   saveManagers();renderAccounts();initLoginScreen();
+  showToast('✅ 계정이 삭제되었습니다');
 }
 
 function delStu(id){const s=S.students.find(x=>x.id===id);if(!s||!confirm(`${s.name} 님을 삭제하시겠습니까?`))return;S.students=S.students.filter(x=>x.id!==id);save();renderAll();}
@@ -6795,25 +7216,20 @@ function renderStudyDashboard(groups){
     <!-- 하단 2단 그리드 -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
 
-      <!-- 오늘 상담 -->
+      <!-- 데일리 리포트 달력 (매니저 공유) -->
       <div class="card" style="margin:0">
         <div class="card-head">
-          <span class="card-title">📞 오늘 상담</span>
-          <div style="display:flex;gap:6px;align-items:center">
-            <span style="font-size:11px;color:var(--text3)">${todayCols.length?todayCols.length+'건':''}</span>
-            <button class="btn btn-sm btn-primary" onclick="openQuickConsult()">+ 신규 상담</button>
-          </div>
+          <span class="card-title">📅 매니저 공유 달력</span>
+          <button class="btn btn-sm btn-primary" onclick="addSharedEvent()">+ 일정 추가</button>
         </div>
         <div class="card-body" style="padding:0">
-          ${todayCols.length ? todayCols.map(c=>`
-            <div style="padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer" onclick="openModal('editConsult','${c.id}')">
-              <div style="font-size:13px;font-weight:600;display:flex;justify-content:space-between;align-items:center">
-                <span>${c.name} <span style="font-size:11px;color:var(--text3);font-weight:400">${c.phone||''}</span></span>
-                <span style="font-size:11px;color:var(--accent)">${c.time||''}</span>
-              </div>
-              <div style="font-size:11px;color:var(--text3);margin-top:3px">${c.interest||''}</div>
-            </div>
-          `).join('') : '<div style="font-size:12px;color:var(--text3);padding:20px;text-align:center;">오늘 예약된 상담이 없습니다.</div>'}
+          <div id="study-shared-cal-header" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--border)">
+            <button class="btn btn-sm" onclick="studyCalPrev()">◀</button>
+            <span id="study-cal-title" style="font-size:13px;font-weight:700"></span>
+            <button class="btn btn-sm" onclick="studyCalNext()">▶</button>
+          </div>
+          <div id="study-cal-grid" style="padding:6px;max-height:300px;overflow-y:auto"></div>
+          <div id="study-cal-events" style="padding:8px 12px;border-top:1px solid var(--border);max-height:150px;overflow-y:auto;font-size:12px"></div>
         </div>
       </div>
 
@@ -6851,6 +7267,143 @@ function renderStudyDashboard(groups){
     </div>
   `;
   loadGcalStudy();
+  renderStudyCalendar();
+}
+
+// ─── 스터디 공유 달력 변수 ───
+let studyCalYear = new Date().getFullYear();
+let studyCalMonth = new Date().getMonth();
+let studyCalSelectedDate = '';
+
+function studyCalPrev(){
+  studyCalMonth--;
+  if(studyCalMonth < 0){ studyCalMonth = 11; studyCalYear--; }
+  renderStudyCalendar();
+}
+
+function studyCalNext(){
+  studyCalMonth++;
+  if(studyCalMonth > 11){ studyCalMonth = 0; studyCalYear++; }
+  renderStudyCalendar();
+}
+
+function renderStudyCalendar(){
+  const titleEl = document.getElementById('study-cal-title');
+  const gridEl = document.getElementById('study-cal-grid');
+  const eventsEl = document.getElementById('study-cal-events');
+  
+  if(!titleEl || !gridEl || !eventsEl) return;
+  
+  titleEl.textContent = `${studyCalYear}년 ${studyCalMonth + 1}월`;
+  
+  // 달력 그리드 생성
+  const firstDay = new Date(studyCalYear, studyCalMonth, 1).getDay();
+  const daysInMonth = new Date(studyCalYear, studyCalMonth + 1, 0).getDate();
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10);
+  
+  let calHtml = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">';
+  
+  // 요일 헤더
+  ['일','월','화','수','목','금','토'].forEach((d, i) => {
+    const color = i === 0 ? 'var(--red)' : i === 6 ? 'var(--accent)' : 'var(--text3)';
+    calHtml += `<div style="text-align:center;padding:4px;font-size:10px;font-weight:700;color:${color}">${d}</div>`;
+  });
+  
+  // 빈 칸
+  for(let i = 0; i < firstDay; i++){
+    calHtml += '<div></div>';
+  }
+  
+  // 날짜
+  for(let day = 1; day <= daysInMonth; day++){
+    const dateStr = `${studyCalYear}-${String(studyCalMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const isToday = dateStr === todayStr;
+    const isSelected = dateStr === studyCalSelectedDate;
+    const hasEvent = (S.sharedEvents || []).some(e => e.date === dateStr);
+    
+    const bgColor = isToday ? 'var(--accent)' : isSelected ? 'var(--accent-light)' : hasEvent ? 'rgba(255,220,0,0.3)' : 'transparent';
+    const textColor = isToday ? '#fff' : 'var(--text)';
+    
+    calHtml += `<div onclick="selectStudyDate('${dateStr}')" style="text-align:center;padding:6px 2px;font-size:11px;cursor:pointer;background:${bgColor};color:${textColor};border-radius:4px;position:relative">
+      ${day}
+      ${hasEvent ? '<div style="width:4px;height:4px;background:var(--accent);border-radius:50%;position:absolute;bottom:2px;left:50%;transform:translateX(-50%)"></div>' : ''}
+    </div>`;
+  }
+  
+  calHtml += '</div>';
+  gridEl.innerHTML = calHtml;
+  
+  // 선택된 날짜의 일정 표시
+  updateStudyEvents();
+}
+
+function selectStudyDate(dateStr){
+  studyCalSelectedDate = dateStr;
+  renderStudyCalendar();
+}
+
+function updateStudyEvents(){
+  const eventsEl = document.getElementById('study-cal-events');
+  if(!eventsEl) return;
+  
+  if(!S.sharedEvents) S.sharedEvents = [];
+  
+  const dateEvents = S.sharedEvents.filter(e => e.date === studyCalSelectedDate);
+  
+  if(!studyCalSelectedDate || dateEvents.length === 0){
+    eventsEl.innerHTML = '<div style="padding:12px;text-align:center;color:var(--text3);font-size:11px">날짜를 선택하면 일정이 표시됩니다</div>';
+    return;
+  }
+  
+  eventsEl.innerHTML = `
+    <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:600">${studyCalSelectedDate} 일정</div>
+    ${dateEvents.map(e => `
+      <div style="padding:6px 8px;background:var(--bg3);border-radius:var(--r);margin-bottom:4px;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-weight:600;font-size:12px">${e.title}</div>
+          ${e.time ? `<div style="font-size:10px;color:var(--text3);margin-top:2px">${e.time}</div>` : ''}
+        </div>
+        <button class="btn btn-sm btn-danger" onclick="deleteSharedEvent('${e.id}')" style="padding:2px 6px;font-size:10px">삭제</button>
+      </div>
+    `).join('')}
+  `;
+}
+
+function addSharedEvent(){
+  if(!studyCalSelectedDate){
+    alert('먼저 달력에서 날짜를 선택해주세요');
+    return;
+  }
+  
+  const title = prompt('일정 제목:');
+  if(!title) return;
+  
+  const time = prompt('시간 (예: 14:00, 선택사항):');
+  
+  if(!S.sharedEvents) S.sharedEvents = [];
+  
+  S.sharedEvents.push({
+    id: 'evt' + Date.now(),
+    date: studyCalSelectedDate,
+    title: title,
+    time: time || '',
+    createdBy: currentManager?.name || 'admin',
+    createdAt: new Date().toISOString()
+  });
+  
+  save();
+  renderStudyCalendar();
+  showToast('✅ 일정이 추가되었습니다');
+}
+
+function deleteSharedEvent(eventId){
+  if(!confirm('이 일정을 삭제하시겠습니까?')) return;
+  
+  S.sharedEvents = (S.sharedEvents || []).filter(e => e.id !== eventId);
+  save();
+  renderStudyCalendar();
+  showToast('✅ 일정이 삭제되었습니다');
 }
 
 async function loadGcalStudy(){
@@ -7732,77 +8285,71 @@ function delStudyIndiv(id){
 }
 
 // 앱 시작 - DOM 완전히 로드된 후 실행
-document.addEventListener('DOMContentLoaded', async ()=>{
-  await loadManagers().catch(e=>{
+document.addEventListener('DOMContentLoaded', ()=>{
+  loadManagers().catch(e=>{
     console.warn('loadManagers 에러:', e);
     MANAGERS=[...DEFAULT_MANAGERS];
+    selectedManagerId=MANAGERS[0].id;
+    initLoginScreen();
+    tryRestoreSession();
   });
-  await tryRestoreSession();
   try{initShortcuts();}catch(e){console.warn('단축키 초기화 실패:', e);}
 });
 
 // 새로고침 시 세션 복원
-async function tryRestoreSession(){
+function tryRestoreSession(){
   try{
-    const saved = localStorage.getItem('currentUser');
+    const saved = sessionStorage.getItem('thebox_session');
     if(!saved) return;
-    
-    const {userid} = JSON.parse(saved);
-    let user = null;
-    
-    // Firebase에서 사용자 정보 다시 로드 시도
-    if(fbDb){
-      try {
-        const userSnap = await fbDb.ref(`users/${userid}`).once('value');
-        user = userSnap.val();
-      } catch(fbError) {
-        console.warn('Firebase restore error, trying local:', fbError);
-      }
-    }
-    
-    // Firebase에서 못 찾으면 로컬 MANAGERS에서 찾기
-    if(!user){
-      user = MANAGERS.find(m => m.userid === userid);
-    }
-    
-    if(!user || (user.status && user.status !== 'approved')) {
-      localStorage.removeItem('currentUser');
-      return;
-    }
-    
+    const {managerId, page} = JSON.parse(saved);
+    const mgr = MANAGERS.find(m=>m.id===managerId);
+    if(!mgr) return;
     // 로그인 상태 복원
-    currentManager = user;
+    currentManager = mgr;
     document.getElementById('login-screen').style.display='none';
     document.getElementById('main-shell').style.display='flex';
-    
     const av=document.getElementById('topbar-avatar');
-    if(av){
-      av.textContent=(user.name||user.userid||'?')[0];
-      av.style.background=(user.color||'#6058e8')+'22';
-      av.style.borderColor=(user.color||'#6058e8');
-      av.style.color=(user.color||'#6058e8');
-    }
+    if(av){av.textContent=(mgr.name||mgr.userid||'?')[0];av.style.background=mgr.color+'22';av.style.borderColor=mgr.color;av.style.color=mgr.color;}
     const tn=document.getElementById('topbar-name');
-    if(tn)tn.textContent=user.name||(user.userid||'');
-    
+    if(tn)tn.textContent=mgr.name||(mgr.userid||'');
     // 사이드바 권한 재적용
     applyMenuPermissions();
-    
-    try{
-      loadReminders().catch(()=>{});
-      loadData().then(()=>{
-        renderCurrentPage();
-      });
-    }catch(dataErr){
-      console.error('Data restore error:', dataErr);
-      renderCurrentPage();
-    }
-  }catch(e){ 
-    console.error('Session restore error:', e);
-    localStorage.removeItem('currentUser'); 
-  }
+    loadReminders().catch(()=>{});
+    loadData().then(()=>{
+      if(page) setTimeout(()=>goPage(page),200);
+    });
+  }catch(e){ sessionStorage.removeItem('thebox_session'); }
 }
 
+function applyMenuPermissions(){
+  const mgr = currentManager;
+  if(!mgr) return;
+  document.getElementById('sb-report').style.display=canAccessStats()?'flex':'none';
+  const sbAcc=document.getElementById('sb-accounts');
+  if(sbAcc)sbAcc.style.display=canAccessAccounts()?'flex':'none';
+  const sbTrial=document.getElementById('sb-trial');
+  if(sbTrial)sbTrial.style.display=canAccessTrial()?'flex':'none';
+  const sbConsult=document.getElementById('sb-consult');
+  if(sbConsult)sbConsult.style.display=canAccessConsult()?'flex':'none';
+  const sbPayments=document.getElementById('sb-payments');
+  if(sbPayments)sbPayments.style.display=canAccessPayments()?'flex':'none';
+  const sbDaily=document.getElementById('sb-daily');
+  if(sbDaily)sbDaily.style.display=canAccessDaily()?'flex':'none';
+  const showStudy=!isTeacher();
+  const sbSecStudy=document.getElementById('sb-sec-study');
+  if(sbSecStudy)sbSecStudy.style.display=showStudy?'block':'none';
+  ['sb-study-dashboard','sb-study-groups','sb-study-admin','sb-study-payments','sb-study-staff'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.style.display=showStudy?'flex':'none';
+  });
+  const sbStudyPay2=document.getElementById('sb-study-payments2');
+  if(sbStudyPay2)sbStudyPay2.style.display=isManager()?'flex':'none';
+  const topConsultBtn=document.getElementById('topbar-consult-btn');
+  if(topConsultBtn)topConsultBtn.style.display=canAccessConsult()?'inline-flex':'none';
+  const sbDocs=document.getElementById('sb-docs');
+  if(sbDocs)sbDocs.style.display=isTeacher()?'none':'flex';
+  if(isTeacher()) activeTeacher=mgr.name;
+}
 // ══ 스터디 연장 (우클릭) ══
 function studyRenewMember(id){
   const hit = findStudyMember(id); if(!hit) return;
