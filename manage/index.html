@@ -177,7 +177,7 @@ textarea.finput{resize:vertical;min-height:60px}
 .r-callback{background:#fce8f3;color:#b03a7a}
 .r-noshow{background:var(--bg3);color:var(--text3)}
 .consult-memo{background:var(--bg3);border-radius:var(--r);padding:8px 11px;font-size:12.5px;color:var(--text2);line-height:1.6;margin-top:7px;border-left:2px solid var(--accent)}
-.consult-next{background:var(--amber-light);border-radius:var(--r);padding:6px 11px;font-size:12px;color:var(--amber);margin-top:7px;border-left:2px solid var(--amber)}
+.consult-next{background:rgba(255,235,59,0.5);border-radius:var(--r);padding:6px 11px;font-size:12px;color:#000;margin-top:7px;border-left:2px solid rgba(255,235,59,0.8)}
 .exp-row{display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid var(--border)}
 .exp-row:last-child{border-bottom:none}
 .exp-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
@@ -1473,6 +1473,11 @@ async function doLogin(){
       localStorage.setItem('currentUser', JSON.stringify({userid:mgr.userid||mgr.id, loginAt:new Date().toISOString()}));
     }catch(e){}
     
+    // sessionStorage에도 세션 저장 (새로고침 대응)
+    try{
+      sessionStorage.setItem('thebox_session', JSON.stringify({managerId:mgr.id, page:'dashboard'}));
+    }catch(e){}
+    
     document.getElementById('login-screen').style.display='none';
     document.getElementById('main-shell').style.display='flex';
 
@@ -1922,6 +1927,11 @@ function ctxDelete(){
   if(!ctxTargetId)return;
   if(ctxTargetType==='student') delStu(ctxTargetId);
   else if(ctxTargetType==='trial') delTrial(ctxTargetId);
+  else if(ctxTargetType==='studyMember'){
+    // 멤버 ID로 그룹 찾기
+    const g = S.study.groups.find(gr=>(gr.members||[]).find(x=>x.id===ctxTargetId));
+    if(g) delStudyMember(g.id, ctxTargetId);
+  }
   closeCtxMenu();
 }
 document.addEventListener('click',closeCtxMenu);
@@ -2012,6 +2022,12 @@ function goPage(n){
   document.getElementById('page-'+n)?.classList.add('on');
   document.querySelector(`[data-page="${n}"]`)?.classList.add('on');
   document.getElementById('page-title').textContent=PTITLES[n]||n;
+  // 세션 저장
+  try{
+    if(currentManager){
+      sessionStorage.setItem('thebox_session', JSON.stringify({managerId:currentManager.id, page:n}));
+    }
+  }catch(e){}
   renderAll();
 }
 document.querySelectorAll('.sb-item[data-page]').forEach(el=>el.addEventListener('click',()=>goPage(el.dataset.page)));
