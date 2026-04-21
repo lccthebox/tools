@@ -11772,12 +11772,17 @@ function importSwitchTab(tab){
 function normalizeDate(s){
   if(!s) return '';
   s = s.trim().replace(/\./g,'-').replace(/\//g,'-');
-  // YYYYMMDD → YYYY-MM-DD
   if(/^\d{8}$/.test(s)) return s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8);
-  // 연-월-일 형태로 파드
   var m = s.match(/(\d{4})[-\.](\d{1,2})[-\.](\d{1,2})/);
   if(m) return m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0');
   return s;
+}
+// 표시용 날짜 포맷 (YY/MM/DD)
+function fmtImportDate(s){
+  if(!s) return '';
+  var m = s.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if(!m) return s;
+  return m[1].slice(2)+'/'+m[2]+'/'+m[3];
 }
 
 // 납부상태 정규화
@@ -11823,7 +11828,7 @@ function previewImport(type){
 
   if(type === 'academy'){
     html = '<div style="overflow-x:auto"><table class="import-preview-table">';
-    html += '<thead><tr><th>#</th><th>이름</th><th>연락처</th><th>강사</th><th>수업반</th><th>시작일</th><th>개월</th><th>금액</th><th>납부</th><th>비고</th><th>상태</th></tr></thead><tbody>';
+    html += '<thead><tr><th>#</th><th>이름</th><th>연락처</th><th>강사</th><th>수업반</th><th>시작일</th><th>개월</th><th>금액</th><th>납부</th><th>비고</th><th>중복여부</th></tr></thead><tbody>';
     rows.forEach(function(r, i){
       var name=r[0]||'', phone=r[1]||'', teacher=r[2]||'', classTime=r[3]||'';
       var startDate=normalizeDate(r[4]), months=parseInt(r[5])||1;
@@ -11832,12 +11837,12 @@ function previewImport(type){
       var exists = S.students.find(function(s){ return s.name===name && s.phone===phone; });
       var rowClass = exists ? 'irow-warn' : 'irow-ok';
       var statusBadge = exists
-        ? '<span style="font-size:10px;background:var(--amber-light);color:var(--amber);padding:1px 7px;border-radius:99px;font-weight:700">중복</span>'
-        : '<span style="font-size:10px;background:var(--teal-light);color:var(--teal);padding:1px 7px;border-radius:99px;font-weight:700">신규</span>';
+        ? '<span style="font-size:10px;background:var(--amber-light);color:var(--amber);padding:1px 7px;border-radius:99px;font-weight:700">⚠ 중복</span>'
+        : '<span style="font-size:10px;background:var(--accent-light);color:var(--accent);padding:1px 7px;border-radius:99px;font-weight:700">✓ 등록가능</span>';
       html += '<tr class="'+rowClass+'"><td style="color:var(--text3)">'+(i+1)+'</td>';
       html += '<td><strong>'+name+'</strong></td><td style="font-family:var(--font-mono)">'+phone+'</td>';
       html += '<td>'+teacher+'</td><td style="font-size:11px">'+classTime+'</td>';
-      html += '<td style="font-family:var(--font-mono);font-size:11px">'+startDate+'</td>';
+      html += '<td style="font-family:var(--font-mono);font-size:11px">'+fmtImportDate(startDate)+'</td>';
       html += '<td style="text-align:center">'+months+'</td>';
       html += '<td style="text-align:right;font-family:var(--font-mono)">'+(amount?amount.toLocaleString():'')+'</td>';
       html += '<td>'+pay+'</td><td style="font-size:11px;color:var(--text3)">'+memo+'</td>';
@@ -11849,7 +11854,7 @@ function previewImport(type){
 
   if(type === 'study'){
     html = '<div style="overflow-x:auto"><table class="import-preview-table">';
-    html += '<thead><tr><th>#</th><th>이름</th><th>연락처</th><th>그룹</th><th>요일</th><th>레벨</th><th>크레딧</th><th>만료일</th><th>납부</th><th>상태</th></tr></thead><tbody>';
+    html += '<thead><tr><th>#</th><th>이름</th><th>연락처</th><th>그룹</th><th>요일</th><th>레벨</th><th>크레딧</th><th>만료일</th><th>납부</th><th>중복여부</th></tr></thead><tbody>';
     rows.forEach(function(r, i){
       var name=r[0]||'', phone=r[1]||'', group=r[2]||'', days=r[3]||'';
       var level=r[4]||'', credits=parseInt(r[5])||16;
@@ -11864,7 +11869,7 @@ function previewImport(type){
       html += '<td><strong>'+name+'</strong></td><td style="font-family:var(--font-mono)">'+phone+'</td>';
       html += '<td>'+group+'</td><td>'+days+'</td><td>'+level+'</td>';
       html += '<td style="text-align:center">'+credits+'</td>';
-      html += '<td style="font-family:var(--font-mono);font-size:11px">'+expiry+'</td>';
+      html += '<td style="font-family:var(--font-mono);font-size:11px">'+fmtImportDate(expiry)+'</td>';
       html += '<td>'+pay+'</td><td>'+statusBadge+'</td></tr>';
       parsed.push({name,phone,group,days,level,credits,expiry,pay,startDate,existsGroup:!!existsGroup});
     });
@@ -11879,7 +11884,7 @@ function previewImport(type){
       var result=normalizeConsultResult(r[3]), teacher=r[4]||'', channel=r[5]||'', memo=r[6]||'';
       html += '<tr class="irow-ok"><td style="color:var(--text3)">'+(i+1)+'</td>';
       html += '<td><strong>'+name+'</strong></td><td style="font-family:var(--font-mono)">'+phone+'</td>';
-      html += '<td style="font-family:var(--font-mono);font-size:11px">'+date+'</td>';
+      html += '<td style="font-family:var(--font-mono);font-size:11px">'+fmtImportDate(date)+'</td>';
       html += '<td>'+result+'</td><td>'+teacher+'</td><td>'+channel+'</td>';
       html += '<td style="font-size:11px;color:var(--text3)">'+memo+'</td></tr>';
       parsed.push({name,phone,date,result,teacher,channel,memo});
@@ -11889,15 +11894,29 @@ function previewImport(type){
 
   // 실행 버튼
   var newCount = parsed.filter(function(r){ return !r.exists && !r.existsGroup!==undefined?true:true; }).length;
-  html += '<div class="import-confirm-bar">';
-  html += '<span style="font-size:13px"><strong>'+rows.length+'행</strong> 준비됨</span>';
-  html += '<button class="btn btn-primary" onclick="executeImport(\"'+type+'\")" style="font-size:13px;padding:8px 20px">✅ '+rows.length+'건 임포트 실행</button>';
-  html += '</div>';
+    preview.innerHTML = html;
 
-  preview.innerHTML = html;
-  // 전역 변수로 저장 (innerHTML 재설정으로 _parsed 소실 방지)
+  // 전역 변수로 저장
   window._importParsed = window._importParsed || {};
   window._importParsed[type] = parsed;
+
+  // 실행 버튼 - DOM으로 직접 생성 (innerHTML에 넣으면 onclick 깨짐)
+  var oldBar = document.getElementById('import-confirm-'+type);
+  if(oldBar) oldBar.remove();
+  var confirmBar = document.createElement('div');
+  confirmBar.id = 'import-confirm-'+type;
+  confirmBar.className = 'import-confirm-bar';
+  var infoSpan = document.createElement('span');
+  infoSpan.style.fontSize = '13px';
+  infoSpan.innerHTML = '<strong>'+rows.length+'행</strong> 준비됨';
+  var execBtn = document.createElement('button');
+  execBtn.className = 'btn btn-primary';
+  execBtn.style.cssText = 'font-size:13px;padding:8px 20px';
+  execBtn.innerHTML = '✅ '+rows.length+'건 임포트 실행';
+  (function(t){ execBtn.onclick = function(){ executeImport(t); }; })(type);
+  confirmBar.appendChild(infoSpan);
+  confirmBar.appendChild(execBtn);
+  preview.parentNode.appendChild(confirmBar);
 }
 
 // ── 실제 임포트 실행 ──
