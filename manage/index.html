@@ -879,6 +879,59 @@ textarea.finput{resize:vertical;min-height:60px}
 }
 #pwa-install-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(91,79,233,.4)}
 #pwa-install-btn.visible{display:inline-flex}
+
+/* ══ 임포트 페이지 ══ */
+.import-tab{
+  padding:10px 20px;font-size:13px;font-weight:600;
+  background:none;border:none;border-bottom:2.5px solid transparent;
+  color:var(--text3);cursor:pointer;margin-bottom:-2px;
+  font-family:var(--font);transition:all .15s;
+}
+.import-tab:hover{color:var(--text)}
+.import-tab.on{color:var(--accent);border-bottom-color:var(--accent)}
+.import-guide-card{
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--r2);padding:14px 16px;margin-bottom:14px;
+}
+.igc-title{font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px}
+.igc-cols{display:flex;flex-wrap:wrap;align-items:center;gap:5px}
+.igc-col{
+  font-size:11.5px;font-weight:700;padding:3px 10px;
+  border-radius:99px;background:var(--bg4);color:var(--text2);
+  border:1px solid var(--border2);white-space:nowrap;
+}
+.igc-col.required{background:var(--accent-light);color:var(--accent);border-color:var(--accent)}
+.igc-arrow{color:var(--text3);font-size:13px}
+.import-textarea{
+  width:100%;min-height:180px;
+  background:var(--bg3);border:1.5px solid var(--border2);
+  border-radius:var(--r2);padding:12px 14px;
+  font-family:var(--font-mono);font-size:12px;color:var(--text);
+  outline:none;resize:vertical;line-height:1.7;
+  transition:border-color .15s;
+}
+.import-textarea:focus{border-color:var(--accent);background:var(--bg2)}
+.import-preview-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px}
+.import-preview-table th{
+  padding:7px 10px;background:var(--accent);color:#fff;
+  font-size:10px;font-weight:700;text-align:left;
+  text-transform:uppercase;letter-spacing:.07em;
+}
+.import-preview-table td{
+  padding:7px 10px;border-bottom:1px solid var(--border);
+  color:var(--text);vertical-align:middle;
+}
+.import-preview-table tr:last-child td{border-bottom:none}
+.import-preview-table tr:hover td{background:var(--accent-light)}
+.irow-ok td:first-child{border-left:3px solid var(--teal)}
+.irow-warn td:first-child{border-left:3px solid var(--amber)}
+.irow-error td:first-child{border-left:3px solid var(--red)}
+.import-confirm-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;background:var(--bg3);
+  border:1px solid var(--border);border-radius:var(--r2);
+  margin-top:12px;
+}
 </style>
 
 </head>
@@ -1028,6 +1081,10 @@ textarea.finput{resize:vertical;min-height:60px}
     <div class="sb-item" data-page="docs" id="sb-docs">
       <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="3" y="1" width="10" height="14" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M6 5h4M6 8h4M6 11h2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
       문서 발급
+    </div>
+    <div class="sb-item" data-page="import" id="sb-import">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 2v8M5 7l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 12v1a1 1 0 001 1h10a1 1 0 001-1v-1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      데이터 임포트
     </div>
 
     <!-- ══ 링크 메뉴 ══ -->
@@ -1723,6 +1780,130 @@ textarea.finput{resize:vertical;min-height:60px}
       </div>
 
       <!-- 스터디 수강료 관리 (통합됨) -->
+
+      <!-- ══ 데이터 임포트 ══ -->
+      <div class="page" id="page-import">
+        <div style="max-width:900px;margin:0 auto">
+
+          <!-- 헤더 -->
+          <div style="margin-bottom:20px">
+            <div style="font-size:20px;font-weight:800;color:var(--text);font-family:var(--font-display);letter-spacing:-.3px;margin-bottom:6px">📥 데이터 임포트</div>
+            <div style="font-size:13px;color:var(--text3)">구글 시트에서 <strong>셀 선택 → Ctrl+C → 아래 붙여넣기</strong> 하면 바로 입력됩니다</div>
+          </div>
+
+          <!-- 탭 -->
+          <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:20px">
+            <button class="import-tab on" id="itab-academy" onclick="importSwitchTab('academy')">🎓 아카데미 수강생</button>
+            <button class="import-tab" id="itab-study" onclick="importSwitchTab('study')">📚 스터디 멤버</button>
+            <button class="import-tab" id="itab-consult" onclick="importSwitchTab('consult')">💬 상담이력</button>
+          </div>
+
+          <!-- ── 아카데미 탭 ── -->
+          <div id="import-content-academy">
+            <div class="import-guide-card">
+              <div class="igc-title">📋 구글 시트 → 이 순서로 열을 복사하세요</div>
+              <div class="igc-cols">
+                <span class="igc-col required">이름</span>
+                <span class="igc-arrow">→</span>
+                <span class="igc-col required">연락처</span>
+                <span class="igc-arrow">→</span>
+                <span class="igc-col required">강사</span>
+                <span class="igc-arrow">→</span>
+                <span class="igc-col required">수업반</span>
+                <span class="igc-arrow">→</span>
+                <span class="igc-col">수강시작일</span>
+                <span class="igc-arrow">→</span>
+                <span class="igc-col">개월수</span>
+                <span class="igc-arrow">→</span>
+                <span class="igc-col">수납금액</span>
+                <span class="igc-arrow">→</span>
+                <span class="igc-col">납부상태</span>
+                <span class="igc-arrow">→</span>
+                <span class="igc-col">비고</span>
+              </div>
+              <div style="font-size:11px;color:var(--text3);margin-top:8px">* 빨간 항목 필수 · 날짜 형식: 2024-01-15 또는 2024.01.15 · 납부상태: 완료/미납/대기</div>
+            </div>
+            <textarea class="import-textarea" id="import-academy-text" placeholder="구글 시트에서 복사(Ctrl+C)한 내용을 여기에 붙여넣으세요 (Ctrl+V)&#10;&#10;예시:&#10;홍길동	010-1234-5678	제임스	실용 (월목 09:00)	2024-03-01	3	270000	완료	교차수강"></textarea>
+            <div style="display:flex;gap:8px;align-items:center;margin-top:10px">
+              <button class="btn btn-primary" onclick="previewImport('academy')">
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M1 8s3-5 7-5 7 5 7 5-3 5-7 5-7-5-7-5z" stroke="currentColor" stroke-width="1.3"/><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.3"/></svg>
+                미리보기 & 확인
+              </button>
+              <span id="import-academy-count" style="font-size:12px;color:var(--text3)"></span>
+            </div>
+            <div id="import-academy-preview" style="margin-top:14px"></div>
+          </div>
+
+          <!-- ── 스터디 탭 ── -->
+          <div id="import-content-study" style="display:none">
+            <div class="import-guide-card">
+              <div class="igc-title">📋 구글 시트 → 이 순서로 열을 복사하세요</div>
+              <div class="igc-cols">
+                <span class="igc-col required">이름</span>
+                <span class="igc-arrow">→</span>
+                <span class="igc-col required">연락처</span>
+                <span class="igc-arrow">→</span>
+                <span class="igc-col required">그룹(리더명)</span>
+                <span class="igc-arrow">→</span>
+                <span class="igc-col">참여요일</span>
+                <span class="igc-arrow">→</span>
+                <span class="igc-col">레벨</span>
+                <span class="igc-arrow">→</span>
+                <span class="igc-col">크레딧수</span>
+                <span class="igc-arrow">→</span>
+                <span class="igc-col">만료일</span>
+                <span class="igc-arrow">→</span>
+                <span class="igc-col">납부상태</span>
+                <span class="igc-arrow">→</span>
+                <span class="igc-col">시작일</span>
+              </div>
+              <div style="font-size:11px;color:var(--text3);margin-top:8px">* 그룹명이 없으면 새 그룹 자동 생성 · 레벨: 초급/초중급/중급/중고급/고급</div>
+            </div>
+            <textarea class="import-textarea" id="import-study-text" placeholder="구글 시트에서 복사(Ctrl+C)한 내용을 여기에 붙여넣으세요 (Ctrl+V)&#10;&#10;예시:&#10;김영희	010-2345-6789	제임스 그룹A	월수	중급	16	2024-06-30	완료	2024-03-01"></textarea>
+            <div style="display:flex;gap:8px;align-items:center;margin-top:10px">
+              <button class="btn btn-primary" onclick="previewImport('study')">
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M1 8s3-5 7-5 7 5 7 5-3 5-7 5-7-5-7-5z" stroke="currentColor" stroke-width="1.3"/><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.3"/></svg>
+                미리보기 & 확인
+              </button>
+              <span id="import-study-count" style="font-size:12px;color:var(--text3)"></span>
+            </div>
+            <div id="import-study-preview" style="margin-top:14px"></div>
+          </div>
+
+          <!-- ── 상담 탭 ── -->
+          <div id="import-content-consult" style="display:none">
+            <div class="import-guide-card">
+              <div class="igc-title">📋 구글 시트 → 이 순서로 열을 복사하세요</div>
+              <div class="igc-cols">
+                <span class="igc-col required">이름</span>
+                <span class="igc-arrow">→</span>
+                <span class="igc-col required">연락처</span>
+                <span class="igc-arrow">→</span>
+                <span class="igc-col required">상담날짜</span>
+                <span class="igc-arrow">→</span>
+                <span class="igc-col">결과</span>
+                <span class="igc-arrow">→</span>
+                <span class="igc-col">강사</span>
+                <span class="igc-arrow">→</span>
+                <span class="igc-col">채널</span>
+                <span class="igc-arrow">→</span>
+                <span class="igc-col">메모</span>
+              </div>
+              <div style="font-size:11px;color:var(--text3);margin-top:8px">* 결과: 등록완료/검토중/재연락예정/등록거절/노쇼/청강예정</div>
+            </div>
+            <textarea class="import-textarea" id="import-consult-text" placeholder="구글 시트에서 복사(Ctrl+C)한 내용을 여기에 붙여넣으세요 (Ctrl+V)&#10;&#10;예시:&#10;이철수	010-3456-7890	2024-02-15	등록완료	제임스	전화	영어 회화 관심"></textarea>
+            <div style="display:flex;gap:8px;align-items:center;margin-top:10px">
+              <button class="btn btn-primary" onclick="previewImport('consult')">
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M1 8s3-5 7-5 7 5 7 5-3 5-7 5-7-5-7-5z" stroke="currentColor" stroke-width="1.3"/><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.3"/></svg>
+                미리보기 & 확인
+              </button>
+              <span id="import-consult-count" style="font-size:12px;color:var(--text3)"></span>
+            </div>
+            <div id="import-consult-preview" style="margin-top:14px"></div>
+          </div>
+
+        </div>
+      </div>
 
       <!-- ══ 문서 발급 ══ -->
       <div class="page" id="page-docs">
@@ -11537,6 +11718,230 @@ function toggleBackupMenu(){
       });
     }, 50);
   }
+}
+
+
+// ═══════════════════════════════════════════════════
+// 데이터 임포트
+// ═══════════════════════════════════════════════════
+var importCurrentTab = 'academy';
+
+function importSwitchTab(tab){
+  importCurrentTab = tab;
+  ['academy','study','consult'].forEach(function(t){
+    var btn = document.getElementById('itab-'+t);
+    var con = document.getElementById('import-content-'+t);
+    if(btn) btn.classList.toggle('on', t===tab);
+    if(con) con.style.display = t===tab ? 'block' : 'none';
+  });
+}
+
+// 날짜 정규화 (2024.01.15 → 2024-01-15)
+function normalizeDate(s){
+  if(!s) return '';
+  s = s.trim().replace(/\./g,'-').replace(/\//g,'-');
+  // YYYYMMDD → YYYY-MM-DD
+  if(/^\d{8}$/.test(s)) return s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8);
+  // 연-월-일 형태로 파드
+  var m = s.match(/(\d{4})[-\.](\d{1,2})[-\.](\d{1,2})/);
+  if(m) return m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0');
+  return s;
+}
+
+// 납부상태 정규화
+function normalizePayStatus(s){
+  s = (s||'').trim();
+  if(['완료','납부','지불','결제','paid'].includes(s.toLowerCase())) return '완료';
+  if(['미납','미결','unpaid'].includes(s.toLowerCase())) return '미납';
+  return '대기';
+}
+
+// 상담 결과 정규화
+function normalizeConsultResult(s){
+  s = (s||'').trim();
+  var map = {'등록':'registered','등록완료':'registered','검토':'considering','검토중':'considering',
+             '재연락':'callback','재연락예정':'callback','거절':'rejected','노쇼':'noshow',
+             '청강':'trial','청강예정':'trial'};
+  return map[s] || s || 'considering';
+}
+
+function parseImportLines(txt){
+  return txt.split('\n')
+    .map(function(l){ return l.split('\t').map(function(c){ return c.trim(); }); })
+    .filter(function(r){ return r.length >= 2 && r[0]; });
+}
+
+// ── 미리보기 ──
+function previewImport(type){
+  var ta = document.getElementById('import-'+type+'-text');
+  var preview = document.getElementById('import-'+type+'-preview');
+  var countEl = document.getElementById('import-'+type+'-count');
+  if(!ta||!preview) return;
+
+  var rows = parseImportLines(ta.value);
+  if(!rows.length){
+    preview.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:12px">붙여넣기한 내용이 없습니다</div>';
+    return;
+  }
+
+  if(countEl) countEl.textContent = rows.length + '행 감지됨';
+
+  var html = '';
+  var parsed = [];
+
+  if(type === 'academy'){
+    html = '<div style="overflow-x:auto"><table class="import-preview-table">';
+    html += '<thead><tr><th>#</th><th>이름</th><th>연락처</th><th>강사</th><th>수업반</th><th>시작일</th><th>개월</th><th>금액</th><th>납부</th><th>비고</th><th>상태</th></tr></thead><tbody>';
+    rows.forEach(function(r, i){
+      var name=r[0]||'', phone=r[1]||'', teacher=r[2]||'', classTime=r[3]||'';
+      var startDate=normalizeDate(r[4]), months=parseInt(r[5])||1;
+      var amount=parseInt((r[6]||'').replace(/,/g,''))||0;
+      var pay=normalizePayStatus(r[7]), memo=r[8]||'';
+      var exists = S.students.find(function(s){ return s.name===name && s.phone===phone; });
+      var rowClass = exists ? 'irow-warn' : 'irow-ok';
+      var statusBadge = exists
+        ? '<span style="font-size:10px;background:var(--amber-light);color:var(--amber);padding:1px 7px;border-radius:99px;font-weight:700">중복</span>'
+        : '<span style="font-size:10px;background:var(--teal-light);color:var(--teal);padding:1px 7px;border-radius:99px;font-weight:700">신규</span>';
+      html += '<tr class="'+rowClass+'"><td style="color:var(--text3)">'+(i+1)+'</td>';
+      html += '<td><strong>'+name+'</strong></td><td style="font-family:var(--font-mono)">'+phone+'</td>';
+      html += '<td>'+teacher+'</td><td style="font-size:11px">'+classTime+'</td>';
+      html += '<td style="font-family:var(--font-mono);font-size:11px">'+startDate+'</td>';
+      html += '<td style="text-align:center">'+months+'</td>';
+      html += '<td style="text-align:right;font-family:var(--font-mono)">'+(amount?amount.toLocaleString():'')+'</td>';
+      html += '<td>'+pay+'</td><td style="font-size:11px;color:var(--text3)">'+memo+'</td>';
+      html += '<td>'+statusBadge+'</td></tr>';
+      parsed.push({name,phone,teacher,classTime,startDate,months,amount,pay,memo,exists:!!exists});
+    });
+    html += '</tbody></table></div>';
+  }
+
+  if(type === 'study'){
+    html = '<div style="overflow-x:auto"><table class="import-preview-table">';
+    html += '<thead><tr><th>#</th><th>이름</th><th>연락처</th><th>그룹</th><th>요일</th><th>레벨</th><th>크레딧</th><th>만료일</th><th>납부</th><th>상태</th></tr></thead><tbody>';
+    rows.forEach(function(r, i){
+      var name=r[0]||'', phone=r[1]||'', group=r[2]||'', days=r[3]||'';
+      var level=r[4]||'', credits=parseInt(r[5])||16;
+      var expiry=normalizeDate(r[6]), pay=normalizePayStatus(r[7]);
+      var startDate=normalizeDate(r[8]);
+      var existsGroup = (S.study&&S.study.groups||[]).find(function(g){ return g.leaderName===group; });
+      var rowClass = existsGroup ? 'irow-ok' : 'irow-warn';
+      var statusBadge = existsGroup
+        ? '<span style="font-size:10px;background:var(--teal-light);color:var(--teal);padding:1px 7px;border-radius:99px;font-weight:700">기존그룹</span>'
+        : '<span style="font-size:10px;background:var(--amber-light);color:var(--amber);padding:1px 7px;border-radius:99px;font-weight:700">새그룹생성</span>';
+      html += '<tr class="'+rowClass+'"><td style="color:var(--text3)">'+(i+1)+'</td>';
+      html += '<td><strong>'+name+'</strong></td><td style="font-family:var(--font-mono)">'+phone+'</td>';
+      html += '<td>'+group+'</td><td>'+days+'</td><td>'+level+'</td>';
+      html += '<td style="text-align:center">'+credits+'</td>';
+      html += '<td style="font-family:var(--font-mono);font-size:11px">'+expiry+'</td>';
+      html += '<td>'+pay+'</td><td>'+statusBadge+'</td></tr>';
+      parsed.push({name,phone,group,days,level,credits,expiry,pay,startDate,existsGroup:!!existsGroup});
+    });
+    html += '</tbody></table></div>';
+  }
+
+  if(type === 'consult'){
+    html = '<div style="overflow-x:auto"><table class="import-preview-table">';
+    html += '<thead><tr><th>#</th><th>이름</th><th>연락처</th><th>날짜</th><th>결과</th><th>강사</th><th>채널</th><th>메모</th></tr></thead><tbody>';
+    rows.forEach(function(r, i){
+      var name=r[0]||'', phone=r[1]||'', date=normalizeDate(r[2]);
+      var result=normalizeConsultResult(r[3]), teacher=r[4]||'', channel=r[5]||'', memo=r[6]||'';
+      html += '<tr class="irow-ok"><td style="color:var(--text3)">'+(i+1)+'</td>';
+      html += '<td><strong>'+name+'</strong></td><td style="font-family:var(--font-mono)">'+phone+'</td>';
+      html += '<td style="font-family:var(--font-mono);font-size:11px">'+date+'</td>';
+      html += '<td>'+result+'</td><td>'+teacher+'</td><td>'+channel+'</td>';
+      html += '<td style="font-size:11px;color:var(--text3)">'+memo+'</td></tr>';
+      parsed.push({name,phone,date,result,teacher,channel,memo});
+    });
+    html += '</tbody></table></div>';
+  }
+
+  // 실행 버튼
+  var newCount = parsed.filter(function(r){ return !r.exists && !r.existsGroup!==undefined?true:true; }).length;
+  html += '<div class="import-confirm-bar">';
+  html += '<span style="font-size:13px"><strong>'+rows.length+'행</strong> 준비됨</span>';
+  html += '<button class="btn btn-primary" onclick="executeImport(\"'+type+'\")" style="font-size:13px;padding:8px 20px">✅ '+rows.length+'건 임포트 실행</button>';
+  html += '</div>';
+
+  preview.innerHTML = html;
+  preview._parsed = parsed;
+}
+
+// ── 실제 임포트 실행 ──
+function executeImport(type){
+  var preview = document.getElementById('import-'+type+'-preview');
+  if(!preview||!preview._parsed) return;
+  var rows = preview._parsed;
+  var added = 0, skipped = 0;
+
+  if(type === 'academy'){
+    rows.forEach(function(r){
+      if(r.exists){ skipped++; return; }
+      var newId = gid('s');
+      S.students.push({
+        id: newId, name: r.name, phone: r.phone, status: '재원',
+        memo: r.memo, modifiedBy: currentManager?.name||'임포트',
+        modifiedAt: new Date().toISOString(),
+        classes:[{
+          teacher: r.teacher, classTime: r.classTime,
+          startDate: r.startDate, months: r.months,
+          amount: r.amount, pay: r.pay,
+          payDate: r.startDate,
+          payMethods:[], discounts:[], discountAmt:0
+        }]
+      });
+      added++;
+    });
+  }
+
+  if(type === 'study'){
+    rows.forEach(function(r){
+      var group = (S.study&&S.study.groups||[]).find(function(g){ return g.leaderName===r.group; });
+      if(!group){
+        group = {
+          id: gid('sg'), dayGroup: studyDay||'monwed',
+          leaderName: r.group, leaderEngName: '',
+          level:'', members:[], modifiedAt: new Date().toISOString()
+        };
+        if(!S.study.groups) S.study.groups=[];
+        S.study.groups.push(group);
+      }
+      var dup = group.members.find(function(m){ return m.name===r.name; });
+      if(dup){ skipped++; return; }
+      group.members.push({
+        id: gid('sm'), name: r.name, phone: r.phone,
+        days: r.days, level: r.level, credits: r.credits,
+        creditExpiry: r.expiry, payStatus: r.pay,
+        startDate: r.startDate, timesPerWeek:2,
+        totalCredits: r.credits, months:3,
+        isTutor:false, payHistory:[], history:[],
+        modifiedAt: new Date().toISOString()
+      });
+      added++;
+    });
+  }
+
+  if(type === 'consult'){
+    rows.forEach(function(r){
+      S.consults.push({
+        id: gid('c'), name: r.name, phone: r.phone,
+        date: r.date||today(), result: r.result,
+        teacher: r.teacher, channel: r.channel, memo: r.memo,
+        createdAt: new Date().toISOString()
+      });
+      added++;
+    });
+  }
+
+  save();
+  renderAll();
+  showToast('✅ 임포트 완료: '+added+'건 추가' + (skipped?' (중복 '+skipped+'건 건너뜀)':''));
+
+  // 미리보기 초기화
+  if(preview) preview.innerHTML='<div style="padding:16px;background:var(--teal-light);border-radius:var(--r2);color:var(--teal);font-weight:600">✅ '+added+'건이 성공적으로 등록되었습니다!</div>';
+  var ta = document.getElementById('import-'+type+'-text');
+  if(ta) ta.value = '';
+  var countEl = document.getElementById('import-'+type+'-count');
+  if(countEl) countEl.textContent = '';
 }
 
 </script>
