@@ -1238,11 +1238,20 @@ textarea.finput{resize:vertical;min-height:60px}
         <!-- 구글 캘린더 오늘 일정 -->
         <div class="card">
           <div class="card-head">
-            <span class="card-title">📅 오늘 일정</span>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span class="card-title">📅 일정</span>
+              <!-- 날짜 이동 컨트롤 -->
+              <div id="gcal-date-nav" style="display:none;align-items:center;gap:4px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:2px 4px">
+                <button onclick="gcalMoveDate(-1)" class="btn-icon" style="padding:2px 6px;font-size:13px;border:none;background:none;cursor:pointer" title="이전 날">‹</button>
+                <span id="gcal-date-label" style="font-size:12px;font-weight:700;color:var(--text);min-width:90px;text-align:center;cursor:pointer" onclick="gcalGoToday()" title="오늘로 이동">오늘</span>
+                <button onclick="gcalMoveDate(1)" class="btn-icon" style="padding:2px 6px;font-size:13px;border:none;background:none;cursor:pointer" title="다음 날">›</button>
+              </div>
+            </div>
             <div style="display:flex;gap:6px;align-items:center">
               <span style="font-size:11px;color:var(--text3)" id="gcal-status-hint"></span>
+              <button class="btn btn-sm" onclick="gcalGoToday()" id="gcal-today-btn" style="display:none">오늘</button>
               <button class="btn btn-sm" onclick="openGcalSetting()">⚙ 설정</button>
-              <button class="btn btn-sm" onclick="loadGcal()" id="gcal-refresh-btn" style="display:none">↻ 새로고침</button>
+              <button class="btn btn-sm" onclick="loadGcal()" id="gcal-refresh-btn" style="display:none">↻</button>
             </div>
           </div>
           <div id="gcal-events-wrap" style="min-height:120px">
@@ -2968,7 +2977,7 @@ async function save(){
 }
 
 // ══ 네비 ══
-const PTITLES={docs:'문서 발급',dashboard:'아카데미 대시보드',students:'아카데미 수강생 관리',teachers:'수업별 시간표',trial:'청강 관리',consult:'상담 관리',studyPayments:'📚 스터디 수강료',academyPayments:'🎓 아카데미 수강료',report:'통계',board:'공지사항',daily:'데일리 리포트',studyDashboard:'스터디 대시보드',studyGroups:'스터디 그룹',studyAdmin:'스터디 관리',studyStaff:'원어민·한국어 선생님',accounts:'계정 관리'};
+const PTITLES={docs:'문서 발급',dashboard:'아카데미 대시보드',students:'아카데미 수강생 관리',teachers:'수업별 시간표',trial:'청강 관리',consult:'상담 관리',studyPayments:'📚 스터디 수강료',academyPayments:'🎓 아카데미 수강료',report:'통계',board:'공지사항',daily:'데일리 리포트',studyDashboard:'스터디 대시보드',studyGroups:'스터디 그룹',studyAdmin:'스터디 관리',studyStaff:'원어민·한국어 선생님',accounts:'계정 관리',import:'📥 데이터 임포트'};
 function goPage(n){
   // 하단 탭 동기화
   document.querySelectorAll('.mbn-item[data-page]').forEach(function(b){
@@ -3324,28 +3333,64 @@ async function loadGcalConfig(){
   }
 }
 
+// 현재 표시 날짜 (gcal용)
+var gcalViewDate = new Date();
+
+function gcalMoveDate(delta){
+  gcalViewDate = new Date(gcalViewDate);
+  gcalViewDate.setDate(gcalViewDate.getDate() + delta);
+  loadGcal();
+}
+function gcalGoToday(){
+  gcalViewDate = new Date();
+  loadGcal();
+}
+function gcalUpdateDateLabel(){
+  var label = document.getElementById('gcal-date-label');
+  var todayBtn = document.getElementById('gcal-today-btn');
+  if(!label) return;
+  var today = new Date();
+  var isToday = gcalViewDate.toDateString() === today.toDateString();
+  var isTomorrow = new Date(today.getTime()+86400000).toDateString() === gcalViewDate.toDateString();
+  var isYesterday = new Date(today.getTime()-86400000).toDateString() === gcalViewDate.toDateString();
+  var days = ['일','월','화','수','목','금','토'];
+  var dow = days[gcalViewDate.getDay()];
+  var mm = gcalViewDate.getMonth()+1;
+  var dd = gcalViewDate.getDate();
+  if(isToday)       label.textContent = '오늘 ('+mm+'/'+dd+')';
+  else if(isTomorrow) label.textContent = '내일 ('+mm+'/'+dd+')';
+  else if(isYesterday) label.textContent = '어제 ('+mm+'/'+dd+')';
+  else label.textContent = mm+'월 '+dd+'일 ('+dow+')';
+  label.style.color = isToday ? 'var(--accent)' : 'var(--text)';
+  if(todayBtn) todayBtn.style.display = isToday ? 'none' : 'inline-flex';
+}
+
 async function loadGcal(){
   const ph=document.getElementById('gcal-placeholder');
   const evWrap=document.getElementById('gcal-events');
   const hint=document.getElementById('gcal-status-hint');
   const refreshBtn=document.getElementById('gcal-refresh-btn');
+  const dateNav=document.getElementById('gcal-date-nav');
   if(!ph||!evWrap)return;
 
   if(!gcalConfig.apiKey||!gcalConfig.calendarId){
     ph.style.display='block';evWrap.style.display='none';
     if(hint)hint.textContent='';
     if(refreshBtn)refreshBtn.style.display='none';
+    if(dateNav)dateNav.style.display='none';
     return;
   }
 
   ph.style.display='none';evWrap.style.display='block';
   if(refreshBtn)refreshBtn.style.display='inline-flex';
+  if(dateNav)dateNav.style.display='flex';
+  gcalUpdateDateLabel();
   if(hint)hint.textContent='불러오는 중…';
-  evWrap.innerHTML=`<div style="padding:20px;text-align:center;color:var(--text3);font-size:12px">일정 불러오는 중…</div>`;
+  evWrap.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3);font-size:12px">일정 불러오는 중…</div>';
 
   try{
-    const todayStart=new Date();todayStart.setHours(0,0,0,0);
-    const todayEnd=new Date();todayEnd.setHours(23,59,59,999);
+    const todayStart=new Date(gcalViewDate);todayStart.setHours(0,0,0,0);
+    const todayEnd=new Date(gcalViewDate);todayEnd.setHours(23,59,59,999);
     const tmin=todayStart.toISOString();
     const tmax=todayEnd.toISOString();
     const calId=encodeURIComponent(gcalConfig.calendarId);
@@ -3359,10 +3404,12 @@ async function loadGcal(){
     const data=await res.json();
     const events=data.items||[];
 
-    if(hint)hint.textContent=`오늘 ${events.length}건`;
+    if(hint)hint.textContent=events.length+'건';
 
     if(!events.length){
-      evWrap.innerHTML=`<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px">오늘 일정이 없습니다</div>`;
+      var dateLabel2 = document.getElementById('gcal-date-label');
+      var dlText = dateLabel2 ? dateLabel2.textContent.split(' (')[0] : '해당일';
+      evWrap.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px">'+dlText+' 일정이 없습니다</div>';
       return;
     }
 
@@ -11848,14 +11895,16 @@ function previewImport(type){
   html += '</div>';
 
   preview.innerHTML = html;
-  preview._parsed = parsed;
+  // 전역 변수로 저장 (innerHTML 재설정으로 _parsed 소실 방지)
+  window._importParsed = window._importParsed || {};
+  window._importParsed[type] = parsed;
 }
 
 // ── 실제 임포트 실행 ──
 function executeImport(type){
+  var rows = (window._importParsed && window._importParsed[type]) || [];
+  if(!rows.length){ showToast('먼저 미리보기를 실행해주세요'); return; }
   var preview = document.getElementById('import-'+type+'-preview');
-  if(!preview||!preview._parsed) return;
-  var rows = preview._parsed;
   var added = 0, skipped = 0;
 
   if(type === 'academy'){
@@ -11922,11 +11971,13 @@ function executeImport(type){
   showToast('✅ 임포트 완료: '+added+'건 추가' + (skipped?' (중복 '+skipped+'건 건너뜀)':''));
 
   // 미리보기 초기화
-  if(preview) preview.innerHTML='<div style="padding:16px;background:var(--teal-light);border-radius:var(--r2);color:var(--teal);font-weight:600">✅ '+added+'건이 성공적으로 등록되었습니다!</div>';
+  if(preview) preview.innerHTML='<div style="padding:16px;background:var(--teal-light);border-radius:var(--r2);color:var(--teal);font-weight:700;font-size:13.5px">✅ '+added+'건 등록 완료!'+(skipped?' (중복 '+skipped+'건 건너뜀)':'')+'</div>';
   var ta = document.getElementById('import-'+type+'-text');
   if(ta) ta.value = '';
   var countEl = document.getElementById('import-'+type+'-count');
   if(countEl) countEl.textContent = '';
+  // 전역 파싱 캐시 초기화
+  if(window._importParsed) window._importParsed[type] = [];
 }
 
 
