@@ -11284,45 +11284,154 @@ function getAppsScriptCode(){
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var dt = new Date().toLocaleString('ko-KR');
 
-    // 수강생 시트
-    writeSheet(ss, '수강생', ['이름','연락처','상태','강사','수업반','시작일','납부상태','비고'], 
+    // ── 1. 수강생 기본정보 ──
+    writeSheet(ss, '수강생', ['이름','연락처','상태','강사','수업반','시작일','마지막날','납부상태','비고'],
       (data.students||[]).map(function(s){
-        var pri = (s.classes&&s.classes[0]) || s;
-        return [s.name||'', s.phone||'', s.status||'', 
-                pri.teacher||s.teacher||'', pri.classTime||s.classTime||'',
-                pri.startDate||s.startDate||'', pri.pay||s.pay||'', s.memo||''];
+        var cls = (s.classes&&s.classes[0]) || s;
+        var endDate = '';
+        if(cls.startDate && cls.months){
+          var d = new Date(cls.startDate);
+          d.setMonth(d.getMonth() + (cls.months||1));
+          d.setDate(d.getDate()-1);
+          endDate = d.toISOString().slice(0,10);
+        }
+        return [s.name||'', s.phone||'', s.status||'',
+                cls.teacher||s.teacher||'', cls.classTime||s.classTime||'',
+                cls.startDate||s.startDate||'', endDate,
+                cls.pay||s.pay||'', s.memo||''];
       })
     );
 
-    // 스터디 멤버 시트
+    // ── 2. 아카데미 수납내역 (현재 수업 결제) ──
+    var payRows = [];
+    (data.students||[]).forEach(function(s){
+      var classes = s.classes||[];
+      if(classes.length===0 && s.classTime) classes=[s];
+      classes.forEach(function(cl){
+        var methods = (cl.payMethods||[]).join(', ');
+        var discounts = (cl.discounts||[]).join(', ');
+        if(cl.discountAmt>0) discounts += (discounts?' + ':'') + '기타 -'+cl.discountAmt;
+        payRows.push([
+          s.name||'', s.phone||'', cl.teacher||s.teacher||'',
+          cl.classTime||s.classTime||'',
+          cl.payDate||cl.startDate||'', cl.startDate||'',
+          cl.months||1, cl.amount||0,
+          cl.pay||'', methods, discounts,
+          s.status||''
+        ]);
+      });
+      // 결제 이력(환불 등)
+      (s.payHistory||[]).forEach(function(h){
+        var methods = (h.payMethods||[]).join(', ');
+        payRows.push([
+          s.name||'', s.phone||'', h.teacher||s.teacher||'',
+          h.classTime||'',
+          h.payDate||h.refundDate||'', h.startDate||'',
+          h.months||1, h.refunded ? -(h.refundAmount||0) : (h.amount||0),
+          h.refunded ? '환불' : (h.pay||''), methods,
+          h.refunded ? ('환불: '+(h.refundReason||'')) : '',
+          s.status||''
+        ]);
+      });
+    });
+    writeSheet(ss, '아카데미_수납내역',
+      ['이름','연락처','강사','수업반','결제일','시작일','개월수','금액','납부상태','결제방법','할인/비고','수강상태'],
+      payRows
+    );
+
+    // ── 3. 아카데미 수납 요약 (월별 합계) ──
+    var monthMap = {};
+    payRows.forEach(function(r){
+      var ym = (r[4]||'').slice(0,7);
+      if(!ym) return;
+      if(!monthMap[ym]) monthMap[ym] = {complete:0, refund:0, unpaid:0, count:0};
+      var amt = Number(r[7])||0;
+      if(r[8]==='완료')      { monthMap[ym].complete += amt; monthMap[ym].count++; }
+      else if(r[8]==='환불') { monthMap[ym].refund   += Math.abs(amt); }
+      else if(r[8]==='미납') { monthMap[ym].unpaid++; }
+    });
+    var summaryRows = Object.keys(monthMap).sort().map(function(ym){
+      var m = monthMap[ym];
+      return [ym, m.complete, m.refund, m.complete-m.refund, m.unpaid+'건', m.count+'건'];
+    });
+    writeSheet(ss, '아카데미_월별요약',
+      ['연월','완료금액','환불금액','실수납','미납건수','완료건수'],
+      summaryRows
+    );
+
+    // ── 4. 스터디 수납내역 ──
+    var studyPayRows = [];
+    ((data.study&&data.study.groups)||[]).forEach(function(g){
+      (g.members||[]).forEach(function(m){
+        (m.payHistory||[]).forEach(function(ph){
+          studyPayRows.push([
+            g.leaderName||'', m.name||'', m.phone||'',
+            ph.date||'', ph.amount||0, ph.credits||0,
+            ph.type||'', ph.method||'', ph.status||'',
+            ph.by||''
+          ]);
+        });
+      });
+    });
+    writeSheet(ss, '스터디_수납내역',
+      ['그룹','이름','연락처','날짜','금액','크레딧','구분','결제방법','상태','처리자'],
+      studyPayRows
+    );
+
+    // ── 5. 스터디 멤버 현황 ──
     var studyRows = [];
     ((data.study&&data.study.groups)||[]).forEach(function(g){
       (g.members||[]).forEach(function(m){
-        studyRows.push([g.leaderName||'', m.name||'', m.phone||'', 
-                        m.level||'', m.credits||0, m.creditExpiry||'',
-                        m.payStatus||'', m.days||'']);
+        studyRows.push([
+          g.leaderName||'', m.name||'', m.phone||'',
+          m.level||'', m.credits||0, m.creditExpiry||'',
+          m.payStatus||'', m.days||'', m.startDate||'',
+          m.isTutor?'튜터':'일반'
+        ]);
       });
     });
-    writeSheet(ss, '스터디멤버', ['그룹','이름','연락처','레벨','크레딧','만료일','납부상태','요일'], studyRows);
+    writeSheet(ss, '스터디_멤버현황',
+      ['그룹','이름','연락처','레벨','남은크레딧','만료일','납부상태','요일','시작일','구분'],
+      studyRows
+    );
 
-    // 상담 시트
-    writeSheet(ss, '상담', ['이름','연락처','날짜','결과','강사','메모'],
-      (data.consults||[]).map(function(c){
-        return [c.name||'', c.phone||'', c.date||'', 
-                c.result||'', c.teacher||'', c.memo||''];
+    // ── 6. 상담 ──
+    writeSheet(ss, '상담이력', ['이름','연락처','날짜','결과','강사','채널','메모'],
+      (data.consults||[]).map(function(con){
+        return [con.name||'', con.phone||'', con.date||'',
+                con.result||'', con.teacher||'', con.channel||'', con.memo||''];
       })
     );
 
-    // 백업 로그
-    var logSheet = ss.getSheetByName('백업로그') || ss.insertSheet('백업로그');
-    logSheet.appendRow([dt, 
-      (data.students||[]).length + '명',
-      studyRows.length + '명',
-      (data.consults||[]).length + '건',
-      '백업완료']);
+    // ── 7. 청강 ──
+    writeSheet(ss, '청강내역', ['이름','연락처','날짜','강사','수업반','청강비','메모'],
+      (data.trials||[]).map(function(t){
+        return [t.name||'', t.phone||'', t.date||'',
+                t.teacher||'', t.classTime||'', t.fee||'', t.memo||''];
+      })
+    );
 
-    return ContentService.createTextOutput(JSON.stringify({ok:true, time:dt}))
-      .setMimeType(ContentService.MimeType.JSON);
+    // ── 8. 백업 로그 ──
+    var logSheet = ss.getSheetByName('백업로그') || ss.insertSheet('백업로그');
+    if(logSheet.getLastRow()===0){
+      logSheet.appendRow(['백업일시','수강생','스터디멤버','아카데미수납','스터디수납','상담','청강']);
+      logSheet.getRange(1,1,1,7).setBackground('#5b4fe9').setFontColor('#ffffff').setFontWeight('bold');
+    }
+    logSheet.appendRow([dt,
+      (data.students||[]).length+'명',
+      studyRows.length+'명',
+      payRows.length+'건',
+      studyPayRows.length+'건',
+      (data.consults||[]).length+'건',
+      (data.trials||[]).length+'명'
+    ]);
+
+    return ContentService.createTextOutput(JSON.stringify({ok:true, time:dt,
+      students:(data.students||[]).length,
+      payments:payRows.length,
+      studyPay:studyPayRows.length
+    })).setMimeType(ContentService.MimeType.JSON);
+
   } catch(err) {
     return ContentService.createTextOutput(JSON.stringify({ok:false, error:err.toString()}))
       .setMimeType(ContentService.MimeType.JSON);
@@ -11333,11 +11442,24 @@ function writeSheet(ss, name, headers, rows){
   var sheet = ss.getSheetByName(name) || ss.insertSheet(name);
   sheet.clearContents();
   var ts = new Date().toLocaleString('ko-KR');
-  sheet.appendRow(['마지막 백업: ' + ts]);
-  sheet.appendRow(headers);
-  if(rows.length > 0) sheet.getRange(3, 1, rows.length, headers.length).setValues(rows);
-  // 헤더 스타일
-  sheet.getRange(2, 1, 1, headers.length).setBackground('#5b4fe9').setFontColor('#ffffff').setFontWeight('bold');
+  // 1행: 백업 시각
+  sheet.getRange(1,1).setValue('마지막 백업: ' + ts).setFontColor('#888888').setFontStyle('italic');
+  // 2행: 헤더
+  sheet.getRange(2, 1, 1, headers.length).setValues([headers])
+    .setBackground('#5b4fe9').setFontColor('#ffffff').setFontWeight('bold');
+  sheet.setFrozenRows(2);
+  // 데이터
+  if(rows.length > 0){
+    sheet.getRange(3, 1, rows.length, headers.length).setValues(rows);
+    // 금액 컬럼 숫자 형식
+    for(var c=1; c<=headers.length; c++){
+      if(headers[c-1].includes('금액') || headers[c-1].includes('크레딧')){
+        sheet.getRange(3, c, rows.length, 1).setNumberFormat('#,##0');
+      }
+    }
+  }
+  // 열 너비 자동 조정
+  sheet.autoResizeColumns(1, headers.length);
 }`;
 }
 
@@ -11368,9 +11490,11 @@ async function runSheetsBackup(){
   showToast('⏳ 구글 스프레드시트에 백업 중...');
 
   const payload = {
-    students:     S.students     || [],
+    students:     S.students     || [],  // 수납내역 포함 (classes, payHistory)
+    trials:       S.trials       || [],
     consults:     S.consults     || [],
-    study:        S.study        || {},
+    board:        S.board        || [],
+    study:        S.study        || {},  // 스터디 수납이력 포함 (members[].payHistory)
     backedUpAt:   new Date().toISOString()
   };
 
