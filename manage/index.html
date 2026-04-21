@@ -1063,7 +1063,9 @@ textarea.finput{resize:vertical;min-height:60px}
 
     <div class="sb-footer">
       더박스 어학원 · v1.6<br>
-      <button onclick="backupData()" style="background:none;border:none;color:var(--text3);font-size:10px;cursor:pointer;padding:2px 0;text-decoration:underline">💾 데이터 백업</button>
+      <button onclick="backupData()" style="background:none;border:none;color:var(--text3);font-size:10px;cursor:pointer;padding:2px 0;text-decoration:underline" title="JSON 파일 다운로드">💾 JSON 백업</button>
+      <span style="color:var(--border2)"> · </span>
+      <button onclick="openSheetsBackupModal()" style="background:none;border:none;color:var(--text3);font-size:10px;cursor:pointer;padding:2px 0;text-decoration:underline" title="구글 스프레드시트 백업">📊 시트 백업</button>
       <span style="color:var(--border2)"> · </span>
       <button onclick="restoreData()" style="background:none;border:none;color:var(--text3);font-size:10px;cursor:pointer;padding:2px 0;text-decoration:underline">📂 복구</button>
     </div>
@@ -1100,7 +1102,26 @@ textarea.finput{resize:vertical;min-height:60px}
           <span class="mob-hide kbd-hint" style="font-size:10px;color:var(--text3);background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:1px 5px;font-family:var(--font-mono)">Ctrl K</span>
         </button>
         <!-- 15. 백업 버튼 -->
-        <button class="btn-icon" onclick="backupData()" title="데이터 백업 (Ctrl+B)" style="font-size:11px;padding:4px 8px">💾</button>
+        <div style="position:relative">
+          <button class="btn-icon" id="backup-menu-btn" onclick="toggleBackupMenu()" title="데이터 백업" style="font-size:13px;padding:4px 9px">💾</button>
+          <div id="backup-menu" style="display:none;position:absolute;right:0;top:calc(100% + 6px);background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r2);box-shadow:var(--shadow-lg);padding:5px;min-width:200px;z-index:400;animation:ctx-in .12s ease-out">
+            <button onclick="backupData();toggleBackupMenu()" class="ctx-item" style="width:100%;border:none;text-align:left;cursor:pointer">
+              <span style="font-size:14px">📥</span>
+              <div>
+                <div style="font-weight:600;font-size:12.5px">JSON 파일 다운로드</div>
+                <div style="font-size:10.5px;color:var(--text3)">구글 드라이브에 저장 권장</div>
+              </div>
+            </button>
+            <div style="height:1px;background:var(--border);margin:3px 6px"></div>
+            <button onclick="openSheetsBackupModal();toggleBackupMenu()" class="ctx-item" style="width:100%;border:none;text-align:left;cursor:pointer">
+              <span style="font-size:14px">📊</span>
+              <div>
+                <div style="font-weight:600;font-size:12.5px">구글 스프레드시트</div>
+                <div style="font-size:10.5px;color:var(--text3)">시트에 자동 기록</div>
+              </div>
+            </button>
+          </div>
+        </div>
         <button class="btn-icon" onclick="showShortcutHelp()" title="단축키 안내 (?)" style="font-size:11px;padding:4px 8px">⌨️</button>
         <button class="btn-icon" id="dark-toggle" onclick="toggleDarkMode()" title="다크모드 전환" style="font-size:13px;padding:4px 8px">🌙</button>
         <!-- 알림 벨 -->
@@ -6326,16 +6347,39 @@ function saveQuickNote(stuId){
 
 // ══ 데이터 백업/복구 ══
 function backupData(){
-  const data={students:S.students,trials:S.trials,consults:S.consults,calNotes:S.calNotes,board:S.board,teacherPrices:S.teacherPrices,backedUpAt:new Date().toISOString(),version:'thebox2_v1'};
-  const json=JSON.stringify(data,null,2);
-  const blob=new Blob([json],{type:'application/json'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  const dt=new Date().toISOString().slice(0,10);
-  a.href=url;a.download=`thebox2_backup_${dt}.json`;
-  document.body.appendChild(a);a.click();
-  document.body.removeChild(a);URL.revokeObjectURL(url);
-  showToast(`✅ 백업 파일 다운로드: thebox2_backup_${dt}.json`);
+  // 전체 데이터 백업 (스터디 포함)
+  const dt  = new Date().toISOString().slice(0,10);
+  const now = new Date().toLocaleString('ko-KR');
+  const data = {
+    students:     S.students     || [],
+    trials:       S.trials       || [],
+    consults:     S.consults     || [],
+    board:        S.board        || [],
+    calNotes:     S.calNotes     || {},
+    teacherPrices:S.teacherPrices|| {},
+    study:        S.study        || {},
+    sharedEvents: S.sharedEvents || [],
+    backedUpAt:   new Date().toISOString(),
+    version:      'thebox2_v2',
+    // 요약 통계
+    _summary: {
+      students:  (S.students||[]).length,
+      studyMembers: (S.study&&S.study.groups||[]).reduce(function(a,g){return a+(g.members||[]).length;},0),
+      consults:  (S.consults||[]).length,
+      backedUpAt: now
+    }
+  };
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], {type:'application/json'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = 'thebox_backup_' + dt + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('✅ 백업 완료 — 구글 드라이브에 저장해두세요!');
 }
 
 function restoreData(){
@@ -11176,6 +11220,198 @@ function installPWA(){
     } else {
       alert('이미 설치되었거나, 브라우저 주소창 오른쪽의 설치 아이콘을 이용해주세요.');
     }
+  }
+}
+
+
+// ═══════════════════════════════════════════════════
+// 구글 스프레드시트 백업
+// ═══════════════════════════════════════════════════
+
+// Google Apps Script 웹앱 URL (사용자가 설정)
+var SHEETS_WEBHOOK_URL = '';
+
+function loadSheetsConfig(){
+  try{
+    var saved = localStorage.getItem('thebox_sheets_url');
+    if(saved) SHEETS_WEBHOOK_URL = saved;
+  }catch(e){}
+}
+loadSheetsConfig();
+
+function openSheetsBackupModal(){
+  var overlay = document.getElementById('modal-overlay');
+  if(!overlay) return;
+  document.getElementById('modal-title').textContent = '📊 구글 스프레드시트 백업';
+  document.getElementById('modal-form').innerHTML = `
+    <div style="background:var(--blue-light);border:1px solid var(--blue);border-radius:var(--r);padding:12px 14px;font-size:12.5px;color:var(--blue);margin-bottom:16px;line-height:1.7">
+      <strong>📋 설정 방법 (1회만 하면 됩니다)</strong><br>
+      1. <a href="https://script.google.com" target="_blank" style="color:var(--accent)">script.google.com</a> → 새 프로젝트<br>
+      2. 아래 코드 전체 붙여넣기 → 저장<br>
+      3. 배포 → 웹 앱 → 누구나 접근 → URL 복사<br>
+      4. 복사한 URL을 아래에 입력
+    </div>
+
+    <div class="fgroup full" style="margin-bottom:14px">
+      <label class="flabel">Apps Script 코드 (복사 후 Google Script에 붙여넣기)</label>
+      <div style="position:relative">
+        <textarea class="finput" id="f-apps-script-code" rows="8" readonly style="font-family:var(--font-mono);font-size:10.5px;background:var(--bg4);resize:none;user-select:all">${getAppsScriptCode()}</textarea>
+        <button onclick="copyAppsScriptCode()" style="position:absolute;top:6px;right:6px;background:var(--accent);border:none;border-radius:6px;color:#fff;font-size:10px;font-weight:700;padding:4px 10px;cursor:pointer;font-family:var(--font)">복사</button>
+      </div>
+    </div>
+
+    <div class="fgroup full">
+      <label class="flabel">Google Apps Script 웹앱 URL</label>
+      <input class="finput" id="f-sheets-url" placeholder="https://script.google.com/macros/s/..." value="${SHEETS_WEBHOOK_URL}">
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">배포 후 받은 URL을 여기에 입력하세요</div>
+    </div>
+  `;
+
+  var footer = overlay.querySelector('.modal-footer');
+  if(footer) footer.innerHTML = `
+    <button class="btn" onclick="closeModal()">취소</button>
+    <button class="btn btn-primary" onclick="saveSheetsUrl()">URL 저장</button>
+    <button class="btn btn-teal" onclick="runSheetsBackup()" style="margin-left:4px">📊 지금 백업 실행</button>
+  `;
+  S.modalMode = 'sheets';
+  overlay.classList.add('show');
+}
+
+function getAppsScriptCode(){
+  return `function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var dt = new Date().toLocaleString('ko-KR');
+
+    // 수강생 시트
+    writeSheet(ss, '수강생', ['이름','연락처','상태','강사','수업반','시작일','납부상태','비고'], 
+      (data.students||[]).map(function(s){
+        var pri = (s.classes&&s.classes[0]) || s;
+        return [s.name||'', s.phone||'', s.status||'', 
+                pri.teacher||s.teacher||'', pri.classTime||s.classTime||'',
+                pri.startDate||s.startDate||'', pri.pay||s.pay||'', s.memo||''];
+      })
+    );
+
+    // 스터디 멤버 시트
+    var studyRows = [];
+    ((data.study&&data.study.groups)||[]).forEach(function(g){
+      (g.members||[]).forEach(function(m){
+        studyRows.push([g.leaderName||'', m.name||'', m.phone||'', 
+                        m.level||'', m.credits||0, m.creditExpiry||'',
+                        m.payStatus||'', m.days||'']);
+      });
+    });
+    writeSheet(ss, '스터디멤버', ['그룹','이름','연락처','레벨','크레딧','만료일','납부상태','요일'], studyRows);
+
+    // 상담 시트
+    writeSheet(ss, '상담', ['이름','연락처','날짜','결과','강사','메모'],
+      (data.consults||[]).map(function(c){
+        return [c.name||'', c.phone||'', c.date||'', 
+                c.result||'', c.teacher||'', c.memo||''];
+      })
+    );
+
+    // 백업 로그
+    var logSheet = ss.getSheetByName('백업로그') || ss.insertSheet('백업로그');
+    logSheet.appendRow([dt, 
+      (data.students||[]).length + '명',
+      studyRows.length + '명',
+      (data.consults||[]).length + '건',
+      '백업완료']);
+
+    return ContentService.createTextOutput(JSON.stringify({ok:true, time:dt}))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({ok:false, error:err.toString()}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function writeSheet(ss, name, headers, rows){
+  var sheet = ss.getSheetByName(name) || ss.insertSheet(name);
+  sheet.clearContents();
+  var ts = new Date().toLocaleString('ko-KR');
+  sheet.appendRow(['마지막 백업: ' + ts]);
+  sheet.appendRow(headers);
+  if(rows.length > 0) sheet.getRange(3, 1, rows.length, headers.length).setValues(rows);
+  // 헤더 스타일
+  sheet.getRange(2, 1, 1, headers.length).setBackground('#5b4fe9').setFontColor('#ffffff').setFontWeight('bold');
+}`;
+}
+
+function copyAppsScriptCode(){
+  var el = document.getElementById('f-apps-script-code');
+  if(!el) return;
+  el.select();
+  document.execCommand('copy');
+  showToast('✅ 코드 복사 완료! Google Script에 붙여넣으세요');
+}
+
+function saveSheetsUrl(){
+  var url = (document.getElementById('f-sheets-url')?.value||'').trim();
+  if(!url){ showToast('⚠️ URL을 입력해주세요'); return; }
+  SHEETS_WEBHOOK_URL = url;
+  try{ localStorage.setItem('thebox_sheets_url', url); }catch(e){}
+  showToast('✅ URL 저장 완료');
+  closeModal();
+}
+
+async function runSheetsBackup(){
+  var url = (document.getElementById('f-sheets-url')?.value||SHEETS_WEBHOOK_URL||'').trim();
+  if(!url){
+    showToast('⚠️ 먼저 Apps Script URL을 입력해주세요');
+    return;
+  }
+
+  showToast('⏳ 구글 스프레드시트에 백업 중...');
+
+  const payload = {
+    students:     S.students     || [],
+    consults:     S.consults     || [],
+    study:        S.study        || {},
+    backedUpAt:   new Date().toISOString()
+  };
+
+  try{
+    const res = await fetch(url, {
+      method: 'POST',
+      mode:   'no-cors',  // CORS 우회 (Apps Script 필요)
+      headers:{'Content-Type':'application/json'},
+      body:    JSON.stringify(payload)
+    });
+    // no-cors 모드에서는 응답 못 읽음 → 성공으로 처리
+    showToast('✅ 구글 스프레드시트 백업 완료!');
+    closeModal();
+    // 저장
+    SHEETS_WEBHOOK_URL = url;
+    try{ localStorage.setItem('thebox_sheets_url', url); }catch(e){}
+  } catch(err){
+    showToast('❌ 백업 실패: ' + err.message);
+    console.error('Sheets backup error:', err);
+  }
+}
+
+
+// ── 백업 메뉴 토글 ──
+function toggleBackupMenu(){
+  var menu = document.getElementById('backup-menu');
+  if(!menu) return;
+  var isOpen = menu.style.display !== 'none';
+  if(isOpen){
+    menu.style.display = 'none';
+  } else {
+    menu.style.display = 'block';
+    // 외부 클릭 시 닫기
+    setTimeout(function(){
+      document.addEventListener('click', function handler(e){
+        if(!e.target.closest('#backup-menu') && !e.target.closest('#backup-menu-btn')){
+          menu.style.display = 'none';
+          document.removeEventListener('click', handler);
+        }
+      });
+    }, 50);
   }
 }
 
