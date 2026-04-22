@@ -11994,7 +11994,7 @@ function previewImport(type){
       html += '<td><strong>'+name+'</strong></td>';
       html += '<td style="font-family:var(--font-mono);font-size:11px">'+phone+'</td>';
       html += '<td>'+teacher+'</td>';
-      html += '<td style="font-size:11px">'+classTime+'</td>';
+      html += '<td style="font-size:11px">'+(classTime.includes('|')?classTime.split('|').map(function(x){return '<span style="background:var(--accent-light);color:var(--accent);padding:1px 5px;border-radius:4px;font-size:10px;font-weight:700">'+x.trim()+'</span>';}).join(' + '):classTime)+'</td>';
       html += '<td style="font-family:var(--font-mono);font-size:11px">'+fmtImportDate(payDate)+'</td>';
       html += '<td style="font-family:var(--font-mono);font-size:11px">'+fmtImportDate(startDate)+'</td>';
       html += '<td style="text-align:center">'+months+'</td>';
@@ -12126,6 +12126,22 @@ function executeImport(type){
     rows.forEach(function(r){
       if(r.exists){ skipped++; return; }
       var newId = gid('s');
+      // 수업반 | 구분으로 다중 수업 처리 (예: 패턴A|패턴B)
+      var classTimes = r.classTime ? r.classTime.split(/[|,]/).map(function(x){return x.trim();}).filter(Boolean) : [''];
+      var classesArr = classTimes.map(function(ct, ci){
+        return {
+          teacher:     r.teacher,
+          classTime:   ct,
+          payDate:     r.payDate || r.startDate,
+          startDate:   r.startDate,
+          months:      r.months,
+          amount:      ci===0 ? r.amount : 0,   // 금액은 첫번째 수업에만
+          pay:         r.pay,
+          payMethods:  ci===0 ? (r.payMethods||[]) : [],
+          discounts:   ci===0 ? (r.discounts||[])  : [],
+          discountAmt: ci===0 ? (r.discountAmt||0) : 0
+        };
+      });
       S.students.push({
         id: newId,
         name: r.name,
@@ -12134,18 +12150,7 @@ function executeImport(type){
         memo: r.memo,
         modifiedBy: currentManager ? currentManager.name : '임포트',
         modifiedAt: new Date().toISOString(),
-        classes:[{
-          teacher:     r.teacher,
-          classTime:   r.classTime,
-          payDate:     r.payDate || r.startDate,
-          startDate:   r.startDate,
-          months:      r.months,
-          amount:      r.amount,
-          pay:         r.pay,
-          payMethods:  r.payMethods  || [],
-          discounts:   r.discounts   || [],
-          discountAmt: r.discountAmt || 0
-        }]
+        classes: classesArr
       });
       added++;
     });
