@@ -1794,29 +1794,30 @@ textarea.finput{resize:vertical;min-height:60px}
           <!-- ── 아카데미 탭 ── -->
           <div id="import-content-academy">
             <div class="import-guide-card">
-              <div class="igc-title">📋 구글 시트 → 이 순서로 열을 복사하세요</div>
-              <div class="igc-cols">
-                <span class="igc-col required">이름</span>
-                <span class="igc-arrow">→</span>
-                <span class="igc-col required">연락처</span>
-                <span class="igc-arrow">→</span>
-                <span class="igc-col required">강사</span>
-                <span class="igc-arrow">→</span>
-                <span class="igc-col required">수업반</span>
-                <span class="igc-arrow">→</span>
-                <span class="igc-col">수강시작일</span>
-                <span class="igc-arrow">→</span>
-                <span class="igc-col">개월수</span>
-                <span class="igc-arrow">→</span>
-                <span class="igc-col">수납금액</span>
-                <span class="igc-arrow">→</span>
-                <span class="igc-col">납부상태</span>
-                <span class="igc-arrow">→</span>
+              <div class="igc-title">📋 구글 시트 → 아래 순서로 열을 정리 후 복사하세요</div>
+              <div class="igc-cols" style="margin-bottom:8px">
+                <span class="igc-col required">이름</span><span class="igc-arrow">→</span>
+                <span class="igc-col required">연락처</span><span class="igc-arrow">→</span>
+                <span class="igc-col required">강사</span><span class="igc-arrow">→</span>
+                <span class="igc-col required">수업반</span><span class="igc-arrow">→</span>
+                <span class="igc-col required">결제일</span><span class="igc-arrow">→</span>
+                <span class="igc-col required">수강시작일</span><span class="igc-arrow">→</span>
+                <span class="igc-col required">개월수</span><span class="igc-arrow">→</span>
+                <span class="igc-col required">납부금액</span><span class="igc-arrow">→</span>
+                <span class="igc-col required">납부상태</span><span class="igc-arrow">→</span>
+                <span class="igc-col">납부방법</span><span class="igc-arrow">→</span>
+                <span class="igc-col">할인종류</span><span class="igc-arrow">→</span>
+                <span class="igc-col">할인금액</span><span class="igc-arrow">→</span>
                 <span class="igc-col">비고</span>
               </div>
-              <div style="font-size:11px;color:var(--text3);margin-top:8px">* 빨간 항목 필수 · 날짜 형식: 2024-01-15 또는 2024.01.15 · 납부상태: 완료/미납/대기</div>
+              <div style="background:var(--bg2);border-radius:var(--r);padding:8px 12px;font-size:11px;color:var(--text3);line-height:1.8">
+                <b style="color:var(--text2)">납부방법:</b> 카드 / 계좌이체 / 결제선생 / 온누리 / 대구로 / 현금 (복합결제시 쉼표 구분: 카드,현금)
+                <br><b style="color:var(--text2)">할인종류:</b> 리뷰할인 / 지인할인 / 특별할인
+                <br><b style="color:var(--text2)">납부상태:</b> 완료 / 미납 / 대기
+                <br><b style="color:var(--text2)">날짜형식:</b> 2024-04-01 또는 2024.04.01 또는 20240401
+              </div>
             </div>
-            <textarea class="import-textarea" id="import-academy-text" placeholder="구글 시트에서 복사(Ctrl+C)한 내용을 여기에 붙여넣으세요 (Ctrl+V)&#10;&#10;예시:&#10;홍길동	010-1234-5678	제임스	실용 (월목 09:00)	2024-03-01	3	270000	완료	교차수강"></textarea>
+            <textarea class="import-textarea" id="import-academy-text" placeholder="구글 시트에서 복사(Ctrl+C)한 내용을 여기에 붙여넣으세요 (Ctrl+V)&#10;&#10;예시 (탭 구분):&#10;홍길동	010-1234-5678	제임스	실용 (월목 09:00)	2024-04-01	2024-04-01	2	270000	완료	카드	지인할인	10000	교차수강"></textarea>
             <div style="display:flex;gap:8px;align-items:center;margin-top:10px">
               <button class="btn btn-primary" onclick="previewImport('academy')">
                 <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M1 8s3-5 7-5 7 5 7 5-3 5-7 5-7-5-7-5z" stroke="currentColor" stroke-width="1.3"/><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.3"/></svg>
@@ -6223,6 +6224,48 @@ function consultForm(c){
     <div class="fgroup full"><label class="flabel">상담 내용 및 비고</label>
       <textarea class="finput" id="f-memo" rows="4" placeholder="상담 상세 내용...">${c?.memo||''}</textarea>
     </div>
+
+    <!-- ── 사전 설문 및 배경 ── -->
+    <div class="fgroup full" style="grid-column:1/-1">
+      <div style="border:1px solid var(--border2);border-radius:var(--r);padding:12px;background:var(--bg3)">
+        <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:10px;text-transform:uppercase;letter-spacing:.08em">사전 설문 및 배경</div>
+
+        <div class="fgroup" style="margin-bottom:10px">
+          <label class="flabel">유입 경로</label>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;padding:8px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r)">
+            ${['네이버','인스타그램','구글','지하철·오프라인광고','주변인 소개','예전 수강생','기타SNS','당근','직접 방문','기타'].map(o=>`
+              <label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;padding:3px 8px;border-radius:99px;border:1px solid var(--border);background:${(c?.sources||[]).includes(o)?'var(--accent)':'var(--bg3)'};color:${(c?.sources||[]).includes(o)?'#fff':'var(--text2)'}">
+                <input type="checkbox" name="f-src" value="${o}" ${(c?.sources||[]).includes(o)?'checked':''} style="display:none"> ${o}
+              </label>`).join('')}
+          </div>
+        </div>
+
+        <div class="fgroup" style="margin-bottom:10px">
+          <label class="flabel">영어 목적</label>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;padding:8px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r)">
+            ${['워킹홀리데이/이민','유학·교환학생','취업준비','직장·비즈니스','취미·자기계발','여행','대학수업·전공','기타'].map(o=>`
+              <label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;padding:3px 8px;border-radius:99px;border:1px solid var(--border);background:${(c?.purposes||[]).includes(o)?'var(--teal)':'var(--bg3)'};color:${(c?.purposes||[]).includes(o)?'#fff':'var(--text2)'}">
+                <input type="checkbox" name="f-purpose" value="${o}" ${(c?.purposes||[]).includes(o)?'checked':''} style="display:none"> ${o}
+              </label>`).join('')}
+          </div>
+        </div>
+
+        <div class="fgroup" style="margin-bottom:10px">
+          <label class="flabel">영어 배경</label>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;padding:8px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r)">
+            ${['경험 없음','해외 경험 있음','공인시험 준비','전화·화상 영어','유튜브·앱 독학','타 학원 수강','기타'].map(o=>`
+              <label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;padding:3px 8px;border-radius:99px;border:1px solid var(--border);background:${(c?.engBg||[]).includes(o)?'var(--amber)':'var(--bg3)'};color:${(c?.engBg||[]).includes(o)?'#fff':'var(--text2)'}">
+                <input type="checkbox" name="f-engbg" value="${o}" ${(c?.engBg||[]).includes(o)?'checked':''} style="display:none"> ${o}
+              </label>`).join('')}
+          </div>
+        </div>
+
+        <div class="fgroup">
+          <label class="flabel">해외 경험 (국가/기간)</label>
+          <input class="finput" id="f-abroad" value="${c?.abroad||''}" placeholder="예: 호주 6개월, 필리핀 1개월 등">
+        </div>
+      </div>
+    </div>
   `;
 }
 
@@ -6319,13 +6362,19 @@ function saveModal(){
       name, phone:v('f-phone'), birth:v('f-birth'), gender:v('f-gender'),
       date:v('f-date')||today(), staff: v('f-staff') || (currentManager?.name||''),
       system, result, memo:v('f-memo'),
-      
+
+      // 사전 설문
+      sources:   [...document.querySelectorAll('input[name="f-src"]:checked')].map(x=>x.value),
+      purposes:  [...document.querySelectorAll('input[name="f-purpose"]:checked')].map(x=>x.value),
+      engBg:     [...document.querySelectorAll('input[name="f-engbg"]:checked')].map(x=>x.value),
+      abroad:    v('f-abroad'),
+
       // Academy fields
       teacher: v('f-teacher'), interest: v('f-interest'),
-      
+
       // Study fields
       preferTime: v('f-prefer-time'), studyGroupId: v('f-study-group'),
-      
+
       // Registration fields
       regPayDate: v('f-reg-paydate'), regStartDate: v('f-reg-startdate'),
       regMonths: parseInt(v('f-reg-months'))||1, regAmount: parseInt(v('f-reg-amount'))||0,
@@ -11828,26 +11877,43 @@ function previewImport(type){
 
   if(type === 'academy'){
     html = '<div style="overflow-x:auto"><table class="import-preview-table">';
-    html += '<thead><tr><th>#</th><th>이름</th><th>연락처</th><th>강사</th><th>수업반</th><th>시작일</th><th>개월</th><th>금액</th><th>납부</th><th>비고</th><th>중복여부</th></tr></thead><tbody>';
+    html += '<thead><tr><th>#</th><th>이름</th><th>연락처</th><th>강사</th><th>수업반</th><th>결제일</th><th>시작일</th><th>개월</th><th>금액</th><th>납부</th><th>납부방법</th><th>할인</th><th>비고</th><th>중복여부</th></tr></thead><tbody>';
     rows.forEach(function(r, i){
       var name=r[0]||'', phone=r[1]||'', teacher=r[2]||'', classTime=r[3]||'';
-      var startDate=normalizeDate(r[4]), months=parseInt(r[5])||1;
-      var amount=parseInt((r[6]||'').replace(/,/g,''))||0;
-      var pay=normalizePayStatus(r[7]), memo=r[8]||'';
+      var payDate=normalizeDate(r[4]), startDate=normalizeDate(r[5]);
+      var months=parseInt(r[6])||1;
+      var amount=parseInt((r[7]||'').replace(/,/g,''))||0;
+      var pay=normalizePayStatus(r[8]);
+      var payMethodRaw=(r[9]||'').trim();
+      var discountRaw=(r[10]||'').trim();
+      var discountAmt=parseInt((r[11]||'').replace(/,/g,''))||0;
+      var memo=r[12]||'';
+      // 결제일 미입력시 시작일로
+      if(!payDate && startDate) payDate = startDate;
+      // 납부방법 배열 파싱 (카드,현금 → ['카드','현금'])
+      var payMethods = payMethodRaw ? payMethodRaw.split(/[,\/]/).map(function(x){return x.trim();}).filter(Boolean) : [];
+      // 할인 처리
+      var discounts = discountRaw ? [discountRaw] : [];
       var exists = S.students.find(function(s){ return s.name===name && s.phone===phone; });
       var rowClass = exists ? 'irow-warn' : 'irow-ok';
       var statusBadge = exists
         ? '<span style="font-size:10px;background:var(--amber-light);color:var(--amber);padding:1px 7px;border-radius:99px;font-weight:700">⚠ 중복</span>'
         : '<span style="font-size:10px;background:var(--accent-light);color:var(--accent);padding:1px 7px;border-radius:99px;font-weight:700">✓ 등록가능</span>';
       html += '<tr class="'+rowClass+'"><td style="color:var(--text3)">'+(i+1)+'</td>';
-      html += '<td><strong>'+name+'</strong></td><td style="font-family:var(--font-mono)">'+phone+'</td>';
-      html += '<td>'+teacher+'</td><td style="font-size:11px">'+classTime+'</td>';
+      html += '<td><strong>'+name+'</strong></td>';
+      html += '<td style="font-family:var(--font-mono);font-size:11px">'+phone+'</td>';
+      html += '<td>'+teacher+'</td>';
+      html += '<td style="font-size:11px">'+classTime+'</td>';
+      html += '<td style="font-family:var(--font-mono);font-size:11px">'+fmtImportDate(payDate)+'</td>';
       html += '<td style="font-family:var(--font-mono);font-size:11px">'+fmtImportDate(startDate)+'</td>';
       html += '<td style="text-align:center">'+months+'</td>';
-      html += '<td style="text-align:right;font-family:var(--font-mono)">'+(amount?amount.toLocaleString():'')+'</td>';
-      html += '<td>'+pay+'</td><td style="font-size:11px;color:var(--text3)">'+memo+'</td>';
+      html += '<td style="text-align:right;font-family:var(--font-mono);font-weight:700">'+(amount?amount.toLocaleString():'')+'</td>';
+      html += '<td><span style="font-size:11px;font-weight:600;color:'+(pay==='완료'?'var(--teal)':pay==='미납'?'var(--red)':'var(--amber)')+'">'+pay+'</span></td>';
+      html += '<td style="font-size:11px;color:var(--text3)">'+payMethods.join(', ')+'</td>';
+      html += '<td style="font-size:11px;color:var(--text3)">'+(discounts.length?discounts.join(', ')+(discountAmt?' -'+discountAmt.toLocaleString():''):'')+'</td>';
+      html += '<td style="font-size:11px;color:var(--text3)">'+memo+'</td>';
       html += '<td>'+statusBadge+'</td></tr>';
-      parsed.push({name,phone,teacher,classTime,startDate,months,amount,pay,memo,exists:!!exists});
+      parsed.push({name,phone,teacher,classTime,payDate,startDate,months,amount,pay,payMethods,discounts,discountAmt,memo,exists:!!exists});
     });
     html += '</tbody></table></div>';
   }
@@ -11931,15 +11997,24 @@ function executeImport(type){
       if(r.exists){ skipped++; return; }
       var newId = gid('s');
       S.students.push({
-        id: newId, name: r.name, phone: r.phone, status: '재원',
-        memo: r.memo, modifiedBy: currentManager?.name||'임포트',
+        id: newId,
+        name: r.name,
+        phone: r.phone,
+        status: '재원',
+        memo: r.memo,
+        modifiedBy: currentManager ? currentManager.name : '임포트',
         modifiedAt: new Date().toISOString(),
         classes:[{
-          teacher: r.teacher, classTime: r.classTime,
-          startDate: r.startDate, months: r.months,
-          amount: r.amount, pay: r.pay,
-          payDate: r.startDate,
-          payMethods:[], discounts:[], discountAmt:0
+          teacher:     r.teacher,
+          classTime:   r.classTime,
+          payDate:     r.payDate || r.startDate,
+          startDate:   r.startDate,
+          months:      r.months,
+          amount:      r.amount,
+          pay:         r.pay,
+          payMethods:  r.payMethods  || [],
+          discounts:   r.discounts   || [],
+          discountAmt: r.discountAmt || 0
         }]
       });
       added++;
@@ -12058,6 +12133,26 @@ async function resetAllData(){
   renderAll();
   showToast('✅ 전체 초기화 완료 — 데이터 임포트 메뉴에서 데이터를 입력하세요');
 }
+
+
+// ── 상담폼 체크박스 토글 (레이블 클릭 시 스타일 변경) ──
+document.addEventListener('change', function(e){
+  if(e.target.type === 'checkbox' && ['f-src','f-purpose','f-engbg'].includes(e.target.name)){
+    var label = e.target.closest('label');
+    if(!label) return;
+    var colorMap = {'f-src':'var(--accent)','f-purpose':'var(--teal)','f-engbg':'var(--amber)'};
+    var color = colorMap[e.target.name];
+    if(e.target.checked){
+      label.style.background = color;
+      label.style.color = '#fff';
+      label.style.borderColor = color;
+    } else {
+      label.style.background = 'var(--bg3)';
+      label.style.color = 'var(--text2)';
+      label.style.borderColor = 'var(--border)';
+    }
+  }
+});
 
 </script>
 
