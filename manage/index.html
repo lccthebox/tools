@@ -3768,15 +3768,15 @@ function renderTeacherPage(){
   if(gridArea){
     const makeSection=(gk, label, color)=>{
       if(!groups[gk].length) return '';
-      const cards = groups[gk].map((ct, i)=>{
+      const cards = groups[gk].map(function(ct){
         const cnt = (byClass[ct]||[]).length;
-        const exp = (byClass[ct]||[]).filter(s=>daysLeft(getLastDay(s))<=14).length;
+        const exp = (byClass[ct]||[]).filter(function(s){return daysLeft(getLastDay(s))<=14;}).length;
         const countColor = cnt>=12?'var(--red)':cnt>=8?'var(--amber)':cnt>0?'var(--teal)':'var(--text3)';
         const countBg   = cnt>=12?'var(--red-light)':cnt>=8?'var(--amber-light)':cnt>0?'var(--teal-light)':'var(--bg4)';
-        const isOn = ct===activeClass;
-        var safeId = 'cls_'+i;
-        window[safeId] = ct;
-        return '<div class="class-card'+(isOn?' on':'')+'" onclick="setActiveClass(window.cls_'+i+')">'
+        const isOn = (ct===activeClass);
+        const onAttr = 'setActiveClass(window._ct_'+encodeURIComponent(ct)+')';
+        window['_ct_'+encodeURIComponent(ct)] = ct;
+        return '<div class="class-card'+(isOn?' on':'')+'" onclick="'+onAttr+'">'
           +'<div class="class-card-name">'+ct+'</div>'
           +'<div class="class-card-footer">'
           +'<span class="class-card-count" style="background:'+countBg+';color:'+countColor+'">'+cnt+'명</span>'
