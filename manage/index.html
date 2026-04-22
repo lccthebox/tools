@@ -2627,7 +2627,7 @@ let TEACHERS = Object.keys(TEACHER_INFO);
 const RLBL={registered:'등록완료',trial:'청강예정',considering:'검토중',callback:'재연락예정',rejected:'등록거절',noshow:'노쇼'};
 const RCLS={registered:'r-registered',trial:'r-trial',considering:'r-considering',callback:'r-callback',rejected:'r-rejected',noshow:'r-noshow'};
 
-let S={students:[],trials:[],consults:[],board:[],calNotes:{},editId:null,modalMode:'add',teacherInfo:{}};
+let S={students:[],trials:[],consults:[],board:[],calNotes:{},editId:null,modalMode:'add',teacherInfo:{},study:{}};
 let curMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1); // 항상 현재 달
 let activeTeacher='제임스';
 let activeClass='';
@@ -3114,7 +3114,28 @@ function prevMonth(){curMonth.setMonth(curMonth.getMonth()-1);updateMonthLabel()
 function nextMonth(){curMonth.setMonth(curMonth.getMonth()+1);updateMonthLabel();renderAll();}
 updateMonthLabel();
 
-function renderAll(){renderDashboard();renderStudents();renderTeacherPage();renderTrials();renderConsults();renderPayments();renderReport();renderBoard();renderDaily();renderAccounts();renderStudy();renderStudyPayments();renderStudyStaff();renderDocs();updateDots();}
+function ensureS(){
+  if(!S.study) S.study={};
+  if(!S.study.groups)       S.study.groups=[];
+  if(!S.study.creditLog)    S.study.creditLog=[];
+  if(!S.study.waiting)      S.study.waiting=[];
+  if(!S.study.leaders)      S.study.leaders=[];
+  if(!S.study.unrenewed)    S.study.unrenewed=[];
+  if(!S.study.indivCredits) S.study.indivCredits=[];
+  if(!S.study.returnList)   S.study.returnList=[];
+  if(!S.study.koreanStaff)  S.study.koreanStaff=[];
+  if(!S.study.nativeStaff)  S.study.nativeStaff=[];
+  if(!S.consults)    S.consults=[];
+  if(!S.students)    S.students=[];
+  if(!S.trials)      S.trials=[];
+  if(!S.board)       S.board=[];
+  if(!S.dailyNotes)  S.dailyNotes=[];
+  if(!S.calNotes)    S.calNotes={};
+  if(!S.teacherInfo) S.teacherInfo={};
+}
+function renderAll(){
+  ensureS();
+  renderDashboard();renderStudents();renderTeacherPage();renderTrials();renderConsults();renderPayments();renderReport();renderBoard();renderDaily();renderAccounts();renderStudy();renderStudyPayments();renderStudyStaff();renderDocs();updateDots();}
 function updateDots(){
   const cbs=getFilteredConsults().filter(c=>c.result==='callback'&&c.callbackDate&&daysLeft(c.callbackDate)<=3&&daysLeft(c.callbackDate)>=0);
   document.getElementById('consult-dot').style.display=cbs.length?'block':'none';
@@ -3126,6 +3147,7 @@ function getExpiringSoon(days){
   return S.students.filter(s=>{if(s.status!=='재원')return false;const dl=Math.ceil((new Date(addMonths(s.startDate,s.months||1))-t)/86400000);return dl>=0&&dl<=days;}).sort((a,b)=>addMonths(a.startDate,a.months||1).localeCompare(addMonths(b.startDate,b.months||1)));
 }
 function renderDashboard(){
+  ensureS();
   // 강사 계정이면 본인 수강생만 대상으로
   const allStudents = isTeacher()
     ? S.students.filter(s=>s.teacher===currentManager?.name||getClasses(s).some(c=>c.teacher===currentManager?.name))
@@ -7315,6 +7337,7 @@ function renderStudyRevenueTab(){
 
 function renderReport(){
   if(!document.getElementById('page-report')?.classList.contains('on'))return;
+  if(!S.study) S.study={};
   const active=S.students.filter(s=>s.status==='재원');
   const total=active.length;
   const paid=active.filter(s=>getPayStatus(s)==='완료').length;
@@ -7325,7 +7348,7 @@ function renderReport(){
   // 아카데미 결제 완료 합계
   const acaRevenue = allClasses.filter(c=>c.pay==='완료').reduce((a,c)=>a+(c.amount||0),0);
   // 스터디 결제(크레딧 충전) 합계
-  const studyRevenue = (S.study.creditLog||[]).filter(l=>(l.at||'').startsWith(curMonth.toISOString().slice(0,7))).reduce((a,l)=>a+(l.amount||0),0);
+  const studyRevenue = ((S.study&&S.study.creditLog)||[]).filter(l=>(l.at||'').startsWith(curMonth.toISOString().slice(0,7))).reduce((a,l)=>a+(l.amount||0),0);
   const totalRevenue = acaRevenue + studyRevenue;
 
   // 메트릭
@@ -8691,6 +8714,7 @@ function getStudyGroups(day){
 }
 
 function renderStudy(){
+  ensureS();
   initStudyData();
   const groups=getStudyGroups(studyDay);
   renderStudyDashboard(groups);
@@ -8718,6 +8742,7 @@ function parseStudyDate(str){
 
 // ── 스터디 대시보드 ──
 function renderStudyDashboard(groups){
+  ensureS();
   const el=document.getElementById('study-content-dashboard');if(!el)return;
   const dayLabel=STUDY_DAY_LABELS[studyDay];
   
@@ -9070,6 +9095,7 @@ async function loadGcalStudy(){
 
 // ── 그룹 관리 ──
 function renderStudyGroups(groups){
+  ensureS();
   const el=document.getElementById('study-content-groups');if(!el)return;
   const DAY_COLORS={'월':'#4dabf7','화':'#ff8787','수':'#38d9a9','목':'#ffa94d','금':'#b197fc','토':'#ff6b6b','일':'#20c997'};
   // 크레딧 시각화 헬퍼
@@ -9237,6 +9263,7 @@ function studyGroupCheckAll(chk, gid){
 
 // ── 크레딧 관리 ──
 function renderStudyCredits(groups){
+  ensureS();
   const el=document.getElementById('study-content-credits');if(!el)return;
   const credQ = (document.getElementById('cred-search')?.value||'').toLowerCase();
   const credType = document.getElementById('cred-type-filter')?.value||'';
@@ -9279,6 +9306,7 @@ function renderStudyCredits(groups){
 
 // ── 대기/복귀 ──
 function renderStudyWaiting(){
+  ensureS();
   const el=document.getElementById('study-content-waiting');if(!el)return;
   const waitQ=(document.getElementById('wait-search')?.value||'').toLowerCase();
   const waiting=(S.study.waiting||[]).filter(w=>w.dayGroup===studyDay&&(!waitQ||w.name.toLowerCase().includes(waitQ)));
@@ -9331,6 +9359,7 @@ function renderStudyWaiting(){
 
 // ── 개별크레딧 ──
 function renderStudyIndiv(){
+  ensureS();
   const el=document.getElementById('study-content-indiv');if(!el)return;
   const indivQ=(document.getElementById('indiv-search')?.value||'').toLowerCase();
   const list=(S.study.indivCredits||[]).filter(i=>!indivQ||i.name.toLowerCase().includes(indivQ)||(i.group||'').toLowerCase().includes(indivQ));
@@ -9366,6 +9395,7 @@ function renderStudyIndiv(){
 
 // ── 스터디 수강료 관리 ──
 function renderStudyPayments(){
+  ensureS();
   if(!document.getElementById('page-studyPayments')?.classList.contains('on')) return;
   const el = document.getElementById('page-studyPayments'); if(!el) return;
   
@@ -10647,6 +10677,7 @@ function saveStaffModal(){
 }
 
 function renderStudyLeaders(){
+  ensureS();
   const container = document.getElementById('study-leader-table-container');
   if(!container) return;
   const todayDate = new Date();
