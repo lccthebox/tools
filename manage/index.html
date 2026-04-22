@@ -1370,6 +1370,52 @@ textarea.finput{resize:vertical;min-height:60px}
           </div>
         </div>
       
+      <!-- ══ 스터디 수강료 ══ -->
+      <div class="page" id="page-studyPayments"></div>
+
+      <!-- ══ 청강 관리 ══ -->
+      <div class="page" id="page-trial">
+        <div class="filter-row">
+          <input class="search-box" id="trial-search" placeholder="🔍 이름·연락처 검색" oninput="renderTrials()" style="max-width:180px">
+          <select class="fsel" id="trial-teacher" onchange="renderTrials()"><option value="">강사 전체</option></select>
+          <select class="fsel" id="trial-fee" onchange="renderTrials()">
+            <option value="">청강비 전체</option>
+            <option value="완료">완료</option>
+            <option value="미납">미납</option>
+          </select>
+          <span id="trial-count" style="font-size:12px;color:var(--text3);margin-left:4px"></span>
+          <button class="btn btn-primary btn-sm" onclick="openModal('trial')" style="margin-left:auto">+ 청강 등록</button>
+        </div>
+        <div class="card">
+          <div class="sheet-table-wrap">
+            <table class="sheet-table"><tbody id="trial-list"></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ 상담 관리 ══ -->
+      <div class="page" id="page-consult">
+        <div class="filter-row">
+          <input class="search-box" id="con-search" placeholder="🔍 이름·연락처 검색…" oninput="renderConsults()" style="max-width:180px">
+          <select class="fsel" id="con-teacher" onchange="renderConsults()"><option value="">강사 전체</option></select>
+          <select class="fsel" id="con-result" onchange="renderConsults()">
+            <option value="">결과 전체</option>
+            <option value="등록">등록완료</option>
+            <option value="당일결제">당일결제</option>
+            <option value="callback">재연락예정</option>
+            <option value="considering">검토중</option>
+            <option value="trial">청강예정</option>
+            <option value="rejected">등록거절</option>
+            <option value="noshow">노쇼</option>
+          </select>
+          <span id="con-count" style="font-size:12px;color:var(--text3);margin-left:4px"></span>
+          <button class="btn btn-primary btn-sm" onclick="openQuickConsult()" style="margin-left:auto">+ 신규 상담</button>
+        </div>
+        <div class="metrics" id="con-metrics" style="margin-bottom:12px"></div>
+        <div id="consult-list"></div>
+      </div>
+
+
       <div class="page" id="page-academyPayments">
         <div class="metrics" id="pay-metrics"></div>
         <!-- 필터 툴바 -->
