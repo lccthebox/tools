@@ -3768,7 +3768,7 @@ function renderTeacherPage(){
   if(gridArea){
     const makeSection=(gk, label, color)=>{
       if(!groups[gk].length) return '';
-      const cards = groups[gk].map(ct=>{
+      const cards = groups[gk].map((ct, i)=>{
         const cnt = (byClass[ct]||[]).length;
         const exp = (byClass[ct]||[]).filter(s=>daysLeft(getLastDay(s))<=14).length;
         const countColor = cnt>=12?'var(--red)':cnt>=8?'var(--amber)':cnt>0?'var(--teal)':'var(--text3)';
