@@ -2630,7 +2630,20 @@ const SS=[];
 const ST=[];
 const SC=[];
 // ══ 유틸 ══
-function addMonths(d,m){if(!d)return'';const dt=new Date(d);dt.setMonth(dt.getMonth()+m);dt.setDate(dt.getDate()-1);return dt.toISOString().slice(0,10)}
+function addMonths(d,m){
+  if(!d||!m) return '';
+  var parts=d.split('-');
+  if(parts.length<2) return '';
+  var year=parseInt(parts[0]), month=parseInt(parts[1]);
+  // 시작달 기준 + (m-1)달 후의 말일
+  // 예: 4월 시작 2개월 → 5월 말일(31일)
+  var targetMonth = month + m - 1;
+  var targetYear  = year + Math.floor((targetMonth-1)/12);
+  targetMonth = ((targetMonth-1)%12)+1;
+  // 해당 달의 말일 계산
+  var lastDay = new Date(targetYear, targetMonth, 0).getDate();
+  return targetYear+'-'+String(targetMonth).padStart(2,'0')+'-'+String(lastDay).padStart(2,'0');
+}
 function daysLeft(e){if(!e)return 9999;const t=new Date();t.setHours(0,0,0,0);const en=new Date(e);en.setHours(0,0,0,0);return Math.ceil((en-t)/86400000)}
 function fmtDate(d){if(!d)return'-';return d.slice(2).replace(/-/g,'.')}
 function fmtFull(d){if(!d)return'-';return d.replace(/-/g,'.')}
