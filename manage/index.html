@@ -1646,10 +1646,15 @@ textarea.finput{resize:vertical;min-height:60px}
 
           <!-- 오른쪽: 업무 노트 (me착별) -->
           <div class="card" style="display:flex;flex-direction:column;overflow:hidden">
-            <div class="card-head" style="display:flex;justify-content:space-between;align-items:center">
+            <div class="card-head" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
               <span class="card-title">📝 데일리 업무 노트</span>
               <div style="display:flex;align-items:center;gap:6px">
-                <span id="daily-note-date" style="font-size:11px;color:var(--text3)"></span>
+                <!-- 날짜 이동 컨트롤 -->
+                <div style="display:flex;align-items:center;gap:3px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:2px 4px">
+                  <button onclick="dailyMoveDays(-1)" style="background:none;border:none;cursor:pointer;font-size:14px;color:var(--text2);padding:1px 5px;border-radius:4px;line-height:1" title="이전날">‹</button>
+                  <span id="daily-note-date" style="font-size:12px;font-weight:700;color:var(--accent);min-width:100px;text-align:center;cursor:pointer" onclick="setDailyDate(today())" title="오늘로 이동"></span>
+                  <button onclick="dailyMoveDays(1)" style="background:none;border:none;cursor:pointer;font-size:14px;color:var(--text2);padding:1px 5px;border-radius:4px;line-height:1" title="다음날">›</button>
+                </div>
                 <span id="daily-save-status" style="font-size:11px;color:var(--text3)">자동 저장됨</span>
               </div>
             </div>
@@ -1831,29 +1836,35 @@ textarea.finput{resize:vertical;min-height:60px}
           <!-- ── 스터디 탭 ── -->
           <div id="import-content-study" style="display:none">
             <div class="import-guide-card">
-              <div class="igc-title">📋 구글 시트 → 이 순서로 열을 복사하세요</div>
-              <div class="igc-cols">
-                <span class="igc-col required">이름</span>
-                <span class="igc-arrow">→</span>
-                <span class="igc-col required">연락처</span>
-                <span class="igc-arrow">→</span>
-                <span class="igc-col required">그룹(리더명)</span>
-                <span class="igc-arrow">→</span>
-                <span class="igc-col">참여요일</span>
-                <span class="igc-arrow">→</span>
-                <span class="igc-col">레벨</span>
-                <span class="igc-arrow">→</span>
-                <span class="igc-col">크레딧수</span>
-                <span class="igc-arrow">→</span>
-                <span class="igc-col">만료일</span>
-                <span class="igc-arrow">→</span>
-                <span class="igc-col">납부상태</span>
-                <span class="igc-arrow">→</span>
-                <span class="igc-col">시작일</span>
+              <div class="igc-title">📋 구글 시트 → 아래 순서로 열을 정리 후 복사하세요</div>
+              <div class="igc-cols" style="margin-bottom:8px">
+                <span class="igc-col required">이름</span><span class="igc-arrow">→</span>
+                <span class="igc-col required">연락처</span><span class="igc-arrow">→</span>
+                <span class="igc-col required">그룹(리더명)</span><span class="igc-arrow">→</span>
+                <span class="igc-col">참여요일</span><span class="igc-arrow">→</span>
+                <span class="igc-col">레벨</span><span class="igc-arrow">→</span>
+                <span class="igc-col required">총크레딧</span><span class="igc-arrow">→</span>
+                <span class="igc-col required">남은크레딧</span><span class="igc-arrow">→</span>
+                <span class="igc-col">만료일</span><span class="igc-arrow">→</span>
+                <span class="igc-col required">결제일</span><span class="igc-arrow">→</span>
+                <span class="igc-col required">시작일</span><span class="igc-arrow">→</span>
+                <span class="igc-col required">납부금액</span><span class="igc-arrow">→</span>
+                <span class="igc-col required">납부상태</span><span class="igc-arrow">→</span>
+                <span class="igc-col">납부방법</span><span class="igc-arrow">→</span>
+                <span class="igc-col">할인종류</span><span class="igc-arrow">→</span>
+                <span class="igc-col">할인금액</span><span class="igc-arrow">→</span>
+                <span class="igc-col">주당횟수</span><span class="igc-arrow">→</span>
+                <span class="igc-col">메모</span>
               </div>
-              <div style="font-size:11px;color:var(--text3);margin-top:8px">* 그룹명이 없으면 새 그룹 자동 생성 · 레벨: 초급/초중급/중급/중고급/고급</div>
+              <div style="background:var(--bg2);border-radius:var(--r);padding:8px 12px;font-size:11px;color:var(--text3);line-height:1.8">
+                <b style="color:var(--text2)">레벨:</b> 초급 / 초중급 / 중급 / 중고급 / 고급
+                <br><b style="color:var(--text2)">납부방법:</b> 카드 / 계좌이체 / 결제선생 / 온누리 / 대구로 / 현금
+                <br><b style="color:var(--text2)">납부상태:</b> 완료 / 미납 / 대기
+                <br><b style="color:var(--text2)">날짜형식:</b> 2024-04-01 또는 2024.04.01
+                <br><b style="color:var(--text2)">그룹명이 없으면</b> 새 그룹 자동 생성
+              </div>
             </div>
-            <textarea class="import-textarea" id="import-study-text" placeholder="구글 시트에서 복사(Ctrl+C)한 내용을 여기에 붙여넣으세요 (Ctrl+V)&#10;&#10;예시:&#10;김영희	010-2345-6789	제임스 그룹A	월수	중급	16	2024-06-30	완료	2024-03-01"></textarea>
+            <textarea class="import-textarea" id="import-study-text" placeholder="구글 시트에서 복사(Ctrl+C)한 내용을 여기에 붙여넣으세요 (Ctrl+V)&#10;&#10;예시 (탭 구분):&#10;김영희	010-2345-6789	제임스 그룹A	월수	중급	16	14	2024-06-30	2024-04-01	2024-04-01	277000	완료	카드		0	2	"></textarea>
             <div style="display:flex;gap:8px;align-items:center;margin-top:10px">
               <button class="btn btn-primary" onclick="previewImport('study')">
                 <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M1 8s3-5 7-5 7 5 7 5-3 5-7 5-7-5-7-5z" stroke="currentColor" stroke-width="1.3"/><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.3"/></svg>
@@ -1867,25 +1878,34 @@ textarea.finput{resize:vertical;min-height:60px}
           <!-- ── 상담 탭 ── -->
           <div id="import-content-consult" style="display:none">
             <div class="import-guide-card">
-              <div class="igc-title">📋 구글 시트 → 이 순서로 열을 복사하세요</div>
-              <div class="igc-cols">
-                <span class="igc-col required">이름</span>
-                <span class="igc-arrow">→</span>
-                <span class="igc-col required">연락처</span>
-                <span class="igc-arrow">→</span>
-                <span class="igc-col required">상담날짜</span>
-                <span class="igc-arrow">→</span>
-                <span class="igc-col">결과</span>
-                <span class="igc-arrow">→</span>
-                <span class="igc-col">강사</span>
-                <span class="igc-arrow">→</span>
-                <span class="igc-col">채널</span>
-                <span class="igc-arrow">→</span>
-                <span class="igc-col">메모</span>
+              <div class="igc-title">📋 상담 시트 컬럼 순서 그대로 복사하세요</div>
+              <div class="igc-cols" style="margin-bottom:8px">
+                <span class="igc-col required">상담시간</span><span class="igc-arrow">→</span>
+                <span class="igc-col required">이름</span><span class="igc-arrow">→</span>
+                <span class="igc-col">생년월일</span><span class="igc-arrow">→</span>
+                <span class="igc-col required">연락처</span><span class="igc-arrow">→</span>
+                <span class="igc-col">주소(동)</span><span class="igc-arrow">→</span>
+                <span class="igc-col">성별</span><span class="igc-arrow">→</span>
+                <span class="igc-col">직업</span><span class="igc-arrow">→</span>
+                <span class="igc-col">시스템</span><span class="igc-arrow">→</span>
+                <span class="igc-col">강사</span><span class="igc-arrow">→</span>
+                <span class="igc-col">상태(결과)</span><span class="igc-arrow">→</span>
+                <span class="igc-col">유입경로</span><span class="igc-arrow">→</span>
+                <span class="igc-col">영어경험</span><span class="igc-arrow">→</span>
+                <span class="igc-col">영어목적</span><span class="igc-arrow">→</span>
+                <span class="igc-col">원하는점</span><span class="igc-arrow">→</span>
+                <span class="igc-col">고려시스템</span><span class="igc-arrow">→</span>
+                <span class="igc-col">수업스타일</span><span class="igc-arrow">→</span>
+                <span class="igc-col">선호시간대</span><span class="igc-arrow">→</span>
+                <span class="igc-col">기타메모</span>
               </div>
-              <div style="font-size:11px;color:var(--text3);margin-top:8px">* 결과: 등록완료/검토중/재연락예정/등록거절/노쇼/청강예정</div>
+              <div style="background:var(--bg2);border-radius:var(--r);padding:8px 12px;font-size:11px;color:var(--text3);line-height:1.8">
+                <b style="color:var(--text2)">상태 매핑:</b> 등록/당일결제 → 등록완료 · 재연락/대기 → 재연락예정 · 거절 → 등록거절 · 노쇼 → 노쇼
+                <br><b style="color:var(--text2)">날짜형식:</b> 2024-04-01 또는 시트 원본 그대로 붙여넣기 가능
+                <br><b style="color:var(--accent)">💡 시트에서 해당 열 전체 선택 → Ctrl+C → 여기에 Ctrl+V</b>
+              </div>
             </div>
-            <textarea class="import-textarea" id="import-consult-text" placeholder="구글 시트에서 복사(Ctrl+C)한 내용을 여기에 붙여넣으세요 (Ctrl+V)&#10;&#10;예시:&#10;이철수	010-3456-7890	2024-02-15	등록완료	제임스	전화	영어 회화 관심"></textarea>
+            <textarea class="import-textarea" id="import-consult-text" placeholder="구글 시트에서 복사(Ctrl+C)한 내용을 여기에 붙여넣으세요 (Ctrl+V)&#10;&#10;시트 컬럼 순서: 상담시간 / 이름 / 생년월일 / 연락처 / 주소 / 성별 / 직업 / 시스템 / 강사 / 상태 / 유입경로 / 영어경험 / 영어목적 / 원하는점 / 고려시스템 / 수업스타일 / 선호시간대 / 기타메모"></textarea>
             <div style="display:flex;gap:8px;align-items:center;margin-top:10px">
               <button class="btn btn-primary" onclick="previewImport('consult')">
                 <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M1 8s3-5 7-5 7 5 7 5-3 5-7 5-7-5-7-5z" stroke="currentColor" stroke-width="1.3"/><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.3"/></svg>
@@ -7456,7 +7476,21 @@ function renderDaily(){
   if(titleEl) titleEl.textContent = `${dailyCalDate.getFullYear()}년 ${dailyCalDate.getMonth()+1}월`;
   
   const noteDateEl = document.getElementById('daily-note-date');
-  if(noteDateEl) noteDateEl.textContent = `날짜: ${dateStr}`;
+  if(noteDateEl){
+    const days=['일','월','화','수','목','금','토'];
+    const d=new Date(dateStr);
+    const dow=days[d.getDay()];
+    const mm=d.getMonth()+1; const dd=d.getDate();
+    const isToday=dateStr===today();
+    const isTomorrow=dateStr===new Date(new Date().getTime()+86400000).toISOString().slice(0,10);
+    const isYesterday=dateStr===new Date(new Date().getTime()-86400000).toISOString().slice(0,10);
+    var label = mm+'월 '+dd+'일 ('+dow+')';
+    if(isToday) label='오늘 · '+mm+'/'+dd+' ('+dow+')';
+    else if(isYesterday) label='어제 · '+mm+'/'+dd+' ('+dow+')';
+    else if(isTomorrow) label='내일 · '+mm+'/'+dd+' ('+dow+')';
+    noteDateEl.textContent = label;
+    noteDateEl.style.color = isToday?'var(--accent)':'var(--text2)';
+  }
 
   renderDailyCalendar();
   renderDailyNotesList(dateStr);
@@ -8736,6 +8770,53 @@ function renderStudyDashboard(groups){
           `<div style="font-size:12px;color:var(--text3);width:100%;text-align:center">${dayLabel} 소속 튜터/원어민 없음</div>`}
       </div>
     </div>
+
+    <!-- ── 교대근무 교차 참여 오늘 출석 ── -->
+    ${(function(){
+      var todayDow = ['일','월','화','수','목','금','토'][new Date().getDay()];
+      // presentDays에 오늘 요일 포함된 멤버 (교차 참여자)
+      var crossMembers = [];
+      groups.forEach(function(g){
+        (g.members||[]).filter(function(m){ return !m.isTutor && m.presentDays && m.presentDays.length > 0; }).forEach(function(m){
+          // presentDays가 days와 다른 경우 = 교차 참여자
+          var normalDays = (m.days||'').replace(/[^월화수목금토일]/g,'').split('');
+          var presentArr = m.presentDays;
+          var isCross = JSON.stringify(normalDays.sort()) !== JSON.stringify([...presentArr].sort());
+          var todayAttend = presentArr.includes(todayDow);
+          if(isCross || (m.days&&!m.days.includes(todayDow)&&presentArr.includes(todayDow))){
+            crossMembers.push({m:m, g:g, todayAttend:todayAttend, normalDays:m.days, presentDays:presentArr});
+          }
+        });
+      });
+      if(!crossMembers.length) return '';
+      var rows = crossMembers.map(function(item){
+        var m=item.m, g=item.g;
+        var highlight = item.todayAttend
+          ? 'background:var(--teal-light);border-left:3px solid var(--teal)'
+          : 'background:var(--bg3);border-left:3px solid var(--border2)';
+        var badge = item.todayAttend
+          ? '<span style="font-size:10px;background:var(--teal);color:#fff;padding:2px 8px;border-radius:99px;font-weight:700">✓ 오늘 출석</span>'
+          : '<span style="font-size:10px;background:var(--bg4);color:var(--text3);padding:2px 8px;border-radius:99px;font-weight:600">오늘 불참</span>';
+        var presentTags = (item.presentDays||[]).map(function(d){
+          var isToday = d===todayDow;
+          return '<span style="font-size:10px;padding:1px 6px;border-radius:99px;font-weight:700;background:'+(isToday?'var(--accent)':'var(--bg4)')+';color:'+(isToday?'#fff':'var(--text3)')+'">'+d+'</span>';
+        }).join(' ');
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-radius:8px;margin-bottom:5px;'+highlight+'">'
+          + '<div style="display:flex;align-items:center;gap:10px">'
+          + '<div><div style="font-weight:700;font-size:13px">'+m.name+'</div>'
+          + '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+g.leaderName+' 그룹 · 기본요일: '+(item.normalDays||'-')+'</div></div>'
+          + '<div style="display:flex;gap:3px">'+presentTags+'</div>'
+          + '</div>'
+          + badge
+          + '</div>';
+      }).join('');
+      return '<div class="card" style="margin-bottom:16px;border:2px solid var(--accent-light)">'
+        + '<div class="card-head" style="background:var(--accent-light)">'
+        + '<span class="card-title" style="color:var(--accent)">🔄 교대근무 교차 참여자 · 오늘 ('+todayDow+'요일) 출석 현황</span>'
+        + '<span style="font-size:11px;color:var(--accent)">'+crossMembers.length+'명</span></div>'
+        + '<div class="card-body" style="padding:12px">'
+        + rows + '</div></div>';
+    })()}
   `;
   loadGcalStudy();
   renderStudyCalendar();
@@ -9616,9 +9697,12 @@ function studyMemberEditForm(m, g){
 
     <div class="fgroup full" style="margin-bottom:10px"><label class="flabel">실제 출석/예약 요일 (시각적 태그 표시용 다중 선택)</label>
       <div style="display:flex;gap:15px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px;flex-wrap:wrap">
-        ${['월','화','수','목','금','토','일'].map(d=>`
-          <label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;font-weight:600">
-            <input type="checkbox" name="sm-present-days" value="${d}" ${(m.presentDays||[]).includes(d)?'checked':''}>${d}
+        <div style="font-size:10px;color:var(--accent);margin-bottom:6px">
+        💡 교대근무자는 실제 참여 요일을 체크 — 대시보드에서 오늘 출석 여부 자동 표시
+      </div>
+      ${['월','화','수','목','금','토','일'].map(d=>`
+          <label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;font-weight:600;padding:3px 7px;border-radius:99px;border:1px solid var(--border);background:${(m.presentDays||[]).includes(d)?'var(--accent)':'var(--bg3)'};color:${(m.presentDays||[]).includes(d)?'#fff':'var(--text2)'}">
+            <input type="checkbox" name="sm-present-days" value="${d}" ${(m.presentDays||[]).includes(d)?'checked':''} style="display:none">${d}
           </label>
         `).join('')}
       </div>
@@ -11845,10 +11929,17 @@ function normalizePayStatus(s){
 // 상담 결과 정규화
 function normalizeConsultResult(s){
   s = (s||'').trim();
-  var map = {'등록':'registered','등록완료':'registered','검토':'considering','검토중':'considering',
-             '재연락':'callback','재연락예정':'callback','거절':'rejected','노쇼':'noshow',
-             '청강':'trial','청강예정':'trial'};
-  return map[s] || s || 'considering';
+  var map = {
+    '등록':'등록','등록완료':'등록','당일결제':'당일결제','선금완':'선금완','이체예정':'이체예정',
+    'registered':'등록',
+    '검토':'considering','검토중':'considering','고민중':'considering',
+    '재연락':'callback','재연락예정':'callback','callback':'callback','다음달':'다음달등록','다음달등록':'다음달등록',
+    '거절':'rejected','등록거절':'rejected','rejected':'rejected',
+    '노쇼':'noshow','no-show':'noshow','noshow':'noshow',
+    '청강':'청강','청강예정':'청강','trial':'청강',
+    '대기':'대기','상담대기':'대기'
+  };
+  return map[s] || (s?'대기':'대기');
 }
 
 function parseImportLines(txt){
@@ -11920,40 +12011,79 @@ function previewImport(type){
 
   if(type === 'study'){
     html = '<div style="overflow-x:auto"><table class="import-preview-table">';
-    html += '<thead><tr><th>#</th><th>이름</th><th>연락처</th><th>그룹</th><th>요일</th><th>레벨</th><th>크레딧</th><th>만료일</th><th>납부</th><th>중복여부</th></tr></thead><tbody>';
+    html += '<thead><tr><th>#</th><th>이름</th><th>연락처</th><th>그룹</th><th>요일</th><th>레벨</th><th>총/남은크레딧</th><th>만료일</th><th>결제일</th><th>시작일</th><th>금액</th><th>납부</th><th>납부방법</th><th>중복여부</th></tr></thead><tbody>';
     rows.forEach(function(r, i){
       var name=r[0]||'', phone=r[1]||'', group=r[2]||'', days=r[3]||'';
-      var level=r[4]||'', credits=parseInt(r[5])||16;
-      var expiry=normalizeDate(r[6]), pay=normalizePayStatus(r[7]);
-      var startDate=normalizeDate(r[8]);
-      var existsGroup = (S.study&&S.study.groups||[]).find(function(g){ return g.leaderName===group; });
-      var rowClass = existsGroup ? 'irow-ok' : 'irow-warn';
-      var statusBadge = existsGroup
-        ? '<span style="font-size:10px;background:var(--teal-light);color:var(--teal);padding:1px 7px;border-radius:99px;font-weight:700">기존그룹</span>'
-        : '<span style="font-size:10px;background:var(--amber-light);color:var(--amber);padding:1px 7px;border-radius:99px;font-weight:700">새그룹생성</span>';
+      var level=r[4]||'';
+      var totalCredits=parseInt(r[5])||16;
+      var credits=parseInt(r[6])||totalCredits;
+      var expiry=normalizeDate(r[7]);
+      var payDate=normalizeDate(r[8]);
+      var startDate=normalizeDate(r[9]);
+      var amount=parseInt((r[10]||'').replace(/,/g,''))||0;
+      var pay=normalizePayStatus(r[11]);
+      var payMethodRaw=(r[12]||'').trim();
+      var discountRaw=(r[13]||'').trim();
+      var discountAmt=parseInt((r[14]||'').replace(/,/g,''))||0;
+      var timesPerWeek=parseInt(r[15])||2;
+      var memo=r[16]||'';
+      var payMethods=payMethodRaw?payMethodRaw.split(/[,\/]/).map(function(x){return x.trim();}).filter(Boolean):[];
+      var discounts=discountRaw?[discountRaw]:[];
+      if(!payDate && startDate) payDate=startDate;
+      var existsGroup=(S.study&&S.study.groups||[]).find(function(g){return g.leaderName===group;});
+      var rowClass=existsGroup?'irow-ok':'irow-warn';
+      var statusBadge=existsGroup
+        ?'<span style="font-size:10px;background:var(--teal-light);color:var(--teal);padding:1px 7px;border-radius:99px;font-weight:700">기존그룹</span>'
+        :'<span style="font-size:10px;background:var(--amber-light);color:var(--amber);padding:1px 7px;border-radius:99px;font-weight:700">새그룹생성</span>';
       html += '<tr class="'+rowClass+'"><td style="color:var(--text3)">'+(i+1)+'</td>';
-      html += '<td><strong>'+name+'</strong></td><td style="font-family:var(--font-mono)">'+phone+'</td>';
+      html += '<td><strong>'+name+'</strong></td>';
+      html += '<td style="font-family:var(--font-mono);font-size:11px">'+phone+'</td>';
       html += '<td>'+group+'</td><td>'+days+'</td><td>'+level+'</td>';
-      html += '<td style="text-align:center">'+credits+'</td>';
+      html += '<td style="text-align:center;font-size:11px">'+totalCredits+'/'+credits+'</td>';
       html += '<td style="font-family:var(--font-mono);font-size:11px">'+fmtImportDate(expiry)+'</td>';
-      html += '<td>'+pay+'</td><td>'+statusBadge+'</td></tr>';
-      parsed.push({name,phone,group,days,level,credits,expiry,pay,startDate,existsGroup:!!existsGroup});
+      html += '<td style="font-family:var(--font-mono);font-size:11px">'+fmtImportDate(payDate)+'</td>';
+      html += '<td style="font-family:var(--font-mono);font-size:11px">'+fmtImportDate(startDate)+'</td>';
+      html += '<td style="text-align:right;font-family:var(--font-mono);font-weight:700">'+(amount?amount.toLocaleString():'')+'</td>';
+      html += '<td><span style="font-size:11px;font-weight:600;color:'+(pay==='완료'?'var(--teal)':pay==='미납'?'var(--red)':'var(--amber)')+'">'+pay+'</span></td>';
+      html += '<td style="font-size:11px;color:var(--text3)">'+payMethods.join(', ')+'</td>';
+      html += '<td>'+statusBadge+'</td></tr>';
+      parsed.push({name,phone,group,days,level,totalCredits,credits,expiry,payDate,startDate,amount,pay,payMethods,discounts,discountAmt,timesPerWeek,memo,existsGroup:!!existsGroup});
     });
     html += '</tbody></table></div>';
   }
 
   if(type === 'consult'){
     html = '<div style="overflow-x:auto"><table class="import-preview-table">';
-    html += '<thead><tr><th>#</th><th>이름</th><th>연락처</th><th>날짜</th><th>결과</th><th>강사</th><th>채널</th><th>메모</th></tr></thead><tbody>';
+    html += '<thead><tr><th>#</th><th>날짜</th><th>이름</th><th>연락처</th><th>성별</th><th>직업</th><th>시스템</th><th>강사</th><th>결과</th><th>유입경로</th><th>선호시간</th><th>메모</th></tr></thead><tbody>';
     rows.forEach(function(r, i){
-      var name=r[0]||'', phone=r[1]||'', date=normalizeDate(r[2]);
-      var result=normalizeConsultResult(r[3]), teacher=r[4]||'', channel=r[5]||'', memo=r[6]||'';
+      // 시트 컬럼: 시간/이름/생년월일/연락처/주소/성별/직업/시스템/강사/상태/유입경로/영어경험/영어목적/원하는점/고려시스템/수업스타일/선호시간대/기타메모
+      var dateRaw=r[0]||'', name=r[1]||'', birth=r[2]||'', phone=r[3]||'';
+      var address=r[4]||'', gender=r[5]||'', job=r[6]||'', system=r[7]||'';
+      var teacher=r[8]||'', resultRaw=r[9]||'대기';
+      var sourceRaw=r[10]||'', engExp=r[11]||'', purposeRaw=r[12]||'';
+      var wantRaw=r[13]||'', sysConsider=r[14]||'', styleRaw=r[15]||'';
+      var preferTime=r[16]||'', memo=r[17]||'';
+
+      var date = normalizeDate(dateRaw) || dateRaw.slice(0,10) || today();
+      var result = normalizeConsultResult(resultRaw);
+      var sources = sourceRaw ? sourceRaw.split(/[,\/·]/).map(function(x){return x.trim();}).filter(Boolean) : [];
+      var purposes = purposeRaw ? purposeRaw.split(/[,\/·]/).map(function(x){return x.trim();}).filter(Boolean) : [];
+
+      var resultColor = result==='등록'||result==='당일결제'?'var(--teal)':result==='rejected'||result==='noshow'?'var(--red)':'var(--amber)';
       html += '<tr class="irow-ok"><td style="color:var(--text3)">'+(i+1)+'</td>';
-      html += '<td><strong>'+name+'</strong></td><td style="font-family:var(--font-mono)">'+phone+'</td>';
       html += '<td style="font-family:var(--font-mono);font-size:11px">'+fmtImportDate(date)+'</td>';
-      html += '<td>'+result+'</td><td>'+teacher+'</td><td>'+channel+'</td>';
+      html += '<td><strong>'+name+'</strong></td>';
+      html += '<td style="font-family:var(--font-mono);font-size:11px">'+phone+'</td>';
+      html += '<td style="font-size:11px">'+gender+'</td>';
+      html += '<td style="font-size:11px">'+job+'</td>';
+      html += '<td style="font-size:11px">'+system+'</td>';
+      html += '<td>'+teacher+'</td>';
+      html += '<td><span style="font-size:11px;font-weight:700;color:'+resultColor+'">'+result+'</span></td>';
+      html += '<td style="font-size:10px;color:var(--text3)">'+sources.join(', ')+'</td>';
+      html += '<td style="font-size:11px;color:var(--text3)">'+preferTime+'</td>';
       html += '<td style="font-size:11px;color:var(--text3)">'+memo+'</td></tr>';
-      parsed.push({name,phone,date,result,teacher,channel,memo});
+      parsed.push({date,name,birth,phone,address,gender,job,system,teacher,result,
+                   sources,engExp,purposes,wantRaw,sysConsider,styleRaw,preferTime,memo});
     });
     html += '</tbody></table></div>';
   }
@@ -12026,22 +12156,56 @@ function executeImport(type){
       var group = (S.study&&S.study.groups||[]).find(function(g){ return g.leaderName===r.group; });
       if(!group){
         group = {
-          id: gid('sg'), dayGroup: studyDay||'monwed',
+          id: gid('sg'), dayGroup: '',
           leaderName: r.group, leaderEngName: '',
-          level:'', members:[], modifiedAt: new Date().toISOString()
+          level: r.level||'', members:[],
+          modifiedAt: new Date().toISOString()
         };
         if(!S.study.groups) S.study.groups=[];
         S.study.groups.push(group);
       }
       var dup = group.members.find(function(m){ return m.name===r.name; });
       if(dup){ skipped++; return; }
+
+      // 수납 이력 생성 (금액이 있을 경우)
+      var payHistory = [];
+      if(r.amount > 0){
+        payHistory.push({
+          id: gid('sph'),
+          date: r.payDate || r.startDate || today(),
+          amount: r.amount,
+          credits: r.totalCredits,
+          type: '신규등록',
+          method: r.payMethods.join(', ') || '',
+          discounts: r.discounts || [],
+          discountAmt: r.discountAmt || 0,
+          status: r.pay,
+          by: currentManager ? currentManager.name : '임포트'
+        });
+      }
+
       group.members.push({
-        id: gid('sm'), name: r.name, phone: r.phone,
-        days: r.days, level: r.level, credits: r.credits,
-        creditExpiry: r.expiry, payStatus: r.pay,
-        startDate: r.startDate, timesPerWeek:2,
-        totalCredits: r.credits, months:3,
-        isTutor:false, payHistory:[], history:[],
+        id:           gid('sm'),
+        name:         r.name,
+        phone:        r.phone,
+        days:         r.days,
+        level:        r.level,
+        totalCredits: r.totalCredits || 16,
+        credits:      r.credits,
+        creditExpiry: r.expiry,
+        startDate:    r.startDate,
+        paymentDate:  r.payDate || r.startDate,
+        payStatus:    r.pay,
+        timesPerWeek: r.timesPerWeek || 2,
+        months:       3,
+        isTutor:      false,
+        memo:         r.memo || '',
+        payHistory:   payHistory,
+        history: [{
+          date: new Date().toISOString().slice(0,16).replace('T',' '),
+          msg:  '임포트 등록',
+          by:   currentManager ? currentManager.name : '임포트'
+        }],
         modifiedAt: new Date().toISOString()
       });
       added++;
@@ -12051,10 +12215,27 @@ function executeImport(type){
   if(type === 'consult'){
     rows.forEach(function(r){
       S.consults.push({
-        id: gid('c'), name: r.name, phone: r.phone,
-        date: r.date||today(), result: r.result,
-        teacher: r.teacher, channel: r.channel, memo: r.memo,
-        createdAt: new Date().toISOString()
+        id:          gid('c'),
+        name:        r.name,
+        phone:       r.phone,
+        birth:       r.birth       || '',
+        address:     r.address     || '',
+        gender:      r.gender      || '',
+        job:         r.job         || '',
+        date:        r.date        || today(),
+        system:      r.system      || '',
+        teacher:     r.teacher     || '',
+        result:      r.result      || '대기',
+        sources:     r.sources     || [],
+        engExp:      r.engExp      || '',
+        purposes:    r.purposes    || [],
+        wantRaw:     r.wantRaw     || '',
+        sysConsider: r.sysConsider || '',
+        styleRaw:    r.styleRaw    || '',
+        preferTime:  r.preferTime  || '',
+        memo:        r.memo        || '',
+        staff:       currentManager ? currentManager.name : '임포트',
+        createdAt:   new Date().toISOString()
       });
       added++;
     });
@@ -12153,6 +12334,14 @@ document.addEventListener('change', function(e){
     }
   }
 });
+
+
+// ── 데일리 날짜 이동 ──
+function dailyMoveDays(delta){
+  var d = new Date(dailyCalDate);
+  d.setDate(d.getDate() + delta);
+  setDailyDate(d.toISOString().slice(0,10));
+}
 
 </script>
 
