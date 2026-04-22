@@ -1342,7 +1342,7 @@ textarea.finput{resize:vertical;min-height:60px}
             </div>
           </div>
           <div style="overflow-x:auto">
-            <table class="sheet-table"><tbody id="class-sheet-table"></tbody></table>
+            <table class="sheet-table" id="class-sheet-table"></table>
           </div>
         </div>
 
@@ -1370,6 +1370,8 @@ textarea.finput{resize:vertical;min-height:60px}
           </div>
         </div>
       
+      </div><!-- end page-teachers -->
+
       <!-- ══ 스터디 수강료 ══ -->
       <div class="page" id="page-studyPayments"></div>
 
@@ -1386,11 +1388,7 @@ textarea.finput{resize:vertical;min-height:60px}
           <span id="trial-count" style="font-size:12px;color:var(--text3);margin-left:4px"></span>
           <button class="btn btn-primary btn-sm" onclick="openModal('trial')" style="margin-left:auto">+ 청강 등록</button>
         </div>
-        <div class="card">
-          <div class="sheet-table-wrap">
-            <table class="sheet-table"><tbody id="trial-list"></tbody></table>
-          </div>
-        </div>
+        <div id="trial-list"></div>
       </div>
 
       <!-- ══ 상담 관리 ══ -->
@@ -12443,7 +12441,27 @@ function dailyMoveDays(delta){
   setDailyDate(d.toISOString().slice(0,10));
 }
 
+// ── 자동 진단 코드 (임시) ──
+window.addEventListener('load', function(){
+  var pages = ['dashboard','students','teachers','consult','trial','studyDashboard','studyGroups','report'];
+  pages.forEach(function(p){
+    var el = document.getElementById('page-'+p);
+    console.log('page-'+p+':', el ? '존재 ('+el.children.length+'개 자식)' : '❌ 없음!');
+  });
+  
+  var s = document.getElementById('main-shell');
+  console.log('main-shell display:', s ? s.style.display : '없음');
+  
+  setTimeout(function(){
+    var cons = document.getElementById('consult-list');
+    var trial = document.getElementById('trial-list');
+    console.log('consult-list innerHTML 길이:', cons ? cons.innerHTML.length : '없음');
+    console.log('trial-list innerHTML 길이:', trial ? trial.innerHTML.length : '없음');
+  }, 3000);
+});
+
 </script>
+
 
 <!-- ══ 모바일 하단 네비게이션 ══ -->
 <nav class="mobile-bottom-nav" id="mobile-bottom-nav">
