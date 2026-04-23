@@ -12542,7 +12542,11 @@ function executeImport(type){
   if(type === 'study' && added > 0) {
     setTimeout(function(){ goPage('studyGroups'); }, 500);
   }
-  showToast('✅ 임포트 완료: '+added+'건 추가' + (skipped?' (중복 '+skipped+'건 건너뜀)':''));
+  if(added === 0 && skipped > 0){
+    showToast('⚠️ 전체 '+skipped+'건이 중복으로 건너뜀 (이미 등록된 멤버)', 4000);
+  } else {
+    showToast('✅ 임포트 완료: '+added+'건 추가' + (skipped?' (중복 '+skipped+'건 건너뜀)':''));
+  }
 
   // 미리보기 초기화 + 되돌리기 버튼 표시
   if(preview) preview.innerHTML=
