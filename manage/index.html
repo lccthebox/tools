@@ -3023,14 +3023,12 @@ async function loadData(){
     buildFilters(); renderAll();
   }
 }
-async function save(){
+function save(){
   const payload={students:S.students,trials:S.trials,consults:S.consults,calNotes:S.calNotes,board:S.board,teacherPrices:S.teacherPrices,dailyNotes:S.dailyNotes||[],study:S.study||{},teacherInfo:S.teacherInfo||{}};
-  // 로컬 storage 저장 (기존)
-  try{await window.storage.set(SKEY,JSON.stringify(payload));}catch(e){}
-  // Firebase 실시간 동기화
+  try{ window.storage.set(SKEY,JSON.stringify(payload)).catch(function(){}); }catch(e){}
   if(fbSyncEnabled && typeof fbDb !== 'undefined'){
     try{
-      await fbDb.ref('thebox_data').set(payload);
+      fbDb.ref('thebox_data').set(payload).catch(function(e){ console.warn('Firebase save error:', e.message); });
     }catch(e){ console.warn('Firebase save error:', e.message); }
   }
 }
