@@ -9214,7 +9214,7 @@ function renderStudyGroups(groups){
           </div>
           <div style="display:flex;gap:6px">
             <button class="btn btn-sm btn-teal" onclick="addStudyMember('${g.id}')">+ 멤버</button>
-            <button class="btn btn-sm" onclick="deleteStudyGroup('${g.id}')" style="color:var(--red)">삭제</button>
+            <button class="btn btn-sm" onclick="deleteStudyGroup('${g.id}')" style="color:var(--text3);font-size:11px" title="그룹 삭제">삭제</button>
           </div>
         </div>
         <div style="overflow-x:auto">
@@ -9972,9 +9972,19 @@ function addStudyGroup(){
 }
 
 function deleteStudyGroup(gid){
-  if(!confirm('이 그룹을 삭제하시겠습니까?'))return;
-  S.study.groups=S.study.groups.filter(g=>g.id!==gid);
-  save();renderStudy();
+  const g = (S.study.groups||[]).find(x=>x.id===gid);
+  if(!g) return;
+  const memberCount = (g.members||[]).filter(m=>!m.isTutor).length;
+  if(memberCount > 0){
+    if(!confirm(`⚠️ "${g.leaderName}" 그룹에 멤버 ${memberCount}명이 있습니다.\n멤버도 함께 삭제됩니다. 정말 삭제하시겠습니까?\n\n※ 삭제 후 되돌리기 불가`)) return;
+    // 2차 확인
+    if(!confirm(`마지막 확인: "${g.leaderName}" 그룹과 멤버 ${memberCount}명을 영구 삭제합니다.`)) return;
+  } else {
+    if(!confirm(`"${g.leaderName}" 그룹을 삭제하시겠습니까?`)) return;
+  }
+  S.study.groups = S.study.groups.filter(x=>x.id!==gid);
+  save(); renderStudy();
+  showToast(`"${g.leaderName}" 그룹이 삭제되었습니다.`);
 }
 
 function updStudyGroup(gid,field,val){
