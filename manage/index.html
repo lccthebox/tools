@@ -3448,38 +3448,29 @@ function gcalUpdateDateLabel(){
 
 function evHtml(ev, isConsult){
   isConsult = isConsult || false;
-  const isAllDay=!!ev.start?.date;
-  let st='', et='';
-  if(!isAllDay){
-    const s=new Date(ev.start.dateTime);
-    const e=new Date(ev.end.dateTime);
-    st=`${String(s.getHours()).padStart(2,'0')}:${String(s.getMinutes()).padStart(2,'0')}`;
-    et=`${String(e.getHours()).padStart(2,'0')}:${String(e.getMinutes()).padStart(2,'0')}`;
+  var isAD = !!(ev.start && ev.start.date);
+  var st='', et='';
+  if(!isAD && ev.start && ev.start.dateTime){
+    var ss=new Date(ev.start.dateTime), ee=new Date(ev.end.dateTime);
+    st=('0'+ss.getHours()).slice(-2)+':'+('0'+ss.getMinutes()).slice(-2);
+    et=('0'+ee.getHours()).slice(-2)+':'+('0'+ee.getMinutes()).slice(-2);
   }
-  const GCAL_COLORS=['#7986cb','#33b679','#8e24aa','#e67c73','#f6c026','#f5511d','#039be5','#616161','#3f51b5','#0b8043','#d50000'];
-  const barColor = isConsult ? '#f59f00' : (ev.colorId?GCAL_COLORS[parseInt(ev.colorId)-1]||'var(--accent)':'var(--accent)');
-  const bg       = isConsult ? 'rgba(255,224,102,0.18)' : 'var(--bg2)';
-  const border   = isConsult ? '1px solid rgba(245,159,0,0.35)' : '1px solid var(--border)';
-  const title    = ev.summary||'(제목 없음)';
-  const desc     = ev.description?(ev.description.replace(/<[^>]*>/g,'').slice(0,60)):'';
-  return `<div style="display:flex;align-items:stretch;gap:0;background:${bg};border:${border};border-radius:10px;overflow:hidden;margin-bottom:6px">
-    <div style="width:4px;background:${barColor};flex-shrink:0"></div>
-    <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;flex:1;min-width:0">
-  ${isAllDay
-    ? `<div style="width:52px;text-align:center;flex-shrink:0"><span style="font-size:10px;font-weight:700;background:${barColor}22;color:${barColor};padding:2px 6px;border-radius:99px">종일</span></div>`
-    : `<div style="width:52px;flex-shrink:0;text-align:right">
-        <div style="font-size:13px;font-weight:800;color:var(--text);font-family:var(--font-mono)">${st}</div>
-        <div style="font-size:10px;color:var(--text3);font-family:var(--font-mono)">~ ${et}</div>
-      </div>`
-  }
-  <div style="width:1px;background:var(--border);align-self:stretch;flex-shrink:0"></div>
-  <div style="flex:1;min-width:0">
-    <div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${isConsult?'📞 ':''} ${title}</div>
-    ${ev.location?`<div style="font-size:11px;color:var(--text3);margin-top:1px">📍 ${ev.location}</div>`:''}
-    ${desc?`<div style="font-size:11px;color:var(--text3);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${desc}</div>`:''}
-  </div>
-    </div>
-  </div>`;
+  var GCAL_C=['#7986cb','#33b679','#8e24aa','#e67c73','#f6c026','#f5511d','#039be5','#616161','#3f51b5','#0b8043','#d50000'];
+  var bar = isConsult ? '#f59f00' : (ev.colorId ? GCAL_C[parseInt(ev.colorId)-1]||'#6058e8' : '#6058e8');
+  var bg  = isConsult ? 'rgba(255,224,102,0.15)' : 'var(--bg2)';
+  var bd  = isConsult ? '1px solid rgba(245,159,0,0.4)' : '1px solid var(--border)';
+  var title = ev.summary || '(제목 없음)';
+  var timeStr = isAD ? '종일' : (st + ' ~ ' + et);
+  return '<div style="display:flex;align-items:center;gap:0;background:'+bg+';border:'+bd+';border-radius:8px;overflow:hidden;margin-bottom:5px;min-height:36px">'
+    + '<div style="width:4px;min-height:36px;background:'+bar+';flex-shrink:0"></div>'
+    + '<div style="width:108px;flex-shrink:0;padding:0 10px;text-align:right;border-right:1px solid var(--border)">'
+    +   '<span style="font-size:12px;font-weight:700;color:var(--text);font-family:monospace;white-space:nowrap">'+timeStr+'</span>'
+    + '</div>'
+    + '<div style="flex:1;padding:8px 12px;min-width:0;overflow:hidden">'
+    +   '<div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(isConsult?'📞 ':'')+title+'</div>'
+    +   (ev.location?'<div style="font-size:11px;color:var(--text3)">📍 '+ev.location+'</div>':'')
+    + '</div>'
+    + '</div>';
 }
 
 async function loadGcal(){
@@ -7664,7 +7655,10 @@ function renderDailyCalendar(){
 
 function setDailyDate(dateStr){
   dailyCalDate = new Date(dateStr);
+  // gcalViewDate도 같이 변경해서 일정 갱신
+  gcalViewDate = new Date(dateStr);
   renderDaily();
+  loadGcal();
 }
 
 function renderDailyNotesList(dateStr){
@@ -9109,37 +9103,7 @@ async function loadGcalStudy(){
       var tb=b.start&&b.start.dateTime?new Date(b.start.dateTime).getTime():0;
       return ta-tb;
     });
-    var GCAL_C=['#7986cb','#33b679','#8e24aa','#e67c73','#f6c026','#f5511d','#039be5','#616161','#3f51b5','#0b8043','#d50000'];
-    evWrap.innerHTML=events.map(function(ev){
-      var isC=(ev.summary||'').indexOf('상담')>=0;
-      var isAD=!!(ev.start&&ev.start.date);
-      var st3='',et3='';
-      if(!isAD&&ev.start&&ev.start.dateTime){
-        var ss=new Date(ev.start.dateTime),ee=new Date(ev.end.dateTime);
-        st3=('0'+ss.getHours()).slice(-2)+':'+('0'+ss.getMinutes()).slice(-2);
-        et3=('0'+ee.getHours()).slice(-2)+':'+('0'+ee.getMinutes()).slice(-2);
-      }
-      var bar=isC?'#f59f00':(ev.colorId?GCAL_C[parseInt(ev.colorId)-1]||'#6058e8':'#6058e8');
-      var bg=isC?'rgba(255,224,102,0.18)':'var(--bg2)';
-      var bd=isC?'1px solid rgba(245,159,0,0.35)':'1px solid var(--border)';
-      var title=ev.summary||'(제목 없음)';
-      var desc=ev.description?(ev.description.replace(/<[^>]*>/g,'').slice(0,60)):'';
-      var timeCell=isAD
-        ?('<div style="width:52px;text-align:center;flex-shrink:0"><span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:99px;background:'+bar+'22;color:'+bar+'">종일</span></div>')
-        :('<div style="width:52px;flex-shrink:0;text-align:right">'
-          +'<div style="font-size:13px;font-weight:800;color:var(--text);font-family:monospace">'+st3+'</div>'
-          +'<div style="font-size:10px;color:var(--text3);font-family:monospace">~ '+et3+'</div></div>');
-      return '<div style="display:flex;align-items:stretch;background:'+bg+';border:'+bd+';border-radius:10px;overflow:hidden;margin-bottom:6px">'
-        +'<div style="width:4px;background:'+bar+';flex-shrink:0"></div>'
-        +'<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;flex:1;min-width:0">'
-        +timeCell
-        +'<div style="width:1px;background:var(--border);align-self:stretch;flex-shrink:0"></div>'
-        +'<div style="flex:1;min-width:0">'
-        +'<div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(isC?'📞 ':'')+title+'</div>'
-        +(ev.location?'<div style="font-size:11px;color:var(--text3);margin-top:1px">📍 '+ev.location+'</div>':'')
-        +(desc?'<div style="font-size:11px;color:var(--text3);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+desc+'</div>':'')
-        +'</div></div></div>';
-    }).join('');
+    evWrap.innerHTML=events.map(function(ev){ return evHtml(ev,(ev.summary||'').indexOf('상담')>=0); }).join('');
   }catch(err){
     if(hint)hint.textContent='오류';
     evWrap.innerHTML=`<div style="padding:12px;font-size:11px;color:var(--red)">불러오기 실패: ${err.message}</div>`;
