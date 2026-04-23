@@ -1859,8 +1859,8 @@ textarea.finput{resize:vertical;min-height:60px}
                 <span class="igc-col">할인종류</span><span class="igc-arrow">→</span>
                 <span class="igc-col">할인금액</span><span class="igc-arrow">→</span>
                 <span class="igc-col required">주당횟수</span><span class="igc-arrow">→</span>
-                <span class="igc-col" style="background:var(--amber-light);color:var(--amber);border-color:var(--amber)">개월수(선택)</span><span class="igc-arrow">→</span>
                 <span class="igc-col">메모</span>
+                <div style="margin-top:6px;font-size:11px;color:var(--text3)">💡 개월수는 총크레딧÷주당횟수÷4.3×1.5로 자동계산됩니다</div>
               </div>
               <div style="background:var(--bg2);border-radius:var(--r);padding:8px 12px;font-size:11px;color:var(--text3);line-height:1.8">
                 <b style="color:var(--text2)">레벨:</b> 초급 / 초중급 / 중급 / 중고급 / 고급
@@ -12148,12 +12148,13 @@ function importSwitchTab(tab){
 
 // 날짜 정규화 (2024.01.15 → 2024-01-15)
 function normalizeDate(s){
-  if(!s) return '';
-  s = s.trim().replace(/\./g,'-').replace(/\//g,'-');
+  if(!s||s==='-') return '';
+  s = s.trim().replace(/\./g,'-').replace(/\//g,'-').replace(/\s+/g,'');
+  s = s.replace(/-+/g,'-').replace(/^-|-$/g,'');
   if(/^\d{8}$/.test(s)) return s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8);
-  var m = s.match(/(\d{4})[-\.](\d{1,2})[-\.](\d{1,2})/);
+  var m = s.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
   if(m) return m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0');
-  return s;
+  return '';
 }
 // 표시용 날짜 포맷 (YY/MM/DD)
 function fmtImportDate(s){
@@ -12190,7 +12191,12 @@ function normalizeConsultResult(s){
 function parseImportLines(txt){
   return txt.split('\n')
     .map(function(l){ return l.split('\t').map(function(c){ return c.trim(); }); })
-    .filter(function(r){ return r.length >= 2 && r[0]; });
+    .filter(function(r){
+      // 빈 행 제거: 첫 컬럼이 비어있거나 모든 컬럼이 비어있으면 스킵
+      if(!r[0]) return false;
+      var hasData = r.some(function(v){ return v !== ''; });
+      return hasData && r.length >= 2;
+    });
 }
 
 // ── 미리보기 ──
@@ -12271,11 +12277,9 @@ function previewImport(type){
       var discountRaw=(r[13]||'').trim();
       var discountAmt=parseInt((r[14]||'').replace(/,/g,''))||0;
       var timesPerWeek=parseInt(r[15])||2;
-      // r[16]: 개월수(선택) - 없으면 총크레딧/주당횟수/4.3으로 역산
-      var monthsRaw=parseFloat(r[16])||0;
-      // 개월수: 직접 입력 > 없으면 (총크레딧÷주당횟수÷4.3) × 1.5배 (정상소진+여유)
-      var months = monthsRaw > 0 ? monthsRaw : Math.round((totalCredits / timesPerWeek / 4.3 * 1.5) * 2) / 2;
-      var memo=r[17]||'';  // r[17]이 메모 (r[16]은 개월수)
+      var memo=r[16]||'';  // Q열 = 메모 (개월수 컬럼 없음)
+      // 개월수 = 총크레딧÷주당횟수÷4.3 × 1.5배 자동 역산
+      var months = Math.round((totalCredits / timesPerWeek / 4.3 * 1.5) * 2) / 2;
       var payMethods=payMethodRaw?payMethodRaw.split(/[,\/]/).map(function(x){return x.trim();}).filter(Boolean):[];
       var discounts=discountRaw?[discountRaw]:[];
       if(!payDate && startDate) payDate=startDate;
