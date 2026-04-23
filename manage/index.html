@@ -3502,12 +3502,9 @@ async function loadGcal(){
     const consultEvents = events.filter(ev=>(ev.summary||'').includes('상담'));
     const normalEvents  = events.filter(ev=>!(ev.summary||'').includes('상담'));
 
-    function evHtml(ev, isConsult=false){
+    function evHtml(ev, isConsult){
+      isConsult = isConsult || false;
       const isAllDay=!!ev.start?.date;
-      let startMin = isAllDay ? -1 : (() => {
-        const s=new Date(ev.start.dateTime);
-        return s.getHours()*60+s.getMinutes();
-      })();
       let st='', et='';
       if(!isAllDay){
         const s=new Date(ev.start.dateTime);
@@ -9108,25 +9105,13 @@ async function loadGcalStudy(){
     const events=data.items||[];
     if(hint)hint.textContent=`오늘 ${events.length}건`;
     if(!events.length){evWrap.innerHTML='<div style="padding:16px;text-align:center;color:var(--text3);font-size:12px">오늘 일정이 없습니다</div>';return;}
-    evWrap.innerHTML=events.map(ev=>{
-      const isConsult=(ev.summary||'').includes('상담');
-      const isAllDay=!!ev.start?.date;
-      let timeStr='종일';
-      if(!isAllDay){
-        const s=new Date(ev.start.dateTime),e2=new Date(ev.end.dateTime);
-        timeStr=`${String(s.getHours()).padStart(2,'0')}:${String(s.getMinutes()).padStart(2,'0')} ~ ${String(e2.getHours()).padStart(2,'0')}:${String(e2.getMinutes()).padStart(2,'0')}`;
-      }
-      const barColor=isConsult?'rgba(255,235,59,0.8)':'var(--accent)';
-      const bgColor = isConsult ? 'rgba(255,235,59,0.2)' : 'transparent';
-      const titleColor = isConsult ? '#000' : 'var(--text)';
-      return`<div style="display:flex;align-items:flex-start;gap:8px;padding:8px;border-bottom:1px solid var(--border);background:${bgColor};border-radius:6px;margin-bottom:3px">
-        <div style="width:3px;min-height:32px;border-radius:2px;background:${barColor};flex-shrink:0;margin-top:2px"></div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:12.5px;font-weight:600;color:${titleColor}">${ev.summary||'(제목 없음)'}</div>
-          <div style="font-size:11.5px;color:${isConsult?'#333':'var(--text3)'};font-weight:${isConsult?'500':'400'}">${timeStr}</div>
-        </div>
-      </div>`;
-    }).join('');
+    // 시간순 정렬
+    const sortedEvs = [...events].sort((a,b)=>{
+      const ta=a.start?.dateTime?new Date(a.start.dateTime).getTime():0;
+      const tb=b.start?.dateTime?new Date(b.start.dateTime).getTime():0;
+      return ta-tb;
+    });
+    evWrap.innerHTML=sortedEvs.map(ev=>evHtml(ev,(ev.summary||'').includes('상담'))).join('');
   }catch(err){
     if(hint)hint.textContent='오류';
     evWrap.innerHTML=`<div style="padding:12px;font-size:11px;color:var(--red)">불러오기 실패: ${err.message}</div>`;
