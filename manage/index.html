@@ -3487,6 +3487,10 @@ async function loadGcal(){
 
     if(hint)hint.textContent=events.length+'건';
 
+    // 상담/일반 구분 정보
+    const consultCnt = consultEvents.length;
+    const normalCnt  = normalEvents.length;
+
     if(!events.length){
       var dateLabel2 = document.getElementById('gcal-date-label');
       var dlText = dateLabel2 ? dateLabel2.textContent.split(' (')[0] : '해당일';
@@ -3500,29 +3504,50 @@ async function loadGcal(){
 
     function evHtml(ev, isConsult=false){
       const isAllDay=!!ev.start?.date;
-      let timeStr='종일';
+      let startMin = isAllDay ? -1 : (() => {
+        const s=new Date(ev.start.dateTime);
+        return s.getHours()*60+s.getMinutes();
+      })();
+      let st='', et='';
       if(!isAllDay){
         const s=new Date(ev.start.dateTime);
         const e=new Date(ev.end.dateTime);
-        const st = `${String(s.getHours()).padStart(2,'0')}:${String(s.getMinutes()).padStart(2,'0')}`;
-        const et = `${String(e.getHours()).padStart(2,'0')}:${String(e.getMinutes()).padStart(2,'0')}`;
-        timeStr = `<span style="font-weight:700;color:var(--text);background:var(--bg3);padding:1px 4px;border-radius:4px">${st}</span> ~ <span style="font-weight:700;color:var(--text);background:var(--bg3);padding:1px 4px;border-radius:4px">${et}</span>`;
+        st=`${String(s.getHours()).padStart(2,'0')}:${String(s.getMinutes()).padStart(2,'0')}`;
+        et=`${String(e.getHours()).padStart(2,'0')}:${String(e.getMinutes()).padStart(2,'0')}`;
       }
       const GCAL_COLORS=['#7986cb','#33b679','#8e24aa','#e67c73','#f6c026','#f5511d','#039be5','#616161','#3f51b5','#0b8043','#d50000'];
-      const barColor = isConsult ? 'rgba(255,235,59,0.8)' : (ev.colorId?GCAL_COLORS[parseInt(ev.colorId)-1]||'var(--accent)':'var(--accent)');
-      const bgColor = isConsult ? 'rgba(255,235,59,0.2)' : 'transparent';
-      const titleColor = isConsult ? '#000' : 'var(--text)';
-      return`<div style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-bottom:1px solid var(--border);background:${bgColor};border-radius:6px;margin-bottom:4px">
-        <div style="width:3px;min-height:36px;border-radius:2px;background:${barColor};flex-shrink:0;margin-top:2px"></div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13.5px;font-weight:600;color:${titleColor};margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${ev.summary||'(제목 없음)'}</div>
-          <div style="font-size:12px;color:${isConsult?'#333':'var(--text3)'};font-weight:${isConsult?'500':'400'}">${timeStr}${ev.location?` · 📍${ev.location}`:''}</div>
-          ${ev.description?`<div style="font-size:11px;color:var(--text3);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${ev.description.replace(/<[^>]*>/g,'')}</div>`:''}
+      const barColor = isConsult ? '#f59f00' : (ev.colorId?GCAL_COLORS[parseInt(ev.colorId)-1]||'var(--accent)':'var(--accent)');
+      const bg       = isConsult ? 'rgba(255,224,102,0.18)' : 'var(--bg2)';
+      const border   = isConsult ? '1px solid rgba(245,159,0,0.35)' : '1px solid var(--border)';
+      const title    = ev.summary||'(제목 없음)';
+      const desc     = ev.description?(ev.description.replace(/<[^>]*>/g,'').slice(0,60)):'';
+      return `<div style="display:flex;align-items:stretch;gap:0;background:${bg};border:${border};border-radius:10px;overflow:hidden;margin-bottom:6px">
+        <div style="width:4px;background:${barColor};flex-shrink:0"></div>
+        <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;flex:1;min-width:0">
+          ${isAllDay
+            ? `<div style="width:52px;text-align:center;flex-shrink:0"><span style="font-size:10px;font-weight:700;background:${barColor}22;color:${barColor};padding:2px 6px;border-radius:99px">종일</span></div>`
+            : `<div style="width:52px;flex-shrink:0;text-align:right">
+                <div style="font-size:13px;font-weight:800;color:var(--text);font-family:var(--font-mono)">${st}</div>
+                <div style="font-size:10px;color:var(--text3);font-family:var(--font-mono)">~ ${et}</div>
+              </div>`
+          }
+          <div style="width:1px;background:var(--border);align-self:stretch;flex-shrink:0"></div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${isConsult?'📞 ':''} ${title}</div>
+            ${ev.location?`<div style="font-size:11px;color:var(--text3);margin-top:1px">📍 ${ev.location}</div>`:''}
+            ${desc?`<div style="font-size:11px;color:var(--text3);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${desc}</div>`:''}
+          </div>
         </div>
       </div>`;
     }
 
-    evWrap.innerHTML = normalEvents.map(ev=>evHtml(ev,false)).join('') ||
+    // 시간순 정렬 후 렌더
+    const allEvsSorted = [...normalEvents].sort((a,b)=>{
+      const ta = a.start?.dateTime ? new Date(a.start.dateTime).getTime() : 0;
+      const tb = b.start?.dateTime ? new Date(b.start.dateTime).getTime() : 0;
+      return ta-tb;
+    });
+    evWrap.innerHTML = allEvsSorted.map(ev=>evHtml(ev,false)).join('') ||
       '<div style="padding:16px;text-align:center;color:var(--text3);font-size:12px">오늘 일반 일정이 없습니다</div>';
 
     // 상담 이벤트를 오늘 상담 카드에 추가
@@ -12365,8 +12390,20 @@ function previewImport(type){
 
 // ── 실제 임포트 실행 ──
 function executeImport(type){
+  ensureS();
   var rows = (window._importParsed && window._importParsed[type]) || [];
+  console.log('[임포트] type='+type+', rows='+rows.length+', S.study.groups='+(S.study.groups||[]).length);
   if(!rows.length){ showToast('먼저 미리보기를 실행해주세요'); return; }
+
+  // 실행 전 스냅샷 저장 (취소용)
+  window._importSnapshot = {
+    type: type,
+    time: new Date().toLocaleString('ko-KR'),
+    students: JSON.parse(JSON.stringify(S.students||[])),
+    consults:  JSON.parse(JSON.stringify(S.consults||[])),
+    study:     JSON.parse(JSON.stringify(S.study||{})),
+  };
+
   var preview = document.getElementById('import-'+type+'-preview');
   var added = 0, skipped = 0;
 
@@ -12406,10 +12443,12 @@ function executeImport(type){
 
   if(type === 'study'){
     rows.forEach(function(r){
-      var group = (S.study&&S.study.groups||[]).find(function(g){ return g.leaderName===r.group; });
+      if(!r.name || !r.group) { skipped++; return; } // 이름/그룹 없는 행 스킵
+      var group = (S.study.groups||[]).find(function(g){ return g.leaderName===r.group; });
       if(!group){
         group = {
-          id: gid('sg'), dayGroup: '',
+          id: gid('sg'),
+          dayGroup: inferDayGroup(r.days),
           leaderName: r.group, leaderEngName: '',
           level: r.level||'', members:[],
           modifiedAt: new Date().toISOString()
@@ -12495,12 +12534,22 @@ function executeImport(type){
     });
   }
 
+  console.log('[임포트 완료] added='+added+', skipped='+skipped+', groups='+(S.study.groups||[]).length);
   save();
   renderAll();
+  // 스터디 임포트면 스터디 그룹 페이지로 이동
+  if(type === 'study' && added > 0) {
+    setTimeout(function(){ goPage('studyGroups'); }, 500);
+  }
   showToast('✅ 임포트 완료: '+added+'건 추가' + (skipped?' (중복 '+skipped+'건 건너뜀)':''));
 
-  // 미리보기 초기화
-  if(preview) preview.innerHTML='<div style="padding:16px;background:var(--teal-light);border-radius:var(--r2);color:var(--teal);font-weight:700;font-size:13.5px">✅ '+added+'건 등록 완료!'+(skipped?' (중복 '+skipped+'건 건너뜀)':'')+'</div>';
+  // 미리보기 초기화 + 되돌리기 버튼 표시
+  if(preview) preview.innerHTML=
+    '<div style="padding:14px 16px;background:var(--teal-light);border-radius:var(--r2);color:var(--teal);font-weight:700;font-size:13.5px;display:flex;align-items:center;justify-content:space-between;gap:12px">'
+    +'<span>✅ '+added+'건 등록 완료!'+(skipped?' (중복 '+skipped+'건 건너뜀)':'')+'</span>'
+    +'<button onclick="undoImport()" style="background:var(--amber);color:#fff;border:none;border-radius:var(--r);padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0">↩ 되돌리기</button>'
+    +'</div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-top:6px;padding:0 4px">⚠ 되돌리기는 이번 임포트만 취소합니다. 페이지를 이동하면 버튼이 사라집니다.</div>';
   var ta = document.getElementById('import-'+type+'-text');
   if(ta) ta.value = '';
   var countEl = document.getElementById('import-'+type+'-count');
@@ -12666,6 +12715,40 @@ function renewAutoCalc(){
       if(s) expEl.value = calcStudyExpiry(s, mo);
     }
   }
+}
+
+
+// 참여요일 문자열로 dayGroup 추론
+function inferDayGroup(days){
+  if(!days) return '';
+  var d = days.replace(/\s/g,'');
+  if(d.includes('월')&&d.includes('수')) return 'monwed';
+  if(d.includes('화')&&d.includes('목')) return 'tuethu';
+  if(d.includes('토')||d.includes('일')) return 'satsun';
+  if(d.includes('월')||d.includes('수')) return 'monwed';
+  if(d.includes('화')||d.includes('목')) return 'tuethu';
+  return '';
+}
+
+
+// ── 임포트 되돌리기 ──
+function undoImport(){
+  if(!window._importSnapshot){
+    showToast('되돌릴 임포트 기록이 없습니다.');
+    return;
+  }
+  var snap = window._importSnapshot;
+  if(!confirm('임포트를 되돌리겠습니까?\n(' + snap.time + ' · ' + snap.type + ' 임포트)\n\n추가된 데이터가 모두 삭제됩니다.')) return;
+
+  // 스냅샷으로 복원
+  S.students = snap.students;
+  S.consults  = snap.consults;
+  S.study     = snap.study;
+
+  save();
+  renderAll();
+  window._importSnapshot = null;
+  showToast('↩ 임포트가 취소되었습니다.');
 }
 
 </script>
