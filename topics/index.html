@@ -96,6 +96,8 @@ nav{height:52px;background:var(--black);display:flex;align-items:center;padding:
 .gen-all:hover{background:linear-gradient(135deg,#252525,#181818);box-shadow:0 4px 16px rgba(0,0,0,.22);transform:translateY(-1px)}
 .gen-all:active{transform:translateY(0)}
 .gen-all:disabled{background:#b0aea9;cursor:not-allowed;box-shadow:none;transform:none}
+.del-all-subtle{margin-left:14px;padding:0 14px;height:36px;border:1px solid #eaeaea;background:#fff;border-radius:10px;cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:11px;font-weight:700;color:var(--muted);transition:all .15s;}
+.del-all-subtle:hover{background:#fff0f0;border-color:#ffb3b8;color:var(--red);}
 
 /* ── RIGHT PANEL ── */
 .right-p{background:#fff;border-radius:20px;display:flex;flex-direction:column;box-shadow:0 8px 30px rgba(0,0,0,.04);border:1px solid #EAEAEA;overflow:hidden;height:100%}
@@ -159,6 +161,10 @@ nav{height:52px;background:var(--black);display:flex;align-items:center;padding:
 .add-btn{padding:9px 14px;background:var(--black);color:#fff;border:none;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;font-family:'Instrument Sans',sans-serif}
 .add-btn:hover{background:#1e1e1e}
 .tip{font-size:10px;color:var(--text3);margin-top:9px;line-height:1.65;font-style:italic}
+.ai-update-btn{background:linear-gradient(135deg,#6A5ACD,#483D8B);color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:10.5px;font-weight:600;cursor:pointer;font-family:'Instrument Sans',sans-serif;box-shadow:0 2px 6px rgba(106,90,205,0.25);transition:all 0.15s;letter-spacing:0.3px;}
+.ai-update-btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(106,90,205,0.4);background:linear-gradient(135deg,#7B68EE,#483D8B);}
+.ai-update-btn:active{transform:translateY(0);}
+.ai-update-btn:disabled{background:#ccc;cursor:not-allowed;box-shadow:none;transform:none;}
 
 /* ── MODAL ── */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:999;backdrop-filter:blur(4px)}
@@ -202,16 +208,17 @@ nav{height:52px;background:var(--black);display:flex;align-items:center;padding:
         <div style="flex:1"></div>
         <button class="cal-nav" id="prev">&#8592;</button>
         <button class="cal-nav" id="next" style="margin-left:5px">&#8594;</button>
+        <button class="del-all-subtle" onclick="delAll()" title="이 달의 전체 토픽 초기화">✕ 초기화</button>
       </div>
-      <div class="stats-row">
+      <div class="dow-row" id="dows"></div>
+      <div class="grid" id="cal-grid"></div>
+      <button class="gen-all" id="gen-all-btn">✦ 전체 생성</button>
+      <div class="stats-row" style="margin-top:20px;margin-bottom:0">
         <div class="stat-c"><div class="stat-l">생성 완료</div><div class="stat-v r" id="s-done">0</div></div>
         <div class="stat-c"><div class="stat-l">전체 일수</div><div class="stat-v" id="s-total">0</div></div>
         <div class="stat-c"><div class="stat-l">달성률</div><div class="stat-v" id="s-pct">0%</div></div>
         <div class="stat-c"><div class="stat-l">포맷 종류</div><div class="stat-v" id="s-fmts">0</div></div>
       </div>
-      <div class="dow-row" id="dows"></div>
-      <div class="grid" id="cal-grid"></div>
-      <button class="gen-all" id="gen-all-btn">✦ 전체 생성</button>
     </div>
     <div class="right-p" id="right-p"></div>
   </div>
@@ -222,7 +229,10 @@ nav{height:52px;background:var(--black);display:flex;align-items:center;padding:
     <h2>설정</h2>
     <p class="s-sub">포맷과 소스를 직접 추가·삭제·수정할 수 있어요. 새 포맷을 추가하면 AI가 그 방식에 맞게 토픽을 자동 구성합니다.</p>
     <div class="set-sec">
-      <h3>액티비티 포맷 <span class="set-badge" id="fmt-cnt-badge">0</span></h3>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+        <h3 style="margin:0">액티비티 포맷 <span class="set-badge" id="fmt-cnt-badge">0</span></h3>
+        <button class="ai-update-btn" id="ai-fmt-btn" onclick="aiUpdateFormats()">🤖 AI 신규 액티비티 생성</button>
+      </div>
       <p class="set-desc">● 활성화된 포맷만 랜덤 선택됩니다. 새 포맷을 추가하면 다음 생성부터 바로 반영돼요.</p>
       <div class="items-list" id="fmt-list"></div>
       <div class="add-row">
@@ -232,7 +242,10 @@ nav{height:52px;background:var(--black);display:flex;align-items:center;padding:
       <p class="tip">💡 추가 가능: Hot Seat, Two Truths One Lie, Fishbowl, Role Reversal, Deal or No Deal, Speed Debate...</p>
     </div>
     <div class="set-sec">
-      <h3>소스 풀 <span class="set-badge" id="src-cnt-badge">0</span></h3>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+        <h3 style="margin:0">소스 풀 <span class="set-badge" id="src-cnt-badge">0</span></h3>
+        <button class="ai-update-btn" id="ai-src-btn" onclick="aiUpdateSources()">🤖 AI 최신 트렌드 소스 수집</button>
+      </div>
       <p class="set-desc">매 생성 시 랜덤으로 3개 선택. 최신 뉴스레터·유튜브 주제를 직접 추가할수록 토픽이 풍부해져요.</p>
       <div class="items-list" id="src-list"></div>
       <div class="add-row">
@@ -295,6 +308,11 @@ const DEFAULT_FORMATS=[
   {id:'f22',name:'Price Check',desc:'가격 추측 게임',on:false},
   {id:'f23',name:'Roast and Toast',desc:'칭찬+저격 돌아가기',on:false},
   {id:'f24',name:'Headline Writer',desc:'헤드라인으로 요약',on:false},
+  {id:'f25',name:'Liar Game',desc:'라이어 찾기 토크',on:true},
+  {id:'f26',name:'Mafia Game',desc:'마피아 vs 시민 토크',on:true},
+  {id:'f27',name:'Minefield Talk Show',desc:'금지어 피하며 토크',on:true},
+  {id:'f28',name:'The Blind Director',desc:'안 보고 지시하기',on:true},
+  {id:'f29',name:'Heads Up',desc:'이마 위 단어 맞추기',on:true},
 ];
 
 /* ── 소스 풀 (60개+ — 가볍고 수다스러운 일상 주제만) ── */
@@ -435,6 +453,11 @@ const FMT_GUIDE={
   'Price Check':'roles: 가격 맞출 아이템 5개 (실제 가격 포함)',
   'Roast and Toast':'roles: ["Roaster","Toaster"]',
   'Headline Writer':'roles: ["The Editor","The Reporter"]',
+  'Liar Game':'roles: ["The Liar","The Truth Tellers"]',
+  'Mafia Game':'roles: ["The Mafia","The Citizens"]',
+  'Minefield Talk Show':'roles: ["The Talker","The Mine Setter"]',
+  'The Blind Director':'roles: ["The Director","The Actors"]',
+  'Heads Up':'roles: ["The Guesser","The Clue Givers"]',
 };
 
 const KR_FMT_GUIDE={
@@ -453,6 +476,11 @@ const KR_FMT_GUIDE={
   'Fishbowl':'Inner group debates while the outer group watches silently. Then switch roles and react to what you heard.',
   'Role Reversal':'Argue for the side you actually disagree with. Convince others — even if you don\'t believe it yourself!',
   'Deal or No Deal':'Negotiate the terms of a deal. Accept or reject — but only in English!',
+  'Confession Box':'One person makes a secret confession; others grill them to guess if it is a lie or true.',
+  'This or That Blitz':'Rapid-fire A or B choices. No overthinking, just gut feeling!',
+  'Pitch & Vote':'Pitch an idea like you are on Shark Tank. Others vote with their "investor" money.',
+  'Myth Busters':'Debunk common misconceptions. Pick a myth, explain why it is wrong, and provide the truth.',
+  'Time Machine':'Discuss a past, present, and future version of a topic or yourself.',
 };
 
 let year,month,selected=null,loading=false,genDay=null;
@@ -477,7 +505,7 @@ function showToast(msg){
 
 function topicKey(d){return`${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`}
 
-async function generateTopic(day){
+async function generateTopic(day, forceFmt){
   const apiKey=getApiKey();
   if(!apiKey){
     document.getElementById('modal').style.display='flex';
@@ -492,7 +520,7 @@ async function generateTopic(day){
   loading=true;genDay=day;selected=day;
   renderCal();renderRight();
 
-  const fmt=fmts[Math.floor(Math.random()*fmts.length)].name;
+  const fmt=forceFmt || fmts[Math.floor(Math.random()*fmts.length)].name;
   const picked=[...srcs].sort(()=>Math.random()-.5).slice(0,3);
   const tops=getTopics();
   const rcats=[];
@@ -517,10 +545,11 @@ If it sounds like a textbook, news article, or academic paper → REJECT IT.
 If it sounds like a KakaoTalk group chat at 11pm arguing over something silly → PERFECT.
 
 === HOW TO MAKE IT FUN (THE NEW RULES) ===
-1. PROVOCATIVE TITLES: No "News Headlines" (e.g., "Study finds 7 hours of sleep..."). Use polarizing, provocative questions. (e.g., "Would you take a pay cut for a 4-day workweek?")
-2. SLANG/CASUAL KEYWORDS: No academic words (e.g., Insomnia, Supernatural). Use relatable slang or idioms (e.g., "Zombie mode", "Danggn addict", "Pet peeve", "Mind-blowing").
-3. BINGO WITH A TWIST: Spark words must be something they can attach a personal embarrassing story/episode to, not just a vocabulary test.
-4. JUICY SCENARIOS: Add specific amounts (₩50,000 / 3 months), brand names, app names, real relatable embarrassment. 
+1. PROVOCATIVE TITLES: No "News Headlines". Use polarizing, provocative questions. (e.g., "Would you take a pay cut for a 4-day workweek?")
+2. SLANG/CASUAL KEYWORDS: No academic words. Use relatable slang or idioms (e.g., "Zombie mode", "Danggn addict", "Pet peeve", "Mind-blowing").
+3. BINGO WITH A TWIST: Spark words must trigger a specific memory/story.
+4. JUICY SCENARIOS: Add specific amounts (₩50,000), brand names, app names, relatable situations. 
+5. HYPER FRESHNESS (NO CLICHES): DO NOT use cliché topics (Work-life balance, Mint Choco, Cats vs Dogs, Apple vs Samsung, Money vs Love). Invent UNPREDICTABLE, HYPER-REALISTIC modern angles. (e.g., "Your boss sends a meme at 11 PM on Saturday. Do you reply?" or "Your date asks to split a 4,500 KRW coffee. Dealbreaker?")
 ✗ Never: politics, environment, abstract philosophy, vague generalities.
 
 === SESSION 1 — Ice Breaking ===
@@ -534,19 +563,25 @@ Icebreakers (3 questions):
 → Dead simple. Anyone answers without hesitation.
 → GREAT: "What's the most expensive useless thing collecting dust in your room?"
 
-=== SESSION 2 — The Conflict Zone ===
-- Create one JUICY scenario. The A vs B split must make people genuinely disagree. No "both are fine" answers.
-- GREAT scenario: "You've been paying ₩19,000/month for a gym you've gone to 4 times in 6 months. Your friend says just cancel it. You say 'next month I'll go.' Who's right?"
+=== SESSION 2 — The Conflict Zone / Games ===
+- If the format is a Debate/Scenario: Create one JUICY scenario. The A vs B split must make people genuinely disagree.
+- If the format is a Game (e.g. Liar Game, Heads Up, Mafia): Provide specific words, roles, or situations needed to play the game related to the topic.
 
 === ROLE NAMES ===
 **Role names MUST be SHORT — max 3-4 words each.** (e.g., "Cancel It Now" / "Keep It Just In Case")
+
+=== NUTRITIOUS EXPRESSIONS (MUST LEARN) ===
+Members want to learn HIGH-LEVEL, native-like English expressions. 
+Provide exactly 6 advanced idioms, phrasal verbs, or sophisticated collocations related to the topic (e.g., "Wrap my head around", "Take it with a grain of salt", "Steer clear of", "Hit the nail on the head", "Play devil's advocate").
+Do NOT give basic middle-school English ("I agree", "That is bad"). Give them native "찐 어휘"!
 
 === OUTPUT FORMAT ===
 Format: ${fmt}
 ${fmtHint}
 
 Return ONLY raw JSON (no markdown fences):
-{"main_title":"Provocative question title (max 10 words)","category":"Money|Work|Love|Food|Travel|Health|AI|SNS|Lifestyle|Korea Trend|Friendship|Community","korean_angle":"어제 카톡방에서 나눌 법한 수다 주제처럼 바이브 있게 1-2문장 Korean","source_name":"${picked[0]?.name||''}","meme_idea":"Describe a funny meme image or picture that perfectly captures this topic (e.g., A guy bringing a microwave to a cafe)","session1":{"spark_title":"short punchy title","spark_words":["Slang/Idiom 1","Slang/Idiom 2","Slang/Idiom 3","Slang/Idiom 4","Slang/Idiom 5","Slang/Idiom 6"],"icebreakers":["Fun personal Q1","Q2","Q3"]},"session2":{"format":"${fmt}","title":"catchy activity title","subtitle_kr":"2-4 Korean words","scenario":"Juicy specific scenario — real numbers, app names, relatable situation. 2-3 sentences max.","roles":["Short Label A","Short Label B"],"questions":["Q1: Personal — What did YOU do?","Q2: Social — Why do so many people...?","Q3: Hypothetical — If you could... would you?"],"vote":"Final quick vote question","expressions":["Honestly same, but...","Wait that's actually kind of valid...","Okay but hear me out..."]}}`;
+{"main_title":"Provocative question title (max 10 words)","category":"Money|Work|Love|Food|Travel|Health|AI|SNS|Lifestyle|Korea Trend|Friendship|Community","korean_angle":"어제 카톡방에서 나눌 법한 수다 주제처럼 바이브 있게 1-2문장 Korean","source_name":"${picked[0]?.name||''}","meme_idea":"Describe a funny meme image or picture that perfectly captures this topic (e.g., A guy bringing a microwave to a cafe)","session1":{"spark_title":"short punchy title","spark_words":["Slang/Idiom 1","Slang/Idiom 2","Slang/Idiom 3","Slang/Idiom 4","Slang/Idiom 5","Slang/Idiom 6"],"icebreakers":["Fun personal Q1","Q2","Q3"]},"session2":{"format":"${fmt}","title":"catchy activity title","subtitle_kr":"2-4 Korean words","scenario":"Juicy specific scenario or Game setup — real numbers, app names, relatable situation. 2-3 sentences max.","roles":["Short Label A","Short Label B"],"questions":["Q1: Personal — What did YOU do?","Q2: Social — Why do so many people...?","Q3: Hypothetical — If you could... would you?"],"vote":"Final quick vote question","expressions":["High-level Idiom 1 — short meaning","Advanced phrase 2 — short meaning","Native Collocation 3 — short meaning","Phrase 4","Phrase 5","Phrase 6"]},"session3":{"left_title":"게임 진행 순서","left_rules":["룰 1","룰 2","룰 3"],"left_tips_title":"💡 질문 할 때 팁","left_tips":["진행 팁 1","진행 팁 2","진행 팁 3","진행 팁 4"],"right_title":"막힐 때 던져볼만한 질문 (혹은 주제 키워드)","right_items":[{"context":"어떤 상황에서 던지는 질문인지 (예: 한쪽 의견만 너무 나올 때)","en":"리더가 던지는 돌발 영어 질문 1-2문장","kr":"해당 질문 한국어 해석"},{"context":"...","en":"...","kr":"..."}]}}
+// Note: session3.right_items MUST contain exactly 4 items.`;
 
   const steps=['소스 분석 중...','트렌드 파악 중...',`${fmt} 생성 중...`,'마무리 중...'];
   let si=0;
@@ -561,7 +596,7 @@ Return ONLY raw JSON (no markdown fences):
         'anthropic-version':'2023-06-01',
         'anthropic-dangerous-direct-browser-access':'true'
       },
-      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1800,messages:[{role:'user',content:prompt}]})
+      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:2500,messages:[{role:'user',content:prompt}]})
     });
     if(!res.ok){const e=await res.json();throw new Error(e.error?.message||`HTTP ${res.status}`)}
     const data=await res.json();
@@ -583,10 +618,50 @@ async function genAll(){
   if(!apiKey){document.getElementById('modal').style.display='flex';return}
   const dim=new Date(year,month+1,0).getDate();
   const tops=getTopics();
+  
+  // 2026년 한국 주요 공휴일 (대체공휴일 포함)
+  const holidays = [
+    '2026-01-01','2026-02-16','2026-02-17','2026-02-18','2026-03-01','2026-03-02',
+    '2026-05-05','2026-05-24','2026-05-25','2026-06-06','2026-08-15','2026-08-17',
+    '2026-09-24','2026-09-25','2026-09-26','2026-10-03','2026-10-09','2026-12-25'
+  ];
+
   for(let d=1;d<=dim;d++){
-    if(!tops[topicKey(d)]){await generateTopic(d);await new Promise(r=>setTimeout(r,400))}
+    const dateObj = new Date(year, month, d);
+    const dow = dateObj.getDay();
+    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    
+    // 금요일(5) 및 공휴일 제외 (토, 일은 생성됨)
+    if(dow===5 || holidays.includes(dateStr)) continue;
+
+    if(!tops[topicKey(d)]){
+      await generateTopic(d);
+      await new Promise(r=>setTimeout(r,400));
+    }
   }
   showToast(`${MONTHS[month]} 전체 생성 완료!`);
+}
+
+function delAll(){
+  if(!confirm('생성된 이번 달의 모든 토픽을 삭제하시겠습니까?\\n(이 작업은 되돌릴 수 없습니다)')) return;
+  const tops=getTopics();
+  const dim=new Date(year,month+1,0).getDate();
+  let deleted = false;
+  for(let d=1;d<=dim;d++){
+    const k=topicKey(d);
+    if(tops[k]){
+      delete tops[k];
+      deleted = true;
+    }
+  }
+  if(deleted){
+    saveTopics(tops);
+    renderCal();
+    renderRight();
+    showToast(`${MONTHS[month]} 전체 초기화 완료`);
+  } else {
+    showToast('삭제할 토픽이 없습니다.');
+  }
 }
 
 /* ══════════════════════════════════════════════════════
@@ -594,7 +669,7 @@ async function genAll(){
    ══════════════════════════════════════════════════════ */
 function downloadPDF(day){
   const k=topicKey(day);const t=getTopics()[k];if(!t)return;
-  const s1=t.session1||{},s2=t.session2||{};
+  const s1=t.session1||{},s2=t.session2||{},s3=t.session3||{};
   const catColor=CAT_COLORS[t.category]||'#888';
   const sparks=(s1.spark_words||[]).slice(0,6);
   const icebreakers=(s1.icebreakers||[]);
@@ -606,21 +681,21 @@ function downloadPDF(day){
   /* Spark words — 파티 카드 느낌으로 크고 선명하게 */
   const sparkHTML=sparks.map((w,i)=>{
     const styles=[
-      `background:#0D0D0D;color:#fff;font-size:13pt`,
-      `background:${catColor};color:#fff;font-size:13pt`,
-      `background:#fff;color:#0D0D0D;border:2px solid #0D0D0D;font-size:13pt`,
-      `background:#fff;color:${catColor};border:2px solid ${catColor};font-size:13pt`,
-      `background:#F5F3EF;color:#0D0D0D;border:1.5px solid #ccc;font-size:13pt`,
-      `background:#F5F3EF;color:#0D0D0D;border:1.5px solid #ccc;font-size:13pt`,
+      `background:#0D0D0D;color:#fff;font-size:11pt`,
+      `background:${catColor};color:#fff;font-size:11pt`,
+      `background:#fff;color:#0D0D0D;border:2px solid #0D0D0D;font-size:11pt`,
+      `background:#fff;color:${catColor};border:2px solid ${catColor};font-size:11pt`,
+      `background:#F5F3EF;color:#0D0D0D;border:1.5px solid #ccc;font-size:11pt`,
+      `background:#F5F3EF;color:#0D0D0D;border:1.5px solid #ccc;font-size:11pt`,
     ];
-    return `<div style="display:inline-flex;align-items:center;justify-content:center;padding:12px 22px;border-radius:8px;font-family:'DM Sans',sans-serif;font-weight:800;letter-spacing:.8px;text-transform:uppercase;${styles[i]||styles[5]}">${w}</div>`;
+    return `<div style="display:inline-flex;align-items:center;justify-content:center;padding:10px 18px;border-radius:8px;font-family:'DM Sans',sans-serif;font-weight:800;letter-spacing:.8px;text-transform:uppercase;${styles[i]||styles[5]}">${w}</div>`;
   }).join('');
 
   /* How to play 설명 텍스트 */
   const howToPlay=`<div style="background:#F7F6F3;border-radius:10px;padding:12px 16px;margin-bottom:16px;border-left:4px solid ${catColor}">
     <div style="font-family:'DM Sans',sans-serif;font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:${catColor};margin-bottom:5px">🎯 BINGO RULE</div>
     <div style="font-family:'DM Sans',sans-serif;font-size:9.5pt;color:#333;line-height:1.7">
-      Don't just say the word! You must share a <strong>personal story, cringe memory, or real episode</strong> related to the word to claim it.
+      단어만 말하면 무효! 무조건 <strong>자신의 흑역사, 개인적인 경험, 찐 에피소드</strong> 중 하나를 썰로 풀어야 빙고 칸을 채울 수 있습니다.
     </div>
   </div>`;
 
@@ -676,21 +751,22 @@ function downloadPDF(day){
   }
 
   /* Korean format guide */
-  const krFmt=KR_FMT_GUIDE[s2.format]||'팀을 나눠 주어진 주제로 영어로 자유롭게 대화해봐요!';
+  const fObj = getFormats().find(x=>x.name === s2.format);
+  const krFmt = (fObj && fObj.desc) ? fObj.desc : (KR_FMT_GUIDE[s2.format]||'팀을 나눠 주어진 주제로 영어로 자유롭게 대화해봐요!');
 
-  /* Discussion questions — 레이블 크고 질문 명확하게 */
-  const levelLabels=['① Personal','② Social','③ Hypothetical'];
+  /* Discussion questions — 더 가볍고 깔끔한 텍스트 위주 디자인 */
+  const levelLabels=['Q1. Personal','Q2. Social','Q3. Hypothetical'];
   const dqHTML=qs.slice(0,3).map((q,i)=>`
-    <div style="display:flex;gap:14px;align-items:flex-start;padding:10px 0;border-bottom:1px solid #EBEBEA">
-      <div style="flex-shrink:0;padding:3px 10px;border-radius:20px;background:${catColor};font-family:'DM Sans',sans-serif;font-size:7.5pt;font-weight:700;color:#fff;white-space:nowrap;margin-top:2px;letter-spacing:.3px">${levelLabels[i]||`Q${i+1}`}</div>
-      <div style="font-family:'DM Sans',sans-serif;font-size:10.5pt;font-weight:500;line-height:1.55;color:#1a1a1a">${q}</div>
+    <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px">
+      <div style="flex-shrink:0;color:${catColor};font-family:'DM Sans',sans-serif;font-size:9pt;font-weight:800;margin-top:1px">${levelLabels[i]||`Q${i+1}`}</div>
+      <div style="font-family:'DM Sans',sans-serif;font-size:10pt;color:#333;line-height:1.45">${q}</div>
     </div>`).join('');
 
-  /* Expressions — 크고 외우기 쉽게 */
+  /* Expressions — 무거운 블록 대신 깔끔한 글머리 기호 리스트로 변경 */
   const exprHTML=exprs.slice(0,6).map(e=>[
-    '<div style="padding:9px 12px;background:#F7F6F3;border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:9.5pt;font-style:italic;color:#333;border-left:4px solid '+catColor+';line-height:1.45">',
+    '<div style="font-family:\'DM Sans\',sans-serif;font-size:9pt;color:#444;line-height:1.4;display:flex;gap:6px;align-items:flex-start"><div style="color:',catColor,';font-weight:800;margin-top:1px">•</div><div>',
     e,
-    '</div>'
+    '</div></div>'
   ].join('')).join('');
 
   /* Vote tally — 차분한 라벨 디자인 (텍스트 잘림 없음) */
@@ -729,12 +805,12 @@ body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#0D0D0D}
 .footer-brand{font-size:8pt;font-weight:700;letter-spacing:1.5px;color:#555}
 .footer-brand b{color:#ff5555}
 .footer-pg{font-size:10pt;font-weight:700;color:#444}
-.scen{background:#F7F6F3;border-radius:10px;padding:13px 16px;margin-bottom:16px;border-left:5px solid #0D0D0D}
-.scen-label{font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:${catColor};margin-bottom:6px}
-.scen-text{font-size:10.5pt;font-weight:500;line-height:1.65;color:#1a1a1a}
-.vote-bar{display:flex;align-items:center;gap:14px;border:2.5px solid ${catColor};border-radius:10px;padding:11px 16px;margin:14px 0}
+.scen{background:#fdfcfb;border:1px solid #e0dfdb;border-radius:8px;padding:12px 14px;margin-bottom:14px}
+.scen-label{font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:${catColor};margin-bottom:4px}
+.scen-text{font-size:10pt;font-weight:500;line-height:1.6;color:#333}
+.vote-bar{display:flex;align-items:center;gap:12px;background:#faf9f7;border-left:3px solid ${catColor};border-radius:6px;padding:10px 14px;margin:12px 0}
 .vote-label{font-size:8.5pt;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:${catColor};white-space:nowrap;flex-shrink:0}
-.vote-q{font-size:10pt;font-weight:500;flex:1;color:#1a1a1a}
+.vote-q{font-size:9.5pt;font-weight:500;flex:1;color:#1a1a1a}
 .vote-tally{display:flex;gap:6px}
 .tally-box{border:2px solid #0D0D0D;border-radius:6px;padding:4px 12px;font-size:8pt;font-weight:700;text-align:center;min-width:44px}
 @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}@page{size:A4;margin:0}.page{page-break-after:always}}`;
@@ -781,12 +857,12 @@ body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#0D0D0D}
     ${howToPlay}
     <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px">${sparkHTML}</div>
     <div style="font-family:'DM Sans',sans-serif;font-size:8pt;color:#aaa;line-height:1.7;margin-top:4px">
-      → Pick a word → Share a personal story or memory → Let the conversation flow naturally. No right or wrong!
+      → 단어 선택 → 관련된 흑역사나 개인적인 썰 풀기 → 대화의 흐름에 몸을 맡기세요! 정답은 없습니다.
     </div>
   </div>
   <div class="footer">
     <div class="footer-brand">THE<b>BOX</b> ENGLISH NETWORKING</div>
-    <div class="footer-pg">1 / 2</div>
+    <div class="footer-pg">1 / ${s3.left_rules ? '3' : '2'}</div>
   </div>
 </div>
 
@@ -807,9 +883,9 @@ body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#0D0D0D}
     <span class="session-title">${s2.title||''}</span>
   </div>
   <div class="body">
-    <div style="background:#F0EDFF;border-radius:10px;padding:10px 15px;margin-bottom:12px;border-left:4px solid #7F77DD">
-      <div style="font-family:'DM Sans',sans-serif;font-size:7.5pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#7F77DD;margin-bottom:4px">🎮 How to Play</div>
-      <div style="font-family:'DM Sans',sans-serif;font-size:9.5pt;color:#1a1a1a;line-height:1.6">${krFmt}</div>
+    <div style="background:#FFFDF5;border:1px solid #F1EACB;border-radius:8px;padding:10px 14px;margin-bottom:12px;">
+      <div style="font-family:'DM Sans',sans-serif;font-size:8.5pt;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:#B48A00;margin-bottom:2px">💡 HOW TO PLAY</div>
+      <div style="font-family:'DM Sans',sans-serif;font-size:9pt;color:#555;line-height:1.5">${krFmt}</div>
     </div>
     <div class="scen">
       <div class="scen-label">📍 Situation</div>
@@ -828,13 +904,84 @@ body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#0D0D0D}
     </div>
 
     <div class="section-head"><span class="section-label">🗣 Useful Expressions — Use These Today!</span><div class="section-rule"></div></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">${exprHTML}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px">${exprHTML}</div>
   </div>
   <div class="footer">
     <div class="footer-brand">THE<b>BOX</b> ENGLISH NETWORKING</div>
-    <div class="footer-pg">2 / 2</div>
+    <div class="footer-pg">2 / ${s3.left_rules ? '3' : '2'}</div>
   </div>
 </div>
+${(()=>{
+  if(!s3||!s3.left_rules||!s3.left_rules.length) return '';
+  const CC2=catColor;
+  const leftRules=(s3.left_rules||[]).map(function(r){
+    return '<li style="margin-bottom:10px;line-height:1.65">'+r+'</li>';
+  }).join('');
+  const leftTips=(s3.left_tips||[]).map(function(tip){
+    return '<li style="margin-bottom:10px;line-height:1.65">'+tip+'</li>';
+  }).join('');
+  const rightItems=(s3.right_items||[]).map(function(item,idx){
+    return '<div style="border-bottom:1px solid #eaeaea;padding-bottom:14px;margin-bottom:14px">'
+      +'<div style="font-family:\'DM Sans\',sans-serif;font-size:9pt;font-weight:800;background:#FFE500;display:inline-block;padding:2px 8px;border-radius:3px;margin-bottom:7px;color:#111">'+(item.context||'')+'</div>'
+      +'<div style="font-family:\'DM Sans\',sans-serif;font-size:10pt;color:#111;margin-bottom:5px;line-height:1.5;font-weight:500">'+(item.en||'')+'</div>'
+      +'<div style="font-family:\'DM Sans\',sans-serif;font-size:9pt;color:#666;line-height:1.45">'+(item.kr||'')+'</div>'
+      +'</div>';
+  }).join('');
+
+  return '<div class="page" style="display:flex;flex-direction:column;height:297mm;overflow:hidden">'
+    +'<div style="height:6px;background:'+CC2+'"></div>'
+    +'<div style="background:#0D0D0D;padding:12px 22px;display:flex;align-items:center;justify-content:space-between">'
+      +'<div style="font-size:17pt;font-weight:800;letter-spacing:2.5px;color:#fff;font-family:\'DM Sans\',sans-serif">THE<span style="color:#ff5555">BOX</span></div>'
+      +'<div style="text-align:right">'
+        +'<div style="font-size:7.5pt;color:#888;margin-bottom:3px;font-family:\'DM Sans\',sans-serif">'+k+'</div>'
+        +'<div style="display:inline-block;background:'+CC2+';color:#fff;font-size:7pt;font-weight:700;padding:2px 10px;border-radius:4px;letter-spacing:.8px;text-transform:uppercase;font-family:\'DM Sans\',sans-serif">'+(t.category||'')+'</div>'
+      +'</div>'
+    +'</div>'
+    +'<div style="background:#F7F6F3;border-bottom:2px solid #E8E6E0;padding:9px 22px;display:flex;align-items:center;gap:10px">'
+      +'<span style="font-size:10pt;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#0D0D0D;font-family:\'DM Sans\',sans-serif">LEADER\'S CUE</span>'
+      +'<div style="width:1px;height:16px;background:#D0CEC8;margin:0 6px"></div>'
+      +'<span style="font-size:8.5pt;color:#888;font-family:\'DM Sans\',sans-serif">진행자 가이드 — 멤버들에게 보여주지 마세요</span>'
+      +'<div style="margin-left:auto;font-size:8.5pt;font-weight:700;color:#0D0D0D;font-family:\'DM Sans\',sans-serif">'+(t.main_title||'')+'</div>'
+    +'</div>'
+    +'<div style="flex:1;display:grid;grid-template-columns:1fr 1fr;overflow:hidden">'
+
+      /* LEFT COLUMN */
+      +'<div style="padding:22px 24px;border-right:2px solid #EAEAEA;overflow-y:auto">'
+        +'<div style="background:'+CC2+';color:#fff;font-family:\'DM Sans\',sans-serif;font-size:14pt;font-weight:800;padding:11px 16px;border-radius:8px;margin-bottom:18px;letter-spacing:.5px">'
+          +(s2.format||'Activity Guide')
+        +'</div>'
+
+        +'<div style="font-family:\'DM Sans\',sans-serif;font-size:9.5pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#333;margin-bottom:10px">'
+          +(s3.left_title||'게임 진행 순서')
+        +'</div>'
+        +'<ol style="font-family:\'DM Sans\',sans-serif;font-size:9.5pt;color:#222;line-height:1.65;padding-left:20px;margin-bottom:22px">'
+          +leftRules
+        +'</ol>'
+
+        +'<div style="background:#FFE500;display:inline-block;font-family:\'DM Sans\',sans-serif;font-size:9.5pt;font-weight:800;padding:4px 10px;border-radius:4px;margin-bottom:12px;color:#111">'
+          +(s3.left_tips_title||'💡 질문 할 때 팁')
+        +'</div>'
+        +'<ol style="font-family:\'DM Sans\',sans-serif;font-size:9.5pt;color:#222;line-height:1.65;padding-left:20px">'
+          +leftTips
+        +'</ol>'
+      +'</div>'
+
+      /* RIGHT COLUMN */
+      +'<div style="padding:22px 24px;overflow-y:auto">'
+        +'<div style="font-family:\'DM Sans\',sans-serif;font-size:12pt;font-weight:800;color:'+CC2+';margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">'
+          +(s3.right_title||'TOPIC QUESTIONS')
+        +'</div>'
+        +'<div style="font-family:\'DM Sans\',sans-serif;font-size:8pt;color:#aaa;margin-bottom:16px">앞 토픽이 막힐 때 여기서 골라 던지세요</div>'
+        +rightItems
+      +'</div>'
+
+    +'</div>'
+    +'<div style="background:#0D0D0D;padding:7px 22px;display:flex;align-items:center;justify-content:space-between">'
+      +'<div style="font-size:8pt;font-weight:700;letter-spacing:1.5px;color:#555;font-family:\'DM Sans\',sans-serif">THE<b style="color:#ff5555">BOX</b> ENGLISH NETWORKING</div>'
+      +'<div style="font-size:9pt;font-weight:700;color:#444;font-family:\'DM Sans\',sans-serif">3 / 3</div>'
+    +'</div>'
+  +'</div>';
+})()}
 
 <scr'+'ipt>window.onload=()=>window.print()</scr'+'ipt>
 </body></html>`;
@@ -868,7 +1015,7 @@ function renderCal(){
     const isSun=dow===0,isSat=dow===6;
     const cls=['day',isSun?'sun':isSat?'sat':'',has?'has':'',tod?'today':'',isSel?'sel':'',isGen?'busy':''].filter(Boolean).join(' ');
     const dc=t?(CAT_COLORS[t.category]||'#888'):'';
-    const fmtShort=has?(t.session2?.format||'').replace('Agree/Disagree Spectrum','Spectrum').replace('Would You Rather','W.Y.R').replace('Unpopular Opinion','Unpopular').replace('Survival Scenario','Survival').replace('Two Truths One Lie','2 Truths 1 Lie').replace('Deal or No Deal','Deal/No Deal').replace('This or That Blitz','This/That').replace('Confession Box','Confession').replace('Headline Writer','Headline').replace('Roast and Toast','Roast/Toast'):'';
+    const fmtShort=has?(t.session2?.format||'').replace('Agree/Disagree Spectrum','Spectrum').replace('Would You Rather','W.Y.R').replace('Unpopular Opinion','Unpopular').replace('Survival Scenario','Survival').replace('Two Truths One Lie','2 Truths 1 Lie').replace('Deal or No Deal','Deal/No Deal').replace('This or That Blitz','This/That').replace('Confession Box','Confession').replace('Headline Writer','Headline').replace('Roast and Toast','Roast/Toast').replace('Minefield Talk Show','Minefield').replace('The Blind Director','Blind Dir.'):'';
     cells+=`<div class="${cls}" data-d="${d}">`
       +`<div class="dn">${d}</div>`
       +(tod?`<div class="today-badge">TODAY</div>`:'')
@@ -902,7 +1049,48 @@ function renderRight(){
     return;
   }
   const s1=t.session1||{},s2=t.session2||{},cc=CAT_COLORS[t.category]||'#888';
-  panel.innerHTML=`<div class="r-body"><div class="date-row"><div class="date-big">${String(selected).padStart(2,'0')}</div><div style="display:flex;flex-direction:column;gap:3px"><div class="date-mo">${MONTHS[month]} ${year}</div><div class="cpill" style="background:${cc}">${t.category||''}</div></div><div class="fmtpill"><div class="fmtdot"></div>${s2.format||''}</div></div><div class="r-title">${t.main_title||''}</div><div class="r-angle">${t.korean_angle||''}</div><div class="src-chip">소스: ${t.source_name||''}</div><div class="sec"><div class="sec-l">1ST — Ice Breaking</div><div class="sec-line"></div></div>${(s1.icebreakers||[]).map((q,i)=>`<div class="sq"><span class="sq-q">Q${i+1}</span><span>${q}</span></div>`).join('')}<div class="sec" style="margin-top:10px"><div class="sec-l">Spark Words — ${s1.spark_title||''}</div><div class="sec-line"></div></div><div class="bingo" style="grid-template-columns:repeat(3,1fr);gap:3px">${(s1.spark_words||[]).map(w=>`<div class="bc" style="font-size:10px;padding:7px 4px;letter-spacing:.5px">${w}</div>`).join('')}</div><div class="sec"><div class="sec-l">2ND — ${s2.format||''}</div><div class="sec-line"></div></div><div style="font-size:12px;font-weight:600;margin-bottom:4px">${s2.title||''} <span style="font-size:10px;color:var(--muted);font-weight:400">${s2.subtitle_kr||''}</span></div><div class="scen-box">${s2.scenario||''}</div><div style="font-size:9px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:5px">Useful Expressions</div>${(s2.expressions||[]).map(e=>`<div class="expr">${e}</div>`).join('')}</div><div class="r-actions"><button class="btn-dl" onclick="window._tbPDF(${selected})">↓  A4 PDF 인쇄 / 다운로드</button><div class="btn-row"><button class="btn-s" onclick="window._tbGen(${selected})" ${loading?'disabled':''}>↺ 재생성</button><button class="btn-s" onclick="window._tbDel(${selected})">✕ 삭제</button></div></div>`;
+  const fObj = getFormats().find(x=>x.name === s2.format);
+  const krFmt = (fObj && fObj.desc) ? fObj.desc : (KR_FMT_GUIDE[s2.format]||'주제에 맞게 자유롭게 대화하세요!');
+  panel.innerHTML=`<div class="r-body">
+    <div class="date-row"><div class="date-big">${String(selected).padStart(2,'0')}</div><div style="display:flex;flex-direction:column;gap:3px"><div class="date-mo">${MONTHS[month]} ${year}</div><div class="cpill" style="background:${cc}">${t.category||''}</div></div><div class="fmtpill"><div class="fmtdot"></div>${s2.format||''}</div></div>
+    <div class="r-title">${t.main_title||''}</div>
+    <div class="r-angle">${t.korean_angle||''}</div>
+    <div class="sec"><div class="sec-l">1ST — Ice Breaking</div><div class="sec-line"></div></div>
+    ${(s1.icebreakers||[]).map((q,i)=>`<div class="sq"><span class="sq-q">Q${i+1}</span><span>${q}</span></div>`).join('')}
+    <div class="sec" style="margin-top:10px"><div class="sec-l">Spark Words — ${s1.spark_title||''}</div><div class="sec-line"></div></div>
+    <div class="bingo" style="grid-template-columns:repeat(3,1fr);gap:3px">${(s1.spark_words||[]).map(w=>`<div class="bc" style="font-size:10px;padding:7px 4px;letter-spacing:.5px">${w}</div>`).join('')}</div>
+    
+    <div class="sec"><div class="sec-l">2ND — ${s2.format||''}</div><div class="sec-line"></div></div>
+    
+    <!-- 한국어 룰 설명 (추가됨) -->
+    <div style="background:#FFFDF5; border:1px solid #F1EACB; border-radius:8px; padding:10px; margin-bottom:12px;">
+      <div style="font-size:10.5px; font-weight:800; color:#B48A00; margin-bottom:3px; letter-spacing:0.5px">💡 HOW TO PLAY</div>
+      <div style="font-size:11px; color:#555; line-height:1.5">${krFmt}</div>
+    </div>
+    
+    <div style="font-size:12px;font-weight:600;margin-bottom:4px">${s2.title||''} <span style="font-size:10px;color:var(--muted);font-weight:400">${s2.subtitle_kr||''}</span></div>
+    <div class="scen-box">${s2.scenario||''}</div>
+    
+    <!-- 어휘 섹션 아코디언 (접어두기) -->
+    <details style="background:#F8F9FA; border:1px solid #EAEAEA; border-radius:8px; padding:10px 12px; margin-bottom:10px; cursor:pointer">
+      <summary style="font-size:11px; font-weight:700; color:#333; list-style:none; display:flex; justify-content:space-between; align-items:center;">
+        <span>🔥 찐 원어민 어휘 (Nutritious Expressions)</span>
+        <span style="font-size:9px; color:#888;">클릭해서 보기 ▼</span>
+      </summary>
+      <div style="margin-top:10px; padding-top:10px; border-top:1px dashed #DDD; display:flex; flex-direction:column; gap:6px;">
+        ${(s2.expressions||[]).map(e=>`<div style="font-size:11px; line-height:1.45; color:#444;">• ${e}</div>`).join('')}
+      </div>
+    </details>
+    
+    </div><div class="r-actions"><button class="btn-dl" onclick="window._tbPDF(${selected})">↓  A4 PDF 인쇄 / 다운로드</button>
+    <div class="btn-row" style="margin-top:8px">
+      <select id="regen-fmt" style="flex:1; padding:8px; border-radius:8px; border:1px solid #EAEAEA; font-family:inherit; font-size:11px; font-weight:700; outline:none; cursor:pointer; background:#F8F9FA; color:#333;" ${loading?'disabled':''}>
+        <option value="">🎲 랜덤 포맷</option>
+        ${getFormats().filter(f=>f.on).map(f=>`<option value="${f.name}">${f.name}</option>`).join('')}
+      </select>
+      <button class="btn-s" onclick="window._tbGen(${selected})" ${loading?'disabled':''} style="flex:1">↺ 재생성</button>
+      <button class="btn-s" onclick="window._tbDel(${selected})" style="flex:0.6;background:#fff;border:1px solid #EAEAEA;color:#888">✕ 삭제</button>
+    </div></div>`;
 }
 
 function renderSettings(){
@@ -926,9 +1114,54 @@ function updateNavKey(){
   document.getElementById('key-lbl').textContent=k?'API 키 등록됨':'API 키 입력';
 }
 
-window._tbGen=d=>generateTopic(d);
+window._tbGen=d=>{
+  const s=document.getElementById('regen-fmt');
+  generateTopic(d, s && s.value ? s.value : undefined);
+};
 window._tbDel=d=>{if(!confirm('삭제?'))return;const t=getTopics();delete t[topicKey(d)];saveTopics(t);renderCal();renderRight();showToast('삭제됨')};
 window._tbPDF=d=>downloadPDF(d);
+
+async function aiUpdateFormats(){
+  const apiKey=getApiKey();
+  if(!apiKey){showToast('API 키를 먼저 입력해주세요');return;}
+  const btn = document.getElementById('ai-fmt-btn');
+  btn.disabled = true; btn.textContent = '생성 중...';
+  try {
+    const prompt = `Invent 3 completely new, highly engaging networking conversation/activity formats for Korean 20-30s. Similar to Mafia Game, Hot Seat, Speed Debate. Return ONLY a JSON array. Format: [{ "name": "English Name", "desc": "직관적이고 찰진 한국어 룰 설명 (1-2문장, How to play)" }]`;
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1000,messages:[{role:'user',content:prompt}]})
+    });
+    if(!res.ok) throw new Error('API Error');
+    const raw=(await res.json()).content[0].text.trim().replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
+    const newFmts = JSON.parse(raw);
+    let fmts = getFormats(), turnedOff = 0;
+    for(let i=fmts.length-1; i>=0; i--){ if(fmts[i].on){ fmts[i].on=false; turnedOff++; } if(turnedOff>=3) break; }
+    newFmts.forEach(f => fmts.unshift({id:'f'+Date.now()+Math.floor(Math.random()*100), name:f.name, desc:f.desc, on:true}));
+    saveFormats(fmts); renderSettings(); showToast(`신규 액티비티 ${newFmts.length}개 추가 및 기존 3개 비활성화!`);
+  } catch(e){ console.error(e); showToast('오류 발생: '+e.message); } finally { btn.disabled = false; btn.textContent = '🤖 AI 신규 액티비티 생성'; }
+}
+
+async function aiUpdateSources(){
+  const apiKey=getApiKey();
+  if(!apiKey){showToast('API 키를 먼저 입력해주세요');return;}
+  const btn = document.getElementById('ai-src-btn');
+  btn.disabled = true; btn.textContent = '가져오는 중...';
+  try {
+    const prompt = `Korean 20-30s English networking club source ideas. Invent 5 completely fresh, highly relatable, modern trending topics/angles (e.g. recent dating trends, office life annoyances, money saving memes). Return ONLY a JSON array. Format: [{ "name": "Short Name (e.g. 탕후루 다이어트)", "angle": "Specific angle to debate (e.g. 식비 절약하려고 삼각김밥 먹으면서 탕후루는 4천원 주고 사먹는 심리)" }]`;
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1000,messages:[{role:'user',content:prompt}]})
+    });
+    if(!res.ok) throw new Error('API Error');
+    const raw=(await res.json()).content[0].text.trim().replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
+    const newSrcs = JSON.parse(raw);
+    let srcs = getSources(), turnedOff = 0;
+    for(let i=srcs.length-1; i>=0; i--){ if(srcs[i].on){ srcs[i].on=false; turnedOff++; } if(turnedOff>=5) break; }
+    newSrcs.forEach(s => srcs.unshift({id:'s'+Date.now()+Math.floor(Math.random()*100), name:s.name, angle:s.angle, on:true}));
+    saveSources(srcs); renderSettings(); showToast(`최신 소스 ${newSrcs.length}개 추가 및 기존 5개 비활성화!`);
+  } catch(e){ console.error(e); showToast('오류 발생: '+e.message); } finally { btn.disabled = false; btn.textContent = '🤖 AI 최신 트렌드 소스 수집'; }
+}
 
 document.addEventListener('DOMContentLoaded',()=>{
   const now=new Date();year=now.getFullYear();month=now.getMonth();
