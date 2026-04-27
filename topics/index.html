@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TheBox — Topic Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--red:#CC0014;--red-h:#a8000f;--black:#0D0D0D;--off:#F1EFE9;--border:#E2DFD8;--border-md:#CCCAC4;--muted:#888;--card:#FFFFFF;--surf:#F8F7F4;--text:#0D0D0D;--text2:#555;--text3:#999}
+html{font-size:14px}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--off);color:var(--text);min-height:100vh}
+nav{height:48px;background:var(--black);display:flex;align-items:center;padding:0 20px;gap:12px;position:sticky;top:0;z-index:200}
+.logo{font-size:17px;font-weight:700;letter-spacing:2px;color:#fff;white-space:nowrap}
+.logo span{color:#ff5555}
+.nav-tag{font-size:10px;color:#444;letter-spacing:1.5px;text-transform:uppercase;font-weight:500}
+.nav-sp{flex:1}
+.nav-tabs{display:flex;gap:2px}
+.nav-tab{padding:5px 12px;font-size:11px;font-weight:500;color:#666;background:transparent;border:none;border-radius:5px;cursor:pointer;transition:all .15s}
+.nav-tab:hover{color:#aaa;background:#1a1a1a}
+.nav-tab.active{color:#fff;background:#222}
+.key-btn{font-size:11px;color:#666;background:#1a1a1a;border:1px solid #2a2a2a;border-radius:6px;padding:5px 10px;cursor:pointer;display:flex;align-items:center;gap:5px}
+.key-btn:hover{border-color:#444}
+.key-dot{width:6px;height:6px;border-radius:50%;background:#333;flex-shrink:0}
+.key-dot.on{background:#22c55e}
+.view{display:none}
+.view.active{display:block}
+.cal-layout{display:grid;grid-template-columns:1fr 320px;min-height:calc(100vh - 48px)}
+.cal-left{padding:20px;border-right:1px solid var(--border);overflow-y:auto}
+.cal-head{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.cal-month-name{font-size:18px;font-weight:600}
+.cal-year{font-size:13px;color:var(--muted);margin-left:2px}
+.cal-nav{width:28px;height:28px;border:1px solid var(--border);background:var(--card);border-radius:7px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--text)}
+.cal-nav:hover{background:var(--surf)}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+.stat-c{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:9px 11px}
+.stat-l{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:2px}
+.stat-v{font-size:19px;font-weight:600}
+.stat-v.r{color:var(--red)}
+.dow-row{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:3px}
+.dow{font-size:9px;font-weight:600;color:var(--muted);text-align:center;padding:2px 0;text-transform:uppercase;letter-spacing:.5px}
+.grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
+.day{border-radius:8px;border:1px solid transparent;background:transparent;cursor:pointer;padding:5px 4px 3px;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:56px;transition:background .1s,border-color .1s;position:relative;overflow:hidden}
+.day:hover{background:var(--card);border-color:var(--border)}
+.day.empty{pointer-events:none;visibility:hidden}
+.day.has{background:var(--card);border-color:var(--border)}
+.day.has:hover{border-color:var(--border-md)}
+.day.today{border-color:var(--red)!important;background:var(--card)}
+.day.sel{background:var(--black)!important;border-color:var(--black)!important}
+.day.busy{opacity:.55;animation:blink 1.2s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:.55}50%{opacity:1}}
+.dn{font-size:11px;font-weight:600;color:var(--text);line-height:1}
+.day.today .dn{color:var(--red)}
+.day.sel .dn{color:#fff}
+.ddot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.dtxt{font-size:7px;color:var(--muted);text-align:center;line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;width:100%}
+.day.sel .dtxt{color:rgba(255,255,255,.45)}
+.dfmt{position:absolute;bottom:2px;right:3px;font-size:6px;font-weight:600;color:var(--text3);letter-spacing:.3px;text-transform:uppercase}
+.day.sel .dfmt{color:rgba(255,255,255,.25)}
+.gen-all{display:block;width:100%;margin-top:12px;padding:11px;background:var(--black);color:#fff;border:none;border-radius:9px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;letter-spacing:.3px;cursor:pointer}
+.gen-all:hover{background:#222}
+.gen-all:disabled{background:#aaa;cursor:not-allowed}
+.right-p{background:var(--card);display:flex;flex-direction:column;min-height:calc(100vh - 48px)}
+.r-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--muted);padding:24px;text-align:center}
+.r-empty-ico{font-size:32px;opacity:.18;line-height:1}
+.r-empty p{font-size:12px;line-height:1.7}
+.r-loading{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px}
+.spin{width:22px;height:22px;border:2px solid var(--border);border-top-color:var(--black);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.load-s{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
+.r-body{flex:1;overflow-y:auto;padding:16px}
+.date-row{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.date-big{font-size:30px;font-weight:700;color:var(--red);line-height:1}
+.date-mo{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px}
+.cpill{display:inline-block;color:#fff;font-size:9px;font-weight:600;padding:2px 8px;border-radius:99px;letter-spacing:.7px;text-transform:uppercase}
+.fmtpill{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--border);border-radius:99px;padding:3px 9px;font-size:10px;color:var(--muted);margin-left:auto}
+.fmtdot{width:5px;height:5px;border-radius:50%;background:var(--red)}
+.r-title{font-size:15px;font-weight:600;line-height:1.3;margin-bottom:6px}
+.r-angle{font-size:11px;color:var(--muted);line-height:1.65;border-left:2px solid var(--border);padding-left:8px;margin-bottom:12px;font-style:italic}
+.src-chip{display:inline-block;font-size:9px;background:var(--surf);border:1px solid var(--border);border-radius:99px;padding:2px 9px;color:var(--muted);margin-bottom:10px}
+.sec{display:flex;align-items:center;gap:8px;margin:12px 0 7px}
+.sec-l{font-size:9px;font-weight:600;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase;white-space:nowrap}
+.sec-line{flex:1;height:1px;background:var(--border)}
+.bingo{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin-bottom:10px}
+.bc{border:1px solid var(--border);border-radius:5px;padding:5px 3px;text-align:center;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.2px;color:var(--text);background:var(--surf)}
+.sq{display:flex;gap:7px;align-items:flex-start;padding:5px 0;border-bottom:1px solid var(--border);font-size:11px;line-height:1.55}
+.sq-q{font-size:8px;font-weight:600;color:var(--red);white-space:nowrap;padding-top:1px;letter-spacing:.3px}
+.scen-box{font-size:11px;color:var(--text2);line-height:1.65;padding:9px 11px;background:var(--surf);border-radius:8px;margin-bottom:10px;border-left:2px solid var(--border-md)}
+.expr{font-size:11px;font-style:italic;padding:4px 0 4px 9px;border-left:1.5px solid var(--border);margin-bottom:4px;line-height:1.45}
+.r-actions{padding:13px 16px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:7px}
+.btn-dl{width:100%;padding:12px;background:var(--red);color:#fff;border:none;border-radius:9px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer}
+.btn-dl:hover{background:var(--red-h)}
+.btn-dl:disabled{background:var(--border-md);cursor:not-allowed}
+.btn-row{display:flex;gap:6px}
+.btn-s{flex:1;padding:9px;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:500;cursor:pointer}
+.btn-s:hover{background:var(--surf)}
+.btn-s:disabled{opacity:.4;cursor:not-allowed}
+.settings-wrap{max-width:760px;margin:0 auto;padding:24px 20px}
+.settings-wrap h2{font-size:17px;font-weight:600;margin-bottom:4px}
+.s-sub{font-size:12px;color:var(--muted);margin-bottom:24px;line-height:1.6}
+.set-sec{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:16px}
+.set-sec h3{font-size:13px;font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.set-badge{font-size:9px;font-weight:600;background:var(--black);color:#fff;padding:2px 7px;border-radius:99px;letter-spacing:.5px;text-transform:uppercase}
+.set-desc{font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:14px}
+.items-list{display:flex;flex-direction:column;gap:4px;margin-bottom:10px;max-height:280px;overflow-y:auto}
+.item-row{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surf);border-radius:7px;border:1px solid var(--border)}
+.item-label{flex:1;font-size:12px;font-weight:500}
+.item-sub{font-size:10px;color:var(--muted)}
+.item-del{width:22px;height:22px;border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:14px;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.item-del:hover{color:var(--red)}
+.item-tog{width:22px;height:22px;border:none;background:transparent;cursor:pointer;font-size:13px;border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--border-md)}
+.item-tog:hover{color:var(--muted)}
+.item-tog.on{color:#22c55e}
+.add-row{display:flex;gap:7px;align-items:stretch}
+.add-inp{flex:1;padding:8px 11px;border:1px solid var(--border);border-radius:7px;font-size:12px;font-family:'DM Sans',sans-serif;color:var(--text);background:var(--card);outline:none;min-width:0}
+.add-inp:focus{border-color:var(--black)}
+.add-inp.wide{flex:2}
+.add-btn{padding:8px 14px;background:var(--black);color:#fff;border:none;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.add-btn:hover{background:#222}
+.tip{font-size:10px;color:var(--text3);margin-top:8px;line-height:1.6;font-style:italic}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:999;backdrop-filter:blur(3px)}
+.modal{background:var(--card);border-radius:14px;padding:28px;width:420px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal h3{font-size:15px;font-weight:600;margin-bottom:8px}
+.modal p{font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:18px}
+.modal input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Mono',monospace;color:var(--text);background:var(--card);outline:none;margin-bottom:10px}
+.modal input:focus{border-color:var(--black)}
+.modal-btn{width:100%;padding:12px;background:var(--black);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif}
+.modal-link{display:block;text-align:center;margin-top:12px;font-size:11px;color:var(--muted)}
+.modal-link a{color:var(--black);font-weight:600}
+.toast-el{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--black);color:#fff;padding:10px 20px;border-radius:99px;font-size:11px;font-weight:500;z-index:9999;animation:tin .25s ease;white-space:nowrap;pointer-events:none;box-shadow:0 4px 20px rgba(0,0,0,.2)}
+@keyframes tin{from{opacity:0;transform:translateX(-50%) translateY(6px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">THE<span>BOX</span></div>
+  <div class="nav-tag">Topic Generator</div>
+  <div class="nav-sp"></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" data-view="calendar">달력</button>
+    <button class="nav-tab" data-view="settings">설정</button>
+  </div>
+  <button class="key-btn" id="key-btn">
+    <div class="key-dot" id="key-dot"></div>
+    <span id="key-lbl">API 키 입력</span>
+  </button>
+</nav>
+
+<div class="view active" id="view-calendar">
+  <div class="cal-layout">
+    <div class="cal-left">
+      <div class="cal-head">
+        <span class="cal-month-name" id="m-name"></span>
+        <span class="cal-year" id="m-year"></span>
+        <div style="flex:1"></div>
+        <button class="cal-nav" id="prev">&#8592;</button>
+        <button class="cal-nav" id="next" style="margin-left:5px">&#8594;</button>
+      </div>
+      <div class="stats-row">
+        <div class="stat-c"><div class="stat-l">생성 완료</div><div class="stat-v r" id="s-done">0</div></div>
+        <div class="stat-c"><div class="stat-l">전체 일수</div><div class="stat-v" id="s-total">0</div></div>
+        <div class="stat-c"><div class="stat-l">달성률</div><div class="stat-v" id="s-pct">0%</div></div>
+        <div class="stat-c"><div class="stat-l">포맷 종류</div><div class="stat-v" id="s-fmts">0</div></div>
+      </div>
+      <div class="dow-row" id="dows"></div>
+      <div class="grid" id="cal-grid"></div>
+      <button class="gen-all" id="gen-all-btn">✦ 전체 생성</button>
+    </div>
+    <div class="right-p" id="right-p"></div>
+  </div>
+</div>
+
+<div class="view" id="view-settings">
+  <div class="settings-wrap">
+    <h2>설정</h2>
+    <p class="s-sub">포맷과 소스를 직접 추가·삭제·수정할 수 있어요. 새 포맷을 추가하면 AI가 그 방식에 맞게 토픽을 자동 구성합니다.</p>
+    <div class="set-sec">
+      <h3>액티비티 포맷 <span class="set-badge" id="fmt-cnt-badge">0</span></h3>
+      <p class="set-desc">● 활성화된 포맷만 랜덤 선택됩니다. 새 포맷을 추가하면 다음 생성부터 바로 반영돼요.</p>
+      <div class="items-list" id="fmt-list"></div>
+      <div class="add-row">
+        <input class="add-inp wide" id="fmt-inp" placeholder="새 포맷 이름 (예: Hot Seat, Story Chain...)">
+        <button class="add-btn" id="fmt-add-btn">+ 추가</button>
+      </div>
+      <p class="tip">💡 추가 가능: Hot Seat, Two Truths One Lie, Fishbowl, Role Reversal, Deal or No Deal, Speed Debate...</p>
+    </div>
+    <div class="set-sec">
+      <h3>소스 풀 <span class="set-badge" id="src-cnt-badge">0</span></h3>
+      <p class="set-desc">매 생성 시 랜덤으로 3개 선택. 최신 뉴스레터·유튜브 주제를 직접 추가할수록 토픽이 풍부해져요.</p>
+      <div class="items-list" id="src-list"></div>
+      <div class="add-row">
+        <input class="add-inp" id="src-name-inp" placeholder="소스명">
+        <input class="add-inp wide" id="src-angle-inp" placeholder="이슈·각도 (예: 요즘 MZ 직장 문화 변화)">
+        <button class="add-btn" id="src-add-btn">+ 추가</button>
+      </div>
+      <p class="tip">💡 뉴닉 최신 뉴스레터, 유튜브 영상 주제, SNS 핫이슈를 직접 붙여넣어 주세요.</p>
+    </div>
+    <div class="set-sec">
+      <h3>Anthropic API 키</h3>
+      <p class="set-desc">Claude API 키를 입력하면 토픽 자동 생성이 활성화돼요. 키는 이 브라우저에만 저장됩니다.</p>
+      <div class="add-row">
+        <input class="add-inp wide" id="api-key-inp" type="password" placeholder="sk-ant-...">
+        <button class="add-btn" id="api-save-btn">저장</button>
+      </div>
+      <p class="tip">💡 키 발급: <a href="https://console.anthropic.com" target="_blank" style="color:var(--black);font-weight:600">console.anthropic.com</a> → API Keys → Create Key</p>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="modal" style="display:none">
+  <div class="modal">
+    <h3>🔑 Anthropic API 키 입력</h3>
+    <p>Claude API로 매일 새로운 토픽을 자동 생성합니다.<br>키는 <strong>이 브라우저에만</strong> 저장되고 외부로 전송되지 않아요.</p>
+    <input type="password" id="modal-key-inp" placeholder="sk-ant-...">
+    <button class="modal-btn" id="modal-save">저장하고 시작하기</button>
+    <p class="modal-link">키 발급: <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> → API Keys → Create Key</p>
+  </div>
+</div>
+
+<script>
+const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DOWS_L=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const CAT_COLORS={Money:'#E24B4A',Work:'#378ADD',Love:'#D4537E',Food:'#EF9F27',Travel:'#1D9E75',Health:'#639922',AI:'#7F77DD',SNS:'#BA7517',Lifestyle:'#3B6D11','Korea Trend':'#D85A30',Friendship:'#185FA5',Community:'#993556'};
+
+const DEFAULT_FORMATS=[
+  {id:'f1',name:'Advice Lab',desc:'Angel / Judge / Joker 역할',on:true},
+  {id:'f2',name:'Debate',desc:'A vs B 팀 토론',on:true},
+  {id:'f3',name:'Ranking Game',desc:'선택지 순위 매기기',on:true},
+  {id:'f4',name:'Shopping Game',desc:'예산 배분 게임',on:true},
+  {id:'f5',name:'Survival Scenario',desc:'가상 상황 생존',on:true},
+  {id:'f6',name:'Unpopular Opinion',desc:'반전 의견 공유',on:true},
+  {id:'f7',name:'Would You Rather',desc:'양자택일 딜레마',on:true},
+  {id:'f8',name:'Hot Seat',desc:'한 명에게 집중 질문',on:true},
+  {id:'f9',name:'Two Truths One Lie',desc:'진실 2개 거짓 1개',on:true},
+  {id:'f10',name:'Story Chain',desc:'릴레이 스토리',on:true},
+  {id:'f11',name:'Agree/Disagree Spectrum',desc:'동의 스펙트럼',on:true},
+  {id:'f12',name:'Speed Debate',desc:'30초 빠른 찬반',on:true},
+  {id:'f13',name:'Fishbowl',desc:'안팎 그룹 토론',on:false},
+  {id:'f14',name:'Role Reversal',desc:'반대 입장 설득',on:false},
+  {id:'f15',name:'Deal or No Deal',desc:'조건 협상 게임',on:false},
+];
+
+const DEFAULT_SOURCES=[
+  {id:'s1',name:'뉴닉',angle:'MZ세대 야근 vs 칼퇴 직장 문화',on:true},
+  {id:'s2',name:'뉴닉',angle:'혼밥·혼술 문화 혼자가 편한 사람들',on:true},
+  {id:'s3',name:'슈카월드',angle:'배달앱 수수료 올라도 계속 쓰는 이유',on:true},
+  {id:'s4',name:'슈카월드',angle:'2030 내집마련 포기 vs 도전',on:true},
+  {id:'s5',name:'슈카월드',angle:'주식 vs 부동산 vs 그냥 통장',on:true},
+  {id:'s6',name:'유튜브 트렌드',angle:'숏폼 중독 집중력 저하',on:true},
+  {id:'s7',name:'인스타 트렌드',angle:'SNS 잘 사는 척 언팔 욕구',on:true},
+  {id:'s8',name:'직장인 커뮤니티',angle:'직장 동료와 친구 사이 선긋기',on:true},
+  {id:'s9',name:'커뮤니티',angle:'구독 서비스 해지 못 하는 이유',on:true},
+  {id:'s10',name:'연애 트렌드',angle:'연인 폰 비번 신뢰 vs 프라이버시',on:true},
+  {id:'s11',name:'연애 트렌드',angle:'데이트 통장 vs 각자 내기',on:true},
+  {id:'s12',name:'맛집 유튜브',angle:'점심 메뉴 혼자 결정 못 하는 이유',on:true},
+  {id:'s13',name:'직장인 커뮤니티',angle:'재택근무 vs 사무실 출근',on:true},
+  {id:'s14',name:'링크드인',angle:'N잡러 부업이 본업보다 재밌다',on:true},
+  {id:'s15',name:'헬스 유튜브',angle:'헬스장 끊고 실제로 다닌 기간 고백',on:true},
+  {id:'s16',name:'테크 뉴스',angle:'AI가 내 직업 뺏을 것 같아',on:true},
+  {id:'s17',name:'당근마켓',angle:'중고거래 신기한 경험',on:true},
+  {id:'s18',name:'웰니스 트렌드',angle:'수면 루틴 챙기기 vs 그냥 쓰러져 자기',on:true},
+  {id:'s19',name:'소비 트렌드',angle:'명품 vs 가성비 어디 돈 쓰는 게 맞아',on:true},
+  {id:'s20',name:'틱톡 트렌드',angle:'챌린지 문화 안 하면 소외감',on:true},
+  {id:'s21',name:'직장인 커뮤니티',angle:'회식 강요 아직도 있어',on:true},
+  {id:'s22',name:'연애 트렌드',angle:'소개팅 앱 실제 만남으로 이어진 경험',on:true},
+  {id:'s23',name:'커뮤니티',angle:'친구한테 돈 빌려줬다 어떻게 됐어',on:true},
+  {id:'s24',name:'SNS 트렌드',angle:'온라인 친구 vs 오프라인 친구',on:true},
+  {id:'s25',name:'편의점 트렌드',angle:'편의점 신상 꼭 사보는 사람',on:true},
+];
+
+const FMT_GUIDE={
+  'Advice Lab':'roles: ["THE ANGEL","THE JUDGE","THE JOKER"]',
+  'Debate':'roles: 팀 이름 2개',
+  'Ranking Game':'roles: 순위 매길 선택지 5개 이상',
+  'Shopping Game':'roles: 플레이어 이름 2개',
+  'Survival Scenario':'roles: 생존 전략/팀 2개',
+  'Unpopular Opinion':'roles: ["Popular View","My Real Take"]',
+  'Would You Rather':'roles: 선택지 2개',
+  'Hot Seat':'roles: ["The Hot Seat","The Questioners"]',
+  'Two Truths One Lie':'roles: ["The Speaker","The Guessers"]',
+  'Story Chain':'roles: ["Team A","Team B"]',
+  'Agree/Disagree Spectrum':'roles: ["Strongly Agree","Strongly Disagree"]',
+  'Speed Debate':'roles: ["PRO","CON"]',
+  'Fishbowl':'roles: ["Inner Circle","Outer Circle"]',
+  'Role Reversal':'roles: ["Reversed A","Reversed B"]',
+  'Deal or No Deal':'roles: ["The Dealer","The Challenger"]',
+};
+
+let year,month,selected=null,loading=false,genDay=null;
+
+function getTopics(){try{return JSON.parse(localStorage.getItem('tb_topics_v5')||'{}')}catch{return{}}}
+function saveTopics(t){localStorage.setItem('tb_topics_v5',JSON.stringify(t))}
+function getFormats(){try{return JSON.parse(localStorage.getItem('tb_fmts_v2')||'null')||DEFAULT_FORMATS}catch{return DEFAULT_FORMATS}}
+function saveFormats(f){localStorage.setItem('tb_fmts_v2',JSON.stringify(f))}
+function getSources(){try{return JSON.parse(localStorage.getItem('tb_srcs_v2')||'null')||DEFAULT_SOURCES}catch{return DEFAULT_SOURCES}}
+function saveSources(s){localStorage.setItem('tb_srcs_v2',JSON.stringify(s))}
+function getApiKey(){return localStorage.getItem('tb_api_key_v2')||''}
+function saveApiKey(k){localStorage.setItem('tb_api_key_v2',k)}
+
+let toastTimer=null;
+function showToast(msg){
+  document.querySelectorAll('.toast-el').forEach(e=>e.remove());
+  if(toastTimer)clearTimeout(toastTimer);
+  const el=document.createElement('div');el.className='toast-el';el.textContent=msg;
+  document.body.appendChild(el);
+  toastTimer=setTimeout(()=>el.remove(),2800);
+}
+
+function topicKey(d){return`${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`}
+
+async function generateTopic(day){
+  const apiKey=getApiKey();
+  if(!apiKey){
+    document.getElementById('modal').style.display='flex';
+    setTimeout(()=>document.getElementById('modal-key-inp').focus(),50);
+    return;
+  }
+  const fmts=getFormats().filter(f=>f.on);
+  const srcs=getSources().filter(s=>s.on);
+  if(!fmts.length){showToast('활성 포맷 없음 — 설정에서 켜주세요');return}
+
+  const k=topicKey(day);
+  loading=true;genDay=day;selected=day;
+  renderCal();renderRight();
+
+  const fmt=fmts[Math.floor(Math.random()*fmts.length)].name;
+  const picked=[...srcs].sort(()=>Math.random()-.5).slice(0,3);
+  const tops=getTopics();
+  const rcats=[];
+  for(let i=1;i<=7;i++){
+    const dd=new Date(year,month,day);dd.setDate(dd.getDate()-i);
+    const rk=`${dd.getFullYear()}-${String(dd.getMonth()+1).padStart(2,'0')}-${String(dd.getDate()).padStart(2,'0')}`;
+    if(tops[rk]?.category)rcats.push(tops[rk].category);
+  }
+  const avoid=[...new Set(rcats)];
+  const avoidS=avoid.length?`\n카테고리 피하기: ${avoid.join(',')}`:'';
+  const srcBlock=picked.map(s=>`[${s.name}] "${s.angle}"`).join(' / ');
+  const fmtHint=FMT_GUIDE[fmt]||`roles: 역할 2개`;
+
+  const prompt=`TheBox 영어회화 네트워킹 클럽 토픽 생성.
+날짜: ${MONTHS[month]} ${day}, ${year} | 포맷: ${fmt}${avoidS}
+소스: ${srcBlock}
+철학: English NETWORKING (study 아님). 한국말 30분+ 수다 가능. 구체적 숫자/장면 필수. 빙고: 초쉬운 일상어. 학술어 금지.
+포맷가이드: ${fmtHint}
+JSON만 반환(코드블록 없이): {"main_title":"영어 최대8단어","category":"Money|Work|Love|Food|Travel|Health|AI|SNS|Lifestyle|Korea Trend|Friendship|Community","korean_angle":"수다이유 1-2문장","source_name":"${picked[0]?.name||''}","session1":{"bingo_title":"빙고제목","bingo_words":["w1","w2","w3","w4","w5","w6","w7","w8","w9"],"small_talk":["q1","q2","q3"]},"session2":{"format":"${fmt}","title":"2부제목","subtitle_kr":"부제","scenario":"영어상황 2-3문장","roles":["r1","r2"],"questions":["q1","q2","q3"],"vote":"투표질문","expressions":["I get your point, but...","e2","e3","e4","e5"]}}`;
+
+  const steps=['소스 분석 중...','트렌드 파악 중...',`${fmt} 생성 중...`,'마무리 중...'];
+  let si=0;
+  const stepTimer=setInterval(()=>{const el=document.getElementById('load-step');if(el)el.textContent=steps[Math.min(si++,steps.length-1)];},700);
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key':apiKey,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1600,messages:[{role:'user',content:prompt}]})
+    });
+    if(!res.ok){const e=await res.json();throw new Error(e.error?.message||`HTTP ${res.status}`)}
+    const data=await res.json();
+    const raw=data.content[0].text.trim().replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
+    const result=JSON.parse(raw);
+    const updated=getTopics();updated[k]=result;saveTopics(updated);
+    showToast(`"${result.main_title}" 생성 완료!`);
+  }catch(e){
+    console.error(e);
+    showToast('오류: '+(e.message||'').slice(0,60));
+  }finally{
+    clearInterval(stepTimer);loading=false;genDay=null;
+    renderCal();renderRight();
+  }
+}
+
+async function genAll(){
+  const apiKey=getApiKey();
+  if(!apiKey){document.getElementById('modal').style.display='flex';return}
+  const dim=new Date(year,month+1,0).getDate();
+  const tops=getTopics();
+  for(let d=1;d<=dim;d++){
+    if(!tops[topicKey(d)]){await generateTopic(d);await new Promise(r=>setTimeout(r,400))}
+  }
+  showToast(`${MONTHS[month]} 전체 생성 완료!`);
+}
+
+function downloadPDF(day){
+  const k=topicKey(day);const t=getTopics()[k];if(!t)return;
+  const s1=t.session1||{},s2=t.session2||{};
+  const cc=CAT_COLORS[t.category]||'#888';
+  const words=s1.bingo_words||[];const smalls=s1.small_talk||[];
+  const exprs=s2.expressions||[];const qs=s2.questions||[];
+  const roles=s2.roles||['Team A','Team B'];
+  const bg=words.map(w=>`<div style="border:1.5px solid #111;display:flex;align-items:center;justify-content:center;text-align:center;padding:3px;font-weight:700;font-size:8.5pt;text-transform:uppercase;min-height:50px;line-height:1.2">${w}</div>`).join('');
+  const rh=roles.slice(0,3).map((r,i)=>`<div style="flex:1;border:1.5px solid #111;overflow:hidden;min-width:0"><div style="background:${i===0?'#111':i===2?'#CC0014':'#444'};padding:6px;text-align:center"><div style="font-size:9pt;font-weight:700;color:white">${r}</div></div><div style="padding:7px 8px"><div style="font-size:7pt;color:#888;font-weight:600;text-transform:uppercase;margin-bottom:3px">Name:</div><div style="border-bottom:1px solid #ddd;margin-bottom:8px;padding-bottom:3px"></div><div style="font-size:7pt;color:#888;font-weight:600;text-transform:uppercase;margin-bottom:2px">Notes:</div><div style="border-bottom:1px dashed #ddd;margin-bottom:3px;height:14px"></div><div style="border-bottom:1px dashed #ddd;height:14px"></div></div></div>`).join('');
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><style>@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap');*{box-sizing:border-box;margin:0;padding:0}body{font-family:'DM Sans',Arial,sans-serif;color:#111}.page{width:210mm;min-height:297mm;display:flex;flex-direction:column;page-break-after:always}.hd{background:#111;padding:9px 15px;display:flex;align-items:center;justify-content:space-between}.lg{font-size:15pt;font-weight:700;letter-spacing:2px;color:#fff}.lg span{color:#f55}.hm{text-align:right}.hd2{font-size:7.5pt;color:#666}.hc{display:inline-block;color:white;font-size:6.5pt;font-weight:700;padding:1.5px 7px;border-radius:99px;letter-spacing:.6px;text-transform:uppercase;margin-top:2px}.sb{background:#CC0014;padding:7px 15px;display:flex;align-items:baseline;gap:9px}.sn{font-size:13pt;font-weight:700;color:white;letter-spacing:1px}.ss{font-size:8pt;color:rgba(255,255,255,.7)}.stl{margin-left:auto;font-size:7.5pt;color:white;opacity:.9}.bd{padding:12px 15px;flex:1}.nb{border:1.5px solid #111;padding:7px 11px;display:flex;align-items:center;gap:9px;margin-bottom:12px}.nl{font-size:7pt;font-weight:700;color:#CC0014;text-transform:uppercase;letter-spacing:.7px;white-space:nowrap}.nln{flex:1;border-bottom:1px dashed #ccc}.plb{display:inline-block;background:#111;color:white;font-size:7pt;font-weight:700;padding:2px 7px;letter-spacing:.4px;text-transform:uppercase}.plr{display:inline-block;background:#CC0014;color:white;font-size:7pt;font-weight:700;padding:2px 7px;letter-spacing:.4px;text-transform:uppercase}.sg{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:6px 0 12px}.scd{border-left:3px solid #CC0014;padding:6px 8px;background:#f8f8f7}.sqs{font-size:6.5pt;font-weight:700;color:#CC0014;display:block;margin-bottom:2px}.stxt{font-size:8pt;font-weight:500;line-height:1.4}.bwp{display:flex;gap:12px;align-items:flex-start}.bgr{display:grid;grid-template-columns:repeat(3,52px);grid-template-rows:repeat(3,52px);gap:3px;flex-shrink:0}.bip{flex:1}.bit{font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:#CC0014;margin-bottom:5px}.bst{display:flex;gap:5px;align-items:flex-start;margin-bottom:5px}.bsn{width:12px;height:12px;min-width:12px;background:#111;color:white;font-size:7pt;font-weight:700;display:flex;align-items:center;justify-content:center}.bstx{font-size:7.5pt;line-height:1.35;padding-top:1px}.scr{display:flex;align-items:center;gap:5px;margin-top:8px}.scl{font-size:7pt;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.4px}.scb{width:11px;height:11px;border:1.5px solid #111}.ft{background:#111;padding:6px 15px;display:flex;align-items:center;justify-content:space-between;margin-top:auto}.fb{font-size:7.5pt;font-weight:700;color:#555;letter-spacing:1px}.fb span{color:#CC0014}.fp{font-size:9pt;font-weight:700;color:#444}.at{display:flex;align-items:baseline;gap:7px;margin-bottom:5px}.atn{font-size:13pt;font-weight:700}.ats{font-size:8.5pt;color:#888}.fmb{margin-left:auto;background:#CC0014;color:white;font-size:7pt;font-weight:700;padding:2.5px 8px;letter-spacing:.7px;text-transform:uppercase}.scnb{border-left:4px solid #111;background:#f8f8f7;padding:8px 11px;margin-bottom:11px;font-size:8.5pt;font-weight:500;line-height:1.55}.scnl{font-size:6.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:#CC0014;margin-bottom:2px}.rr{display:flex;gap:6px;margin-bottom:11px}.dq{display:flex;align-items:flex-start;gap:6px;padding:5px 0;border-bottom:1px solid #eee}.dqn{width:14px;height:14px;min-width:14px;background:#CC0014;color:white;font-size:7pt;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px}.dqt{font-size:8.5pt;font-weight:500;line-height:1.4}.vb{border:1.5px solid #CC0014;padding:6px 11px;display:flex;align-items:center;gap:8px;margin:10px 0}.vl{font-size:7.5pt;font-weight:700;color:#CC0014;white-space:nowrap}.vt{font-size:8pt;font-weight:500;flex:1}.vt2{display:flex;gap:4px}.vtb{border:1.5px solid #111;padding:2.5px 6px;font-size:6.5pt;font-weight:700;text-align:center;min-width:34px}.eg{display:grid;grid-template-columns:1fr 1fr;gap:3px}.ei{display:flex;align-items:flex-start;gap:4px;font-size:8pt;font-style:italic;padding:3px 5px;background:#f8f8f7;border-left:2px solid #CC0014;line-height:1.35}.ea{color:#CC0014;font-style:normal;font-size:8.5pt;flex-shrink:0}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}@page{size:A4;margin:0}.page{page-break-after:always}}</style></head><body>
+<div class="page"><div class="hd"><div class="lg">THE<span>BOX</span></div><div class="hm"><div class="hd2">${k}</div><div class="hc" style="background:${cc}">${t.category||''}</div></div></div><div class="sb"><span class="sn">1ST CONVERSATION</span><span class="ss">Ice Breaking &amp; Keyword Bingo</span><span class="stl">${t.main_title||''}</span></div><div class="bd"><div class="nb"><span class="nl">✦ Names</span><div class="nln"></div></div><div class="plr">✦ Small Talk — 여기서 시작해요</div><div class="sg">${smalls.slice(0,3).map((q,i)=>`<div class="scd" ${i===2?'style="grid-column:1/-1"':''}><span class="sqs">Q${i+1}</span><span class="stxt">${q}</span></div>`).join('')}</div><div style="display:flex;align-items:center;gap:9px;margin-bottom:6px"><div class="plb">✦ Keyword Bingo</div><span style="font-size:10pt;font-weight:700;letter-spacing:1px">${(s1.bingo_title||'').toUpperCase()}</span></div><div class="bwp"><div class="bgr">${bg}</div><div class="bip"><div class="bit">How to Play</div><div class="bst"><div class="bsn">1</div><div class="bstx">9개 키워드로 자유롭게 대화해요.</div></div><div class="bst"><div class="bsn">2</div><div class="bstx">말한 단어에 체크 표시하세요.</div></div><div class="bst"><div class="bsn">3</div><div class="bstx">빙고 줄 몇 개?</div></div><div class="scr"><span class="scl">My Score:</span>${Array(6).fill('<div class="scb"></div>').join('')}</div></div></div></div><div class="ft"><div class="fb">THE<span>BOX</span> ENGLISH NETWORKING</div><div class="fp">1 / 2</div></div></div>
+<div class="page"><div class="hd"><div class="lg">THE<span>BOX</span></div><div class="hm"><div class="hd2">${k}</div><div class="hc" style="background:${cc}">${t.category||''}</div></div></div><div class="sb"><span class="sn">2ND ACTIVITY</span><span class="ss">${s2.format||''}</span></div><div class="bd"><div class="at"><div class="atn">${s2.title||''}</div><div class="ats">${s2.subtitle_kr||''}</div><div class="fmb">${s2.format||''}</div></div><div class="scnb"><div class="scnl">Situation</div>${s2.scenario||''}</div><div class="rr">${rh}</div><div class="plb">✦ Discussion Questions</div><div style="margin:6px 0 9px">${qs.slice(0,3).map((q,i)=>`<div class="dq"><div class="dqn">${i+1}</div><div class="dqt">${q}</div></div>`).join('')}</div><div class="vb"><span class="vl">✦ VOTE</span><span class="vt">${s2.vote||''}</span><div class="vt2">${roles.slice(0,2).map(r=>`<div class="vtb">${r.slice(0,8)}<br>___</div>`).join('')}</div></div><div class="plr" style="margin-bottom:5px">✦ Useful Expressions</div><div class="eg">${exprs.slice(0,6).map(e=>`<div class="ei"><span class="ea">›</span>${e}</div>`).join('')}</div></div><div class="ft"><div class="fb">THE<span>BOX</span> ENGLISH NETWORKING</div><div class="fp">2 / 2</div></div></div>
+<script>window.onload=()=>window.print()<\/script></body></html>`;
+  const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}
+}
+
+function renderCal(){
+  const tops=getTopics();
+  const dim=new Date(year,month+1,0).getDate();
+  const fdow=new Date(year,month,1).getDay();
+  const now=new Date();
+  const isToday=d=>d===now.getDate()&&month===now.getMonth()&&year===now.getFullYear();
+  const pfx=`${year}-${String(month+1).padStart(2,'0')}`;
+  const done=Object.keys(tops).filter(k=>k.startsWith(pfx)).length;
+  const usedFmts=new Set(Object.values(tops).map(t=>t.session2?.format).filter(Boolean));
+  document.getElementById('m-name').textContent=MONTHS[month];
+  document.getElementById('m-year').textContent=year;
+  document.getElementById('s-done').textContent=done;
+  document.getElementById('s-total').textContent=dim;
+  document.getElementById('s-pct').textContent=Math.round(done/dim*100)+'%';
+  document.getElementById('s-fmts').textContent=usedFmts.size;
+  document.getElementById('dows').innerHTML=DOWS_L.map(d=>`<div class="dow">${d}</div>`).join('');
+  let cells='';
+  for(let i=0;i<fdow;i++)cells+=`<div class="day empty"></div>`;
+  for(let d=1;d<=dim;d++){
+    const k=topicKey(d),t=tops[k],has=!!t,isGen=genDay===d,isSel=selected===d;
+    const cls=['day',has?'has':'',isToday(d)?'today':'',isSel?'sel':'',isGen?'busy':''].filter(Boolean).join(' ');
+    const dc=t?(CAT_COLORS[t.category]||'#888'):'';
+    cells+=`<div class="${cls}" data-d="${d}"><div class="dn">${d}</div>${has?`<div class="ddot" style="background:${dc}"></div>`:''}${has?`<div class="dtxt">${t.main_title||''}</div>`:''}${has?`<div class="dfmt">${(t.session2?.format||'').slice(0,3)}</div>`:''}</div>`;
+  }
+  const grid=document.getElementById('cal-grid');
+  grid.innerHTML=cells;
+  grid.querySelectorAll('.day[data-d]').forEach(el=>{
+    el.addEventListener('click',()=>{selected=parseInt(el.dataset.d);renderCal();renderRight()});
+  });
+  document.getElementById('gen-all-btn').disabled=loading;
+  document.getElementById('gen-all-btn').textContent=loading?'생성 중...':`✦  ${MONTHS[month]} 전체 생성`;
+}
+
+function renderRight(){
+  const panel=document.getElementById('right-p');
+  if(loading&&genDay===selected){
+    panel.innerHTML=`<div class="r-loading"><div class="spin"></div><div class="load-s" id="load-step">준비 중...</div><div style="font-size:10px;color:var(--muted);margin-top:4px">${MONTHS[month]} ${selected}일</div></div>`;
+    return;
+  }
+  if(!selected){
+    panel.innerHTML=`<div class="r-empty"><div class="r-empty-ico">📅</div><p>날짜를 클릭하면<br>토픽을 생성할 수 있어요</p></div>`;
+    return;
+  }
+  const k=topicKey(selected),t=getTopics()[k];
+  if(!t){
+    panel.innerHTML=`<div class="r-empty"><div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px">${MONTHS[month]} ${selected}일</div><p>아직 토픽이 없어요</p><button onclick="window._tbGen(${selected})" style="margin-top:10px;padding:10px 20px;background:var(--red);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">✦ 토픽 생성</button></div>`;
+    return;
+  }
+  const s1=t.session1||{},s2=t.session2||{},cc=CAT_COLORS[t.category]||'#888';
+  panel.innerHTML=`<div class="r-body"><div class="date-row"><div class="date-big">${String(selected).padStart(2,'0')}</div><div style="display:flex;flex-direction:column;gap:3px"><div class="date-mo">${MONTHS[month]} ${year}</div><div class="cpill" style="background:${cc}">${t.category||''}</div></div><div class="fmtpill"><div class="fmtdot"></div>${s2.format||''}</div></div><div class="r-title">${t.main_title||''}</div><div class="r-angle">${t.korean_angle||''}</div><div class="src-chip">소스: ${t.source_name||''}</div><div class="sec"><div class="sec-l">1ST — Small Talk</div><div class="sec-line"></div></div>${(s1.small_talk||[]).map((q,i)=>`<div class="sq"><span class="sq-q">Q${i+1}</span><span>${q}</span></div>`).join('')}<div class="sec" style="margin-top:10px"><div class="sec-l">Bingo — ${s1.bingo_title||''}</div><div class="sec-line"></div></div><div class="bingo">${(s1.bingo_words||[]).map(w=>`<div class="bc">${w}</div>`).join('')}</div><div class="sec"><div class="sec-l">2ND — ${s2.format||''}</div><div class="sec-line"></div></div><div style="font-size:12px;font-weight:600;margin-bottom:4px">${s2.title||''} <span style="font-size:10px;color:var(--muted);font-weight:400">${s2.subtitle_kr||''}</span></div><div class="scen-box">${s2.scenario||''}</div><div style="font-size:9px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:5px">Useful Expressions</div>${(s2.expressions||[]).map(e=>`<div class="expr">${e}</div>`).join('')}</div><div class="r-actions"><button class="btn-dl" onclick="window._tbPDF(${selected})">↓  A4 PDF 인쇄 / 다운로드</button><div class="btn-row"><button class="btn-s" onclick="window._tbGen(${selected})" ${loading?'disabled':''}>↺ 재생성</button><button class="btn-s" onclick="window._tbDel(${selected})">✕ 삭제</button></div></div>`;
+}
+
+function renderSettings(){
+  const fmts=getFormats(),srcs=getSources();
+  document.getElementById('fmt-cnt-badge').textContent=fmts.filter(f=>f.on).length+'/'+fmts.length;
+  document.getElementById('src-cnt-badge').textContent=srcs.filter(s=>s.on).length+'/'+srcs.length;
+  const fmtList=document.getElementById('fmt-list');
+  fmtList.innerHTML=fmts.map(f=>`<div class="item-row"><div style="flex:1;min-width:0"><div class="item-label">${f.name}</div>${f.desc?`<div class="item-sub">${f.desc}</div>`:''}</div><button class="item-tog ${f.on?'on':''}" data-tog="${f.id}">${f.on?'●':'○'}</button><button class="item-del" data-df="${f.id}">✕</button></div>`).join('');
+  fmtList.querySelectorAll('[data-tog]').forEach(btn=>btn.onclick=()=>{const f=getFormats().map(f=>f.id===btn.dataset.tog?{...f,on:!f.on}:f);saveFormats(f);renderSettings()});
+  fmtList.querySelectorAll('[data-df]').forEach(btn=>btn.onclick=()=>{if(!confirm('삭제?'))return;saveFormats(getFormats().filter(f=>f.id!==btn.dataset.df));renderSettings()});
+  const srcList=document.getElementById('src-list');
+  srcList.innerHTML=srcs.map(s=>`<div class="item-row"><div style="flex:1;min-width:0"><div class="item-label">${s.name}</div><div class="item-sub">${s.angle}</div></div><button class="item-tog ${s.on?'on':''}" data-ts="${s.id}">${s.on?'●':'○'}</button><button class="item-del" data-ds="${s.id}">✕</button></div>`).join('');
+  srcList.querySelectorAll('[data-ts]').forEach(btn=>btn.onclick=()=>{const s=getSources().map(s=>s.id===btn.dataset.ts?{...s,on:!s.on}:s);saveSources(s);renderSettings()});
+  srcList.querySelectorAll('[data-ds]').forEach(btn=>btn.onclick=()=>{saveSources(getSources().filter(s=>s.id!==btn.dataset.ds));renderSettings()});
+  document.getElementById('api-key-inp').value=getApiKey()?'••••••••••••••••':'';
+}
+
+function updateNavKey(){
+  const k=getApiKey();
+  document.getElementById('key-dot').className='key-dot'+(k?' on':'');
+  document.getElementById('key-lbl').textContent=k?'API 키 등록됨':'API 키 입력';
+}
+
+window._tbGen=d=>generateTopic(d);
+window._tbDel=d=>{if(!confirm('삭제?'))return;const t=getTopics();delete t[topicKey(d)];saveTopics(t);renderCal();renderRight();showToast('삭제됨')};
+window._tbPDF=d=>downloadPDF(d);
+
+document.addEventListener('DOMContentLoaded',()=>{
+  const now=new Date();year=now.getFullYear();month=now.getMonth();
+
+  document.querySelectorAll('.nav-tab').forEach(tab=>tab.addEventListener('click',()=>{
+    document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('view-'+tab.dataset.view).classList.add('active');
+    if(tab.dataset.view==='settings')renderSettings();
+  }));
+
+  document.getElementById('prev').addEventListener('click',()=>{if(month===0){month=11;year--}else month--;selected=null;renderCal();renderRight()});
+  document.getElementById('next').addEventListener('click',()=>{if(month===11){month=0;year++}else month++;selected=null;renderCal();renderRight()});
+  document.getElementById('gen-all-btn').addEventListener('click',genAll);
+
+  document.getElementById('key-btn').addEventListener('click',()=>{
+    document.getElementById('modal').style.display='flex';
+    setTimeout(()=>document.getElementById('modal-key-inp').focus(),50);
+  });
+
+  const saveModal=()=>{
+    const k=document.getElementById('modal-key-inp').value.trim();
+    if(!k)return;
+    saveApiKey(k);
+    document.getElementById('modal').style.display='none';
+    updateNavKey();
+    showToast('API 키 저장됨 ✓');
+  };
+  document.getElementById('modal-save').addEventListener('click',saveModal);
+  document.getElementById('modal-key-inp').addEventListener('keydown',e=>{if(e.key==='Enter')saveModal()});
+  document.getElementById('modal').addEventListener('click',e=>{if(e.target===document.getElementById('modal'))document.getElementById('modal').style.display='none'});
+
+  document.getElementById('fmt-add-btn').addEventListener('click',()=>{
+    const nm=document.getElementById('fmt-inp').value.trim();
+    if(!nm)return;
+    const f=getFormats();f.push({id:'f'+Date.now(),name:nm,desc:'',on:true});
+    saveFormats(f);document.getElementById('fmt-inp').value='';renderSettings();showToast(`"${nm}" 추가됨`);
+  });
+  document.getElementById('fmt-inp').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('fmt-add-btn').click()});
+
+  document.getElementById('src-add-btn').addEventListener('click',()=>{
+    const nm=document.getElementById('src-name-inp').value.trim();
+    const angle=document.getElementById('src-angle-inp').value.trim();
+    if(!nm||!angle){showToast('소스명과 이슈 내용을 입력해주세요');return}
+    const s=getSources();s.unshift({id:'s'+Date.now(),name:nm,angle,on:true});
+    saveSources(s);document.getElementById('src-name-inp').value='';document.getElementById('src-angle-inp').value='';
+    renderSettings();showToast(`"${nm}" 소스 추가됨`);
+  });
+  document.getElementById('src-angle-inp').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('src-add-btn').click()});
+
+  document.getElementById('api-save-btn').addEventListener('click',()=>{
+    const k=document.getElementById('api-key-inp').value.trim();
+    if(!k||k.startsWith('•'))return;
+    saveApiKey(k);updateNavKey();showToast('API 키 저장됨');
+    document.getElementById('api-key-inp').value='••••••••••••••••';
+  });
+
+  updateNavKey();renderCal();renderRight();
+});
+</script>
+</body>
+</html>
