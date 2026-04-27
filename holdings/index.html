@@ -91,6 +91,10 @@ body {
 .mname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mtype-lbl { font-size: 10px; font-weight: 600; color: #BBB; flex-shrink: 0; }
 .new-badge { font-size: 9px; font-weight: 900; background: #F0A800; color: #fff; padding: 1px 5px; border-radius: 4px; flex-shrink: 0; }
+.new-badge.d1 { background: #E05000; }
+.new-badge.d2 { background: #E07800; }
+.new-badge.d3 { background: #D09000; }
+.new-badge.d4 { background: #B0A000; }
 .mdel { background: none; border: none; cursor: pointer; color: #CCC; font-size: 13px; line-height: 1; padding: 0; flex-shrink: 0; }
 .mdel:hover { color: #E00; }
 .pool-list { display: flex; flex-direction: column; gap: 5px; min-height: 36px; }
@@ -1123,7 +1127,7 @@ function selType(t) {
 /* ── 원어민/비원어민 추가 ── */
 function addMember(name, type, nf) {
   name = name.trim(); if (!name) return;
-  members.push({ id:uid(), name, type, isNew:!!nf });
+  members.push({ id:uid(), name, type, isNew:!!nf, newDay:0 });
 }
 function addFromPaste() {
   const raw = document.getElementById('pasteArea').value;
@@ -1140,10 +1144,16 @@ function removeMember(id) {
   groups.forEach(g => { g.memberIds=g.memberIds.filter(x=>x!==id); });
   renderAll();
 }
-function toggleMemberNew(id) {
+function setMemberNewDay(id, day) {
+  // day: 0=해제, 1~4=일차
   const m = members.find(m=>m.id===id);
-  if (m) { m.isNew=!m.isNew; renderAll(); }
+  if (m) {
+    m.newDay = (m.newDay === day) ? 0 : day; // 같은 값 누르면 해제
+    m.isNew = m.newDay > 0;
+    renderAll();
+  }
 }
+function toggleMemberNew(id) { setMemberNewDay(id, 1); } // 하위 호환
 
 /* ── 반 프리셋 데이터 ── */
 // 각 그룹: { name, leader(한국인 리더), natives(원어민 이름 배열) }
@@ -1400,7 +1410,10 @@ function mkTag(m, fromGid) {
   const lbl = document.createElement('span'); lbl.className='mtype-lbl'; lbl.textContent=TL[m.type]||'';
   div.appendChild(dot); div.appendChild(nm);
   if (m.isNew) {
-    const nb=document.createElement('span'); nb.className='new-badge'; nb.textContent='NEW';
+    const nb=document.createElement('span');
+    const day = m.newDay||1;
+    nb.className='new-badge d'+day;
+    nb.textContent = 'NEW '+(m.newDay>0 ? m.newDay+'일' : '');
     div.appendChild(nb);
   }
   div.appendChild(lbl);
@@ -1426,7 +1439,11 @@ function mkTag(m, fromGid) {
     div.addEventListener('contextmenu', e=>{
       if (e.target.closest('.mdel')) return;
       showCtxMenu(e, [
-        { label: m.isNew ? '✦ NEW 해제' : '✦ NEW 표시', action:()=>toggleMemberNew(m.id) },
+        { label:'✦ NEW 1일차', action:()=>setMemberNewDay(m.id,1), checked: m.newDay===1 },
+        { label:'✦ NEW 2일차', action:()=>setMemberNewDay(m.id,2), checked: m.newDay===2 },
+        { label:'✦ NEW 3일차', action:()=>setMemberNewDay(m.id,3), checked: m.newDay===3 },
+        { label:'✦ NEW 4일차', action:()=>setMemberNewDay(m.id,4), checked: m.newDay===4 },
+        { label:'✦ NEW 해제',  action:()=>setMemberNewDay(m.id,0), checked: !m.isNew },
         'sep',
         { label:'✕ 삭제', danger:true, action:()=>removeMember(m.id) },
       ]);
@@ -1445,7 +1462,11 @@ function mkTag(m, fromGid) {
     div.addEventListener('contextmenu', e=>{
       if (e.target.closest('.mdel')) return;
       showCtxMenu(e, [
-        { label: m.isNew ? '✦ NEW 해제' : '✦ NEW 표시', action:()=>toggleMemberNew(m.id) },
+        { label:'✦ NEW 1일차', action:()=>setMemberNewDay(m.id,1), checked: m.newDay===1 },
+        { label:'✦ NEW 2일차', action:()=>setMemberNewDay(m.id,2), checked: m.newDay===2 },
+        { label:'✦ NEW 3일차', action:()=>setMemberNewDay(m.id,3), checked: m.newDay===3 },
+        { label:'✦ NEW 4일차', action:()=>setMemberNewDay(m.id,4), checked: m.newDay===4 },
+        { label:'✦ NEW 해제',  action:()=>setMemberNewDay(m.id,0), checked: !m.isNew },
         'sep',
         { label:'✕ 삭제', danger:true, action:()=>removeMember(m.id) },
       ]);
@@ -1778,7 +1799,7 @@ function setupDrop(el,gid){
 function renderStats(){
   const nat = members.filter(m=>m.type==='native').length;
   const non = members.filter(m=>m.type==='nonnative').length;
-  const kor = groups.reduce((sum, g) => sum + g.koreans.length, 0);
+  const kor = groups.reduce((sum, g) => sum + (g.koreans||[]).length, 0);
   const all = nat + non + kor;
   document.getElementById('stNat').textContent = '원어민 ' + nat;
   document.getElementById('stNon').textContent = '비원어민 ' + non;
@@ -2013,7 +2034,12 @@ function makeHTag(name, type, onDel, flags={}) {
   }
   const nm=document.createElement('span'); nm.textContent=name; tag.appendChild(nm);
   if(flags.isNew){
-    const nb=document.createElement('span'); nb.style.cssText='font-size:9px;font-weight:900;background:#F0A800;color:#fff;padding:1px 5px;border-radius:4px;margin-left:2px;'; nb.textContent='NEW'; tag.appendChild(nb);
+    const nb=document.createElement('span');
+    const day = flags.newDay||1;
+    const dayColors = ['','#E05000','#E07800','#D09000','#B0A000'];
+    nb.style.cssText=`font-size:9px;font-weight:900;background:${dayColors[day]||'#F0A800'};color:#fff;padding:1px 5px;border-radius:4px;margin-left:2px;`;
+    nb.textContent='NEW '+(flags.newDay>0 ? flags.newDay+'일' : '');
+    tag.appendChild(nb);
   }
   if(flags.isReturn){
     const rb=document.createElement('span'); rb.style.cssText='font-size:9px;font-weight:900;background:#22A06B;color:#fff;padding:1px 5px;border-radius:4px;margin-left:2px;'; rb.textContent='복귀'; tag.appendChild(rb);
@@ -2066,8 +2092,8 @@ function renderHClasses() {
     if (!cls.korMembers)  cls.korMembers  = [];
     if (!cls.korTeachers) cls.korTeachers = [];
     // 기존 문자열 항목을 객체로 마이그레이션
-    cls.korMembers  = cls.korMembers.map(m  => typeof m==='string' ? {id:hUid(),name:m,isNew:false,isReturn:false} : m);
-    cls.korTeachers = cls.korTeachers.map(t => typeof t==='string' ? {id:hUid(),name:t,isNew:false,isReturn:false} : t);
+    cls.korMembers  = cls.korMembers.map(m  => typeof m==='string' ? {id:hUid(),name:m,isNew:false,isReturn:false,newDay:0} : m);
+    cls.korTeachers = cls.korTeachers.map(t => typeof t==='string' ? {id:hUid(),name:t,isNew:false,isReturn:false,newDay:0} : t);
 
     // ── 섹션별 태그 렌더 함수 ──
     const renderSections = () => {
@@ -2104,24 +2130,28 @@ function renderHClasses() {
       cls.members.forEach(m => {
         const tag = makeHTag(m.name, 'holding',
           ()=>{ cls.members=cls.members.filter(x=>x.id!==m.id); renderSections(); },
-          { isNew: m.isNew, isReturn: m.isReturn }
+          { isNew: m.isNew, isReturn: m.isReturn, newDay: m.newDay||0 }
         );
         tag.title='우클릭 → 메뉴';
         tag.addEventListener('contextmenu', e=>{
           showCtxMenu(e, [
             { label:'👤 한국인 멤버로 이동', action:()=>{
               cls.members=cls.members.filter(x=>x.id!==m.id);
-              if(!cls.korMembers.find(x=>x.name===m.name)) cls.korMembers.push({id:hUid(),name:m.name,isNew:m.isNew,isReturn:m.isReturn});
+              if(!cls.korMembers.find(x=>x.name===m.name)) cls.korMembers.push({id:hUid(),name:m.name,isNew:m.isNew,isReturn:m.isReturn,newDay:m.newDay||0});
               renderSections();
             }},
             { label:'👩‍🏫 쌤으로 이동', action:()=>{
               cls.members=cls.members.filter(x=>x.id!==m.id);
-              if(!cls.korTeachers.find(x=>x.name===m.name)) cls.korTeachers.push({id:hUid(),name:m.name,isNew:m.isNew,isReturn:m.isReturn});
+              if(!cls.korTeachers.find(x=>x.name===m.name)) cls.korTeachers.push({id:hUid(),name:m.name,isNew:m.isNew,isReturn:m.isReturn,newDay:m.newDay||0});
               renderSections();
             }},
             'sep',
-            { label: m.isNew ? '✦ NEW 해제' : '✦ NEW 표시', action:()=>{ m.isNew=!m.isNew; if(m.isNew)m.isReturn=false; renderSections(); }},
-            { label: m.isReturn ? '↩ 복귀 해제' : '↩ 복귀 표시', action:()=>{ m.isReturn=!m.isReturn; if(m.isReturn)m.isNew=false; renderSections(); }},
+            { label:'✦ NEW 1일차', action:()=>{ m.newDay=m.newDay===1?0:1; m.isNew=m.newDay>0; m.isReturn=false; renderSections(); }, checked: m.newDay===1 },
+            { label:'✦ NEW 2일차', action:()=>{ m.newDay=m.newDay===2?0:2; m.isNew=m.newDay>0; m.isReturn=false; renderSections(); }, checked: m.newDay===2 },
+            { label:'✦ NEW 3일차', action:()=>{ m.newDay=m.newDay===3?0:3; m.isNew=m.newDay>0; m.isReturn=false; renderSections(); }, checked: m.newDay===3 },
+            { label:'✦ NEW 4일차', action:()=>{ m.newDay=m.newDay===4?0:4; m.isNew=m.newDay>0; m.isReturn=false; renderSections(); }, checked: m.newDay===4 },
+            { label:'✦ NEW 해제',  action:()=>{ m.newDay=0; m.isNew=false; renderSections(); }, checked: !m.isNew },
+            { label: m.isReturn ? '↩ 복귀 해제' : '↩ 복귀 표시', action:()=>{ m.isReturn=!m.isReturn; if(m.isReturn){m.isNew=false;m.newDay=0;} renderSections(); }},
             'sep',
             { label:'✕ 삭제', danger:true, action:()=>{ cls.members=cls.members.filter(x=>x.id!==m.id); renderSections(); }},
           ]);
@@ -2133,24 +2163,28 @@ function renderHClasses() {
       cls.korMembers.forEach(m => {
         const tag = makeHTag(m.name, 'member',
           ()=>{ cls.korMembers=cls.korMembers.filter(x=>x.id!==m.id); renderSections(); },
-          { isNew: m.isNew, isReturn: m.isReturn }
+          { isNew: m.isNew, isReturn: m.isReturn, newDay: m.newDay||0 }
         );
         tag.title='우클릭 → 메뉴';
         tag.addEventListener('contextmenu', e=>{
           showCtxMenu(e, [
             { label:'🔴 홀딩으로 이동', action:()=>{
               cls.korMembers=cls.korMembers.filter(x=>x.id!==m.id);
-              if(!cls.members.find(x=>x.name===m.name)) cls.members.push({id:hUid(),name:m.name,isNew:m.isNew,isReturn:m.isReturn});
+              if(!cls.members.find(x=>x.name===m.name)) cls.members.push({id:hUid(),name:m.name,isNew:m.isNew,isReturn:m.isReturn,newDay:m.newDay||0});
               renderSections();
             }},
             { label:'👩‍🏫 쌤으로 이동', action:()=>{
               cls.korMembers=cls.korMembers.filter(x=>x.id!==m.id);
-              if(!cls.korTeachers.find(x=>x.name===m.name)) cls.korTeachers.push({id:hUid(),name:m.name,isNew:m.isNew,isReturn:m.isReturn});
+              if(!cls.korTeachers.find(x=>x.name===m.name)) cls.korTeachers.push({id:hUid(),name:m.name,isNew:m.isNew,isReturn:m.isReturn,newDay:m.newDay||0});
               renderSections();
             }},
             'sep',
-            { label: m.isNew ? '✦ NEW 해제' : '✦ NEW 표시', action:()=>{ m.isNew=!m.isNew; if(m.isNew)m.isReturn=false; renderSections(); }},
-            { label: m.isReturn ? '↩ 복귀 해제' : '↩ 복귀 표시', action:()=>{ m.isReturn=!m.isReturn; if(m.isReturn)m.isNew=false; renderSections(); }},
+            { label:'✦ NEW 1일차', action:()=>{ m.newDay=m.newDay===1?0:1; m.isNew=m.newDay>0; m.isReturn=false; renderSections(); }, checked: m.newDay===1 },
+            { label:'✦ NEW 2일차', action:()=>{ m.newDay=m.newDay===2?0:2; m.isNew=m.newDay>0; m.isReturn=false; renderSections(); }, checked: m.newDay===2 },
+            { label:'✦ NEW 3일차', action:()=>{ m.newDay=m.newDay===3?0:3; m.isNew=m.newDay>0; m.isReturn=false; renderSections(); }, checked: m.newDay===3 },
+            { label:'✦ NEW 4일차', action:()=>{ m.newDay=m.newDay===4?0:4; m.isNew=m.newDay>0; m.isReturn=false; renderSections(); }, checked: m.newDay===4 },
+            { label:'✦ NEW 해제',  action:()=>{ m.newDay=0; m.isNew=false; renderSections(); }, checked: !m.isNew },
+            { label: m.isReturn ? '↩ 복귀 해제' : '↩ 복귀 표시', action:()=>{ m.isReturn=!m.isReturn; if(m.isReturn){m.isNew=false;m.newDay=0;} renderSections(); }},
             'sep',
             { label:'✕ 삭제', danger:true, action:()=>{ cls.korMembers=cls.korMembers.filter(x=>x.id!==m.id); renderSections(); }},
           ]);
@@ -2162,24 +2196,28 @@ function renderHClasses() {
       cls.korTeachers.forEach(m => {
         const tag = makeHTag(m.name, 'teacher',
           ()=>{ cls.korTeachers=cls.korTeachers.filter(x=>x.id!==m.id); renderSections(); },
-          { isNew: m.isNew, isReturn: m.isReturn }
+          { isNew: m.isNew, isReturn: m.isReturn, newDay: m.newDay||0 }
         );
         tag.title='우클릭 → 메뉴';
         tag.addEventListener('contextmenu', e=>{
           showCtxMenu(e, [
             { label:'👤 한국인 멤버로 이동', action:()=>{
               cls.korTeachers=cls.korTeachers.filter(x=>x.id!==m.id);
-              if(!cls.korMembers.find(x=>x.name===m.name)) cls.korMembers.push({id:hUid(),name:m.name,isNew:m.isNew,isReturn:m.isReturn});
+              if(!cls.korMembers.find(x=>x.name===m.name)) cls.korMembers.push({id:hUid(),name:m.name,isNew:m.isNew,isReturn:m.isReturn,newDay:m.newDay||0});
               renderSections();
             }},
             { label:'🔴 홀딩으로 이동', action:()=>{
               cls.korTeachers=cls.korTeachers.filter(x=>x.id!==m.id);
-              if(!cls.members.find(x=>x.name===m.name)) cls.members.push({id:hUid(),name:m.name,isNew:m.isNew,isReturn:m.isReturn});
+              if(!cls.members.find(x=>x.name===m.name)) cls.members.push({id:hUid(),name:m.name,isNew:m.isNew,isReturn:m.isReturn,newDay:m.newDay||0});
               renderSections();
             }},
             'sep',
-            { label: m.isNew ? '✦ NEW 해제' : '✦ NEW 표시', action:()=>{ m.isNew=!m.isNew; if(m.isNew)m.isReturn=false; renderSections(); }},
-            { label: m.isReturn ? '↩ 복귀 해제' : '↩ 복귀 표시', action:()=>{ m.isReturn=!m.isReturn; if(m.isReturn)m.isNew=false; renderSections(); }},
+            { label:'✦ NEW 1일차', action:()=>{ m.newDay=m.newDay===1?0:1; m.isNew=m.newDay>0; m.isReturn=false; renderSections(); }, checked: m.newDay===1 },
+            { label:'✦ NEW 2일차', action:()=>{ m.newDay=m.newDay===2?0:2; m.isNew=m.newDay>0; m.isReturn=false; renderSections(); }, checked: m.newDay===2 },
+            { label:'✦ NEW 3일차', action:()=>{ m.newDay=m.newDay===3?0:3; m.isNew=m.newDay>0; m.isReturn=false; renderSections(); }, checked: m.newDay===3 },
+            { label:'✦ NEW 4일차', action:()=>{ m.newDay=m.newDay===4?0:4; m.isNew=m.newDay>0; m.isReturn=false; renderSections(); }, checked: m.newDay===4 },
+            { label:'✦ NEW 해제',  action:()=>{ m.newDay=0; m.isNew=false; renderSections(); }, checked: !m.isNew },
+            { label: m.isReturn ? '↩ 복귀 해제' : '↩ 복귀 표시', action:()=>{ m.isReturn=!m.isReturn; if(m.isReturn){m.isNew=false;m.newDay=0;} renderSections(); }},
             'sep',
             { label:'✕ 삭제', danger:true, action:()=>{ cls.korTeachers=cls.korTeachers.filter(x=>x.id!==m.id); renderSections(); }},
           ]);
@@ -2386,17 +2424,21 @@ function printAttendance() {
     const tableLabel= g.tableIds?.length ? g.tableIds.map(id=>getTableLabel(id)).join(' · ') : '미배정';
     const leaderName= cleanName(g.name);
 
-    const memberTag = (name, isNew, isReturn) => {
+    const memberTag = (name, isNew, isReturn, newDay) => {
       let badge = '';
-      if (isNew)    badge = '<span style="background:#F0A800;color:#fff;font-size:7pt;font-weight:900;padding:1px 5px;border-radius:3px;margin-left:3px;vertical-align:middle;">NEW</span>';
+      if (isNew) {
+        const d = newDay||1;
+        const colors = ['','#E05000','#E07800','#D09000','#B0A000'];
+        badge = `<span style="background:${colors[d]||'#F0A800'};color:#fff;font-size:7pt;font-weight:900;padding:1px 5px;border-radius:3px;margin-left:3px;vertical-align:middle;">NEW ${d}일</span>`;
+      }
       if (isReturn) badge = '<span style="background:#22A06B;color:#fff;font-size:7pt;font-weight:900;padding:1px 5px;border-radius:3px;margin-left:3px;vertical-align:middle;">복귀</span>';
       return `<span style="white-space:nowrap;">${name}${badge}</span>`;
     };
 
-    const korList = korMembers.map(k=>memberTag(k.name, k.isNew, k.isReturn)).join('<span style="color:#CCC;margin:0 4px;">·</span>');
-    const teaList = korTeachers.map(k=>memberTag(k.name, k.isNew, k.isReturn)).join('<span style="color:#CCC;margin:0 4px;">·</span>');
-    const natList = natives.map(m=>memberTag(m.name, m.isNew, false)).join('<span style="color:#CCC;margin:0 4px;">·</span>');
-    const nonList = nonnatives.map(m=>memberTag(m.name, m.isNew, false)).join('<span style="color:#CCC;margin:0 4px;">·</span>');
+    const korList = korMembers.map(k=>memberTag(k.name, k.isNew, k.isReturn, k.newDay)).join('<span style="color:#CCC;margin:0 4px;">·</span>');
+    const teaList = korTeachers.map(k=>memberTag(k.name, k.isNew, k.isReturn, k.newDay)).join('<span style="color:#CCC;margin:0 4px;">·</span>');
+    const natList = natives.map(m=>memberTag(m.name, m.isNew, false, m.newDay)).join('<span style="color:#CCC;margin:0 4px;">·</span>');
+    const nonList = nonnatives.map(m=>memberTag(m.name, m.isNew, false, m.newDay)).join('<span style="color:#CCC;margin:0 4px;">·</span>');
     const newNames= newPeople.map(x=>x.name).join(', ');
 
     pages += `
