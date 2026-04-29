@@ -181,6 +181,137 @@ nav{height:52px;background:var(--black);display:flex;align-items:center;padding:
 /* ── TOAST ── */
 .toast-el{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--black);color:#fff;padding:10px 20px;border-radius:99px;font-size:11px;font-weight:500;z-index:9999;animation:tin .2s ease;white-space:nowrap;pointer-events:none;box-shadow:0 6px 24px rgba(0,0,0,.25)}
 @keyframes tin{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+/* ════════════════════════════════
+   📱 MOBILE  (max-width: 768px)
+   ════════════════════════════════ */
+
+/* 기본 숨김 요소 */
+.mob-bar { display:none; }
+.mob-spacer { display:none; height:64px; }
+.sheet-close {
+  display:none;
+  position:absolute; top:14px; right:16px;
+  width:32px; height:32px;
+  background:#f0f0f0; border:none; border-radius:50%;
+  font-size:16px; cursor:pointer; z-index:10;
+  align-items:center; justify-content:center;
+  -webkit-tap-highlight-color:transparent;
+}
+
+@media (max-width: 768px) {
+  /* ── Nav ── */
+  nav { padding:0 14px; gap:8px; height:48px; }
+  .nav-tag { display:none; }
+  .nav-tabs { display:none; }
+  .key-btn { padding:4px 8px; font-size:10px; }
+  #key-lbl { display:none; }
+  #sync-lbl { display:none; }
+
+  /* ── 달력 레이아웃: 1열로 ── */
+  .cal-layout {
+    display:block;
+    padding:12px 12px 0;
+    max-width:100%;
+  }
+  .cal-left {
+    border-radius:16px;
+    padding:16px 14px;
+    margin-bottom:12px;
+  }
+  .cal-month-name { font-size:22px; }
+  .cal-year { font-size:13px; }
+  .cal-nav { width:32px; height:32px; font-size:14px; border-radius:8px; }
+  .del-all-subtle { padding:0 10px; height:32px; font-size:10px; }
+
+  /* ── DOW 행 ── */
+  .dow-row { gap:2px; margin-bottom:4px; }
+  .dow { font-size:9px; padding:4px 0; border-radius:6px; }
+
+  /* ── 날짜 셀 ── */
+  .grid { gap:3px; }
+  .day { min-height:58px; padding:7px 3px 4px; border-radius:10px; gap:2px; }
+  .dn { font-size:13px; letter-spacing:0; }
+  .dtxt { font-size:8px; -webkit-line-clamp:1; }
+  .dfmt { font-size:6px; padding:1px 4px; }
+  .today-badge { font-size:6px; padding:1px 4px; }
+
+  /* ── 통계 2열 ── */
+  .stats-row { grid-template-columns:repeat(2,1fr); gap:6px; margin-top:12px; }
+  .stat-v { font-size:18px; }
+  .gen-all { padding:12px; font-size:11px; margin-top:12px; }
+  .del-all-subtle { margin-left:8px; }
+
+  /* ── 오른쪽 패널 → 바텀 시트 ── */
+  .right-p {
+    position:fixed;
+    bottom:0; left:0; right:0;
+    height:0;
+    border-radius:24px 24px 0 0;
+    z-index:150;
+    box-shadow:0 -8px 40px rgba(0,0,0,.2);
+    transition:height 0.35s cubic-bezier(0.16,1,0.3,1);
+    overflow:hidden;
+    border:none;
+    background:#fff;
+  }
+  .right-p.open {
+    height:85vh;
+  }
+  .right-p.open .r-body {
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+  /* 드래그 핸들 */
+  .right-p::before {
+    content:'';
+    display:block;
+    width:40px; height:4px;
+    background:#ddd; border-radius:99px;
+    margin:12px auto 0;
+    flex-shrink:0;
+  }
+  .sheet-close { display:flex !important; }
+
+  /* ── 설정 페이지 ── */
+  .settings-wrap { padding:14px 12px 80px; }
+  .settings-wrap h2 { font-size:16px; }
+  .set-sec { padding:14px; }
+  .add-row { flex-wrap:wrap; gap:6px; }
+  .add-inp.wide { flex:1 1 100%; }
+
+  /* ── 토스트 위치 ── */
+  .toast-el { bottom:74px; }
+
+  /* ── 모바일 탭바 표시 ── */
+  .mob-bar { display:flex !important; }
+  .mob-spacer { display:block !important; }
+}
+
+/* ── 모바일 하단 탭바 ── */
+.mob-bar {
+  position:fixed; bottom:0; left:0; right:0;
+  height:64px;
+  background:#fff;
+  border-top:1px solid #eaeaea;
+  z-index:140;
+  box-shadow:0 -2px 16px rgba(0,0,0,.07);
+  align-items:stretch;
+}
+.mob-btn {
+  flex:1; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:4px;
+  font-size:10px; font-weight:700; color:#aaa;
+  border:none; background:transparent;
+  cursor:pointer; letter-spacing:.3px; text-transform:uppercase;
+  -webkit-tap-highlight-color:transparent;
+  transition:color .15s;
+  font-family:'Instrument Sans',sans-serif;
+  padding-bottom:4px;
+}
+.mob-btn svg { width:22px; height:22px; stroke-width:2; }
+.mob-btn.active { color:#CC0014; }
+
 </style>
 </head>
 <body>
@@ -224,7 +355,7 @@ nav{height:52px;background:var(--black);display:flex;align-items:center;padding:
         <div class="stat-c"><div class="stat-l">포맷 종류</div><div class="stat-v" id="s-fmts">0</div></div>
       </div>
     </div>
-    <div class="right-p" id="right-p"></div>
+    <div class="right-p" id="right-p"><button class="sheet-close" onclick="mobClose()" aria-label="닫기">✕</button></div>
   </div>
 </div>
 
@@ -514,9 +645,12 @@ let year,month,selected=null,loading=false,genDay=null;
 function getTopics(){try{return JSON.parse(localStorage.getItem('tb_topics_v5')||'{}')}catch{return{}}}
 function saveTopics(t){
   localStorage.setItem('tb_topics_v5',JSON.stringify(t));
-  scheduleAutoPush();
+  // auto-push debounce (아래 _autoPushTimer 사용)
+  clearTimeout(window._autoPushTimer);
+  window._autoPushTimer=setTimeout(function(){
+    if(typeof getGistToken==='function'&&getGistToken()&&getGistId()) gistPush();
+  },2000);
 }
-function scheduleAutoPush(){ /* defined later, safe to call early */ }
 function getFormats(){try{return JSON.parse(localStorage.getItem('tb_fmts_v2')||'null')||DEFAULT_FORMATS}catch{return DEFAULT_FORMATS}}
 function saveFormats(f){localStorage.setItem('tb_fmts_v2',JSON.stringify(f))}
 function getSources(){try{return JSON.parse(localStorage.getItem('tb_srcs_v3')||'null')||DEFAULT_SOURCES}catch{return DEFAULT_SOURCES}}
@@ -1215,10 +1349,10 @@ function updateSyncStatus(){
 }
 
 async function gistPush(){
-  var _tkInp=(document.getElementById('gist-token-inp')||{}).value||'';
-  var _idInp=(document.getElementById('gist-id-inp')||{}).value||'';
-  if(_idInp) saveGistId(_idInp);
-  if(_tkInp && !_tkInp.startsWith('•')) saveGistToken(_tkInp);
+  var _iv=(document.getElementById('gist-id-inp')||{}).value||'';
+  var _tv=(document.getElementById('gist-token-inp')||{}).value||'';
+  if(_iv) saveGistId(_iv);
+  if(_tv&&!_tv.startsWith('•')) saveGistToken(_tv);
   const token=getGistToken();
   if(!token){ showToast('GitHub 토큰을 먼저 입력해주세요'); return; }
   const topics=getTopics();
@@ -1266,10 +1400,10 @@ async function gistPush(){
 }
 
 async function gistPull(){
-  var _tkInp=(document.getElementById('gist-token-inp')||{}).value||'';
-  var _idInp=(document.getElementById('gist-id-inp')||{}).value||'';
-  if(_idInp) saveGistId(_idInp);
-  if(_tkInp && !_tkInp.startsWith('•')) saveGistToken(_tkInp);
+  var _iv=(document.getElementById('gist-id-inp')||{}).value||'';
+  var _tv=(document.getElementById('gist-token-inp')||{}).value||'';
+  if(_iv) saveGistId(_iv);
+  if(_tv&&!_tv.startsWith('•')) saveGistToken(_tv);
   const token=getGistToken(), id=getGistId();
   if(!token||!id){ showToast('토큰과 Gist ID를 모두 입력해주세요'); return; }
   showToast('불러오는 중...');
@@ -1282,8 +1416,7 @@ async function gistPull(){
     const fileContent=data.files['thebox-topics.json']?.content;
     if(!fileContent) throw new Error('thebox-topics.json 파일을 찾을 수 없어요');
     const topics=JSON.parse(fileContent);
-    /* gistPull에서는 auto-push 없이 직접 저장 (무한루프 방지) */
-    localStorage.setItem('tb_topics_v5', JSON.stringify(topics));
+    localStorage.setItem('tb_topics_v5',JSON.stringify(topics));
     renderCal(); renderRight();
     showToast('✓ 불러오기 완료! '+Object.keys(topics).length+'개 토픽 로드됨');
     updateSyncStatus();
@@ -1293,14 +1426,7 @@ async function gistPull(){
   }
 }
 
-/* Auto-push: 원본 saveTopics 재선언 없이 타이머만 관리 */
-var _autoPushTimer = null;
-function scheduleAutoPush(){
-  clearTimeout(_autoPushTimer);
-  _autoPushTimer = setTimeout(function(){
-    if(getGistToken() && getGistId()) gistPush();
-  }, 2000);
-}
+/* auto-push is now built into saveTopics above */
 
 /* Auto-pull on page load if connected */
 async function autoSyncOnLoad(){
@@ -1408,28 +1534,28 @@ document.addEventListener('DOMContentLoaded',()=>{
 
   /* Pull button in settings */
   document.getElementById('gist-pull-btn').addEventListener('click',function(){
-    var idVal = document.getElementById('gist-id-inp').value.trim();
-    var tkVal = document.getElementById('gist-token-inp').value.trim();
-    if(idVal) saveGistId(idVal);
-    if(tkVal && !tkVal.startsWith('•')) saveGistToken(tkVal);
+    var iv=document.getElementById('gist-id-inp').value.trim();
+    var tv=document.getElementById('gist-token-inp').value.trim();
+    if(iv) saveGistId(iv);
+    if(tv&&!tv.startsWith('•')) saveGistToken(tv);
     gistPull();
   });
 
   /* Push now */
   document.getElementById('gist-push-btn').addEventListener('click',function(){
-    var idVal = document.getElementById('gist-id-inp').value.trim();
-    var tkVal = document.getElementById('gist-token-inp').value.trim();
-    if(idVal) saveGistId(idVal);
-    if(tkVal && !tkVal.startsWith('•')) saveGistToken(tkVal);
+    var iv=document.getElementById('gist-id-inp').value.trim();
+    var tv=document.getElementById('gist-token-inp').value.trim();
+    if(iv) saveGistId(iv);
+    if(tv&&!tv.startsWith('•')) saveGistToken(tv);
     gistPush();
   });
 
   /* Pull now */
   document.getElementById('gist-pull-now-btn').addEventListener('click',function(){
-    var idVal = document.getElementById('gist-id-inp').value.trim();
-    var tkVal = document.getElementById('gist-token-inp').value.trim();
-    if(idVal) saveGistId(idVal);
-    if(tkVal && !tkVal.startsWith('•')) saveGistToken(tkVal);
+    var iv=document.getElementById('gist-id-inp').value.trim();
+    var tv=document.getElementById('gist-token-inp').value.trim();
+    if(iv) saveGistId(iv);
+    if(tv&&!tv.startsWith('•')) saveGistToken(tv);
     gistPull();
   });
 
@@ -1455,6 +1581,111 @@ document.addEventListener('DOMContentLoaded',()=>{
   /* Auto-pull on load */
   autoSyncOnLoad();
 });
+
+/* ════════════════════════════════
+   📱 Mobile JS
+   ════════════════════════════════ */
+(function(){
+  function isMob(){ return window.innerWidth <= 768; }
+
+  /* 바텀시트 열기/닫기 */
+  window.mobOpen = function(){
+    if(!isMob()) return;
+    var rp = document.getElementById('right-p');
+    if(rp){ rp.classList.add('open'); document.body.style.overflow='hidden'; }
+  };
+  window.mobClose = function(){
+    var rp = document.getElementById('right-p');
+    if(rp){ rp.classList.remove('open'); document.body.style.overflow=''; }
+  };
+
+  /* 모바일 탭 네비게이션 */
+  window.mobNav = function(view){
+    document.querySelectorAll('.nav-tab').forEach(function(t){ t.classList.remove('active'); });
+    document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('active'); });
+    var tab = document.querySelector('[data-view="'+view+'"]');
+    if(tab) tab.classList.add('active');
+    var el = document.getElementById('view-'+view);
+    if(el) el.classList.add('active');
+    var ca = document.getElementById('mob-cal');
+    var se = document.getElementById('mob-set');
+    if(ca) ca.classList.toggle('active', view==='calendar');
+    if(se) se.classList.toggle('active', view==='settings');
+    if(view==='settings' && typeof renderSettings==='function') renderSettings();
+    mobClose();
+  };
+
+  /* 상단 nav 탭 클릭 시 하단 탭바 동기화 */
+  document.querySelectorAll('.nav-tab').forEach(function(tab){
+    tab.addEventListener('click', function(){
+      var v = tab.dataset.view;
+      var ca = document.getElementById('mob-cal');
+      var se = document.getElementById('mob-set');
+      if(ca) ca.classList.toggle('active', v==='calendar');
+      if(se) se.classList.toggle('active', v==='settings');
+    });
+  });
+
+  /* ── 이벤트 위임: 달력 날짜 클릭 → 바텀시트 오픈 ── */
+  document.addEventListener('click', function(e){
+    if(!isMob()) return;
+    var dayEl = e.target.closest('.day[data-d]');
+    if(!dayEl) return;
+    /* renderRight가 DOM을 업데이트한 뒤 열기 */
+    setTimeout(function(){
+      var rp = document.getElementById('right-p');
+      /* r-body 또는 r-loading이 생성됐으면 열기 */
+      if(rp && (rp.querySelector('.r-body') || rp.querySelector('.r-loading') || rp.querySelector('.r-empty button'))){
+        mobOpen();
+      }
+    }, 100);
+  });
+
+  /* ── 스와이프 다운으로 닫기 ── */
+  var _sy = 0;
+  document.addEventListener('touchstart', function(e){
+    _sy = e.touches[0].clientY;
+  }, {passive:true});
+  document.addEventListener('touchend', function(e){
+    var rp = document.getElementById('right-p');
+    if(!rp || !rp.classList.contains('open')) return;
+    if(e.changedTouches[0].clientY - _sy > 80) mobClose();
+  }, {passive:true});
+
+  /* ── 시트 바깥 터치 시 닫기 ── */
+  document.addEventListener('touchstart', function(e){
+    var rp = document.getElementById('right-p');
+    if(rp && rp.classList.contains('open') && !rp.contains(e.target)){
+      mobClose();
+    }
+  }, {passive:true});
+
+})();
+
 </script>
+
+<!-- 모바일 spacer -->
+<div class="mob-spacer"></div>
+
+<!-- 모바일 하단 탭바 -->
+<div class="mob-bar" id="mob-bar">
+  <button class="mob-btn active" id="mob-cal" onclick="mobNav('calendar')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2.5"/>
+      <line x1="16" y1="2" x2="16" y2="6"/>
+      <line x1="8" y1="2" x2="8" y2="6"/>
+      <line x1="3" y1="10" x2="21" y2="10"/>
+    </svg>
+    달력
+  </button>
+  <button class="mob-btn" id="mob-set" onclick="mobNav('settings')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </svg>
+    설정
+  </button>
+</div>
+
 </body>
 </html>
