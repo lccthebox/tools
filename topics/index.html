@@ -259,22 +259,6 @@ nav{height:52px;background:var(--black);display:flex;align-items:center;padding:
       </div>
       <p class="tip">💡 뉴닉, 롱블랙, 캐릿, 트렌드코리아, 유튜브 주제, SNS 핫이슈를 직접 붙여넣어 주세요.</p>
     </div>
-    <div class="set-sec" style="border:2px solid #1a7f37">
-      <h3 style="display:flex;align-items:center;gap:8px">
-        <span>🌐 실시간 트렌드 크롤러</span>
-        <span class="set-badge" id="crawler-badge" style="background:#555">미설정</span>
-      </h3>
-      <p class="set-desc">Cloudflare Worker URL을 연결하면 네이버 뉴스·유튜브·구글 트렌드를 실시간으로 가져와 토픽 생성에 사용해요.</p>
-      <div class="add-row" style="margin-bottom:8px">
-        <input class="add-inp wide" id="crawler-url-inp" placeholder="https://thebox-crawler.your-name.workers.dev">
-        <button class="add-btn" id="crawler-save-btn" style="background:#1a7f37">저장</button>
-      </div>
-      <button class="add-btn" id="crawler-test-btn" style="background:#555;width:100%;margin-bottom:6px">🔍 연결 테스트</button>
-      <div id="crawler-preview" style="display:none;background:var(--surf);border-radius:8px;padding:10px;font-size:10px;color:var(--muted);max-height:120px;overflow-y:auto;margin-bottom:6px"></div>
-      <p class="tip">💡 Worker 배포 방법: <a href="https://workers.cloudflare.com" target="_blank" style="color:var(--black);font-weight:600">workers.cloudflare.com</a> → Create Worker → thebox-worker.js 코드 붙여넣기 → Deploy<br>
-      💡 무료 티어로 하루 100,000 요청 가능 — 충분해요.</p>
-    </div>
-
     <div class="set-sec" style="border:2px solid var(--black)">
       <h3 style="display:flex;align-items:center;gap:8px">
         <span>☁️ GitHub Gist 동기화</span>
@@ -528,7 +512,13 @@ const KR_FMT_GUIDE={
 let year,month,selected=null,loading=false,genDay=null;
 
 function getTopics(){try{return JSON.parse(localStorage.getItem('tb_topics_v5')||'{}')}catch{return{}}}
-function saveTopics(t){localStorage.setItem('tb_topics_v5',JSON.stringify(t))}
+function saveTopics(t){
+  localStorage.setItem('tb_topics_v5',JSON.stringify(t));
+  clearTimeout(window._apTimer);
+  window._apTimer=setTimeout(function(){
+    if(typeof getGistToken==='function'&&getGistToken()&&getGistId()) gistPush();
+  },2000);
+}
 function getFormats(){try{return JSON.parse(localStorage.getItem('tb_fmts_v2')||'null')||DEFAULT_FORMATS}catch{return DEFAULT_FORMATS}}
 function saveFormats(f){localStorage.setItem('tb_fmts_v2',JSON.stringify(f))}
 function getSources(){try{return JSON.parse(localStorage.getItem('tb_srcs_v3')||'null')||DEFAULT_SOURCES}catch{return DEFAULT_SOURCES}}
@@ -563,25 +553,7 @@ async function generateTopic(day, forceFmt){
   renderCal();renderRight();
 
   const fmt=forceFmt || fmts[Math.floor(Math.random()*fmts.length)].name;
-
-  // 실시간 트렌드 수집 시도
-  let liveTrends = null;
-  try { liveTrends = await fetchLiveTrends(); } catch(e){}
-
-  let picked, srcBlock;
-  if(liveTrends && liveTrends.length >= 3){
-    // 실시간 트렌드 사용 — 랜덤 5개 선택
-    const shuffledLive = [...liveTrends].sort(()=>Math.random()-.5).slice(0,5);
-    srcBlock = shuffledLive.map(i=>`[${i.source}] "${i.title}${i.desc?' — '+i.desc.slice(0,50):''}"`).join('\n');
-    picked = shuffledLive.map(i=>({name:i.source, angle:i.title}));
-  } else {
-    // Fallback: 기존 소스풀
-    const recentSrcNames = new Set((Object.values(getTopics()).slice(-3)||[]).map(t=>t.source_name).filter(Boolean));
-    const freshSrcs = srcs.filter(s=>!recentSrcNames.has(s.name));
-    const srcPool = freshSrcs.length>=3 ? freshSrcs : srcs;
-    picked = [...srcPool].sort(()=>Math.random()-.5).slice(0,3);
-    srcBlock = picked.map(s=>`[${s.name}] "${s.angle}"`).join(' / ');
-  }
+  const picked=[...srcs].sort(()=>Math.random()-.5).slice(0,3);
   const tops=getTopics();
   const rcats=[];
   for(let i=1;i<=7;i++){
@@ -591,7 +563,7 @@ async function generateTopic(day, forceFmt){
   }
   const avoid=[...new Set(rcats)];
   const avoidS=avoid.length?`\n카테고리 피하기: ${avoid.join(',')}`:'' ;
-  // srcBlock은 위에서 이미 정의됨
+  const srcBlock=picked.map(s=>`[${s.name}] "${s.angle}"`).join(' / ');
   const fmtHint=FMT_GUIDE[fmt]||`roles: 역할 2개`;
 
   const prompt=`TheBox English Networking Club — weekly topic card generator.
@@ -1304,7 +1276,7 @@ async function gistPull(){
     const fileContent=data.files['thebox-topics.json']?.content;
     if(!fileContent) throw new Error('thebox-topics.json 파일을 찾을 수 없어요');
     const topics=JSON.parse(fileContent);
-    saveTopics(topics);
+    localStorage.setItem('tb_topics_v5',JSON.stringify(topics));
     renderCal(); renderRight();
     showToast('✓ 불러오기 완료! '+Object.keys(topics).length+'개 토픽 로드됨');
     updateSyncStatus();
@@ -1314,17 +1286,7 @@ async function gistPull(){
   }
 }
 
-/* Auto-push after every topic save */
-const _origSaveTopics = saveTopics;
-function saveTopics(t){
-  _origSaveTopics(t);
-  /* debounce auto-push: 2s after last save */
-  clearTimeout(saveTopics._timer);
-  saveTopics._timer=setTimeout(()=>{
-    if(getGistToken()&&getGistId()) gistPush();
-  },2000);
-}
-saveTopics._timer=null;
+/* auto-push is built into saveTopics */
 
 /* Auto-pull on page load if connected */
 async function autoSyncOnLoad(){
@@ -1410,25 +1372,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     document.getElementById('api-key-inp').value='••••••••••••••••';
   });
 
-  updateNavKey();updateSyncStatus();updateCrawlerBadge();renderCal();renderRight();
-
-  // 크롤러 설정
-  const crawlerSaveBtn = document.getElementById('crawler-save-btn');
-  if(crawlerSaveBtn){
-    crawlerSaveBtn.addEventListener('click',function(){
-      const u = document.getElementById('crawler-url-inp').value.trim();
-      if(!u){ showToast('Worker URL을 입력해주세요'); return; }
-      saveCrawlerUrl(u);
-      updateCrawlerBadge();
-      showToast('크롤러 URL 저장됨 ✓');
-    });
-  }
-  const crawlerTestBtn = document.getElementById('crawler-test-btn');
-  if(crawlerTestBtn) crawlerTestBtn.addEventListener('click', testCrawler);
-
-  // 저장된 URL 복원
-  const crawlerInp = document.getElementById('crawler-url-inp');
-  if(crawlerInp && getCrawlerUrl()) crawlerInp.value = getCrawlerUrl();
+  updateNavKey();updateSyncStatus();renderCal();renderRight();
 
   /* Gist token save */
   document.getElementById('gist-token-save').addEventListener('click',()=>{
@@ -1483,81 +1427,6 @@ document.addEventListener('DOMContentLoaded',()=>{
   /* Auto-pull on load */
   autoSyncOnLoad();
 });
-
-/* ════════════════════════════════
-   🌐 실시간 트렌드 크롤러
-   ════════════════════════════════ */
-function getCrawlerUrl(){ return localStorage.getItem('tb_crawler_url')||''; }
-function saveCrawlerUrl(u){ localStorage.setItem('tb_crawler_url',u); }
-
-function updateCrawlerBadge(){
-  const badge = document.getElementById('crawler-badge');
-  if(!badge) return;
-  const url = getCrawlerUrl();
-  if(url){
-    badge.textContent='연결됨';
-    badge.style.background='#1a7f37';
-  } else {
-    badge.textContent='미설정';
-    badge.style.background='#555';
-  }
-}
-
-async function fetchLiveTrends(){
-  const url = getCrawlerUrl();
-  if(!url) return null;
-  try{
-    const res = await fetch(url+'?source=all', {
-      signal: AbortSignal.timeout(8000),
-    });
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const data = await res.json();
-    if(!data.ok || !data.items?.length) return null;
-    return data.items; // [{title, desc, source, type}]
-  }catch(e){
-    console.warn('크롤러 fetch 실패:', e.message);
-    return null;
-  }
-}
-
-async function testCrawler(){
-  const btn = document.getElementById('crawler-test-btn');
-  const preview = document.getElementById('crawler-preview');
-  const urlInp = document.getElementById('crawler-url-inp');
-  const url = urlInp.value.trim() || getCrawlerUrl();
-  if(!url){ showToast('Worker URL을 먼저 입력해주세요'); return; }
-
-  btn.disabled = true;
-  btn.textContent = '테스트 중...';
-  preview.style.display = 'none';
-
-  try{
-    const res = await fetch(url+'?source=all', {
-      signal: AbortSignal.timeout(10000),
-    });
-    const data = await res.json();
-    if(data.ok && data.items?.length){
-      preview.style.display = 'block';
-      preview.innerHTML = `<div style="font-weight:600;color:#1a7f37;margin-bottom:6px">✓ 연결 성공 — ${data.items.length}개 트렌드 수집</div>`
-        + data.items.slice(0,8).map(i=>
-            `<div style="padding:2px 0;border-bottom:1px solid var(--border)">
-              <span style="color:var(--red);font-weight:600">[${i.source}]</span> ${i.title}
-            </div>`
-          ).join('');
-      showToast(`✓ ${data.items.length}개 트렌드 수집 성공!`);
-    } else {
-      throw new Error(data.error || '데이터 없음');
-    }
-  }catch(e){
-    preview.style.display = 'block';
-    preview.innerHTML = `<div style="color:var(--red)">✗ 연결 실패: ${e.message}</div>`;
-    showToast('연결 실패: '+e.message.slice(0,40));
-  }finally{
-    btn.disabled = false;
-    btn.textContent = '🔍 연결 테스트';
-  }
-}
-
 </script>
 </body>
 </html>
