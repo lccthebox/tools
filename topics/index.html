@@ -1032,12 +1032,12 @@ function renderRight(){
   const krFmt = (fObj && fObj.desc) ? fObj.desc : (KR_FMT_GUIDE[s2.format]||'주제에 맞게 자유롭게 대화하세요!');
   panel.innerHTML=`<div class="r-body">
     <div class="date-row"><div class="date-big">${String(selected).padStart(2,'0')}</div><div style="display:flex;flex-direction:column;gap:3px"><div class="date-mo">${MONTHS[month]} ${year}</div><div class="cpill" style="background:${cc}">${t.category||''}</div></div><div class="fmtpill"><div class="fmtdot"></div>${s2.format||''}</div></div>
-    <div class="r-title">${t.main_title||''}</div>
-    <div class="r-angle">${t.korean_angle||''}</div>
+    <div class="r-title" contenteditable="true" onblur="window._tbEdit(${selected},'main_title',this.innerText)">${t.main_title||''}</div>
+    <div class="r-angle" contenteditable="true" onblur="window._tbEdit(${selected},'korean_angle',this.innerText)">${t.korean_angle||''}</div>
     <div class="sec"><div class="sec-l">1ST — Ice Breaking</div><div class="sec-line"></div></div>
-    ${(s1.icebreakers||[]).map((q,i)=>`<div class="sq"><span class="sq-q">Q${i+1}</span><span>${q}</span></div>`).join('')}
+    ${(s1.icebreakers||[]).map((q,i)=>`<div class="sq"><span class="sq-q">Q${i+1}</span><span contenteditable="true" onblur="window._tbEdit(${selected},'s1.ib.${i}',this.innerText)">${q}</span></div>`).join('')}
     <div class="sec" style="margin-top:10px"><div class="sec-l">Spark Words — ${s1.spark_title||''}</div><div class="sec-line"></div></div>
-    <div class="bingo" style="grid-template-columns:repeat(3,1fr);gap:3px">${(s1.spark_words||[]).map(w=>`<div class="bc" style="font-size:10px;padding:7px 4px;letter-spacing:.5px">${w}</div>`).join('')}</div>
+    <div class="bingo" style="grid-template-columns:repeat(3,1fr);gap:3px">${(s1.spark_words||[]).map((w,i)=>`<div class="bc" contenteditable="true" onblur="window._tbEdit(${selected},'s1.sw.${i}',this.innerText)" style="font-size:10px;padding:7px 4px;letter-spacing:.5px">${w}</div>`).join('')}</div>
     
     <div class="sec"><div class="sec-l">2ND — ${s2.format||''}</div><div class="sec-line"></div></div>
     
@@ -1048,7 +1048,7 @@ function renderRight(){
     </div>
     
     <div style="font-size:12px;font-weight:600;margin-bottom:4px">${s2.title||''} <span style="font-size:10px;color:var(--muted);font-weight:400">${s2.subtitle_kr||''}</span></div>
-    <div class="scen-box">${s2.scenario||''}</div>
+    <div class="scen-box" contenteditable="true" onblur="window._tbEdit(${selected},'s2.scen',this.innerText)">${t.session2?.scenario||''}</div>
     
     <!-- 어휘 섹션 아코디언 (접어두기) -->
     <details style="background:#F8F9FA; border:1px solid #EAEAEA; border-radius:8px; padding:10px 12px; margin-bottom:10px; cursor:pointer">
@@ -1057,7 +1057,7 @@ function renderRight(){
         <span style="font-size:9px; color:#888;">클릭해서 보기 ▼</span>
       </summary>
       <div style="margin-top:10px; padding-top:10px; border-top:1px dashed #DDD; display:flex; flex-direction:column; gap:6px;">
-        ${(s2.expressions||[]).map(e=>`<div style="font-size:11px; line-height:1.45; color:#444;">• ${e}</div>`).join('')}
+        ${(s2.expressions||[]).map((e,i)=>`<div contenteditable="true" onblur="window._tbEdit(${selected},'s2.ex.${i}',this.innerText)" style="font-size:11px; line-height:1.45; color:#444;">• ${e}</div>`).join('')}
       </div>
     </details>
     
@@ -1096,6 +1096,17 @@ function updateNavKey(){
 window._tbGen=d=>{
   const s=document.getElementById('regen-fmt');
   generateTopic(d, s && s.value ? s.value : undefined);
+};
+window._tbEdit=(d,path,val)=>{
+  const tops=getTopics();const k=topicKey(d);if(!tops[k])return;
+  const t=tops[k];
+  if(path==='main_title')t.main_title=val;
+  if(path==='korean_angle')t.korean_angle=val;
+  if(path==='s2.scen')t.session2.scenario=val;
+  if(path.startsWith('s1.ib.')){const idx=parseInt(path.split('.')[2]);t.session1.icebreakers[idx]=val;}
+  if(path.startsWith('s1.sw.')){const idx=parseInt(path.split('.')[2]);t.session1.spark_words[idx]=val;}
+  if(path.startsWith('s2.ex.')){const idx=parseInt(path.split('.')[2]);t.session2.expressions[idx]=val.replace(/^•\s*/,'');}
+  saveTopics(tops);renderCal();showToast('수정사항 저장됨');
 };
 window._tbDel=d=>{if(!confirm('삭제?'))return;const t=getTopics();delete t[topicKey(d)];saveTopics(t);renderCal();renderRight();showToast('삭제됨')};
 window._tbPDF=d=>downloadPDF(d);
