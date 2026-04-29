@@ -485,26 +485,6 @@ const KR_FMT_GUIDE={
 
 let year,month,selected=null,loading=false,genDay=null;
 
-/* ── Pollinations.ai — 무료 AI 이미지 URL 생성 ── */
-function memeImgUrl(memeText){
-  if(!memeText)return '';
-  // 텍스트/말풍선을 유도하는 문장들 제거
-  let cleanText = memeText
-    .replace(/with thought bubbles? like ['"][^'"]+['"]/gi, '')
-    .replace(/thought bubbles? like ['"][^'"]+['"]/gi, '')
-    .replace(/saying ['"][^'"]+['"]/gi, 'looking expressive')
-    .replace(/Caption:? ['"][^'"]+['"]/gi, '')
-    .replace(/with text ['"][^'"]+['"]/gi, '')
-    .replace(/speech bubbles?/gi, '')
-    .replace(/thought bubbles?/gi, '');
-  
-  const basePrompt = `High-quality 3D Pixar-style digital art. Scene: ${cleanText}. Style: Polished 3D render, soft studio lighting, cute and relatable characters, highly detailed, perfect anatomy. Rules: ABSOLUTELY NO TEXT, NO WORDS, NO SPEECH BUBBLES, NO WATERMARKS. Phone screens must be blank. Format: 16:10 landscape, clean worksheet composition.`.replace(/\\n/g, ' ');
-
-  const prompt=encodeURIComponent(basePrompt);
-  const seed=memeText.split('').reduce((a,c)=>a+c.charCodeAt(0),0)%9999;
-  return `https://image.pollinations.ai/prompt/${prompt}?width=1000&height=625&seed=${seed}&nologo=true`;
-}
-
 function getTopics(){try{return JSON.parse(localStorage.getItem('tb_topics_v5')||'{}')}catch{return{}}}
 function saveTopics(t){localStorage.setItem('tb_topics_v5',JSON.stringify(t))}
 function getFormats(){try{return JSON.parse(localStorage.getItem('tb_fmts_v2')||'null')||DEFAULT_FORMATS}catch{return DEFAULT_FORMATS}}
@@ -600,7 +580,7 @@ Format: ${fmt}
 ${fmtHint}
 
 Return ONLY raw JSON (no markdown fences):
-{"main_title":"Provocative question title (max 10 words)","category":"Money|Work|Love|Food|Travel|Health|AI|SNS|Lifestyle|Korea Trend|Friendship|Community","korean_angle":"어제 카톡방에서 나눌 법한 수다 주제처럼 바이브 있게 1-2문장 Korean","source_name":"${picked[0]?.name||''}","meme_idea":"Describe a funny visual scene. NO TEXT/WORDS AT ALL. Purely visual actions. Must be relatable (office/after-work vibe), clean composition for landscape. Avoid weird/creepy/low-quality.","session1":{"spark_title":"short punchy title","spark_words":["Slang/Idiom 1","Slang/Idiom 2","Slang/Idiom 3","Slang/Idiom 4","Slang/Idiom 5","Slang/Idiom 6"],"icebreakers":["Fun personal Q1","Q2","Q3"]},"session2":{"format":"${fmt}","title":"catchy activity title","subtitle_kr":"2-4 Korean words","scenario":"Juicy specific scenario or Game setup — real numbers, app names, relatable situation. 2-3 sentences max.","roles":["Short Label A","Short Label B"],"questions":["Q1: Personal — What did YOU do?","Q2: Social — Why do so many people...?","Q3: Hypothetical — If you could... would you?"],"vote":"Final quick vote question","expressions":["High-level Idiom 1 — short meaning","Advanced phrase 2 — short meaning","Native Collocation 3 — short meaning","Phrase 4","Phrase 5","Phrase 6"]},"session3":{"left_title":"게임 진행 순서","left_rules":["룰 1","룰 2","룰 3"],"left_tips_title":"💡 질문 할 때 팁","left_tips":["진행 팁 1","진행 팁 2","진행 팁 3","진행 팁 4"],"right_title":"막힐 때 던져볼만한 질문 (혹은 주제 키워드)","right_items":[{"context":"어떤 상황에서 던지는 질문인지 (예: 한쪽 의견만 너무 나올 때)","en":"리더가 던지는 돌발 영어 질문 1-2문장","kr":"해당 질문 한국어 해석"},{"context":"...","en":"...","kr":"..."}]}}
+{"main_title":"Provocative question title (max 10 words)","category":"Money|Work|Love|Food|Travel|Health|AI|SNS|Lifestyle|Korea Trend|Friendship|Community","korean_angle":"어제 카톡방에서 나눌 법한 수다 주제처럼 바이브 있게 1-2문장 Korean","source_name":"${picked[0]?.name||''}","session1":{"spark_title":"short punchy title","spark_words":["Slang/Idiom 1","Slang/Idiom 2","Slang/Idiom 3","Slang/Idiom 4","Slang/Idiom 5","Slang/Idiom 6"],"icebreakers":["Fun personal Q1","Q2","Q3"]},"session2":{"format":"${fmt}","title":"catchy activity title","subtitle_kr":"2-4 Korean words","scenario":"Provide a HIGHLY DETAILED, JUICY, and SPECIFIC scenario or Game setup. Include real numbers (e.g. ₩50,000, 3 hours), specific brand/app names, and relatable modern dilemmas. Aim for 4-5 sentences that paint a vivid picture for discussion.","roles":["Short Label A","Short Label B"],"questions":["Q1: Personal — What did YOU do?","Q2: Social — Why do so many people...?","Q3: Hypothetical — If you could... would you?"],"vote":"Final quick vote question","expressions":["High-level Idiom 1 — short meaning","Advanced phrase 2 — short meaning","Native Collocation 3 — short meaning","Phrase 4","Phrase 5","Phrase 6"]},"session3":{"left_title":"게임 진행 순서","left_rules":["룰 1","룰 2","룰 3"],"left_tips_title":"💡 질문 할 때 팁","left_tips":["진행 팁 1","진행 팁 2","진행 팁 3","진행 팁 4"],"right_title":"막힐 때 던져볼만한 질문 (혹은 주제 키워드)","right_items":[{"context":"어떤 상황에서 던지는 질문인지 (예: 한쪽 의견만 너무 나올 때)","en":"리더가 던지는 돌발 영어 질문 1-2문장","kr":"해당 질문 한국어 해석"},{"context":"...","en":"...","kr":"..."}]}}
 // Note: session3.right_items MUST contain exactly 4 items.`;
 
   const steps=['소스 분석 중...','트렌드 파악 중...',`${fmt} 생성 중...`,'마무리 중...'];
@@ -620,13 +600,15 @@ Return ONLY raw JSON (no markdown fences):
     });
     if(!res.ok){const e=await res.json();throw new Error(e.error?.message||`HTTP ${res.status}`)}
     const data=await res.json();
-    const raw=data.content[0].text.trim().replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
-    const result=JSON.parse(raw);
+    const content=data.content[0].text;
+    const match=content.match(/\{[\s\S]*\}/);
+    if(!match) throw new Error('응답에서 유효한 JSON을 찾을 수 없습니다.');
+    const result=JSON.parse(match[0]);
     const updated=getTopics();updated[k]=result;saveTopics(updated);
     showToast(`"${result.main_title}" 생성 완료!`);
   }catch(e){
     console.error(e);
-    showToast('오류: '+(e.message||'').slice(0,60));
+    showToast('오류: '+(e.message||'').slice(0,100));
   }finally{
     clearInterval(stepTimer);loading=false;genDay=null;
     renderCal();renderRight();
@@ -767,18 +749,7 @@ function downloadPDF(day){
         </div>
       </div>`).join('')}
       ${fmt.includes('debate')||fmt.includes('rather')?`<div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:2px solid #e0e0de;font-family:'DM Sans',sans-serif;font-size:9pt;font-weight:800;color:#cc0014">VS</div>`:''}
-    </div>
-    ${t.meme_idea?(()=>{
-      const mu=memeImgUrl(t.meme_idea);
-      return `<div style="border-radius:10px;overflow:hidden;border:1px solid #E0DFDB;margin-bottom:16px">
-        <div style="background:#F7F6F3;padding:6px 14px;display:flex;align-items:center;gap:8px">
-          <span style="font-size:10pt">📸</span>
-          <span style="font-family:'DM Sans',sans-serif;font-size:7pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#888">Meme / Visual Cue</span>
-        </div>
-        <img src="${mu}" alt="meme" style="width:100%;display:block;max-height:200px;object-fit:cover">
-        <div style="padding:8px 14px;font-family:'DM Sans',sans-serif;font-size:8.5pt;color:#555;font-style:italic;line-height:1.45;background:#fdfcfb;border-top:1px solid #e8e6e0">${t.meme_idea}</div>
-      </div>`;
-    })():''}`;
+    </div>`;
   }
 
   /* Korean format guide */
@@ -873,17 +844,7 @@ body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#0D0D0D}
       <div style="font-family:'DM Sans',sans-serif;font-size:7.5pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:${catColor};margin-bottom:5px">📌 Why This Topic?</div>
       <div style="font-family:'DM Sans',sans-serif;font-size:10pt;color:#1a1a1a;line-height:1.65;font-weight:500">${t.korean_angle}</div>
     </div>`:''}
-    ${t.meme_idea?(()=>{
-      const pdfMemeUrl=memeImgUrl(t.meme_idea);
-      return `<div style="border-radius:10px;overflow:hidden;border:1px solid #E0DFDB;margin-bottom:16px">
-        <div style="background:#F7F6F3;padding:5px 12px;display:flex;align-items:center;gap:7px">
-          <span style="font-size:10pt">📸</span>
-          <span style="font-family:'DM Sans',sans-serif;font-size:7pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#888">Meme / Visual Cue</span>
-        </div>
-        <img src="${pdfMemeUrl}" alt="meme" style="width:100%;display:block;height:auto;max-height:350px;object-fit:contain;background:#EAEAEA">
-        <div style="padding:7px 12px;font-family:'DM Sans',sans-serif;font-size:8pt;color:#666;font-style:italic;line-height:1.4;background:#fdfcfb;border-top:1px solid #e8e6e0">${t.meme_idea}</div>
-      </div>`;
-    })():''}
+
 
     <div class="section-head"><span class="section-label">🔥 Icebreaker Questions</span><div class="section-rule"></div></div>
     <div style="margin-bottom:18px">${ibHTML}</div>
@@ -946,92 +907,62 @@ body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#0D0D0D}
     <div class="footer-pg">2 / ${s3.left_rules ? '3' : '2'}</div>
   </div>
 </div>
-${(()=>{
-  if(!s3||!s3.left_rules||!s3.left_rules.length) return '';
-  const CC2=catColor;
-  const leftRules=(s3.left_rules||[]).map(function(r){
-    return '<li style="margin-bottom:10px;line-height:1.65">'+r+'</li>';
-  }).join('');
-  const leftTips=(s3.left_tips||[]).map(function(tip){
-    return '<li style="margin-bottom:10px;line-height:1.65">'+tip+'</li>';
-  }).join('');
-  const rightItems=(s3.right_items||[]).map(function(item,idx){
-    return '<div style="border-bottom:1px solid #eaeaea;padding-bottom:14px;margin-bottom:14px">'
-      +'<div style="font-family:\'DM Sans\',sans-serif;font-size:9pt;font-weight:800;background:#FFE500;display:inline-block;padding:2px 8px;border-radius:3px;margin-bottom:7px;color:#111">'+(item.context||'')+'</div>'
-      +'<div style="font-family:\'DM Sans\',sans-serif;font-size:10pt;color:#111;margin-bottom:5px;line-height:1.5;font-weight:500">'+(item.en||'')+'</div>'
-      +'<div style="font-family:\'DM Sans\',sans-serif;font-size:9pt;color:#666;line-height:1.45">'+(item.kr||'')+'</div>'
-      +'</div>';
-  }).join('');
+${s3.left_rules ? `
+<!-- PAGE 3 — LEADER'S GUIDE (2-COLUMN) -->
+<div class="page" style="display:flex; height:297mm; overflow:hidden;">
+  <!-- Left Column -->
+  <div style="flex:1; padding:40px; border-right:1px solid #ccc; background:#fff;">
+    <div style="background:#cc0000; color:#fff; font-family:'Instrument Sans',sans-serif; font-size:18pt; font-weight:800; padding:12px 20px; margin-bottom:20px;">
+      ${s2.format || 'Activity Guide'}
+    </div>
+    
+    <div style="font-family:'DM Sans',sans-serif; font-size:10pt; font-weight:700; color:#111; margin-bottom:14px;">
+      ${s3.left_title || '게임 진행 순서'}
+    </div>
+    
+    <ol style="font-family:'DM Sans',sans-serif; font-size:9.5pt; color:#111; line-height:1.7; padding-left:20px; margin-bottom:30px;">
+      ${(s3.left_rules||[]).map(r=>`<li style="margin-bottom:12px">${r}</li>`).join('')}
+    </ol>
+    
+    <div style="font-family:'DM Sans',sans-serif; font-size:10pt; font-weight:800; background:#ffff00; display:inline-block; padding:4px 8px; margin-bottom:14px;">
+      ${s3.left_tips_title || '💡 질문 할 때 팁'}
+    </div>
+    
+    <ol style="font-family:'DM Sans',sans-serif; font-size:9.5pt; color:#111; line-height:1.7; padding-left:20px;">
+      ${(s3.left_tips||[]).map(t=>`<li style="margin-bottom:12px">${t}</li>`).join('')}
+    </ol>
+  </div>
+  
+  <!-- Right Column -->
+  <div style="flex:1; padding:40px; background:#fff; position:relative;">
+    <div style="font-family:'DM Sans',sans-serif; font-size:13pt; font-weight:800; color:#cc0000; margin-bottom:20px; text-transform:uppercase;">
+      ${s3.right_title || 'TOPIC QUESTIONS'}
+    </div>
+    
+    <div style="display:flex; flex-direction:column; gap:20px;">
+      ${(s3.right_items||[]).map(i=>`
+        <div style="border-bottom:1px solid #eaeaea; padding-bottom:16px;">
+          <div style="font-family:'DM Sans',sans-serif; font-size:9.5pt; font-weight:800; background:#ffff00; display:inline-block; padding:2px 6px; margin-bottom:8px;">
+            ${i.context}
+          </div>
+          <div style="font-family:'DM Sans',sans-serif; font-size:10pt; color:#111; margin-bottom:6px; line-height:1.4;">
+            ${i.en}
+          </div>
+          <div style="font-family:'DM Sans',sans-serif; font-size:9pt; color:#555; line-height:1.4;">
+            ${i.kr}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+    
+    <div class="footer" style="position:absolute; bottom:20px; left:40px; right:40px;">
+      <div class="footer-brand">THE<b>BOX</b> ENGLISH NETWORKING</div>
+      <div class="footer-pg">3 / 3</div>
+    </div>
+  </div>
+</div>` : ''}
 
-  return '<div class="page" style="display:flex;flex-direction:column;height:297mm;overflow:hidden">'
-    +'<div style="height:6px;background:'+CC2+'"></div>'
-    +'<div style="background:#0D0D0D;padding:12px 22px;display:flex;align-items:center;justify-content:space-between">'
-      +'<div style="font-size:17pt;font-weight:800;letter-spacing:2.5px;color:#fff;font-family:\'DM Sans\',sans-serif">THE<span style="color:#ff5555">BOX</span></div>'
-      +'<div style="text-align:right">'
-        +'<div style="font-size:7.5pt;color:#888;margin-bottom:3px;font-family:\'DM Sans\',sans-serif">'+k+'</div>'
-        +'<div style="display:inline-block;background:'+CC2+';color:#fff;font-size:7pt;font-weight:700;padding:2px 10px;border-radius:4px;letter-spacing:.8px;text-transform:uppercase;font-family:\'DM Sans\',sans-serif">'+(t.category||'')+'</div>'
-      +'</div>'
-    +'</div>'
-    +'<div style="background:#F7F6F3;border-bottom:2px solid #E8E6E0;padding:9px 22px;display:flex;align-items:center;gap:10px">'
-      +'<span style="font-size:10pt;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#0D0D0D;font-family:\'DM Sans\',sans-serif">LEADER\'S CUE</span>'
-      +'<div style="width:1px;height:16px;background:#D0CEC8;margin:0 6px"></div>'
-      +'<span style="font-size:8.5pt;color:#888;font-family:\'DM Sans\',sans-serif">진행자 가이드 — 멤버들에게 보여주지 마세요</span>'
-      +'<div style="margin-left:auto;font-size:8.5pt;font-weight:700;color:#0D0D0D;font-family:\'DM Sans\',sans-serif">'+(t.main_title||'')+'</div>'
-    +'</div>'
-    +'<div style="flex:1;display:grid;grid-template-columns:1fr 1fr;overflow:hidden">'
-
-      /* LEFT COLUMN */
-      +'<div style="padding:22px 24px;border-right:2px solid #EAEAEA;overflow-y:auto">'
-        +'<div style="background:'+CC2+';color:#fff;font-family:\'DM Sans\',sans-serif;font-size:14pt;font-weight:800;padding:11px 16px;border-radius:8px;margin-bottom:18px;letter-spacing:.5px">'
-          +(s2.format||'Activity Guide')
-        +'</div>'
-
-        +'<div style="font-family:\'DM Sans\',sans-serif;font-size:9.5pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#333;margin-bottom:10px">'
-          +(s3.left_title||'게임 진행 순서')
-        +'</div>'
-        +'<ol style="font-family:\'DM Sans\',sans-serif;font-size:9.5pt;color:#222;line-height:1.65;padding-left:20px;margin-bottom:22px">'
-          +leftRules
-        +'</ol>'
-
-        +'<div style="background:#FFE500;display:inline-block;font-family:\'DM Sans\',sans-serif;font-size:9.5pt;font-weight:800;padding:4px 10px;border-radius:4px;margin-bottom:12px;color:#111">'
-          +(s3.left_tips_title||'💡 질문 할 때 팁')
-        +'</div>'
-        +'<ol style="font-family:\'DM Sans\',sans-serif;font-size:9.5pt;color:#222;line-height:1.65;padding-left:20px">'
-          +leftTips
-        +'</ol>'
-      +'</div>'
-
-      /* RIGHT COLUMN */
-      +'<div style="padding:22px 24px;overflow-y:auto">'
-        +'<div style="font-family:\'DM Sans\',sans-serif;font-size:12pt;font-weight:800;color:'+CC2+';margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">'
-          +(s3.right_title||'TOPIC QUESTIONS')
-        +'</div>'
-        +'<div style="font-family:\'DM Sans\',sans-serif;font-size:8pt;color:#aaa;margin-bottom:16px">앞 토픽이 막힐 때 여기서 골라 던지세요</div>'
-        +rightItems
-      +'</div>'
-
-    +'</div>'
-    +'<div style="background:#0D0D0D;padding:7px 22px;display:flex;align-items:center;justify-content:space-between">'
-      +'<div style="font-size:8pt;font-weight:700;letter-spacing:1.5px;color:#555;font-family:\'DM Sans\',sans-serif">THE<b style="color:#ff5555">BOX</b> ENGLISH NETWORKING</div>'
-      +'<div style="font-size:9pt;font-weight:700;color:#444;font-family:\'DM Sans\',sans-serif">3 / 3</div>'
-    +'</div>'
-  +'</div>';
-})()}
-
-<scr'+'ipt>
-window.onload=()=>{
-  const imgs=document.querySelectorAll('img');
-  if(!imgs.length){window.print();return;}
-  let total=imgs.length,done=0;
-  const tryPrint=()=>{done++;if(done>=total)window.print();};
-  imgs.forEach(img=>{
-    if(img.complete){tryPrint();}
-    else{img.onload=tryPrint;img.onerror=tryPrint;}
-  });
-  // 최대 8초 기다리다 그냥 인쇄
-  setTimeout(()=>window.print(),8000);
-};
-</scr'+'ipt>
+<scr'+'ipt>window.onload=()=>window.print()</scr'+'ipt>
 </body></html>`;
   const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}
 }
@@ -1099,18 +1030,10 @@ function renderRight(){
   const s1=t.session1||{},s2=t.session2||{},cc=CAT_COLORS[t.category]||'#888';
   const fObj = getFormats().find(x=>x.name === s2.format);
   const krFmt = (fObj && fObj.desc) ? fObj.desc : (KR_FMT_GUIDE[s2.format]||'주제에 맞게 자유롭게 대화하세요!');
-  const memeUrl=memeImgUrl(t.meme_idea||'');
   panel.innerHTML=`<div class="r-body">
     <div class="date-row"><div class="date-big">${String(selected).padStart(2,'0')}</div><div style="display:flex;flex-direction:column;gap:3px"><div class="date-mo">${MONTHS[month]} ${year}</div><div class="cpill" style="background:${cc}">${t.category||''}</div></div><div class="fmtpill"><div class="fmtdot"></div>${s2.format||''}</div></div>
     <div class="r-title">${t.main_title||''}</div>
     <div class="r-angle">${t.korean_angle||''}</div>
-    ${t.meme_idea?`
-    <div style="margin-bottom:12px;border-radius:10px;overflow:hidden;border:1px solid #E8E6E0;background:#f7f6f3;position:relative">
-      <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#888;padding:7px 12px 5px;display:flex;align-items:center;gap:6px">📸 <span>Meme / Visual Cue</span></div>
-      <img src="${memeUrl}" alt="meme" style="width:100%;display:block;height:auto;max-height:280px;object-fit:contain;background:#EAEAEA;" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
-      <div style="display:none;padding:8px 12px;font-size:10px;color:#aaa;font-style:italic">${t.meme_idea}</div>
-      <div style="padding:7px 12px 9px;font-size:9.5px;color:#555;font-style:italic;line-height:1.45;border-top:1px solid #ebebea">${t.meme_idea}</div>
-    </div>`:''}
     <div class="sec"><div class="sec-l">1ST — Ice Breaking</div><div class="sec-line"></div></div>
     ${(s1.icebreakers||[]).map((q,i)=>`<div class="sq"><span class="sq-q">Q${i+1}</span><span>${q}</span></div>`).join('')}
     <div class="sec" style="margin-top:10px"><div class="sec-l">Spark Words — ${s1.spark_title||''}</div><div class="sec-line"></div></div>
