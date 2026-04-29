@@ -512,7 +512,11 @@ const KR_FMT_GUIDE={
 let year,month,selected=null,loading=false,genDay=null;
 
 function getTopics(){try{return JSON.parse(localStorage.getItem('tb_topics_v5')||'{}')}catch{return{}}}
-function saveTopics(t){localStorage.setItem('tb_topics_v5',JSON.stringify(t))}
+function saveTopics(t){
+  localStorage.setItem('tb_topics_v5',JSON.stringify(t));
+  scheduleAutoPush();
+}
+function scheduleAutoPush(){ /* defined later, safe to call early */ }
 function getFormats(){try{return JSON.parse(localStorage.getItem('tb_fmts_v2')||'null')||DEFAULT_FORMATS}catch{return DEFAULT_FORMATS}}
 function saveFormats(f){localStorage.setItem('tb_fmts_v2',JSON.stringify(f))}
 function getSources(){try{return JSON.parse(localStorage.getItem('tb_srcs_v3')||'null')||DEFAULT_SOURCES}catch{return DEFAULT_SOURCES}}
@@ -1211,10 +1215,10 @@ function updateSyncStatus(){
 }
 
 async function gistPush(){
-  const tokenInp=(document.getElementById('gist-token-inp')||{}).value||'';
-  const idInp=(document.getElementById('gist-id-inp')||{}).value||'';
-  if(tokenInp && !tokenInp.startsWith('•')) saveGistToken(tokenInp);
-  if(idInp) saveGistId(idInp);
+  var _tkInp=(document.getElementById('gist-token-inp')||{}).value||'';
+  var _idInp=(document.getElementById('gist-id-inp')||{}).value||'';
+  if(_idInp) saveGistId(_idInp);
+  if(_tkInp && !_tkInp.startsWith('•')) saveGistToken(_tkInp);
   const token=getGistToken();
   if(!token){ showToast('GitHub 토큰을 먼저 입력해주세요'); return; }
   const topics=getTopics();
@@ -1262,11 +1266,10 @@ async function gistPush(){
 }
 
 async function gistPull(){
-  /* localStorage에 없으면 화면 입력값에서도 시도 */
-  const tokenInp=(document.getElementById('gist-token-inp')||{}).value||'';
-  const idInp=(document.getElementById('gist-id-inp')||{}).value||'';
-  if(tokenInp && !tokenInp.startsWith('•')) saveGistToken(tokenInp);
-  if(idInp) saveGistId(idInp);
+  var _tkInp=(document.getElementById('gist-token-inp')||{}).value||'';
+  var _idInp=(document.getElementById('gist-id-inp')||{}).value||'';
+  if(_idInp) saveGistId(_idInp);
+  if(_tkInp && !_tkInp.startsWith('•')) saveGistToken(_tkInp);
   const token=getGistToken(), id=getGistId();
   if(!token||!id){ showToast('토큰과 Gist ID를 모두 입력해주세요'); return; }
   showToast('불러오는 중...');
@@ -1279,7 +1282,8 @@ async function gistPull(){
     const fileContent=data.files['thebox-topics.json']?.content;
     if(!fileContent) throw new Error('thebox-topics.json 파일을 찾을 수 없어요');
     const topics=JSON.parse(fileContent);
-    saveTopics(topics);
+    /* gistPull에서는 auto-push 없이 직접 저장 (무한루프 방지) */
+    localStorage.setItem('tb_topics_v5', JSON.stringify(topics));
     renderCal(); renderRight();
     showToast('✓ 불러오기 완료! '+Object.keys(topics).length+'개 토픽 로드됨');
     updateSyncStatus();
@@ -1289,17 +1293,14 @@ async function gistPull(){
   }
 }
 
-/* Auto-push after every topic save */
-const _origSaveTopics = saveTopics;
-function saveTopics(t){
-  _origSaveTopics(t);
-  /* debounce auto-push: 2s after last save */
-  clearTimeout(saveTopics._timer);
-  saveTopics._timer=setTimeout(()=>{
-    if(getGistToken()&&getGistId()) gistPush();
-  },2000);
+/* Auto-push: 원본 saveTopics 재선언 없이 타이머만 관리 */
+var _autoPushTimer = null;
+function scheduleAutoPush(){
+  clearTimeout(_autoPushTimer);
+  _autoPushTimer = setTimeout(function(){
+    if(getGistToken() && getGistId()) gistPush();
+  }, 2000);
 }
-saveTopics._timer=null;
 
 /* Auto-pull on page load if connected */
 async function autoSyncOnLoad(){
@@ -1406,28 +1407,29 @@ document.addEventListener('DOMContentLoaded',()=>{
   });
 
   /* Pull button in settings */
-  document.getElementById('gist-pull-btn').addEventListener('click',()=>{
-    const id=document.getElementById('gist-id-inp').value.trim();
-    if(id) saveGistId(id);
+  document.getElementById('gist-pull-btn').addEventListener('click',function(){
+    var idVal = document.getElementById('gist-id-inp').value.trim();
+    var tkVal = document.getElementById('gist-token-inp').value.trim();
+    if(idVal) saveGistId(idVal);
+    if(tkVal && !tkVal.startsWith('•')) saveGistToken(tkVal);
     gistPull();
   });
 
   /* Push now */
-  document.getElementById('gist-push-btn').addEventListener('click',()=>{
-    const idInp=document.getElementById('gist-id-inp').value.trim();
-    if(idInp) saveGistId(idInp);
-    const tokenInp=document.getElementById('gist-token-inp').value.trim();
-    if(tokenInp && !tokenInp.startsWith('•')) saveGistToken(tokenInp);
+  document.getElementById('gist-push-btn').addEventListener('click',function(){
+    var idVal = document.getElementById('gist-id-inp').value.trim();
+    var tkVal = document.getElementById('gist-token-inp').value.trim();
+    if(idVal) saveGistId(idVal);
+    if(tkVal && !tkVal.startsWith('•')) saveGistToken(tkVal);
     gistPush();
   });
 
   /* Pull now */
-  document.getElementById('gist-pull-now-btn').addEventListener('click',()=>{
-    /* 화면에 보이는 ID가 있으면 먼저 저장 후 pull */
-    const idInp=document.getElementById('gist-id-inp').value.trim();
-    if(idInp) saveGistId(idInp);
-    const tokenInp=document.getElementById('gist-token-inp').value.trim();
-    if(tokenInp && !tokenInp.startsWith('•')) saveGistToken(tokenInp);
+  document.getElementById('gist-pull-now-btn').addEventListener('click',function(){
+    var idVal = document.getElementById('gist-id-inp').value.trim();
+    var tkVal = document.getElementById('gist-token-inp').value.trim();
+    if(idVal) saveGistId(idVal);
+    if(tkVal && !tkVal.startsWith('•')) saveGistToken(tkVal);
     gistPull();
   });
 
@@ -1448,10 +1450,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   const savedToken=getGistToken();
   const savedId=getGistId();
   if(savedToken) document.getElementById('gist-token-inp').value='••••••••••••••••';
-  if(savedId){
-    const idEl=document.getElementById('gist-id-inp');
-    if(idEl && !idEl.value) idEl.value=savedId;
-  }
+  if(savedId) document.getElementById('gist-id-inp').value=savedId;
 
   /* Auto-pull on load */
   autoSyncOnLoad();
