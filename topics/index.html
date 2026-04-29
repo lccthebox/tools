@@ -181,6 +181,106 @@ nav{height:52px;background:var(--black);display:flex;align-items:center;padding:
 /* ── TOAST ── */
 .toast-el{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--black);color:#fff;padding:10px 20px;border-radius:99px;font-size:11px;font-weight:500;z-index:9999;animation:tin .2s ease;white-space:nowrap;pointer-events:none;box-shadow:0 6px 24px rgba(0,0,0,.25)}
 @keyframes tin{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+/* ══ MOBILE ≤768px ══ */
+@media (max-width: 768px) {
+  nav { padding: 0 14px; gap: 8px; height: 50px; }
+  .nav-tag { display: none; }
+  .nav-tab { padding: 4px 9px; font-size: 9px; }
+  .key-btn { padding: 4px 8px; font-size: 10px; }
+  #key-lbl, #sync-lbl { display: none; }
+
+  .cal-layout {
+    grid-template-columns: 1fr;
+    padding: 12px 10px;
+    gap: 0;
+    min-height: auto;
+  }
+  .cal-left { border-radius: 16px; padding: 16px 14px; margin-bottom: 70px; }
+  .cal-month-name { font-size: 22px; }
+  .cal-year { font-size: 13px; }
+  .cal-nav { width: 32px; height: 32px; font-size: 14px; }
+  .del-all-subtle { padding: 0 10px; height: 32px; font-size: 10px; }
+
+  .dow-row { gap: 2px; margin-bottom: 4px; }
+  .dow { font-size: 9px; padding: 4px 0; border-radius: 6px; }
+
+  .grid { gap: 3px; }
+  .day { min-height: 56px; padding: 7px 3px 4px; border-radius: 10px; gap: 2px; }
+  .dn { font-size: 13px; }
+  .dtxt { font-size: 8px; -webkit-line-clamp: 1; }
+  .dfmt { font-size: 6.5px; padding: 1px 4px; }
+
+  .stats-row { grid-template-columns: repeat(2,1fr); gap: 6px; }
+  .stat-v { font-size: 18px; }
+  .gen-all { padding: 12px; font-size: 11px; margin-top: 12px; }
+
+  /* Right panel → bottom sheet */
+  .right-p {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 0;
+    border-radius: 20px 20px 0 0;
+    z-index: 100;
+    box-shadow: 0 -8px 40px rgba(0,0,0,.2);
+    transition: height 0.32s cubic-bezier(0.16,1,0.3,1);
+    overflow: hidden;
+    border: none;
+  }
+  .right-p.mob-open { height: 82vh; }
+  .right-p.mob-open .r-body { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .right-p::before {
+    content: '';
+    display: block;
+    width: 38px; height: 4px;
+    background: #ddd; border-radius: 99px;
+    margin: 10px auto 0;
+    flex-shrink: 0;
+  }
+
+  .sheet-close { display: flex !important; }
+  .toast-el { bottom: 72px; }
+  .settings-wrap { padding: 16px 14px 80px; }
+  .settings-wrap h2 { font-size: 16px; }
+  .set-sec { padding: 14px; }
+}
+
+/* Sheet close btn (desktop: hidden) */
+.sheet-close {
+  display: none;
+  position: absolute; top: 12px; right: 14px;
+  width: 28px; height: 28px;
+  background: #f0f0f0; border: none; border-radius: 50%;
+  font-size: 13px; cursor: pointer; z-index: 10;
+  align-items: center; justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Mobile bottom tab bar (desktop: hidden) */
+.mob-bar {
+  display: none;
+  position: fixed; bottom: 0; left: 0; right: 0;
+  height: 58px; background: #fff;
+  border-top: 1px solid #eaeaea; z-index: 99;
+  box-shadow: 0 -2px 16px rgba(0,0,0,.07);
+}
+.mob-btn {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 3px;
+  font-size: 9px; font-weight: 700; color: #999;
+  border: none; background: transparent; cursor: pointer;
+  letter-spacing: .3px; text-transform: uppercase;
+  -webkit-tap-highlight-color: transparent; transition: color .15s;
+  font-family: 'Instrument Sans', sans-serif;
+}
+.mob-btn.active { color: #CC0014; }
+.mob-btn svg { width: 20px; height: 20px; }
+.mob-spacer { display: none; height: 58px; }
+
+@media (max-width: 768px) {
+  .mob-bar    { display: flex; }
+  .mob-spacer { display: block; }
+}
 </style>
 </head>
 <body>
@@ -193,6 +293,10 @@ nav{height:52px;background:var(--black);display:flex;align-items:center;padding:
     <button class="nav-tab active" data-view="calendar">달력</button>
     <button class="nav-tab" data-view="settings">설정</button>
   </div>
+  <button class="key-btn" id="sync-btn" style="margin-right:4px" title="GitHub Gist 동기화 상태">
+    <div class="key-dot" id="sync-dot"></div>
+    <span id="sync-lbl">Gist 미연결</span>
+  </button>
   <button class="key-btn" id="key-btn">
     <div class="key-dot" id="key-dot"></div>
     <span id="key-lbl">API 키 입력</span>
@@ -220,7 +324,7 @@ nav{height:52px;background:var(--black);display:flex;align-items:center;padding:
         <div class="stat-c"><div class="stat-l">포맷 종류</div><div class="stat-v" id="s-fmts">0</div></div>
       </div>
     </div>
-    <div class="right-p" id="right-p"></div>
+    <div class="right-p" id="right-p"><button class="sheet-close" onclick="mobCloseSheet()">✕</button></div>
   </div>
 </div>
 
@@ -254,6 +358,28 @@ nav{height:52px;background:var(--black);display:flex;align-items:center;padding:
         <button class="add-btn" id="src-add-btn">+ 추가</button>
       </div>
       <p class="tip">💡 뉴닉, 롱블랙, 캐릿, 트렌드코리아, 유튜브 주제, SNS 핫이슈를 직접 붙여넣어 주세요.</p>
+    </div>
+    <div class="set-sec" style="border:2px solid var(--black)">
+      <h3 style="display:flex;align-items:center;gap:8px">
+        <span>☁️ GitHub Gist 동기화</span>
+        <span class="set-badge" id="gist-status-badge" style="background:#555">미연결</span>
+      </h3>
+      <p class="set-desc">GitHub Gist에 토픽을 저장하면 어느 컴퓨터에서든 동일한 데이터를 볼 수 있어요. A에서 생성 → B에서 바로 확인 가능.</p>
+      <div class="add-row" style="margin-bottom:8px">
+        <input class="add-inp wide" id="gist-token-inp" type="password" placeholder="GitHub Personal Access Token (gist 권한 필요)">
+        <button class="add-btn" id="gist-token-save">저장</button>
+      </div>
+      <div class="add-row" style="margin-bottom:8px">
+        <input class="add-inp wide" id="gist-id-inp" placeholder="Gist ID (최초 저장 시 자동 생성, 또는 기존 ID 입력)">
+        <button class="add-btn" id="gist-pull-btn" style="background:#1a7f37">↓ 불러오기</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button class="add-btn" id="gist-push-btn" style="flex:1;background:var(--black)">↑ 지금 저장 (Push)</button>
+        <button class="add-btn" id="gist-pull-now-btn" style="flex:1;background:#1a7f37">↓ 지금 불러오기 (Pull)</button>
+      </div>
+      <p class="tip">💡 토큰 발급: <a href="https://github.com/settings/tokens/new?scopes=gist&description=TheBox+Topics" target="_blank" style="color:var(--black);font-weight:600">github.com/settings/tokens</a> → Generate new token → gist 체크 → 복사<br>
+      💡 처음엔 "지금 저장"을 누르면 새 Gist가 자동 생성되고 ID가 저장돼요.<br>
+      💡 다른 컴퓨터에서는 같은 토큰 + Gist ID 입력 후 "불러오기"를 누르세요.</p>
     </div>
     <div class="set-sec">
       <h3>Anthropic API 키</h3>
@@ -1153,7 +1279,147 @@ async function aiUpdateSources(){
   } catch(e){ console.error(e); showToast('오류 발생: '+e.message); } finally { btn.disabled = false; btn.textContent = '🤖 AI 최신 트렌드 소스 수집'; }
 }
 
+
+/* ═══════════════════════════════════════════════════════
+   GITHUB GIST SYNC
+   ═══════════════════════════════════════════════════════ */
+function getGistToken(){ return localStorage.getItem('tb_gist_token')||''; }
+function saveGistToken(t){ localStorage.setItem('tb_gist_token',t); }
+function getGistId(){ return localStorage.getItem('tb_gist_id')||''; }
+function saveGistId(id){ localStorage.setItem('tb_gist_id',id); }
+
+function updateSyncStatus(){
+  const token=getGistToken(), id=getGistId();
+  const dot=document.getElementById('sync-dot');
+  const lbl=document.getElementById('sync-lbl');
+  const badge=document.getElementById('gist-status-badge');
+  if(!dot||!lbl) return;
+  if(token && id){
+    dot.className='key-dot on';
+    lbl.textContent='Gist 연결됨';
+    if(badge){ badge.textContent='연결됨'; badge.style.background='#1a7f37'; }
+  } else if(token){
+    dot.className='key-dot';
+    dot.style.background='#f59e0b';
+    lbl.textContent='토큰만 등록';
+    if(badge){ badge.textContent='ID 없음'; badge.style.background='#f59e0b'; }
+  } else {
+    dot.className='key-dot';
+    lbl.textContent='Gist 미연결';
+    if(badge){ badge.textContent='미연결'; badge.style.background='#555'; }
+  }
+}
+
+async function gistPush(){
+  const token=getGistToken();
+  if(!token){ showToast('GitHub 토큰을 먼저 입력해주세요'); return; }
+  const topics=getTopics();
+  const content=JSON.stringify(topics,null,2);
+  const gistId=getGistId();
+
+  showToast('저장 중...');
+  try{
+    let res, data;
+    if(gistId){
+      /* PATCH — update existing gist */
+      res=await fetch('https://api.github.com/gists/'+gistId,{
+        method:'PATCH',
+        headers:{'Authorization':'token '+token,'Content-Type':'application/json','Accept':'application/vnd.github+json'},
+        body:JSON.stringify({files:{'thebox-topics.json':{content:content}}})
+      });
+    } else {
+      /* POST — create new gist */
+      res=await fetch('https://api.github.com/gists',{
+        method:'POST',
+        headers:{'Authorization':'token '+token,'Content-Type':'application/json','Accept':'application/vnd.github+json'},
+        body:JSON.stringify({
+          description:'TheBox English Networking — Topic Data',
+          public:false,
+          files:{'thebox-topics.json':{content:content}}
+        })
+      });
+    }
+    if(!res.ok){ const e=await res.json(); throw new Error(e.message||'GitHub API error'); }
+    data=await res.json();
+    if(!gistId){
+      saveGistId(data.id);
+      /* update the ID field in settings if visible */
+      const inp=document.getElementById('gist-id-inp');
+      if(inp) inp.value=data.id;
+      showToast('✓ 새 Gist 생성됨! ID: '+data.id.slice(0,8)+'...');
+    } else {
+      showToast('✓ Gist 저장 완료 ('+new Date().toLocaleTimeString()+')');
+    }
+    updateSyncStatus();
+  }catch(e){
+    console.error(e);
+    showToast('❌ 저장 실패: '+e.message.slice(0,50));
+  }
+}
+
+async function gistPull(){
+  const token=getGistToken(), id=getGistId();
+  if(!token||!id){ showToast('토큰과 Gist ID를 모두 입력해주세요'); return; }
+  showToast('불러오는 중...');
+  try{
+    const res=await fetch('https://api.github.com/gists/'+id,{
+      headers:{'Authorization':'token '+token,'Accept':'application/vnd.github+json'}
+    });
+    if(!res.ok){ const e=await res.json(); throw new Error(e.message||'GitHub API error'); }
+    const data=await res.json();
+    const fileContent=data.files['thebox-topics.json']?.content;
+    if(!fileContent) throw new Error('thebox-topics.json 파일을 찾을 수 없어요');
+    const topics=JSON.parse(fileContent);
+    saveTopics(topics);
+    renderCal(); renderRight();
+    showToast('✓ 불러오기 완료! '+Object.keys(topics).length+'개 토픽 로드됨');
+    updateSyncStatus();
+  }catch(e){
+    console.error(e);
+    showToast('❌ 불러오기 실패: '+e.message.slice(0,50));
+  }
+}
+
+/* Auto-push after every topic save */
+const _origSaveTopics = saveTopics;
+function saveTopics(t){
+  _origSaveTopics(t);
+  /* debounce auto-push: 2s after last save */
+  clearTimeout(saveTopics._timer);
+  saveTopics._timer=setTimeout(()=>{
+    if(getGistToken()&&getGistId()) gistPush();
+  },2000);
+}
+saveTopics._timer=null;
+
+/* Auto-pull on page load if connected */
+async function autoSyncOnLoad(){
+  if(getGistToken()&&getGistId()){
+    updateSyncStatus();
+    showToast('Gist에서 최신 데이터 확인 중...');
+    try{
+      const res=await fetch('https://api.github.com/gists/'+getGistId(),{
+        headers:{'Authorization':'token '+getGistToken(),'Accept':'application/vnd.github+json'}
+      });
+      if(!res.ok) return;
+      const data=await res.json();
+      const fileContent=data.files['thebox-topics.json']?.content;
+      if(!fileContent) return;
+      const remoteTops=JSON.parse(fileContent);
+      const localTops=JSON.parse(localStorage.getItem('tb_topics_v5')||'{}');
+      const remoteCount=Object.keys(remoteTops).length;
+      const localCount=Object.keys(localTops).length;
+      /* merge: remote wins for any key that's in remote */
+      const merged={...localTops,...remoteTops};
+      localStorage.setItem('tb_topics_v5',JSON.stringify(merged));
+      renderCal(); renderRight();
+      showToast('✓ 동기화 완료 ('+remoteCount+'개 토픽)');
+    }catch(e){ console.warn('Auto-sync failed:',e); }
+  }
+}
+
 document.addEventListener('DOMContentLoaded',()=>{
+
   const now=new Date();year=now.getFullYear();month=now.getMonth();
 
   document.querySelectorAll('.nav-tab').forEach(tab=>tab.addEventListener('click',()=>{
@@ -1210,8 +1476,160 @@ document.addEventListener('DOMContentLoaded',()=>{
     document.getElementById('api-key-inp').value='••••••••••••••••';
   });
 
-  updateNavKey();renderCal();renderRight();
+  updateNavKey();updateSyncStatus();renderCal();renderRight();
+
+  /* Gist token save */
+  document.getElementById('gist-token-save').addEventListener('click',()=>{
+    const t=document.getElementById('gist-token-inp').value.trim();
+    if(!t||t.startsWith('•'))return;
+    saveGistToken(t);
+    document.getElementById('gist-token-inp').value='••••••••••••••••';
+    const existingId=document.getElementById('gist-id-inp').value.trim();
+    if(existingId) saveGistId(existingId);
+    updateSyncStatus();
+    showToast('토큰 저장됨');
+  });
+
+  /* Gist ID input save on blur */
+  document.getElementById('gist-id-inp').addEventListener('change',()=>{
+    const id=document.getElementById('gist-id-inp').value.trim();
+    if(id){ saveGistId(id); updateSyncStatus(); showToast('Gist ID 저장됨'); }
+  });
+
+  /* Pull button in settings */
+  document.getElementById('gist-pull-btn').addEventListener('click',()=>{
+    const id=document.getElementById('gist-id-inp').value.trim();
+    if(id) saveGistId(id);
+    gistPull();
+  });
+
+  /* Push now */
+  document.getElementById('gist-push-btn').addEventListener('click',gistPush);
+
+  /* Pull now */
+  document.getElementById('gist-pull-now-btn').addEventListener('click',gistPull);
+
+  /* Sync status button in nav — click to open settings */
+  document.getElementById('sync-btn').addEventListener('click',()=>{
+    document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.querySelector('[data-view="settings"]').classList.add('active');
+    document.getElementById('view-settings').classList.add('active');
+    renderSettings();
+    setTimeout(()=>{
+      const el=document.getElementById('gist-token-inp');
+      if(el) el.scrollIntoView({behavior:'smooth',block:'center'});
+    },200);
+  });
+
+  /* Pre-fill gist fields if already saved */
+  const savedToken=getGistToken();
+  const savedId=getGistId();
+  if(savedToken) document.getElementById('gist-token-inp').value='••••••••••••••••';
+  if(savedId) document.getElementById('gist-id-inp').value=savedId;
+
+  /* Auto-pull on load */
+  autoSyncOnLoad();
 });
+
+/* ══ Mobile JS (event delegation — no function override) ══ */
+(function(){
+  const isMob = () => window.innerWidth <= 768;
+
+  /* 시트 열기/닫기 */
+  window.mobOpenSheet = function() {
+    if (!isMob()) return;
+    const rp = document.getElementById('right-p');
+    if (rp) { rp.classList.add('mob-open'); document.body.style.overflow = 'hidden'; }
+  };
+  window.mobCloseSheet = function() {
+    const rp = document.getElementById('right-p');
+    if (rp) { rp.classList.remove('mob-open'); document.body.style.overflow = ''; }
+  };
+
+  /* 모바일 네비게이션 */
+  window.mobNav = function(view) {
+    document.querySelectorAll('.nav-tab').forEach(function(t){ t.classList.remove('active'); });
+    document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('active'); });
+    var tab = document.querySelector('[data-view="' + view + '"]');
+    if (tab) tab.classList.add('active');
+    var el = document.getElementById('view-' + view);
+    if (el) el.classList.add('active');
+    var ca = document.getElementById('mob-cal');
+    var se = document.getElementById('mob-set');
+    if (ca) ca.classList.toggle('active', view === 'calendar');
+    if (se) se.classList.toggle('active', view === 'settings');
+    if (view === 'settings') renderSettings();
+    mobCloseSheet();
+  };
+
+  /* 네비 탭 클릭 시 하단 탭바 동기화 */
+  document.querySelectorAll('.nav-tab').forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      var v = tab.dataset.view;
+      var ca = document.getElementById('mob-cal');
+      var se = document.getElementById('mob-set');
+      if (ca) ca.classList.toggle('active', v === 'calendar');
+      if (se) se.classList.toggle('active', v === 'settings');
+    });
+  });
+
+  /* 달력 그리드 이벤트 위임 — 날짜 클릭 시 시트 열기 */
+  document.addEventListener('click', function(e) {
+    if (!isMob()) return;
+    var dayEl = e.target.closest('.day[data-d]');
+    if (!dayEl) return;
+    /* renderRight가 처리된 뒤 시트 열기 */
+    setTimeout(function() {
+      var rp = document.getElementById('right-p');
+      if (rp && rp.querySelector('.r-body, .r-loading')) {
+        rp.classList.add('mob-open');
+        document.body.style.overflow = 'hidden';
+      }
+    }, 80);
+  });
+
+  /* 스와이프 다운으로 닫기 */
+  var swipeStartY = 0;
+  document.addEventListener('touchstart', function(e) {
+    swipeStartY = e.touches[0].clientY;
+  }, { passive: true });
+  document.addEventListener('touchend', function(e) {
+    var rp = document.getElementById('right-p');
+    if (!rp || !rp.classList.contains('mob-open')) return;
+    var dy = e.changedTouches[0].clientY - swipeStartY;
+    if (dy > 70) mobCloseSheet();
+  }, { passive: true });
+
+  /* 시트 바깥 탭 시 닫기 */
+  document.addEventListener('touchstart', function(e) {
+    var rp = document.getElementById('right-p');
+    if (rp && rp.classList.contains('mob-open') && !rp.contains(e.target)) {
+      mobCloseSheet();
+    }
+  }, { passive: true });
+
+})();
+
 </script>
+<div class="mob-spacer"></div>
+<div class="mob-bar" id="mob-bar">
+  <button class="mob-btn active" id="mob-cal" onclick="mobNav('calendar')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2.5"/>
+      <line x1="16" y1="2" x2="16" y2="6"/>
+      <line x1="8" y1="2" x2="8" y2="6"/>
+      <line x1="3" y1="10" x2="21" y2="10"/>
+    </svg>
+    달력
+  </button>
+  <button class="mob-btn" id="mob-set" onclick="mobNav('settings')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </svg>
+    설정
+  </button>
+</div>
 </body>
 </html>
