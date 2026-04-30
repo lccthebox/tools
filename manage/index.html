@@ -3178,17 +3178,8 @@ function renderDashboard(){
   let alerts='';
   const s7=getExpiringSoon(7);
   
-  const allStudyMembers = [
-    ...(S.study?.groups||[]).flatMap(g=>g.members||[]),
-    ...(S.study?.indivCredits||[])
-  ];
-  const studyAlerts = allStudyMembers.filter(m => (m.credits||0) <= 2 || (m.creditExpiry && daysLeft(m.creditExpiry) <= 7));
-  
   if(s7.length) {
     alerts += `<div class="alert-bar alert-amber"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.4"/><path d="M8 5v3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="11" r=".8" fill="currentColor"/></svg><strong>아카데미 만료</strong> · ${s7.map(x=>x.name).join(', ')} 님 7일 이내 만료</div>`;
-  }
-  if(studyAlerts.length) {
-    alerts += `<div class="alert-bar alert-red" style="margin-top:6px"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.4"/><path d="M8 5v3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="11" r=".8" fill="currentColor"/></svg><strong>스터디 크레딧/만료</strong> · ${studyAlerts.map(x=>x.name).join(', ')} 님 확인 필요</div>`;
   }
   document.getElementById('dash-alerts').innerHTML=alerts;
 
@@ -9733,11 +9724,12 @@ function studyMemberDetailForm(m, g){
       </div>
     </div>
     
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px">
+    <div style="display:grid;grid-template-columns:repeat(${m.isTutor?2:4},1fr);gap:8px;margin-bottom:16px">
+      ${!m.isTutor ? `
       <div style="background:var(--bg3);border-radius:var(--r);padding:10px 12px;text-align:center;border:1px solid var(--border)">
         <div style="font-size:10px;color:var(--text3);font-weight:600;margin-bottom:3px">남은 크레딧</div>
-        <div style="font-size:16px;font-weight:700;color:${(m.credits||0)<=2?'var(--red)':'var(--accent)'}">${m.isTutor?'-':m.credits}</div>
-      </div>
+        <div style="font-size:16px;font-weight:700;color:${(m.credits||0)<=2?'var(--red)':'var(--accent)'}">${m.credits}</div>
+      </div>` : ''}
       <div style="background:var(--bg3);border-radius:var(--r);padding:10px 12px;text-align:center;border:1px solid var(--border)">
         <div style="font-size:10px;color:var(--text3);font-weight:600;margin-bottom:3px">주당 참여</div>
         <div style="font-size:14px;font-weight:700;color:var(--text)">${m.timesPerWeek||0}회</div>
@@ -9746,10 +9738,11 @@ function studyMemberDetailForm(m, g){
         <div style="font-size:10px;color:var(--text3);font-weight:600;margin-bottom:3px">일일 홀딩</div>
         <div style="font-size:16px;font-weight:700;color:var(--text2)">${holds.length}회</div>
       </div>
+      ${!m.isTutor ? `
       <div style="background:var(--bg3);border-radius:var(--r);padding:10px 12px;text-align:center;border:1px solid var(--border)">
         <div style="font-size:10px;color:var(--text3);font-weight:600;margin-bottom:3px">크레딧 만료일</div>
-        <div style="font-size:12px;font-weight:700;color:${(m.creditExpiry&&daysLeft(m.creditExpiry)<=7)?'var(--red)':'var(--text)'}">${m.isTutor?'-':(m.creditExpiry||'-')}</div>
-      </div>
+        <div style="font-size:12px;font-weight:700;color:${(m.creditExpiry&&daysLeft(m.creditExpiry)<=7)?'var(--red)':'var(--text)'}">${m.creditExpiry||'-'}</div>
+      </div>` : ''}
     </div>
 
     <div style="border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;margin-bottom:12px">
@@ -10005,9 +9998,17 @@ function smAutoCalc(){
   const moEl = document.getElementById('sm-months');
   const exEl = document.getElementById('sm-expiry');
   
+  const fieldsToToggle = ['sm-credits', 'sm-months', 'sm-expiry', 'sm-total-credits', 'sm-times'];
+  fieldsToToggle.forEach(id => {
+    const el = document.getElementById(id);
+    if(el && el.closest('.fgroup')) el.closest('.fgroup').style.display = isTutor ? 'none' : 'block';
+  });
+
   if(isTutor){
     if(moEl) moEl.value = 0;
     if(exEl) exEl.value = '';
+    const crEl = document.getElementById('sm-credits');
+    if(crEl) crEl.value = 0;
     return;
   }
   
