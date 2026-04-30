@@ -1684,8 +1684,8 @@ textarea.finput{resize:vertical;min-height:60px}
       <div class="page" id="page-studyDashboard">
         <div style="display:flex;gap:6px;margin-bottom:16px;align-items:center">
           <span style="font-size:12px;color:var(--text3);font-weight:600;margin-right:4px">요일:</span>
-          <button class="btn btn-sm study-day-btn" data-day="all" onclick="setStudyDay('all')" style="font-size:12px">전체</button>
-          <button class="btn btn-sm study-day-btn on" data-day="monwed_am" onclick="setStudyDay('monwed_am')" style="font-size:11px">월수오전</button>
+          <button class="btn btn-sm study-day-btn on" data-day="all" onclick="setStudyDay('all')" style="font-size:12px">전체</button>
+          <button class="btn btn-sm study-day-btn" data-day="monwed_am" onclick="setStudyDay('monwed_am')" style="font-size:11px">월수오전</button>
           <button class="btn btn-sm study-day-btn" data-day="monwed_pm" onclick="setStudyDay('monwed_pm')" style="font-size:11px">월수오후</button>
           <button class="btn btn-sm study-day-btn" data-day="tuethu_am" onclick="setStudyDay('tuethu_am')" style="font-size:11px">화목오전</button>
           <button class="btn btn-sm study-day-btn" data-day="tuethu_pm" onclick="setStudyDay('tuethu_pm')" style="font-size:11px">화목오후</button>
@@ -1698,8 +1698,8 @@ textarea.finput{resize:vertical;min-height:60px}
       <div class="page" id="page-studyGroups">
         <div style="display:flex;gap:6px;margin-bottom:16px;align-items:center; justify-content: space-between;">
           <div style="display:flex;gap:6px;align-items:center">
-            <button class="btn btn-sm study-day-btn" data-day="all" onclick="setStudyDay('all')" style="font-size:12px">전체</button>
-                        <button class="btn btn-sm study-day-btn on" data-day="monwed_am" onclick="setStudyDay('monwed_am')" style="font-size:11px">월수오전</button>
+            <button class="btn btn-sm study-day-btn on" data-day="all" onclick="setStudyDay('all')" style="font-size:12px">전체</button>
+            <button class="btn btn-sm study-day-btn" data-day="monwed_am" onclick="setStudyDay('monwed_am')" style="font-size:11px">월수오전</button>
             <button class="btn btn-sm study-day-btn" data-day="monwed_pm" onclick="setStudyDay('monwed_pm')" style="font-size:11px">월수오후</button>
             <button class="btn btn-sm study-day-btn" data-day="tuethu_am" onclick="setStudyDay('tuethu_am')" style="font-size:11px">화목오전</button>
             <button class="btn btn-sm study-day-btn" data-day="tuethu_pm" onclick="setStudyDay('tuethu_pm')" style="font-size:11px">화목오후</button>
@@ -1714,8 +1714,8 @@ textarea.finput{resize:vertical;min-height:60px}
       <div class="page" id="page-studyAdmin">
         <div style="display:flex;gap:6px;margin-bottom:16px;align-items:center; justify-content: space-between;">
           <div style="display:flex;gap:6px;align-items:center">
-            <button class="btn btn-sm study-day-btn" data-day="all" onclick="setStudyDay('all')" style="font-size:12px">전체</button>
-            <button class="btn btn-sm study-day-btn on" data-day="monwed_am" onclick="setStudyDay('monwed_am')" style="font-size:11px">월수오전</button>
+            <button class="btn btn-sm study-day-btn on" data-day="all" onclick="setStudyDay('all')" style="font-size:12px">전체</button>
+            <button class="btn btn-sm study-day-btn" data-day="monwed_am" onclick="setStudyDay('monwed_am')" style="font-size:11px">월수오전</button>
             <button class="btn btn-sm study-day-btn" data-day="monwed_pm" onclick="setStudyDay('monwed_pm')" style="font-size:11px">월수오후</button>
             <button class="btn btn-sm study-day-btn" data-day="tuethu_am" onclick="setStudyDay('tuethu_am')" style="font-size:11px">화목오전</button>
             <button class="btn btn-sm study-day-btn" data-day="tuethu_pm" onclick="setStudyDay('tuethu_pm')" style="font-size:11px">화목오후</button>
@@ -2931,6 +2931,7 @@ function openCtxMenu(e,id,type='student'){
       <div class="ctx-item" onclick="openStudyPayModal('${id}');closeCtxMenu()">💳 수납 관리</div>
       <div class="ctx-item" onclick="studyRenewMember('${id}');closeCtxMenu()">🔄 스터디 연장</div>
       <div class="ctx-item" onclick="openStudyHoldModal('${id}');closeCtxMenu()">🔒 일일 홀딩 등록</div>
+      <div class="ctx-item" onclick="moveStudyMemberQuick('${id}');closeCtxMenu()">🚀 그룹 이동</div>
       <div class="ctx-item danger" onclick="ctxDelete()">🗑️ 멤버 삭제</div>`;
   }
   menu.classList.add('show');
@@ -8695,7 +8696,7 @@ function renderCalendar(){
 // ══════════════════════════════════════════
 // 스터디 관리 시스템
 // ══════════════════════════════════════════
-let studyDay='monwed'; // 현재 선택된 요일 그룹
+let studyDay='all'; // 현재 선택된 요일 그룹
 let studyTab='waiting';
 
 const STUDY_DAY_LABELS={monwed_am:'월수오전', monwed_pm:'월수오후', tuethu_am:'화목오전', tuethu_pm:'화목오후', satsun:'주말'};
@@ -8722,7 +8723,13 @@ function initStudyData(){
   if(!S.study.koreanStaff) S.study.koreanStaff=[];
   if(!S.study.nativeStaff) S.study.nativeStaff=[];
   
-  // 리더 데이터는 임포트 메뉴에서 추가하세요
+  // 데이터 마이그레이션 (기존 monwed/tuethu -> monwed_am/tuethu_am)
+  (S.study.groups||[]).forEach(g=>{
+    if(g.dayGroup==='monwed') g.dayGroup='monwed_am';
+    if(g.dayGroup==='tuethu') g.dayGroup='tuethu_am';
+  });
+  if(studyDay==='monwed') studyDay='monwed_am';
+  if(studyDay==='tuethu') studyDay='tuethu_am';
 }
 
 function studySwitch(tab){
@@ -8889,17 +8896,6 @@ function renderStudyDashboard(groups){
       </div>
     </div>
 
-    <!-- 튜터/원어민 친구 -->
-    <div class="card" style="margin-bottom:14px">
-      <div class="card-head"><span class="card-title">🗣 ${dayLabel} 참여 튜터/원어민 친구</span></div>
-      <div class="card-body" style="display:flex;gap:6px;flex-wrap:wrap;padding:14px">
-        ${tutors.length ? tutors.map(t=>`
-          <div style="padding:5px 12px;background:var(--accent-light);color:var(--accent);border:1px solid var(--accent);border-radius:20px;font-size:12px;font-weight:600">
-            👤 ${t.name}
-          </div>`).join('') :
-          `<div style="font-size:12px;color:var(--text3);width:100%;text-align:center">${dayLabel} 소속 튜터/원어민 없음</div>`}
-      </div>
-    </div>
 
     <!-- ── 교대근무 교차 참여 오늘 출석 ── -->
     ${(function(){
@@ -9231,7 +9227,9 @@ function renderStudyGroups(groups){
       return`<div class="card" style="margin-bottom:16px">
         <div class="card-head" style="background:var(--bg3)">
           <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
-            <span class="card-title" style="font-size:14px">${g.leaderName}
+            <span class="card-title" style="font-size:14px;cursor:pointer" 
+                  onclick="const v=prompt('그룹명을 입력하세요', '${g.leaderName}'); if(v) updStudyGroup('${g.id}','leaderName',v)"
+                  title="클릭하여 그룹명 수정">${g.leaderName}
               <span style="font-size:11px;color:var(--text3);font-weight:400"> ${g.leaderEngName?'('+g.leaderEngName+')':''}</span>
               ${(koreanByGroup[g.id]||[]).map(t=>`<span style="font-size:10px;padding:2px 7px;border-radius:99px;background:rgba(14,168,122,0.12);color:#0ea87a;font-weight:700;margin-left:3px">🇰🇷 ${t.name}</span>`).join('')}
             </span>
@@ -9251,10 +9249,14 @@ function renderStudyGroups(groups){
             <div style="display:flex;gap:6px;margin-left:6px">
               <span style="font-size:11px;background:var(--accent-light);color:var(--accent);padding:2px 8px;border-radius:99px;font-weight:600">${members.length + korMembers.length}명</span>
               ${zeroCount>0?`<span style="font-size:11px;background:var(--red-light);color:var(--red);padding:2px 8px;border-radius:99px;font-weight:600">소진 ${zeroCount}명</span>`:''}
-              ${warnCount>0?`<span style="font-size:11px;background:var(--amber-light);color:var(--amber);padding:2px 8px;border-radius:99px;font-weight:600">경고 ${warnCount}명</span>`:''}
+              ${warnCount>0?`<span style="font-size:11px;background:var(--amber-light);color:var(--amber);padding:2px 8px;border-radius:99px;font-weight:600">확인 ${warnCount}명</span>`:''}
             </div>
           </div>
           <div style="display:flex;gap:6px">
+            <div style="display:flex;gap:4px">
+              <button class="btn btn-sm" onclick="moveStudyGroup('${g.id}', -1)" style="font-size:10px;padding:1px 5px;background:none;border:1px solid var(--border);color:var(--text2)" title="위로">▲</button>
+              <button class="btn btn-sm" onclick="moveStudyGroup('${g.id}', 1)" style="font-size:10px;padding:1px 5px;background:none;border:1px solid var(--border);color:var(--text2)" title="아래로">▼</button>
+            </div>
             <button class="btn btn-sm btn-teal" onclick="addStudyMember('${g.id}')">+ 멤버</button>
             <button class="btn btn-sm" onclick="deleteStudyGroup('${g.id}')" style="color:var(--text3);font-size:11px" title="그룹 삭제">삭제</button>
           </div>
@@ -10163,6 +10165,40 @@ function deleteStudyGroup(gid){
   S.study.groups = S.study.groups.filter(x=>x.id!==gid);
   save(); renderStudy();
   showToast(`"${g.leaderName}" 그룹이 삭제되었습니다.`);
+}
+
+function moveStudyGroup(gid, dir){
+  const groups = getStudyGroups(studyDay);
+  const idxInFiltered = groups.findIndex(g=>g.id===gid);
+  if(idxInFiltered===-1) return;
+  const targetIdxInFiltered = idxInFiltered + dir;
+  if(targetIdxInFiltered < 0 || targetIdxInFiltered >= groups.length) return;
+  const targetGid = groups[targetIdxInFiltered].id;
+  const idx1 = S.study.groups.findIndex(g=>g.id===gid);
+  const idx2 = S.study.groups.findIndex(g=>g.id===targetGid);
+  const temp = S.study.groups[idx1];
+  S.study.groups[idx1] = S.study.groups[idx2];
+  S.study.groups[idx2] = temp;
+  save(); renderStudy();
+}
+
+function moveStudyMemberQuick(mid){
+  const gOrig = S.study.groups.find(gr=>(gr.members||[]).find(x=>x.id===mid));
+  if(!gOrig) return;
+  const m = gOrig.members.find(x=>x.id===mid);
+  const others = S.study.groups.filter(gr=>gr.id !== gOrig.id);
+  if(!others.length) { alert('이동 가능한 다른 그룹이 없습니다.'); return; }
+  const grList = others.map((gr,i)=>`${i+1}. [${STUDY_DAY_LABELS[gr.dayGroup]||gr.dayGroup}] ${gr.leaderName} (${gr.timeSlot||''})`).join('\n');
+  const sel = prompt(`${m.name} 멤버를 이동할 그룹 번호를 입력하세요:\n\n${grList}`);
+  if(!sel) return;
+  const targetIdx = parseInt(sel)-1;
+  if(isNaN(targetIdx) || targetIdx < 0 || targetIdx >= others.length) { alert('잘못된 번호입니다.'); return; }
+  const gTarget = others[targetIdx];
+  gOrig.members = gOrig.members.filter(x=>x.id !== mid);
+  if(!gTarget.members) gTarget.members = [];
+  gTarget.members.push(m);
+  save(); renderStudy();
+  showToast(`${m.name} → ${gTarget.leaderName} 그룹으로 이동 완료`);
 }
 
 function updStudyGroup(gid,field,val){
