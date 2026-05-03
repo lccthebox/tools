@@ -505,6 +505,8 @@ function getSources(){try{return JSON.parse(localStorage.getItem('tb_srcs_v3')||
 function saveSources(s){localStorage.setItem('tb_srcs_v3',JSON.stringify(s))}
 function getApiKey(){return localStorage.getItem('tb_api_key_v2')||''}
 function saveApiKey(k){localStorage.setItem('tb_api_key_v2',k)}
+function getLevel(){return localStorage.getItem('tb_level')||'Intermediate'}
+function saveLevel(l){localStorage.setItem('tb_level',l)}
 
 let toastTimer=null;
 function showToast(msg){
@@ -527,6 +529,11 @@ async function generateTopic(day, forceFmt){
   const fmts=getFormats().filter(f=>f.on);
   const srcs=getSources().filter(s=>s.on);
   if(!fmts.length){showToast('활성 포맷 없음 — 설정에서 켜주세요');return}
+
+  const level = getLevel();
+  const levelPrompt = level === 'Beginner' ? 'EASY (A2-B1 level), simple daily words, no hard idioms.' : 
+                    level === 'Advanced' ? 'ADVANCED (C1 level), sophisticated vocabulary, complex nuances.' : 
+                    'NATURAL INTERMEDIATE (B2 level), common idioms, relatable slang.';
 
   const k=topicKey(day);
   loading=true;genDay=day;selected=day;
@@ -585,8 +592,8 @@ If it sounds like a textbook, news article, or academic paper → REJECT IT.
 If it sounds like a KakaoTalk group chat at 11pm arguing over something silly → PERFECT.
 
 === DIFFICULTY & ACCESSIBILITY ===
-- TARGET LEVEL: CEFR B1-B2 (Intermediate). 
-- LANGUAGE: Natural, modern, but NOT overly obscure or academic.
+- TARGET LEVEL: ${levelPrompt}
+- LANGUAGE: ${level === 'Beginner' ? 'Super simple and clear' : level === 'Advanced' ? 'Sophisticated and diverse' : 'Natural and modern'}.
 - ANNOTATIONS: Provide Korean meanings for ALL Spark Words and Useful Expressions.
 
 === HOW TO MAKE IT FUN (THE NEW RULES) ===
@@ -892,7 +899,7 @@ body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#0D0D0D}
 .accent-bar{height:8px;background:${catColor}}
 .header{background:#0D0D0D;padding:13px 20px 12px;display:flex;align-items:center;justify-content:space-between}
 .logo{font-size:18pt;font-weight:800;letter-spacing:2.5px;color:#fff}
-.logo span{color:#007bff}
+.logo span{color:#ff5555}
 .header-right{text-align:right}
 .header-date{font-size:8pt;color:#888;margin-bottom:4px;letter-spacing:.5px}
 .cat-tag{display:inline-block;background:${catColor};color:#fff;font-size:7pt;font-weight:700;padding:3px 11px;border-radius:5px;letter-spacing:1px;text-transform:uppercase}
@@ -902,8 +909,8 @@ body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#0D0D0D}
 .session-sub{font-size:8.5pt;color:#888;font-weight:400}
 .session-title{margin-left:auto;font-size:9pt;font-weight:700;color:#0D0D0D;letter-spacing:.2px;max-width:45%}
 .body{padding:18px 20px;flex:1;display:flex;flex-direction:column}
-.names-bar{display:flex;align-items:center;gap:14px;background:#F7F6F3;border-radius:8px;padding:10px 16px;margin-bottom:16px;border:1.5px solid #E8E6E0}
-.names-label{font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:${catColor};white-space:nowrap;flex-shrink:0}
+.names-bar{display:flex;align-items:center;gap:14px;background:#F7F6F3;border-radius:8px;padding:18px 20px;margin-bottom:16px;border:1.5px solid #E8E6E0;min-height:54px}
+.names-label{font-size:9pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:${catColor};white-space:nowrap;flex-shrink:0}
 .names-line{flex:1;height:1.5px;background:#D5D3CE}
 .section-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;margin-top:4px}
 .section-label{font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#888}
@@ -1129,7 +1136,11 @@ function renderRight(){
   }
   const k=topicKey(selected),t=getTopics()[k];
   if(!t){
-    panel.innerHTML=`<div class="r-empty"><div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px">${MONTHS[month]} ${selected}일</div><p>아직 토픽이 없어요</p><button onclick="window._tbGen(${selected})" style="margin-top:10px;padding:10px 20px;background:var(--red);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">✦ 토픽 생성</button></div>`;
+    panel.innerHTML=`<div class="r-empty">
+      <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:12px">${MONTHS[month]} ${selected}일</div>
+      <p>아직 토픽이 없어요</p>
+      <button onclick="window._tbGen(${selected})" style="margin-top:10px;padding:10px 20px;background:var(--red);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">✦ 토픽 생성</button>
+    </div>`;
     return;
   }
   const s1=t.session1||{},s2=t.session2||{},cc=CAT_COLORS[t.category]||'#888';
@@ -1184,13 +1195,24 @@ function renderRight(){
       </div>
     </details>
     
-    </div><div class="r-actions"><button class="btn-dl" onclick="window._tbPDF(${selected})">↓  A4 PDF 인쇄 / 다운로드</button>
-    <div class="btn-row" style="margin-top:8px">
+    </div><div class="r-actions">
+    <button class="btn-dl" onclick="window._tbPDF(${selected})">↓  A4 PDF 인쇄 / 다운로드</button>
+    
+    <div style="margin-top:12px; background:var(--surf); padding:10px; border-radius:10px; border:1px solid var(--border)">
+      <div style="font-size:9px; font-weight:800; color:var(--muted); text-transform:uppercase; margin-bottom:8px; letter-spacing:0.5px">⚡ 어휘 레벨 맞춤 교체 (AI)</div>
+      <div style="display:flex; gap:4px">
+        <button class="btn-s" onclick="lowerVocabLevel(${selected}, 'Beginner')" style="flex:1; background:#22c55e; color:#fff; border:none">🟢 초급</button>
+        <button class="btn-s" onclick="lowerVocabLevel(${selected}, 'Intermediate')" style="flex:1; background:#eab308; color:#fff; border:none">🟡 중급</button>
+        <button class="btn-s" onclick="lowerVocabLevel(${selected}, 'Advanced')" style="flex:1; background:#ef4444; color:#fff; border:none">🔴 고급</button>
+      </div>
+    </div>
+
+    <div class="btn-row" style="margin-top:10px">
       <select id="regen-fmt" style="flex:1; padding:8px; border-radius:8px; border:1px solid #EAEAEA; font-family:inherit; font-size:11px; font-weight:700; outline:none; cursor:pointer; background:#F8F9FA; color:#333;" ${loading?'disabled':''}>
         <option value="">🎲 랜덤 포맷</option>
         ${getFormats().filter(f=>f.on).map(f=>`<option value="${f.name}">${f.name}</option>`).join('')}
       </select>
-      <button class="btn-s" onclick="window._tbGen(${selected})" ${loading?'disabled':''} style="flex:1">↺ 재생성</button>
+      <button class="btn-s" onclick="window._tbGen(${selected})" ${loading?'disabled':''} style="flex:1">↺ 전체 재생성</button>
       <button class="btn-s" onclick="window._tbDel(${selected})" style="flex:0.6;background:#fff;border:1px solid #EAEAEA;color:#888">✕ 삭제</button>
     </div></div>`;
 }
@@ -1274,6 +1296,7 @@ window._tbEdit=(d,path,val)=>{
   }
   saveTopics(tops);renderCal();showToast('수정사항 저장됨');
 };
+window._tbSetLv=l=>{saveLevel(l);renderRight();showToast(`난이도가 ${l}로 설정되었습니다.`)};
 window._tbDel=d=>{if(!confirm('삭제?'))return;const t=getTopics();delete t[topicKey(d)];saveTopics(t);renderCal();renderRight();showToast('삭제됨')};
 window._tbPDF=d=>downloadPDF(d);
 
@@ -1296,6 +1319,41 @@ async function aiUpdateFormats(){
     newFmts.forEach(f => fmts.unshift({id:'f'+Date.now()+Math.floor(Math.random()*100), name:f.name, desc:f.desc, on:true}));
     saveFormats(fmts); renderSettings(); showToast(`신규 액티비티 ${newFmts.length}개 추가 및 기존 3개 비활성화!`);
   } catch(e){ console.error(e); showToast('오류 발생: '+e.message); } finally { btn.disabled = false; btn.textContent = '🤖 AI 신규 액티비티 생성'; }
+}
+
+async function lowerVocabLevel(day, level){
+  const apiKey=getApiKey();
+  if(!apiKey){showToast('API 키가 필요합니다'); return;}
+  const tops=getTopics(); const k=topicKey(day); const t=tops[k];
+  if(!t) return;
+  
+  showToast(`${level} 수준으로 어휘를 생성 중입니다...`);
+  
+  const levelPrompt = level === 'Beginner' ? 'EASY (A2-B1 level), simple daily words, no hard idioms.' : 
+                    level === 'Advanced' ? 'ADVANCED (C1 level), sophisticated vocabulary, complex nuances.' : 
+                    'NATURAL INTERMEDIATE (B2 level), common idioms, relatable slang.';
+
+  const prompt = `Topic: "${t.main_title}"\nScenario: "${t.session2?.scenario || ''}"\n\nTask: Keep the topic but REPLACE the vocabulary (Spark Words & Expressions) to match ${levelPrompt}. Also provide Korean translations for each.\n\nReturn ONLY raw JSON:\n{\n  "spark_words": [\n    {"en":"Word1","kr":"뜻1"},\n    {"en":"Word2","kr":"뜻2"},\n    {"en":"Word3","kr":"뜻3"},\n    {"en":"Word4","kr":"뜻4"},\n    {"en":"Word5","kr":"뜻5"},\n    {"en":"Word6","kr":"뜻6"}\n  ],\n  "expressions": [\n    {"en":"Exp1","kr":"뜻1"},\n    {"en":"Exp2","kr":"뜻2"},\n    {"en":"Exp3","kr":"뜻3"},\n    {"en":"Exp4","kr":"뜻4"},\n    {"en":"Exp5","kr":"뜻5"},\n    {"en":"Exp6","kr":"뜻6"}\n  ]\n}`;
+
+  try {
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST', headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1000,messages:[{role:'user',content:prompt}]})
+    });
+    if(!res.ok) throw new Error('API Error');
+    const raw=(await res.json()).content[0].text.trim().replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
+    const result = JSON.parse(raw);
+    
+    t.session1.spark_words = result.spark_words;
+    t.session2.expressions = result.expressions;
+    
+    saveTopics(tops);
+    renderRight();
+    showToast(`${level} 수준 어휘로 교체되었습니다! ✓`);
+  } catch(e){
+    console.error(e);
+    showToast('오류 발생: '+e.message);
+  }
 }
 
 async function aiUpdateSources(){
