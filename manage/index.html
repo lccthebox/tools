@@ -9132,17 +9132,19 @@ function renderStudyGroups(groups){
   ensureS();
   const el=document.getElementById('study-content-groups');if(!el)return;
   const DAY_COLORS={'월':'#4dabf7','화':'#ff8787','수':'#38d9a9','목':'#ffa94d','금':'#b197fc','토':'#ff6b6b','일':'#20c997'};
+  const getGColor = (dg) => {
+    if(!dg) return 'var(--accent)';
+    if(dg.startsWith('월수')) return '#228be6'; // 월수: 진한 파랑
+    if(dg.startsWith('화목')) return '#fd7e14'; // 화목: 주황
+    if(dg.startsWith('주말')) return '#be4bdb'; // 주말: 보라
+    return DAY_COLORS[dg[0]] || 'var(--accent)';
+  };
   // 크레딧 시각화 헬퍼
   function creditBar(m){
     const cr = m.credits || 0;
     const maxCr = m.totalCredits || 16;
     if(maxCr<=0) return '';
-    const pct = Math.max(0,Math.min(100,Math.round(cr/maxCr*100)));
-    // 1회 제외 나머지는 모두 초록색 막대
-    const barColor = cr === 1 ? 'var(--red)' : 'var(--teal)';
-    const label = cr + '회';
-    // 텍스트는 항상 검정
-    const labelColor = '#000';
+    const label = `${cr} / ${maxCr}`;
     
     let badges = '';
     if(cr === 10) badges = '<span style="font-size:10px;background:var(--teal-light);color:var(--teal);padding:1px 6px;border-radius:4px;font-weight:700;white-space:nowrap">레벨/적응확인</span>';
@@ -9152,12 +9154,8 @@ function renderStudyGroups(groups){
     }
     if(cr === 1) badges = '<span style="font-size:10px;background:var(--red-light);color:var(--red);padding:1px 6px;border-radius:4px;font-weight:700;white-space:nowrap">연장여부확인</span>';
 
-    // 왼쪽 정렬 및 들여쓰기 (padding-left: 12px)
-    return '<div style="display:flex;align-items:center;gap:8px;justify-content:flex-start;width:100%;padding-left:12px">'
-      + '<span style="font-size:13px;font-weight:800;color:'+labelColor+';white-space:nowrap;min-width:32px">'+label+'</span>'
-      + '<div style="height:5px;width:40px;background:var(--border);border-radius:99px;overflow:hidden;flex-shrink:0">'
-      + '<div style="height:100%;width:'+pct+'%;background:'+barColor+';border-radius:99px;transition:width .3s"></div>'
-      + '</div>' 
+    return '<div style="display:flex;align-items:center;gap:6px;justify-content:flex-start;padding-left:12px">'
+      + '<span style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap">'+label+'</span>'
       + (badges ? '<div style="flex-shrink:0">' + badges + '</div>' : '')
       + '</div>';
   }
@@ -9232,8 +9230,9 @@ function renderStudyGroups(groups){
       const totalCr = members.filter(m=>!m.isTutor).reduce((a,m)=>a+(m.credits??0),0);
       const warnCount = members.filter(m=>!m.isTutor&&(m.credits??0)<=5&&(m.credits??0)>0).length;
       const zeroCount = members.filter(m=>!m.isTutor&&(m.credits??0)<=0).length;
-      return`<div class="card" style="margin-bottom:16px">
-        <div class="card-head" style="background:var(--bg3)">
+      const gColor = getGColor(g.dayGroup);
+      return`<div class="card" style="margin-bottom:16px; border-left: 3px solid ${gColor}">
+          <div class="card-head" style="background:var(--bg3); padding-left: 12px">
           <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
             <span class="card-title" style="font-size:14px;cursor:pointer" 
                   onclick="const v=prompt('그룹명을 입력하세요', '${g.leaderName}'); if(v) updStudyGroup('${g.id}','leaderName',v)"
@@ -9271,42 +9270,41 @@ function renderStudyGroups(groups){
         </div>
         <div style="overflow-x:auto">
           <table class="sheet-table" style="font-size:12px;min-width:900px">
-            <thead><tr>
-              <th style="width:30px"><input type="checkbox" onclick="studyGroupCheckAll(this,'${g.id}')" title="전체선택"></th>
-              <th>이름</th><th>번호</th><th>시작일</th><th style="text-align:center">개월수</th>
-              <th style="text-align:center">크레딧</th><th>만료일</th>
-              <th>참여요일</th>
-              <th>
-                <select onchange="sgLevelMemberFilter='${g.id}:'+this.value;renderStudy()" onclick="event.stopPropagation()"
-                  style="appearance:none;border:none;background:transparent;font-weight:700;font-size:10px;color:var(--text3);cursor:pointer;outline:none;text-transform:uppercase;letter-spacing:.06em">
-                  <option value="">레벨</option>
-                  ${STUDY_LEVELS.map(lv=>`<option value="${lv}">${lv}</option>`).join('')}
-                </select>
-              </th>
-              <th>비고</th>
-            </tr></thead>
+            <thead style="${(function(){
+              const headColor = getGColor(g.dayGroup);
+              return `background:${headColor}15; color:${headColor}; border-bottom: 2.5px solid ${headColor}44;`;
+            })()}">
+              <tr style="background:transparent">
+                <th style="width:30px;color:inherit;border-bottom:inherit"><input type="checkbox" onclick="studyGroupCheckAll(this,'${g.id}')" title="전체선택"></th>
+                <th style="color:inherit;border-bottom:inherit">이름</th><th style="color:inherit;border-bottom:inherit">번호</th><th style="color:inherit;border-bottom:inherit">시작일</th><th style="text-align:center;color:inherit;border-bottom:inherit">개월수</th>
+                <th style="text-align:center;color:inherit;border-bottom:inherit">크레딧</th><th style="color:inherit;border-bottom:inherit">만료일</th>
+                <th style="color:inherit;border-bottom:inherit">참여요일</th>
+                <th style="color:inherit;border-bottom:inherit">
+                  <select onchange="sgLevelMemberFilter='${g.id}:'+this.value;renderStudy()" onclick="event.stopPropagation()"
+                    style="appearance:none;border:none;background:transparent;font-weight:700;font-size:10px;color:inherit;cursor:pointer;outline:none;text-transform:uppercase;letter-spacing:.06em">
+                    <option value="" style="color:var(--text3)">레벨</option>
+                    ${STUDY_LEVELS.map(lv=>`<option value="${lv}" style="color:var(--text)">${lv}</option>`).join('')}
+                  </select>
+                </th>
+                <th style="color:inherit;border-bottom:inherit">비고</th>
+              </tr>
+            </thead>
             <tbody>
             ${members.map(m=>{
               const dl=m.creditExpiry?daysLeft(m.creditExpiry):-1;
               const cr=m.credits??0;
               const maxCr=m.totalCredits||16;
               const isHold=(m.holdDates||[]).includes(today());
-              const rowBg=m.isTutor?'background:var(--bg3)':'';
+              const rowBg = m.isTutor ? 'background:var(--bg3)' : (m.payStatus === '미납' ? 'background:#fff0f6' : '');
               const dayTags=(m.presentDays||[]).map(d=>`<span style="font-size:10px;background:${DAY_COLORS[d]||'#888'}22;color:${DAY_COLORS[d]||'#888'};padding:1px 6px;border-radius:99px;font-weight:700;margin-right:2px">${d}</span>`).join('');
               const tutorTag=m.isTutor?`<span style="font-size:9px;background:var(--teal-light);color:var(--teal);padding:1px 5px;border-radius:99px;margin-left:4px">튜터</span>`:'';
               const holdTag=isHold?`<span style="font-size:9px;background:var(--amber-light);color:var(--amber);padding:1px 5px;border-radius:99px;margin-left:4px">홀딩</span>`:'';
               const acaTag = m.isAca ? `<span style="font-size:9px;background:var(--teal-light);color:var(--teal);padding:1px 5px;border-radius:4px;margin-left:4px;font-weight:700">아카데미</span>` : '';
 
-              const ym_cur = `${curMonth.getFullYear()}-${String(curMonth.getMonth()+1).padStart(2,'0')}`;
-              const payInCurMonth = (m.payHistory||[]).find(ph => (ph.date||'').slice(0,7) === ym_cur);
               let payStatusTag = '';
-              if(payInCurMonth) {
-                const label = (curMonth.getMonth()+1) + '월 ' + (payInCurMonth.type || '연장');
-                const color = payInCurMonth.type === '신규' ? 'var(--teal)' : 'var(--accent)';
-                payStatusTag = `<span style="font-size:10px;background:${color}22;color:${color};padding:1px 5px;border-radius:4px;font-weight:700;margin-right:4px">${label}</span>`;
-              } else if((m.startDate||'').slice(0,7) === ym_cur) {
-                const label = (curMonth.getMonth()+1) + '월 신규';
-                payStatusTag = `<span style="font-size:10px;background:var(--teal)22;color:var(--teal);padding:1px 5px;border-radius:4px;font-weight:700;margin-right:4px">${label}</span>`;
+              const sessionsUsed = (m.totalCredits || 0) - (m.credits || 0);
+              if (m.payType === '신규' && sessionsUsed < 8) {
+                payStatusTag = `<span style="font-size:10px;background:var(--teal);color:#fff;padding:2px 6px;border-radius:4px;font-weight:800;margin-right:6px;box-shadow:0 1px 3px rgba(0,0,0,0.2)">NEW (1달미만)</span>`;
               }
 
               return`<tr style="${rowBg}cursor:pointer"
@@ -9317,7 +9315,9 @@ function renderStudyGroups(groups){
                 </td>
                 <td style="font-weight:600;white-space:nowrap">
                   <div style="display:flex;align-items:center;gap:4px">
-                    ${m.name}${m.isShiftWorker ? ' 🔄' : ''}${tutorTag}${holdTag}${acaTag}
+                    ${m.name}${m.isShiftWorker ? ' 🔄' : ''}
+                    ${m.isChanged ? `<span style="font-size:9px;background:var(--amber-light);color:var(--amber);padding:1px 5px;border-radius:4px;font-weight:700" title="${m.changeAt || ''} 변동사항 있음">변동</span>` : ''}
+                    ${tutorTag}${holdTag}${acaTag}
                     <button class="btn btn-sm" style="padding:1px 4px;font-size:10px;border:none;background:none;color:var(--text3);margin-left:auto" 
                       onclick="event.stopPropagation();delStudyMember('${g.id}','${m.id}')" title="멤버삭제">✕</button>
                   </div>
@@ -9931,11 +9931,6 @@ function studyMemberEditForm(m, g, isAdd){
 
     <div class="fg" style="gap:10px">
       <div class="fgroup"><label class="flabel">시작일자 *</label><input class="finput" id="sm-start" type="date" value="${m.startDate||''}" onchange="smAutoCalc()"></div>
-      <div class="fgroup"><label class="flabel">결제일자</label><input class="finput" id="sm-payment" type="date" value="${m.paymentDate||''}"></div>
-    </div>
-
-    <div class="fg" style="gap:10px">
-      <div class="fgroup"><label class="flabel">크레딧 수 (차감용) *</label><input class="finput" id="sm-credits" type="number" value="${m.credits||0}" oninput="smAutoCalc()"></div>
       <div class="fgroup"><label class="flabel">주당 참여 횟수 *</label>
         <select class="finput" id="sm-times" onchange="smAutoCalc()">
           ${[1,2,3,4,5,6].map(i=>`<option value="${i}" ${m.timesPerWeek===i?'selected':''}>주 ${i}회</option>`).join('')}
@@ -9944,13 +9939,16 @@ function studyMemberEditForm(m, g, isAdd){
     </div>
 
     <div class="fg" style="gap:10px">
-      <div class="fgroup"><label class="flabel">개월수 (자동계산/수정가능)</label>
-        <div style="display:flex;gap:4px">
-          <input class="finput" id="sm-months" type="number" step="0.1" value="${m.months||0}" oninput="smUpdateExpiryFromMonths()">
-          <button type="button" class="btn btn-sm" onclick="smAutoCalc()" style="padding:0 8px;flex-shrink:0" title="자동계산">🔄</button>
-        </div>
+      <div class="fgroup"><label class="flabel">현재 크레딧 *</label><input class="finput" id="sm-credits" type="number" value="${m.credits||0}" oninput="smAutoCalc()"></div>
+      <div class="fgroup"><label class="flabel">크레딧 만료일 (자동계산)</label><input class="finput" id="sm-expiry" type="date" value="${m.creditExpiry||''}"></div>
+    </div>
+
+    <div class="fgroup full" style="margin-bottom:10px">
+      <label class="flabel">개월수 (자동계산/수정가능)</label>
+      <div style="display:flex;gap:4px">
+        <input class="finput" id="sm-months" type="number" step="0.1" value="${m.months||0}" oninput="smUpdateExpiryFromMonths()" style="flex:1">
+        <button type="button" class="btn btn-sm" onclick="smAutoCalc()" style="padding:0 12px;flex-shrink:0" title="자동계산">🔄 자동 계산</button>
       </div>
-      <div class="fgroup"><label class="flabel">크레딧 만료일 (자동계산/수정가능)</label><input class="finput" id="sm-expiry" type="date" value="${m.creditExpiry||''}"></div>
     </div>
 
     <div class="fgroup full" style="margin-bottom:10px">
@@ -9988,13 +9986,28 @@ function studyMemberEditForm(m, g, isAdd){
       </div>
     </div>
 
-    <div class="fg" style="gap:10px">
-      <div class="fgroup"><label class="flabel">총 크레딧 (결제량) *</label><input class="finput" id="sm-total-credits" type="number" value="${m.totalCredits||16}" placeholder="16" oninput="smAutoCalc()"></div>
-      <div class="fgroup"><label class="flabel">납부 상태</label>
+    <div style="margin: 10px 0; padding: 12px; background: var(--bg3); border-radius: var(--r2); border: 1px solid var(--border2)">
+      <div class="flabel" style="margin-bottom:10px; color: var(--accent)">💰 결제 및 수강료 정보</div>
+      <div class="fg" style="gap:10px">
+        <div class="fgroup"><label class="flabel">결제일자 / 구분</label>
+          <div style="display:flex;gap:4px">
+            <input class="finput" id="sm-payment" type="date" value="${m.paymentDate||''}" style="flex:1">
+            <select class="finput" id="sm-pay-type" style="width:100px">
+              <option value="연장" ${m.payType==='연장'?'selected':''}>연장</option>
+              <option value="신규" ${m.payType==='신규'?'selected':''}>신규</option>
+            </select>
+          </div>
+        </div>
+        <div class="fgroup"><label class="flabel">총 크레딧 (결제량) *</label>
+          <input class="finput" id="sm-total-credits" type="number" value="${m.totalCredits||16}" placeholder="16" oninput="smAutoCalc()">
+        </div>
+      </div>
+      <div class="fgroup" style="margin-top:10px">
+        <label class="flabel">납부 상태</label>
         <select class="finput" id="sm-paystatus">
-          <option value="완료" ${(m.payStatus||'대기')==='완료'?'selected':''}>완료</option>
-          <option value="미납" ${m.payStatus==='미납'?'selected':''}>미납</option>
-          <option value="대기" ${m.payStatus==='대기'?'selected':''}>대기</option>
+          <option value="완료" ${(m.payStatus||'대기')==='완료'?'selected':''}>✅ 완료</option>
+          <option value="미납" ${m.payStatus==='미납'?'selected':''}>🔴 미납</option>
+          <option value="대기" ${m.payStatus==='대기'?'selected':''}>🟡 대기</option>
         </select>
       </div>
     </div>
@@ -10136,7 +10149,10 @@ function saveStudyMemberModal(isAdd){
   }
 
   // 값 추출
+  // 값 추출 및 변동 체크를 위한 백업
   const oldName = m.name;
+  const oldTimes = m.timesPerWeek;
+  const oldDays = (m.presentDays || []).join(',');
   m.name = document.getElementById('sm-name').value;
   m.phone = document.getElementById('sm-phone').value;
   
@@ -10158,6 +10174,7 @@ function saveStudyMemberModal(isAdd){
   m.paymentDate = document.getElementById('sm-payment').value;
   m.status = document.getElementById('sm-status').value;
   m.payStatus = document.getElementById('sm-paystatus').value;
+  m.payType = document.getElementById('sm-pay-type')?.value || '연장';
   m.memo = document.getElementById('sm-memo').value;
   m.isAca = document.getElementById('sm-is-aca')?.checked || false;
   m.acaClass = document.getElementById('sm-aca-class')?.value || '';
@@ -10205,6 +10222,14 @@ function saveStudyMemberModal(isAdd){
   else {
     if(oldCredits !== m.credits) histParts.push(`크레딧 ${oldCredits}→${m.credits}`);
     if(oldName !== m.name) histParts.push(`이름 변경 ${oldName}→${m.name}`);
+    
+    // 요일/횟수 변동 체크
+    const newDays = m.presentDays.join(',');
+    if(oldTimes !== m.timesPerWeek || oldDays !== newDays) {
+      m.isChanged = true;
+      m.changeAt = today();
+      histParts.push(`스케줄 변동: 주${oldTimes}회(${oldDays})→주${m.timesPerWeek}회(${newDays})`);
+    }
   }
   
   m.history.push({
