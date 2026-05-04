@@ -9295,16 +9295,17 @@ function renderStudyGroups(groups){
               const cr=m.credits??0;
               const maxCr=m.totalCredits||16;
               const isHold=(m.holdDates||[]).includes(today());
-              const rowBg = m.isTutor ? 'background:var(--bg3)' : (m.payStatus === '미납' ? 'background:#fff0f6' : '');
+              const ps = (m.payStatus || '').trim();
+              const rowBg = m.isTutor ? 'background:var(--bg3);' : (ps === '미납' ? 'background:#ffe8ec;' : (ps === '대기' ? 'background:#fff0f5;' : ''));
               const dayTags=(m.presentDays||[]).map(d=>`<span style="font-size:10px;background:${DAY_COLORS[d]||'#888'}22;color:${DAY_COLORS[d]||'#888'};padding:1px 6px;border-radius:99px;font-weight:700;margin-right:2px">${d}</span>`).join('');
               const tutorTag=m.isTutor?`<span style="font-size:9px;background:var(--teal-light);color:var(--teal);padding:1px 5px;border-radius:99px;margin-left:4px">튜터</span>`:'';
               const holdTag=isHold?`<span style="font-size:9px;background:var(--amber-light);color:var(--amber);padding:1px 5px;border-radius:99px;margin-left:4px">홀딩</span>`:'';
-              const acaTag = m.isAca ? `<span style="font-size:9px;background:var(--teal-light);color:var(--teal);padding:1px 5px;border-radius:4px;margin-left:4px;font-weight:700">아카데미</span>` : '';
+              const acaTag = m.isAca ? `<span style="font-size:9px;background:var(--blue-light);color:var(--blue);padding:1px 5px;border-radius:4px;margin-left:4px;font-weight:700">아카데미</span>` : '';
 
               let payStatusTag = '';
               const sessionsUsed = (m.totalCredits || 0) - (m.credits || 0);
               if (m.payType === '신규' && sessionsUsed < 8) {
-                payStatusTag = `<span style="font-size:10px;background:var(--teal);color:#fff;padding:2px 6px;border-radius:4px;font-weight:800;margin-right:6px;box-shadow:0 1px 3px rgba(0,0,0,0.2)">NEW (1달미만)</span>`;
+                payStatusTag = `<span style="font-size:10px;background:#ffe066;color:#000;padding:2px 6px;border-radius:4px;font-weight:800;margin-right:6px;box-shadow:0 1px 3px rgba(0,0,0,0.1);border:1px solid #fcc419">NEW (1달미만)</span>`;
               }
 
               return`<tr style="${rowBg}cursor:pointer"
@@ -9335,7 +9336,18 @@ function renderStudyGroups(groups){
                     ${STUDY_LEVELS.map(lv=>`<option value="${lv}" ${m.level===lv?'selected':''}>${lv}</option>`).join('')}
                   </select>
                 </td>
-                <td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${m.memo||''}">${payStatusTag}${m.memo||'-'}</td>
+                <td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${m.memo||''}">
+                  ${payStatusTag}
+                  ${(function(){
+                    if (m.isTutor) {
+                      const tutees = members.filter(m2 => !m2.isTutor && m2.memo && (m2.memo.includes(m.name + ' 튜터') || m2.memo.includes(m.name + '튜터'))).map(m2 => m2.name);
+                      if (tutees.length > 0) {
+                        return `<span style="color:var(--teal);font-weight:700;background:var(--teal-light);padding:1px 4px;border-radius:3px;margin-right:4px">👤 ${tutees.join(', ')}</span>` + (m.memo || '');
+                      }
+                    }
+                    return m.memo || '-';
+                  })()}
+                </td>
               </tr>`;
 
             }).join('')}
@@ -9940,15 +9952,18 @@ function studyMemberEditForm(m, g, isAdd){
 
     <div class="fg" style="gap:10px">
       <div class="fgroup"><label class="flabel">현재 크레딧 *</label><input class="finput" id="sm-credits" type="number" value="${m.credits||0}" oninput="smAutoCalc()"></div>
-      <div class="fgroup"><label class="flabel">크레딧 만료일 (자동계산)</label><input class="finput" id="sm-expiry" type="date" value="${m.creditExpiry||''}"></div>
+      <div class="fgroup">
+        <label class="flabel">크레딧 만료일 (자동계산)</label>
+        <div style="display:flex;gap:4px">
+          <input class="finput" id="sm-expiry" type="date" value="${m.creditExpiry||''}" style="flex:1">
+          <button type="button" class="btn btn-sm" onclick="smAutoCalc()" style="padding:0 12px;flex-shrink:0" title="자동계산">🔄 자동 계산</button>
+        </div>
+      </div>
     </div>
 
     <div class="fgroup full" style="margin-bottom:10px">
       <label class="flabel">개월수 (자동계산/수정가능)</label>
-      <div style="display:flex;gap:4px">
-        <input class="finput" id="sm-months" type="number" step="0.1" value="${m.months||0}" oninput="smUpdateExpiryFromMonths()" style="flex:1">
-        <button type="button" class="btn btn-sm" onclick="smAutoCalc()" style="padding:0 12px;flex-shrink:0" title="자동계산">🔄 자동 계산</button>
-      </div>
+      <input class="finput" id="sm-months" type="number" step="0.1" value="${m.months||0}" oninput="smUpdateExpiryFromMonths()">
     </div>
 
     <div class="fgroup full" style="margin-bottom:10px">
@@ -9986,8 +10001,8 @@ function studyMemberEditForm(m, g, isAdd){
       </div>
     </div>
 
-    <div style="margin: 10px 0; padding: 12px; background: var(--bg3); border-radius: var(--r2); border: 1px solid var(--border2)">
-      <div class="flabel" style="margin-bottom:10px; color: var(--accent)">💰 결제 및 수강료 정보</div>
+    <div style="margin: 10px 0; padding: 12px; border-radius: var(--r2); border: 1px solid var(--border2)">
+      <div class="flabel" style="margin-bottom:10px; color: var(--text)">💰 결제 및 수강료 정보</div>
       <div class="fg" style="gap:10px">
         <div class="fgroup"><label class="flabel">결제일자 / 구분</label>
           <div style="display:flex;gap:4px">
@@ -10013,13 +10028,13 @@ function studyMemberEditForm(m, g, isAdd){
     </div>
 
     ${isAdd ? `
-    <div style="background:var(--teal-light);padding:15px;border-radius:var(--r);border:1px solid var(--teal);margin-top:10px">
-      <div style="font-size:13px;font-weight:700;color:var(--teal);margin-bottom:10px;display:flex;align-items:center;gap:6px">
+    <div style="padding:15px;border-radius:var(--r);border:1px solid var(--border2);margin-top:10px">
+      <div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;gap:6px">
         <span>💳</span> 최초 수납 등록 (선택 사항)
       </div>
       <div class="fg" style="gap:10px">
-        <div class="fgroup"><label class="flabel" style="color:var(--teal)">수납 금액</label><input class="finput" id="sm-pay-amount" type="number" placeholder="0"></div>
-        <div class="fgroup"><label class="flabel" style="color:var(--teal)">수납 방법</label>
+        <div class="fgroup"><label class="flabel">수납 금액</label><input class="finput" id="sm-pay-amount" type="number" placeholder="0"></div>
+        <div class="fgroup"><label class="flabel">수납 방법</label>
           <select class="finput" id="sm-pay-method">
             <option value="">선택</option>
             <option value="카드">카드</option>
@@ -10032,7 +10047,7 @@ function studyMemberEditForm(m, g, isAdd){
         </div>
       </div>
       <div class="fgroup full" style="margin-top:8px">
-        <label class="flabel" style="color:var(--teal)">수납 메모</label>
+        <label class="flabel">수납 메모</label>
         <input class="finput" id="sm-pay-memo" placeholder="예: 신규 등록">
       </div>
     </div>
@@ -10043,7 +10058,7 @@ function studyMemberEditForm(m, g, isAdd){
     </div>
 
     <!-- 아카데미 병행 섹션 -->
-    <div style="background:var(--bg3);padding:14px;border-radius:var(--r);border:1px solid var(--border);margin-top:10px">
+    <div style="padding:14px;border-radius:var(--r);border:1px solid var(--border2);margin-top:10px">
       <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;gap:6px">
         <span>🎓</span> 아카데미 병행 정보
       </div>
@@ -10056,8 +10071,11 @@ function studyMemberEditForm(m, g, isAdd){
           ${(function(){
             const academyClasses = [];
             (S.students||[]).forEach(s => {
-              getClasses(s).forEach(cl => {
-                if(cl.classTime && !academyClasses.includes(cl.classTime)) academyClasses.push(cl.classTime);
+              const classes = typeof getClasses === 'function' ? getClasses(s) : (s.classes || []);
+              classes.forEach(cl => {
+                if(!cl.classTime) return;
+                const label = typeof classLabel === 'function' ? classLabel(cl.classTime) : cl.classTime;
+                if(!academyClasses.includes(label)) academyClasses.push(label);
               });
             });
             academyClasses.sort();
