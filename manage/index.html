@@ -952,7 +952,7 @@ textarea.finput{resize:vertical;min-height:60px}
 </head>
 <body>
   <div id="cache-buster-marker" style="position:fixed;top:0;left:0;width:100%;background:#ff0000;color:#ffffff;text-align:center;font-weight:bold;z-index:99999;padding:10px;box-shadow:0 4px 10px rgba(0,0,0,0.3);font-size:14px;display:block !important">
-    🚨 [업데이트 완료] 17:01분 버전이 적용되었습니다. 이 바가 보이면 한국어 선생님 관리 기능도 업데이트된 상태입니다.
+    🚨 [업데이트 완료] 18:25분 버전이 적용되었습니다. (미시작 음영 및 선생님 리스트 누락 수정됨)
     <button onclick="location.reload(true)" style="margin-left:15px;background:white;color:red;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;font-weight:bold">강제 새로고침</button>
     <button onclick="this.parentElement.style.display='none'" style="margin-left:5px;background:rgba(255,255,255,0.2);color:white;border:1px solid white;padding:3px 10px;border-radius:4px;cursor:pointer">닫기</button>
   </div>
@@ -9634,6 +9634,10 @@ function renderStudyPayments(){
         unpaid.push({ ...m, groupName: g.leaderName, dayGroup: g.dayGroup });
       }
     });
+    // 한국어 선생님 추가 (리스트 누락 방지)
+    (koreanByGroup[g.id]||[]).forEach(t => {
+      unpaid.push({ ...t, groupName: g.leaderName, dayGroup: g.dayGroup, isTutor: true, payStatus: 'Staff' });
+    });
   });
 
   // 해당 월 결제(충전) 내역만 필터
@@ -9715,7 +9719,12 @@ function renderStudyPayments(){
                   // 시작하지 않은 사람 음영 (연한 초록색)
                   const isNotStarted = m.startDate && m.startDate > today();
                   const ps = m.payStatus || '대기';
-                  const rowStyle = ps === '연장확정' ? 'background:#e3f2fd' : (ps === '결제예정' ? 'background:#f3e5f5' : (isNotStarted ? 'background:#e6f8ee' : ''));
+                  const rowStyle = m.isTutor ? 'background:var(--bg3)' : 
+                                   (isNotStarted ? 'background:#e6f8ee' : 
+                                   (ps === '미납' ? 'background:#ffe8ec' : 
+                                   (ps === '대기' ? 'background:#fff0f5' : 
+                                   (ps === '연장확정' ? 'background:#e3f2fd' : 
+                                   (ps === '결제예정' ? 'background:#f3e5f5' : '')))));
 
                   return `
                     <tr onclick="openModal('studyMemberDetail','${m.id}')" style="cursor:pointer; ${rowStyle}">
@@ -11192,7 +11201,7 @@ function renderStaffTable(type){
 
   // 헤더 업데이트
   if(thead && isKorean){
-    thead.innerHTML = `<tr><th>이름</th><th>연락처</th><th>업무시작일</th><th>담당 튜티</th><th>보유 자격</th><th>비고</th><th style="text-align:center">관리</th></tr>`;
+    thead.innerHTML = `<tr><th>이름</th><th>연락처</th><th>업무시작일</th><th>담당 그룹</th><th>담당 튜티</th><th>보유 자격</th><th>비고</th><th style="text-align:center">관리</th></tr>`;
   }
 
   if(!data.length){
@@ -11208,6 +11217,7 @@ function renderStaffTable(type){
       <td style="font-family:var(--font-mono);font-size:11px">${t.phone||'-'}</td>
       <td style="font-family:var(--font-mono);font-size:11px">${t.startDate||'-'}</td>
       ${isKorean ? `
+        <td style="font-size:11px;color:var(--accent);font-weight:600">${(t.groups||[]).map(gid => (S.study.groups||[]).find(g=>g.id===gid)?.leaderName||'').filter(x=>x).join(', ')||'-'}</td>
         <td style="font-size:11px;color:var(--teal);font-weight:600">${t.tutees||'-'}</td>
         <td style="font-size:10px">${quals||'-'}</td>
       ` : ''}
