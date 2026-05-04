@@ -951,11 +951,7 @@ textarea.finput{resize:vertical;min-height:60px}
 
 </head>
 <body>
-  <div id="cache-buster-marker" style="position:fixed;top:0;left:0;width:100%;background:#ff0000;color:#ffffff;text-align:center;font-weight:bold;z-index:99999;padding:10px;box-shadow:0 4px 10px rgba(0,0,0,0.3);font-size:14px;display:block !important">
-    🚨 [업데이트 완료] 18:25분 버전이 적용되었습니다. (미시작 음영 및 선생님 리스트 누락 수정됨)
-    <button onclick="location.reload(true)" style="margin-left:15px;background:white;color:red;border:none;padding:3px 10px;border-radius:4px;cursor:pointer;font-weight:bold">강제 새로고침</button>
-    <button onclick="this.parentElement.style.display='none'" style="margin-left:5px;background:rgba(255,255,255,0.2);color:white;border:1px solid white;padding:3px 10px;border-radius:4px;cursor:pointer">닫기</button>
-  </div>
+
 
 <!-- ══ 로그인 화면 ══ -->
 <div class="login-screen" id="login-screen">
@@ -3455,18 +3451,29 @@ function evHtml(ev, isConsult){
   isConsult = isConsult || false;
   var isAD = !!(ev.start && ev.start.date);
   var st='', et='';
+  var isPassed = false;
+  var now = new Date();
+  
   if(!isAD && ev.start && ev.start.dateTime){
     var ss=new Date(ev.start.dateTime), ee=new Date(ev.end.dateTime);
     st=('0'+ss.getHours()).slice(-2)+':'+('0'+ss.getMinutes()).slice(-2);
     et=('0'+ee.getHours()).slice(-2)+':'+('0'+ee.getMinutes()).slice(-2);
+    if(now > ee) isPassed = true;
+  } else if(isAD && ev.end && ev.end.date){
+    var endDate = new Date(ev.end.date);
+    if(now >= endDate) isPassed = true;
   }
+
   var GCAL_C=['#7986cb','#33b679','#8e24aa','#e67c73','#f6c026','#f5511d','#039be5','#616161','#3f51b5','#0b8043','#d50000'];
   var bar = isConsult ? '#f59f00' : (ev.colorId ? GCAL_C[parseInt(ev.colorId)-1]||'#6058e8' : '#6058e8');
   var bg  = isConsult ? 'rgba(255,224,102,0.15)' : 'var(--bg2)';
   var bd  = isConsult ? '1px solid rgba(245,159,0,0.4)' : '1px solid var(--border)';
   var title = ev.summary || '(제목 없음)';
   var timeStr = isAD ? '종일' : (st + ' ~ ' + et);
-  return '<div style="display:flex;align-items:center;gap:0;background:'+bg+';border:'+bd+';border-radius:8px;overflow:hidden;margin-bottom:5px;min-height:36px">'
+  
+  var passStyle = isPassed ? 'opacity:0.4; filter:grayscale(1); text-decoration:line-through;' : '';
+
+  return '<div style="display:flex;align-items:center;gap:0;background:'+bg+';border:'+bd+';border-radius:8px;overflow:hidden;margin-bottom:5px;min-height:36px;transition:all 0.3s;'+passStyle+'">'
     + '<div style="width:4px;min-height:36px;background:'+bar+';flex-shrink:0"></div>'
     + '<div style="width:108px;flex-shrink:0;padding:0 10px;text-align:right;border-right:1px solid var(--border)">'
     +   '<span style="font-size:12px;font-weight:700;color:var(--text);font-family:monospace;white-space:nowrap">'+timeStr+'</span>'
