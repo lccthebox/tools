@@ -8805,6 +8805,19 @@ function renderStudyDashboard(groups){
   const tutors = groups.reduce((arr,g)=>[...arr,...(g.members||[]).filter(m=>m.isTutor)],[]);
   const todayCols = S.consults.filter(c=>c.date&&c.date.startsWith(`${todayStr}`));
 
+  // 이번 달 신규/연장 통계
+  const ym_cur = `${curMonth.getFullYear()}-${String(curMonth.getMonth()+1).padStart(2,'0')}`;
+  let monthNew = 0, monthExt = 0;
+  allMembers.forEach(m => {
+    const pay = (m.payHistory||[]).find(ph => (ph.date||'').slice(0,7) === ym_cur);
+    if(pay) {
+      if(pay.type === '신규') monthNew++;
+      else monthExt++;
+    } else if((m.startDate||'').slice(0,7) === ym_cur) {
+      monthNew++;
+    }
+  });
+
   el.innerHTML=`
     <div class="metrics" style="margin-bottom:18px">
       <div class="metric metric-accent">
@@ -8813,14 +8826,14 @@ function renderStudyDashboard(groups){
         <div class="metric-sub">${groups.length}개 그룹 운영중</div>
       </div>
       <div class="metric metric-teal">
-        <div class="metric-label">${dayLabel} 배정 대기</div>
-        <div class="metric-val">${waiting}</div>
-        <div class="metric-sub">대기 명단 확인 필요</div>
+        <div class="metric-label">${curMonth.getMonth()+1}월 신규 멤버</div>
+        <div class="metric-val">${monthNew}</div>
+        <div class="metric-sub">결제/시작 기준</div>
       </div>
       <div class="metric metric-amber">
-        <div class="metric-label">시작 예정 (결제완료)</div>
-        <div class="metric-val">${startUpcoming}</div>
-        <div class="metric-sub">곧 합류 예정</div>
+        <div class="metric-label">${curMonth.getMonth()+1}월 연장 멤버</div>
+        <div class="metric-val">${monthExt}</div>
+        <div class="metric-sub">결제 기준</div>
       </div>
       <div class="metric metric-pink">
         <div class="metric-label">오늘 시작 수강생</div>
@@ -8837,7 +8850,11 @@ function renderStudyDashboard(groups){
           startTodayMembers.map(m=>`
             <div style="padding:12px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
                <div>
-                 <div style="font-weight:600;font-size:14px;color:var(--text)">${m.name} <span style="font-size:12px;color:var(--text3);font-weight:400">${m.phone}</span></div>
+                 <div style="font-weight:600;font-size:14px;color:var(--text)">
+                   <span style="font-size:10px;background:var(--teal)22;color:var(--teal);padding:1px 5px;border-radius:4px;font-weight:700;margin-right:4px">${(curMonth.getMonth()+1)}월 신규</span>
+                   ${m.name} 
+                   <span style="font-size:12px;color:var(--text3);font-weight:400">${m.phone}</span>
+                 </div>
                  <div style="font-size:12px;color:var(--text2);margin-top:4px;">배정 그룹: <span style="color:var(--accent);font-weight:600">${groups.find(g=>g.members.includes(m))?.leaderName}</span> · 시작 크레딧: ${m.credits}</div>
                </div>
             </div>
@@ -9278,6 +9295,19 @@ function renderStudyGroups(groups){
               const dayTags=(m.presentDays||[]).map(d=>`<span style="font-size:10px;background:${DAY_COLORS[d]||'#888'}22;color:${DAY_COLORS[d]||'#888'};padding:1px 6px;border-radius:99px;font-weight:700;margin-right:2px">${d}</span>`).join('');
               const tutorTag=m.isTutor?`<span style="font-size:9px;background:var(--teal-light);color:var(--teal);padding:1px 5px;border-radius:99px;margin-left:4px">튜터</span>`:'';
               const holdTag=isHold?`<span style="font-size:9px;background:var(--amber-light);color:var(--amber);padding:1px 5px;border-radius:99px;margin-left:4px">홀딩</span>`:'';
+              const acaTag = m.isAca ? `<span style="font-size:9px;background:var(--teal-light);color:var(--teal);padding:1px 5px;border-radius:4px;margin-left:4px;font-weight:700">아카데미</span>` : '';
+
+              const ym_cur = `${curMonth.getFullYear()}-${String(curMonth.getMonth()+1).padStart(2,'0')}`;
+              const payInCurMonth = (m.payHistory||[]).find(ph => (ph.date||'').slice(0,7) === ym_cur);
+              let payStatusTag = '';
+              if(payInCurMonth) {
+                const label = (curMonth.getMonth()+1) + '월 ' + (payInCurMonth.type || '연장');
+                const color = payInCurMonth.type === '신규' ? 'var(--teal)' : 'var(--accent)';
+                payStatusTag = `<span style="font-size:10px;background:${color}22;color:${color};padding:1px 5px;border-radius:4px;font-weight:700;margin-right:4px">${label}</span>`;
+              } else if((m.startDate||'').slice(0,7) === ym_cur) {
+                const label = (curMonth.getMonth()+1) + '월 신규';
+                payStatusTag = `<span style="font-size:10px;background:var(--teal)22;color:var(--teal);padding:1px 5px;border-radius:4px;font-weight:700;margin-right:4px">${label}</span>`;
+              }
 
               return`<tr style="${rowBg}cursor:pointer"
                 onclick="openModal('studyMemberDetail','${m.id}')"
@@ -9287,7 +9317,7 @@ function renderStudyGroups(groups){
                 </td>
                 <td style="font-weight:600;white-space:nowrap">
                   <div style="display:flex;align-items:center;gap:4px">
-                    ${m.name}${m.isShiftWorker ? ' 🔄' : ''}${tutorTag}${holdTag}
+                    ${m.name}${m.isShiftWorker ? ' 🔄' : ''}${tutorTag}${holdTag}${acaTag}
                     <button class="btn btn-sm" style="padding:1px 4px;font-size:10px;border:none;background:none;color:var(--text3);margin-left:auto" 
                       onclick="event.stopPropagation();delStudyMember('${g.id}','${m.id}')" title="멤버삭제">✕</button>
                   </div>
@@ -9305,8 +9335,9 @@ function renderStudyGroups(groups){
                     ${STUDY_LEVELS.map(lv=>`<option value="${lv}" ${m.level===lv?'selected':''}>${lv}</option>`).join('')}
                   </select>
                 </td>
-                <td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${m.memo||''}">${m.memo||'-'}</td>
+                <td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${m.memo||''}">${payStatusTag}${m.memo||'-'}</td>
               </tr>`;
+
             }).join('')}
             ${!members.length?`<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:20px">멤버가 없습니다</td></tr>`:''}
             </tbody>
@@ -9529,14 +9560,32 @@ function renderStudyPayments(){
             <table class="sheet-table" style="font-size:12px">
               <thead><tr><th>이름</th><th>그룹</th><th>연락처</th><th>상태</th></tr></thead>
               <tbody>
-                ${unpaid.map(m => `
-                  <tr onclick="openModal('studyMemberDetail','${m.id}')" style="cursor:pointer">
-                    <td style="font-weight:600">${m.name}</td>
-                    <td style="font-size:11px">${m.groupName}</td>
-                    <td style="font-family:var(--font-mono);font-size:11px">${m.phone||'-'}</td>
-                    <td>${pBadge(m.payStatus||'대기')}</td>
-                  </tr>
-                `).join('')}
+                ${unpaid.map(m => {
+                  const ym_cur = `${curMonth.getFullYear()}-${String(curMonth.getMonth()+1).padStart(2,'0')}`;
+                  const payInCurMonth = (m.payHistory||[]).find(ph => (ph.date||'').slice(0,7) === ym_cur);
+                  let payStatusTag = '';
+                  if(payInCurMonth) {
+                    const label = (curMonth.getMonth()+1) + '월 ' + (payInCurMonth.type || '연장');
+                    const color = payInCurMonth.type === '신규' ? 'var(--teal)' : 'var(--accent)';
+                    payStatusTag = `<span style="font-size:10px;background:${color}22;color:${color};padding:1px 5px;border-radius:4px;font-weight:700;margin-right:4px">${label}</span>`;
+                  } else if((m.startDate||'').slice(0,7) === ym_cur) {
+                    const label = (curMonth.getMonth()+1) + '월 신규';
+                    payStatusTag = `<span style="font-size:10px;background:var(--teal)22;color:var(--teal);padding:1px 5px;border-radius:4px;font-weight:700;margin-right:4px">${label}</span>`;
+                  }
+                  
+                  const acaTag = m.isAca ? `<span style="font-size:9px;background:var(--teal-light);color:var(--teal);padding:1px 5px;border-radius:4px;margin-right:4px;font-weight:700">아카데미</span>` : '';
+                  
+                  return `
+                    <tr onclick="openModal('studyMemberDetail','${m.id}')" style="cursor:pointer">
+                      <td style="font-weight:600">
+                        <div style="display:flex;align-items:center">${payStatusTag}${acaTag}${m.name}</div>
+                      </td>
+                      <td style="font-size:11px">${m.groupName}</td>
+                      <td style="font-family:var(--font-mono);font-size:11px">${m.phone||'-'}</td>
+                      <td>${pBadge(m.payStatus||'대기')}</td>
+                    </tr>
+                  `;
+                }).join('')}
                 ${!unpaid.length? '<tr><td colspan="4" style="text-align:center;padding:30px;color:var(--text3)">미납 인원 없음 🎉</td></tr>':''}
               </tbody>
             </table>
@@ -9895,7 +9944,12 @@ function studyMemberEditForm(m, g, isAdd){
     </div>
 
     <div class="fg" style="gap:10px">
-      <div class="fgroup"><label class="flabel">개월수 (자동계산/수정가능)</label><input class="finput" id="sm-months" type="number" step="0.1" value="${m.months||0}"></div>
+      <div class="fgroup"><label class="flabel">개월수 (자동계산/수정가능)</label>
+        <div style="display:flex;gap:4px">
+          <input class="finput" id="sm-months" type="number" step="0.1" value="${m.months||0}" oninput="smUpdateExpiryFromMonths()">
+          <button type="button" class="btn btn-sm" onclick="smAutoCalc()" style="padding:0 8px;flex-shrink:0" title="자동계산">🔄</button>
+        </div>
+      </div>
       <div class="fgroup"><label class="flabel">크레딧 만료일 (자동계산/수정가능)</label><input class="finput" id="sm-expiry" type="date" value="${m.creditExpiry||''}"></div>
     </div>
 
@@ -9974,6 +10028,32 @@ function studyMemberEditForm(m, g, isAdd){
     <div class="fgroup full"><label class="flabel">비고 / 상담내역</label>
       <textarea class="finput" id="sm-memo" rows="3" placeholder="특이사항이나 편집 사유 등을 적어주세요">${m.memo||''}</textarea>
     </div>
+
+    <!-- 아카데미 병행 섹션 -->
+    <div style="background:var(--bg3);padding:14px;border-radius:var(--r);border:1px solid var(--border);margin-top:10px">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;gap:6px">
+        <span>🎓</span> 아카데미 병행 정보
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--text);cursor:pointer">
+          <input type="checkbox" id="sm-is-aca" ${m.isAca?'checked':''}> 아카데미 수강 중
+        </label>
+        <select class="finput" id="sm-aca-class" style="flex:1">
+          <option value="">수강 중인 수업 선택</option>
+          ${(function(){
+            const academyClasses = [];
+            (S.students||[]).forEach(s => {
+              getClasses(s).forEach(cl => {
+                if(cl.classTime && !academyClasses.includes(cl.classTime)) academyClasses.push(cl.classTime);
+              });
+            });
+            academyClasses.sort();
+            return academyClasses.map(c => `<option value="${c}" ${m.acaClass===c?'selected':''}>${c}</option>`).join('');
+          })()}
+        </select>
+      </div>
+      <div style="font-size:10px;color:var(--text3);margin-top:6px">※ 아카데미 수강 중 체크 시 수강생 상세 정보에 연동 링크가 표시됩니다.</div>
+    </div>
   `;
 }
 
@@ -10025,6 +10105,15 @@ function smAutoCalc(){
   }
 }
 
+function smUpdateExpiryFromMonths(){
+  const start = document.getElementById('sm-start')?.value;
+  const months = parseFloat(document.getElementById('sm-months')?.value)||0;
+  const exEl = document.getElementById('sm-expiry');
+  if(exEl && start) {
+    exEl.value = calcCreditExpiryExact(start, months);
+  }
+}
+
 function saveStudyMemberModal(isAdd){
   const mId = document.getElementById('sm-m-id').value;
   const prevGid = document.getElementById('sm-g-prev').value;
@@ -10070,6 +10159,9 @@ function saveStudyMemberModal(isAdd){
   m.status = document.getElementById('sm-status').value;
   m.payStatus = document.getElementById('sm-paystatus').value;
   m.memo = document.getElementById('sm-memo').value;
+  m.isAca = document.getElementById('sm-is-aca')?.checked || false;
+  m.acaClass = document.getElementById('sm-aca-class')?.value || '';
+
   m.modifiedBy = currentManager?.name||'';
   m.modifiedAt = new Date().toISOString();
 
@@ -11790,12 +11882,29 @@ function getStudyLinkHtml(s){
 
 function getAcaLinkHtml(m){
   var sp=(m.phone||'').replace(/[^0-9]/g,'');
-  var aca=S.students.find(function(s){return s.name===m.name||(sp&&(s.phone||'').replace(/[^0-9]/g,'')===sp);});
-  if(!aca) return '';
-  var oc='openModal("studentDetail","'+aca.id+'")';
-  return '<div onclick="'+oc+'" style="cursor:pointer;margin-top:8px;padding:8px 12px;background:var(--teal-light);border-radius:6px;border:1px dashed var(--teal)">'
+  // 명시적으로 저장된 아카데미 수업이 있으면 우선 고려
+  var aca=null;
+  if(m.isAca && m.acaClass) {
+    aca = S.students.find(function(s){
+      return (s.name===m.name || (sp && (s.phone||'').replace(/[^0-9]/g,'')===sp)) && 
+             getClasses(s).some(cl => cl.classTime === m.acaClass);
+    });
+  }
+  
+  // 못 찾으면 이름/연락처로만 찾기
+  if(!aca) {
+    aca=S.students.find(function(s){return s.name===m.name||(sp&&(s.phone||'').replace(/[^0-9]/g,'')===sp);});
+  }
+
+  if(!aca && !m.isAca) return '';
+  
+  var label = (aca && aca.status) ? aca.teacher + ' 강사 (' + aca.status + ')' : (m.acaClass || '수업 정보 없음');
+  var oc = aca ? 'openModal("studentDetail","'+aca.id+'")' : '';
+  var cursor = aca ? 'pointer' : 'default';
+
+  return '<div onclick="'+oc+'" style="cursor:'+cursor+';margin-top:8px;padding:8px 12px;background:var(--teal-light);border-radius:6px;border:1px dashed var(--teal)">'
     +'<div style="font-size:10px;font-weight:700;color:var(--teal);text-transform:uppercase;margin-bottom:2px">🎓 아카데미 수강중</div>'
-    +'<div style="font-size:12px;font-weight:600;color:var(--text)">'+aca.teacher+' 강사 ('+aca.status+')</div>'
+    +'<div style="font-size:12px;font-weight:600;color:var(--text)">'+label+'</div>'
     +'</div>';
 }
 
