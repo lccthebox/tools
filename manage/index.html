@@ -9224,13 +9224,20 @@ function renderStudyGroups(groups){
   const sgLevel = document.getElementById('sg-level-filter')?.value||'';
   const sgPay = document.getElementById('sg-pay-filter')?.value||'';
   const sgDayF = document.getElementById('sg-day-filter')?.value||'';
+  
+  // Korean staff 담당 그룹 미리 매핑
+  const koreanByGroup = {};
+  (S.study.koreanStaff||[]).forEach(function(t){
+    (t.groups||[]).forEach(function(gid){ if(!koreanByGroup[gid]) koreanByGroup[gid]=[]; koreanByGroup[gid].push(t); });
+  });
 
   // 필터 적용 (그룹 레벨, 멤버 이름, 납부상태)
   const filteredGroups = groups.filter(g=>{
     if(sgLevel && g.level !== sgLevel) return false;
     if(sgQ){
       const nameMatch = (g.leaderName||'').toLowerCase().includes(sgQ) ||
-        (g.members||[]).some(m=>m.name.toLowerCase().includes(sgQ));
+        (g.members||[]).some(m=>m.name.toLowerCase().includes(sgQ)) ||
+        (koreanByGroup[g.id]||[]).some(t=>t.name.toLowerCase().includes(sgQ));
       if(!nameMatch) return false;
     }
     if(sgPay){
@@ -9240,11 +9247,6 @@ function renderStudyGroups(groups){
     return true;
   });
 
-  // Korean staff 담당 그룹 인원 포함
-  const koreanByGroup = {};
-  (S.study.koreanStaff||[]).forEach(function(t){
-    (t.groups||[]).forEach(function(gid){ if(!koreanByGroup[gid]) koreanByGroup[gid]=[]; koreanByGroup[gid].push(t); });
-  });
   const totalMembers = filteredGroups.reduce((a,g)=>a+(g.members||[]).filter(m=>!m.isTutor).length+(koreanByGroup[g.id]||[]).length,0);
 
   el.innerHTML=`
@@ -9409,11 +9411,11 @@ function renderStudyGroups(groups){
               const ps = (m.payStatus || '').trim();
               const isNotStarted = m.startDate && m.startDate > today();
               const rowBg = m.isTutor ? 'background:var(--bg3);' : 
+                            (isNotStarted ? 'background:#e6f8ee;' : 
                             (ps === '미납' ? 'background:#ffe8ec;' : 
                             (ps === '대기' ? 'background:#fff0f5;' : 
                             (ps === '연장확정' ? 'background:#e3f2fd;' : 
-                            (ps === '결제예정' ? 'background:#f3e5f5;' : 
-                            (isNotStarted ? 'background:#e6f8ee;' : '')))));
+                            (ps === '결제예정' ? 'background:#f3e5f5;' : '')))));
               const dayTags=(m.presentDays||[]).map(d=>`<span style="font-size:10px;background:${DAY_COLORS[d]||'#888'}22;color:${DAY_COLORS[d]||'#888'};padding:1px 6px;border-radius:99px;font-weight:700;margin-right:2px">${d}</span>`).join('');
               const tutorTag=m.isTutor?`<span style="font-size:9px;background:var(--teal-light);color:var(--teal);padding:1px 5px;border-radius:99px;margin-left:4px">튜터</span>`:'';
               const holdTag=isHold?`<span style="font-size:9px;background:var(--amber-light);color:var(--amber);padding:1px 5px;border-radius:99px;margin-left:4px">홀딩</span>`:'';
