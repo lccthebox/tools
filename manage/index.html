@@ -2789,7 +2789,7 @@ function searchRowHTML(s){
   const rowBg=isExpired||payStatus==='미납'?'rgba(214,48,48,0.04)':isWarn?'rgba(212,130,10,0.04)':'';
 
   // 수업반 이름만 표시 (복수 지원)
-  const classNames=classes.map(cl=>classLabel(cl.classTime)).join(' + ');
+  const classNames=classes.map(cl=>(classLabel(cl.classTime)+(cl.classTime2?(' + '+classLabel(cl.classTime2)):'')).trim()).join(' / ');
 
   return`<tr style="background:${rowBg}" oncontextmenu="openCtxMenu(event,'${s.id}')" onclick="openModal('studentDetail','${s.id}')" onmouseenter="this.style.background='rgba(92,82,232,0.04)'" onmouseleave="this.style.background='${rowBg}'" style="cursor:pointer">
     <td style="${tdStyle};font-weight:600;white-space:nowrap">${s.name}</td>
@@ -4724,7 +4724,7 @@ function sheetTableHTML(list){
     const{color:c,bg}=TEACHER_INFO[pri.teacher||s.teacher]||{color:'#888',bg:'rgba(136,136,136,0.1)'};
     const classes=getClasses(s);
     const payStatus=getPayStatus(s);
-    const classLabels=classes.map(cl=>`<span style="font-size:11px;color:var(--text2)">${classLabel(cl.classTime)}</span>`).join('<span style="color:var(--text3);margin:0 3px">+</span>');
+    const classLabels=classes.map(cl=>`<span style="font-size:11px;color:var(--text2)">${classLabel(cl.classTime)+(cl.classTime2?' + '+classLabel(cl.classTime2):'')}</span>`).join('<span style="color:var(--text3);margin:0 3px">/</span>');
     const lastNote=s.notes&&s.notes.length?s.notes[s.notes.length-1]:null;
     const noteText=lastNote?lastNote.text:(s.memo||'');
     const isRefunded=s.status==='환불';
@@ -5944,9 +5944,22 @@ function stuForm(s){
             <option value="">선택</option>${teacherSel}
           </select>
         </div>
-        <div class="fgroup"><label class="flabel">수업반</label>
+        <div class="fgroup"><label class="flabel">수업 유형</label>
+          <select class="finput ce-classtype" data-idx="${idx}" onchange="updateClassType(${idx})">
+            <option value="w2" ${(cl.classType||'w2')==='w2'?'selected':''}>주2회 (월수 or 화목)</option>
+            <option value="w4" ${(cl.classType||'')==='w4'?'selected':''}>주4회 / 2과목 연강</option>
+            <option value="w1" ${(cl.classType||'')==='w1'?'selected':''}>주1회</option>
+          </select>
+        </div>
+        <div class="fgroup"><label class="flabel">수업반 <span id="ce-classtype-label-${idx}" style="font-size:10px;color:var(--teal);font-weight:700">${(cl.classType||'w2')==='w4'?'(1차 수업반)':''}</span></label>
           <select class="finput ce-classtime" data-idx="${idx}">
             <option value="">강사 선택 후</option>${co}
+          </select>
+        </div>
+        <div class="fgroup" id="ce-classtime2-wrap-${idx}" style="display:${(cl.classType||'w2')==='w4'?'block':'none'}">
+          <label class="flabel">수업반 <span style="font-size:10px;color:var(--teal);font-weight:700">(2차 수업반)</span></label>
+          <select class="finput ce-classtime2" data-idx="${idx}">
+            <option value="">선택</option>${co}
           </select>
         </div>
         <div class="fgroup"><label class="flabel">결제일</label>
@@ -6032,7 +6045,7 @@ function stuFormTeacher(s){
       return Object.keys(info2.classes||{}).map(ct=>`<option value="${ct}" ${cl.classTime===ct?'selected':''}>[${t}] ${ct}</option>`).join('');
     }).join('');
     return`<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:10px 12px;margin-bottom:8px">
-      <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px">수업 ${i+1} — 현재: <span style="color:var(--accent)">${cl.teacher||''} / ${cl.classTime||'-'}</span></div>
+      <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px">수업 ${i+1} — 현재: <span style="color:var(--accent)">${cl.teacher||''} / ${cl.classTime||'-'}${cl.classTime2?' + '+cl.classTime2:''}</span>${cl.classType==='w4'?'<span style="font-size:9px;background:var(--teal-light);color:var(--teal);padding:1px 5px;border-radius:4px;margin-left:4px;font-weight:700">주4회 연강</span>':cl.classType==='w1'?'<span style="font-size:9px;background:#f3f4f6;color:#6b7280;padding:1px 5px;border-radius:4px;margin-left:4px;font-weight:700">주1회</span>':''}</div>
       <div class="fgroup" style="margin:0">
         <label class="flabel">수업반 변경 (반이동)</label>
         <select class="finput" id="f-teacher-classtime-${i}">
@@ -6184,10 +6197,23 @@ function removeClassEntry(idx){
 function updateClassOptions(idx){
   const tSel=document.querySelector(`.ce-teacher[data-idx="${idx}"]`);
   const cSel=document.querySelector(`.ce-classtime[data-idx="${idx}"]`);
+  const cSel2=document.querySelector(`.ce-classtime2[data-idx="${idx}"]`);
   if(!tSel||!cSel)return;
   const teacher=tSel.value;
   const info=teacher&&TEACHER_INFO[teacher];
-  cSel.innerHTML='<option value="">선택</option>'+(info?Object.keys(info.classes).map(ct=>`<option value="${ct}">${ct}</option>`).join(''):'');
+  const opts='<option value="">선택</option>'+(info?Object.keys(info.classes).map(ct=>`<option value="${ct}">${ct}</option>`).join(''):'');
+  cSel.innerHTML=opts;
+  if(cSel2) cSel2.innerHTML=opts;
+}
+
+function updateClassType(idx){
+  const typeSel=document.querySelector(`.ce-classtype[data-idx="${idx}"]`);
+  const wrap2=document.getElementById(`ce-classtime2-wrap-${idx}`);
+  const label=document.getElementById(`ce-classtype-label-${idx}`);
+  if(!typeSel)return;
+  const isW4=typeSel.value==='w4';
+  if(wrap2) wrap2.style.display=isW4?'block':'none';
+  if(label) label.textContent=isW4?'(1차 수업반)':'';
 }
 
 function getClassEntriesFromForm(){
@@ -6197,9 +6223,13 @@ function getClassEntriesFromForm(){
     const payMethods=[...el.querySelectorAll(`.ce-paymethod[data-idx="${idx}"]:checked`)].map(x=>x.value);
     const discounts=[...el.querySelectorAll(`.ce-discount[data-idx="${idx}"]:checked`)].map(x=>x.value);
     const discountAmt=parseInt(el.querySelector(`.ce-discamt[data-idx="${idx}"]`)?.value)||0;
+    const classType=el.querySelector(`.ce-classtype[data-idx="${idx}"]`)?.value||'w2';
+    const classTime2=classType==='w4'?(el.querySelector(`.ce-classtime2[data-idx="${idx}"]`)?.value||''):'';
     return{
       teacher:el.querySelector(`.ce-teacher[data-idx="${idx}"]`)?.value||'',
       classTime:el.querySelector(`.ce-classtime[data-idx="${idx}"]`)?.value||'',
+      classTime2,
+      classType,
       payDate:el.querySelector(`.ce-paydate[data-idx="${idx}"]`)?.value||'',
       startDate:el.querySelector(`.ce-start[data-idx="${idx}"]`)?.value||'',
       months:parseInt(el.querySelector(`.ce-months[data-idx="${idx}"]`)?.value)||1,
@@ -6336,7 +6366,7 @@ function studentDetailForm(s){
       return`<div style="border:1.5px solid ${c2}33;border-radius:var(--r2);padding:14px 16px;margin-bottom:10px;background:linear-gradient(135deg,${b2}44,transparent)">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
           <span style="background:${b2};color:${c2};padding:3px 10px;border-radius:99px;font-size:12px;font-weight:700">${cl.teacher}</span>
-          <span style="font-size:14px;font-weight:600;color:var(--text);flex:1">${classLabel(cl.classTime)||cl.classTime}</span>
+          <span style="font-size:14px;font-weight:600;color:var(--text);flex:1">${classLabel(cl.classTime)||cl.classTime}${cl.classTime2?' + '+(classLabel(cl.classTime2)||cl.classTime2):''}${cl.classType==='w4'?' 🔄':''}</span>
           ${dChip}
         </div>
         <!-- 진행 바 -->
