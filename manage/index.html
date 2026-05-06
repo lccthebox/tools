@@ -1817,6 +1817,7 @@ textarea.finput{resize:vertical;min-height:60px}
             <button class="import-tab on" id="itab-academy" onclick="importSwitchTab('academy')">🎓 아카데미 수강생</button>
             <button class="import-tab" id="itab-study" onclick="importSwitchTab('study')">📚 스터디 멤버</button>
             <button class="import-tab" id="itab-consult" onclick="importSwitchTab('consult')">💬 상담이력</button>
+            <button class="import-tab" id="itab-excel" onclick="importSwitchTab('excel')" style="color:var(--teal);font-weight:700">📊 엑셀 임포트</button>
           </div>
 
           <!-- ── 아카데미 탭 ── -->
@@ -4989,7 +4990,7 @@ function renderTrials(){
       <td style="font-weight:700">${t.name}</td>
       <td style="font-family:var(--font-mono);font-size:11px;color:var(--text2)">${t.phone||'-'}</td>
       <td><span style="background:${bg};color:${co};padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700">${t.teacher||'-'}</span></td>
-      <td style="font-size:12px">${classLabel(t.classTime)||t.classTime||'-'}</td>
+      <td style="font-size:12px">${classLabel(t.classTime)||t.classTime||'-'}${t.teacher2?`<br><span style="font-size:10px;color:var(--teal);font-weight:700">+2차 ${t.teacher2} / ${classLabel(t.classTime2)||t.classTime2}</span>`:'' }</td>
       <td style="text-align:center;font-family:var(--font-mono);font-size:11px">${fmtDate(t.date)||'-'}</td>
       <td style="text-align:center">
         <span style="font-size:11px;font-weight:700;background:${feeBg};color:${feeColor};padding:2px 9px;border-radius:99px">${fee}</span>
@@ -6543,12 +6544,36 @@ function sdSwitch(tab){
 function trialForm(c = {}){
   const to=TEACHERS.map(t=>`<option value="${t}" ${c.teacher===t?'selected':''}>${t}</option>`).join('');
   const co=c.teacher&&TEACHER_INFO[c.teacher]?Object.keys(TEACHER_INFO[c.teacher].classes).map(ct=>`<option value="${ct}" ${c.classTime===ct?'selected':''}>${ct}</option>`).join(''):'';
+  const to2=TEACHERS.map(t=>`<option value="${t}" ${c.teacher2===t?'selected':''}>${t}</option>`).join('');
+  const co2=c.teacher2&&TEACHER_INFO[c.teacher2]?Object.keys(TEACHER_INFO[c.teacher2].classes).map(ct=>`<option value="${ct}" ${c.classTime2===ct?'selected':''}>${ct}</option>`).join(''):'';
   return`
     ${c.isFromConsult?`<input type="hidden" id="f-trial-from-consult" value="${c.isFromConsult}">`:''}
     <div class="fgroup"><label class="flabel">이름 *</label><input class="finput" id="f-name" value="${c.name||''}" placeholder="홍길동"></div>
     <div class="fgroup"><label class="flabel">연락처</label><input class="finput" id="f-phone" value="${c.phone||''}" placeholder="010-0000-0000"></div>
-    <div class="fgroup"><label class="flabel">강사</label><select class="finput" id="f-teacher" onchange="onTeacherChange(this.value,'f-classtime')"><option value="">선택</option>${to}</select></div>
-    <div class="fgroup"><label class="flabel">수업반</label><select class="finput" id="f-classtime"><option value="">선택</option>${co}</select></div>
+
+    <div style="grid-column:1/-1;background:var(--bg3);border-radius:var(--r);padding:10px 12px;border:1px solid var(--border2);margin-bottom:4px">
+      <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:8px">1차 청강</div>
+      <div class="fg">
+        <div class="fgroup"><label class="flabel">강사</label><select class="finput" id="f-teacher" onchange="onTeacherChange(this.value,'f-classtime')"><option value="">선택</option>${to}</select></div>
+        <div class="fgroup"><label class="flabel">수업반</label><select class="finput" id="f-classtime"><option value="">선택</option>${co}</select></div>
+      </div>
+    </div>
+
+    <div style="grid-column:1/-1;background:var(--teal-light);border-radius:var(--r);padding:10px 12px;border:1px dashed var(--teal);margin-bottom:4px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:11px;font-weight:700;color:var(--teal)">2차 청강 <span style="font-size:10px;font-weight:400;color:var(--text3)">(선택 · 다른 반 추가 청강 시)</span></span>
+        <label style="display:flex;align-items:center;gap:5px;font-size:11px;cursor:pointer">
+          <input type="checkbox" id="f-trial2-on" onchange="document.getElementById('f-trial2-fields').style.display=this.checked?'block':'none'" ${c.teacher2?'checked':''}> 2차 청강 추가
+        </label>
+      </div>
+      <div id="f-trial2-fields" style="display:${c.teacher2?'block':'none'}">
+        <div class="fg">
+          <div class="fgroup"><label class="flabel">강사 (2차)</label><select class="finput" id="f-teacher2" onchange="onTeacherChange(this.value,'f-classtime2')"><option value="">선택</option>${to2}</select></div>
+          <div class="fgroup"><label class="flabel">수업반 (2차)</label><select class="finput" id="f-classtime2"><option value="">선택</option>${co2}</select></div>
+        </div>
+      </div>
+    </div>
+
     <div class="fgroup"><label class="flabel">청강일</label><input class="finput" id="f-start" type="date" value="${c.date||today()}"></div>
     <div class="fgroup"><label class="flabel">청강비</label>
       <select class="finput" id="f-pay">
@@ -6817,9 +6842,15 @@ function saveModal(){
   if(m==='trial'){
     if(S.editId){
       const t = S.trials.find(x=>x.id===S.editId);
-      if(t) Object.assign(t, {name,phone:v('f-phone'),teacher:v('f-teacher'),classTime:v('f-classtime'),date:v('f-start')||today(),fee:v('f-pay')||'대기',memo:v('f-memo')});
+      const trial2on = document.getElementById('f-trial2-on')?.checked;
+      if(t) Object.assign(t, {name,phone:v('f-phone'),teacher:v('f-teacher'),classTime:v('f-classtime'),
+        teacher2:trial2on?v('f-teacher2'):'', classTime2:trial2on?v('f-classtime2'):'',
+        date:v('f-start')||today(),fee:v('f-pay')||'대기',memo:v('f-memo')});
     }else{
-      S.trials.push({id:gid('t'),name,phone:v('f-phone'),teacher:v('f-teacher'),classTime:v('f-classtime'),date:v('f-start')||today(),fee:v('f-pay')||'대기',memo:v('f-memo')});
+      const trial2on = document.getElementById('f-trial2-on')?.checked;
+      S.trials.push({id:gid('t'),name,phone:v('f-phone'),teacher:v('f-teacher'),classTime:v('f-classtime'),
+        teacher2:trial2on?v('f-teacher2'):'', classTime2:trial2on?v('f-classtime2'):'',
+        date:v('f-start')||today(),fee:v('f-pay')||'대기',memo:v('f-memo')});
     }
   }else if(m==='consult'||m==='editConsult'){
     const result=v('f-result')||'대기';
@@ -13653,13 +13684,178 @@ var importCurrentTab = 'academy';
 
 function importSwitchTab(tab){
   importCurrentTab = tab;
-  ['academy','study','consult'].forEach(function(t){
+  // 엑셀 탭 동적 생성
+  if(tab==='excel' && !document.getElementById('import-content-excel')){
+    const excelDiv = document.createElement('div');
+    excelDiv.id = 'import-content-excel';
+    excelDiv.style.display = 'none';
+    excelDiv.innerHTML = `
+      <div class="import-guide-card">
+        <div class="igc-title">📊 엑셀 파일로 신규 수강생 일괄 임포트</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.9;margin-top:6px">
+          1. 아래 <b>엑셀 양식 다운로드</b> 버튼으로 양식을 받으세요<br>
+          2. 양식에 수강생 정보를 입력하고 저장하세요<br>
+          3. <b>파일 선택</b>으로 작성한 엑셀을 업로드하면 자동으로 임포트됩니다
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;margin:16px 0;flex-wrap:wrap">
+        <label class="btn btn-primary" style="cursor:pointer;margin:0;display:inline-flex;align-items:center;gap:6px">
+          📂 엑셀 파일 선택 (.xlsx)
+          <input type="file" accept=".xlsx,.xls" id="excel-file-input" style="display:none" onchange="handleExcelImport(this)">
+        </label>
+      </div>
+      <div id="excel-import-status" style="display:none;margin-top:12px;padding:14px;background:var(--bg2);border-radius:var(--r);border-left:4px solid var(--accent);font-size:13px;line-height:1.9"></div>
+      <div id="excel-import-preview" style="margin-top:14px"></div>
+    `;
+    const consultDiv = document.getElementById('import-content-consult');
+    if(consultDiv) consultDiv.after(excelDiv);
+  }
+  ['academy','study','consult','excel'].forEach(function(t){
     var btn = document.getElementById('itab-'+t);
     var con = document.getElementById('import-content-'+t);
     if(btn) btn.classList.toggle('on', t===tab);
     if(con) con.style.display = t===tab ? 'block' : 'none';
   });
 }
+
+// 엑셀 임포트 처리
+function handleExcelImport(input){
+  const file = input.files[0];
+  if(!file) return;
+  const statusEl = document.getElementById('excel-import-status');
+  const previewEl = document.getElementById('excel-import-preview');
+  statusEl.style.display = 'block';
+  statusEl.style.borderLeftColor = 'var(--accent)';
+  statusEl.textContent = '⏳ 파일 읽는 중...';
+  previewEl.innerHTML = '';
+
+  // SheetJS 로드
+  function loadSheetJS(cb){
+    if(window.XLSX){ cb(); return; }
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload = cb;
+    document.head.appendChild(s);
+  }
+
+  loadSheetJS(function(){
+    const reader = new FileReader();
+    reader.onload = function(e){
+      try{
+        const wb = XLSX.read(e.target.result, {type:'array'});
+        const ws = wb.Sheets[wb.SheetNames[0]]; // 첫번째 시트
+        const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+
+        // 헤더 행(3행) 이후 데이터 (4행부터, 0-indexed: 3)
+        // 컬럼: 이름(0),연락처(1),수강상태(2),비고(3),강사(4),수업유형(5),수업반1(6),수업반2(7),
+        //        결제일(8),시작일(9),개월수(10),납부금액(11),납부상태(12),납부방법(13),
+        //        할인항목(14),할인금액(15),강사2(16),수업반2_2(17)
+        const dataRows = rows.slice(3).filter(r => r[0] && String(r[0]).trim() && String(r[0]).trim() !== '홍길동' && String(r[0]).trim() !== '김철수');
+
+        if(!dataRows.length){
+          statusEl.style.borderLeftColor = 'var(--amber)';
+          statusEl.textContent = '⚠️ 데이터가 없습니다. 4행부터 입력해주세요.';
+          return;
+        }
+
+        const parsed = dataRows.map(function(r){
+          const name = String(r[0]||'').trim();
+          const phone = String(r[1]||'').trim();
+          const status = String(r[2]||'재원').trim();
+          const memo = String(r[3]||'').trim();
+          const teacher = String(r[4]||'').trim();
+          const classType = String(r[5]||'').trim();
+          const classTime = String(r[6]||'').trim();
+          const classTime2 = String(r[7]||'').trim();
+          const payDate = normalizeDate(String(r[8]||'').trim()) || today();
+          const startDate = normalizeDate(String(r[9]||'').trim()) || today();
+          const months = parseInt(r[10])||1;
+          const amount = parseInt(String(r[11]||'0').replace(/,/g,''))||0;
+          const payStatus = String(r[12]||'대기').trim();
+          const payMethods = String(r[13]||'').split(',').map(x=>x.trim()).filter(Boolean);
+          const discountItem = String(r[14]||'').trim();
+          const discountAmt = parseInt(String(r[15]||'0').replace(/,/g,''))||0;
+          const teacher2 = String(r[16]||'').trim();
+          const classTime2_2 = String(r[17]||'').trim();
+
+          const isW4 = classType.includes('4') || classType.includes('연강');
+          const cls = {
+            teacher, classTime,
+            classTime2: isW4 ? classTime2 : '',
+            classType: isW4 ? 'w4' : classType.includes('1회') ? 'w1' : 'w2',
+            payDate, startDate, months, amount,
+            pay: payStatus==='납부완료'?'완료':payStatus,
+            payMethods,
+            discounts: discountItem ? [discountItem] : [],
+            discountAmt,
+          };
+          const classes = [cls];
+          if(teacher2 && classTime2_2){
+            classes.push({teacher:teacher2, classTime:classTime2_2, classType:'w2',
+              payDate, startDate, months:1, amount:0, pay:'대기', payMethods:[], discounts:[], discountAmt:0});
+          }
+
+          return { id:gid('s'), name, phone, status, memo,
+            teacher, classTime, startDate, months, pay:cls.pay, amount, classes };
+        }).filter(s=>s.name);
+
+        // 중복 체크
+        const existingSet = new Set(S.students.map(s=>s.name+(s.phone||'').replace(/-/g,'')));
+        const toAdd = parsed.filter(s=>!existingSet.has(s.name+(s.phone||'').replace(/-/g,'')));
+        const skipped = parsed.length - toAdd.length;
+
+        // 미리보기
+        previewEl.innerHTML = `
+          <div style="font-size:13px;font-weight:700;margin-bottom:8px">
+            📋 미리보기 — 총 ${parsed.length}명 중 추가 ${toAdd.length}명 (중복 스킵 ${skipped}명)
+          </div>
+          <div style="overflow-x:auto">
+          <table class="sheet-table" style="font-size:11px">
+            <thead><tr><th>#</th><th>이름</th><th>연락처</th><th>상태</th><th>강사 / 수업반</th><th>개월</th><th>금액</th><th>중복</th></tr></thead>
+            <tbody>${parsed.map(function(s,i){
+              const dup = existingSet.has(s.name+(s.phone||'').replace(/-/g,''));
+              return '<tr style="'+(dup?'color:var(--text3);':'')+'">'+
+                '<td>'+(i+1)+'</td>'+
+                '<td style="font-weight:600">'+s.name+'</td>'+
+                '<td style="font-family:monospace">'+s.phone+'</td>'+
+                '<td><span style="font-size:10px;background:var(--accent-light);color:var(--accent);padding:1px 5px;border-radius:4px">'+s.status+'</span></td>'+
+                '<td>'+s.teacher+' / '+(s.classTime||'-')+'</td>'+
+                '<td>'+s.months+'개월</td>'+
+                '<td>'+(s.amount?s.amount.toLocaleString()+'원':'-')+'</td>'+
+                '<td>'+(dup?'<span style="color:var(--amber);font-size:10px">중복</span>':'')+'</td>'+
+              '</tr>';
+            }).join('')}</tbody>
+          </table></div>
+          ${toAdd.length>0?`<button class="btn btn-primary" style="margin-top:14px" onclick="executeExcelImport(${JSON.stringify(toAdd).replace(/</g,'\\u003c')})">🚀 ${toAdd.length}명 임포트 실행</button>`:''}
+        `;
+
+        statusEl.style.borderLeftColor = 'var(--teal)';
+        statusEl.textContent = `✅ 파일 파싱 완료 — ${parsed.length}명 발견 / 추가 가능 ${toAdd.length}명`;
+      }catch(err){
+        statusEl.style.borderLeftColor = 'var(--red)';
+        statusEl.textContent = '❌ 파일 읽기 오류: ' + err.message;
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function executeExcelImport(students){
+  if(!students||!students.length) return;
+  if(!confirm(students.length+'명을 임포트하시겠습니까?')) return;
+  pushUndo('엑셀 임포트');
+  students.forEach(function(s){ S.students.push(s); });
+  save('students');
+  renderAll();
+  const statusEl = document.getElementById('excel-import-status');
+  if(statusEl){
+    statusEl.style.borderLeftColor = 'var(--teal)';
+    statusEl.innerHTML = '✅ <strong>'+students.length+'명 임포트 완료!</strong> 앱에 바로 반영됩니다.';
+  }
+  document.getElementById('excel-import-preview').innerHTML = '';
+  showToast('✅ 엑셀 임포트 완료: '+students.length+'명 추가');
+}
+
 
 // 날짜 정규화 (2024.01.15 → 2024-01-15)
 function normalizeDate(s){
