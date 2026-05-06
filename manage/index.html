@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -2829,7 +2829,7 @@ function updPaySearch(id,val,isStudy){
     if(!s)return;
     s.pay=val;
   }
-  save();
+  save('students');
   // 현재 검색 결과 새로고침
   const q=document.getElementById('search-input')?.value||'';
   runSearch(q);
@@ -2840,7 +2840,7 @@ function delStuFromSearch(id){
   const s=S.students.find(x=>x.id===id);
   if(!s||!confirm(`${s.name} 님을 삭제하시겠습니까?`))return;
   S.students=S.students.filter(x=>x.id!==id);
-  save();
+  save('students');
   const q=document.getElementById('search-input')?.value||'';
   runSearch(q);
   renderAll();
@@ -2995,8 +2995,14 @@ async function loadData(){
       if(snap.exists()){
         console.log('Firebase Cloud Data Synced!');
         const d = snap.val();
+        // 유효한 데이터일 때만 덮어쓰기 (빈 배열로 초기화되는 사고 방지)
+        if(!d || (!d.students && !d.trials)) {
+          console.warn('Firebase: 빈 데이터 수신 무시');
+          return;
+        }
         // 전역 상태 S 업데이트
         S.students=d.students||[]; S.trials=d.trials||[]; S.consults=d.consults||[];
+
         S.calNotes=d.calNotes||{}; S.board=d.board||[]; S.teacherPrices=d.teacherPrices||{};
         S.dailyNotes=d.dailyNotes||[]; S.study=d.study||{};
         S.teacherInfo=d.teacherInfo||{};
@@ -3036,14 +3042,199 @@ async function loadData(){
     buildFilters(); renderAll();
   }
 }
-function save(){
-  const payload={students:S.students,trials:S.trials,consults:S.consults,calNotes:S.calNotes,board:S.board,teacherPrices:S.teacherPrices,dailyNotes:S.dailyNotes||[],study:S.study||{},teacherInfo:S.teacherInfo||{}};
-  try{ window.storage.set(SKEY,JSON.stringify(payload)).catch(function(){}); }catch(e){}
-  if(fbSyncEnabled && typeof fbDb !== 'undefined'){
-    try{
-      fbDb.ref('thebox_data').set(payload).catch(function(e){ console.warn('Firebase save error:', e.message); });
-    }catch(e){ console.warn('Firebase save error:', e.message); }
+/* ══ Ctrl+Z 스타일 실행취소 (Undo) ══ */
+const _undoStack = []; // 메모리 기반, 최대 10단계
+const UNDO_MAX = 10;
+
+function pushUndo(label) {
+  try {
+    const snap = {
+      label: label || '실행취소',
+      data: JSON.parse(JSON.stringify({students:S.students,trials:S.trials,consults:S.consults,calNotes:S.calNotes,board:S.board,teacherPrices:S.teacherPrices,dailyNotes:S.dailyNotes||[],study:S.study||{},teacherInfo:S.teacherInfo||{}}))
+    };
+    _undoStack.push(snap);
+    if(_undoStack.length > UNDO_MAX) _undoStack.shift();
+  } catch(e) {}
+}
+
+function undoLast() {
+  if(!_undoStack.length) { showToast('⚠️ 되돌릴 내역이 없습니다'); return; }
+  const snap = _undoStack.pop();
+  const d = snap.data;
+  S.students = d.students||[];
+  S.trials = d.trials||[];
+  S.consults = d.consults||[];
+  S.calNotes = d.calNotes||{};
+  S.board = d.board||[];
+  S.teacherPrices = d.teacherPrices||{};
+  S.dailyNotes = d.dailyNotes||[];
+  S.study = d.study||{};
+  S.teacherInfo = d.teacherInfo||{};
+  save();
+  buildFilters();
+  renderAll();
+  showToast(`↩ ${snap.label} 취소되었습니다 (다시취소: ${_undoStack.length}단계)`);
+}
+
+// Ctrl+Z 킨보드 단쳕키
+document.addEventListener('keydown', function(e) {
+  if(e.ctrlKey && e.key === 'z' && !e.shiftKey) {
+    const tag = (document.activeElement?.tagName||'').toLowerCase();
+    if(tag === 'input' || tag === 'textarea' || tag === 'select') return; // 텍스트 입력 중에는 무시
+    e.preventDefault();
+    undoLast();
   }
+});
+
+let _saveTimer=null;
+// 변경된 컬렉션만 추적 (동시 접속 충돌 방지)
+let _dirtyKeys=new Set();
+
+function save(dirtyKey){
+  const payload={students:S.students,trials:S.trials,consults:S.consults,calNotes:S.calNotes,board:S.board,teacherPrices:S.teacherPrices,dailyNotes:S.dailyNotes||[],study:S.study||{},teacherInfo:S.teacherInfo||{}};
+  // 1) 로컬에 즉시 저장 (빠르고 안전)
+  try{ window.storage.set(SKEY,JSON.stringify(payload)).catch(function(){}); }catch(e){}
+
+  // 변경된 키 추적 (인자 없으면 전체 키 더티 처리)
+  if(dirtyKey && typeof dirtyKey==='string'){
+    _dirtyKeys.add(dirtyKey);
+  } else {
+    ['students','trials','consults','calNotes','board','teacherPrices','dailyNotes','study','teacherInfo'].forEach(function(k){_dirtyKeys.add(k);});
+  }
+
+  // 2) Firebase: debounce 500ms 후 변경된 컬렉션만 개별 저장 (다른 사용자 데이터 덮어쓰기 방지)
+  if(fbSyncEnabled && typeof fbDb !== 'undefined'){
+    if(_saveTimer) clearTimeout(_saveTimer);
+    _saveTimer = setTimeout(function(){
+      const keysToSave = Array.from(_dirtyKeys);
+      _dirtyKeys.clear();
+      try{
+        const updates={};
+        keysToSave.forEach(function(k){
+          updates['thebox_data/'+k] = payload[k] !== undefined ? payload[k] : null;
+        });
+        fbDb.ref('/').update(updates).then(function(){
+          const fps=document.getElementById('fb-status');
+          if(fps){fps.textContent='☁ 저장됨';fps.style.color='var(--teal)';}
+        }).catch(function(e){
+          console.warn('Firebase save error:', e.message);
+          const fps=document.getElementById('fb-status');
+          if(fps){fps.textContent='⚠ 저장실패(로컬보존)';fps.style.color='var(--red)';}
+        });
+      }catch(e){ console.warn('Firebase save error:', e.message); }
+    }, 500);
+  }
+}
+
+/* ══ 복원 페이지 렌더 ══ */
+function renderRestorePage(){
+  const el = document.getElementById('restore-page-body');
+  if(!el) return;
+  let snaps = [];
+  try { snaps = JSON.parse(localStorage.getItem(SNAP_KEY)||'[]'); } catch(e){}
+
+  if(!snaps.length){
+    el.innerHTML = `<div style="text-align:center;padding:60px 20px;color:var(--text3)">
+      <div style="font-size:40px;margin-bottom:12px">📭</div>
+      <div style="font-size:15px;font-weight:600;margin-bottom:6px">저장된 스냅샷이 없습니다</div>
+      <div style="font-size:13px">데이터를 수정하면 자동으로 스냅샷이 생성됩니다</div>
+    </div>`;
+    return;
+  }
+
+  const now = Date.now();
+  function timeAgo(ts){
+    const diff = Math.floor((now-ts)/1000);
+    if(diff<60) return diff+'초 전';
+    if(diff<3600) return Math.floor(diff/60)+'분 전';
+    if(diff<86400) return Math.floor(diff/3600)+'시간 전';
+    return Math.floor(diff/86400)+'일 전';
+  }
+  function fmtDate(ts){
+    const d=new Date(ts);
+    return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+  }
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div style="font-size:13px;color:var(--text3)">${snaps.length}개의 스냅샷 보관 중 (최대 ${SNAP_MAX}개)</div>
+      <button class="btn btn-sm btn-danger" onclick="if(confirm('모든 스냅샷을 삭제할까요?')){localStorage.removeItem('${SNAP_KEY}');renderRestorePage();}">
+        🗑 전체 삭제
+      </button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      ${snaps.map((s,i)=>{
+        const d = JSON.parse(s.data||'{}');
+        return `<div style="background:var(--bg2);border:1.5px solid var(--border);border-radius:var(--r2);padding:16px 18px;display:flex;align-items:center;gap:14px;transition:box-shadow .15s" onmouseover="this.style.boxShadow='var(--shadow)'" onmouseout="this.style.boxShadow='none'">
+          <div style="width:44px;height:44px;border-radius:50%;background:${i===0?'var(--accent-light)':'var(--bg3)'};display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${i===0?'🕐':'📦'}</div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+              <span style="font-size:13px;font-weight:700;color:var(--text)">${fmtDate(s.ts)}</span>
+              ${i===0?'<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px;background:var(--accent-light);color:var(--accent)">최신</span>':''}
+              <span style="font-size:11px;color:var(--text3)">${timeAgo(s.ts)}</span>
+            </div>
+            <div style="display:flex;gap:12px;font-size:12px;color:var(--text2)">
+              <span>👤 학생 <b>${s.studentCount||0}</b>명</span>
+              <span>📚 스터디멤버 <b>${s.studyMemberCount||0}</b>명</span>
+              <span style="color:var(--text3)">저장: ${s.by}</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0">
+            <button class="btn btn-sm" onclick="previewSnapshot(${i})" style="font-size:11px">👁 미리보기</button>
+            <button class="btn btn-sm" style="font-size:11px;border-color:var(--teal);color:var(--teal)" onclick="restoreSnapshot(${i})">🔄 이걸로 복원</button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+}
+
+function previewSnapshot(idx){
+  let snaps = [];
+  try { snaps = JSON.parse(localStorage.getItem(SNAP_KEY)||'[]'); } catch(e){}
+  const s = snaps[idx]; if(!s) return;
+  const d = JSON.parse(s.data||'{}');
+  const students = d.students||[];
+  const activeCount = students.filter(x=>x.status!=='inactive').length;
+  const inactiveCount = students.filter(x=>x.status==='inactive').length;
+  const studyGroups = d.study?.groups||[];
+  const studyMemberTotal = studyGroups.reduce((a,g)=>(a+(g.members||[]).length),0);
+  const now = Date.now();
+  function fmtDate(ts){
+    const d=new Date(ts);
+    return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  }
+  const info = `📦 스냅샷 미리보기\n\n🗓 시간: ${fmtDate(s.ts)}\n\n🎓 아카데미 학생: ${students.length}명 (활성 ${activeCount}명 / 비활성 ${inactiveCount}명)\n📚 스터디 그룹: ${studyGroups.length}개 / 멤버 ${studyMemberTotal}명\n💬 상담: ${(d.consults||[]).length}건\n\n현재 데이터:\n  학생: ${(S.students||[]).length}명\n  스터디: ${(S.study?.groups||[]).length}개`;
+  alert(info);
+}
+
+function restoreSnapshot(idx){
+  let snaps = [];
+  try { snaps = JSON.parse(localStorage.getItem(SNAP_KEY)||'[]'); } catch(e){}
+  const s = snaps[idx]; if(!s) return;
+  const d = JSON.parse(s.data||'{}');
+  function fmtDate(ts){
+    const dt=new Date(ts);
+    return `${dt.getFullYear()}.${String(dt.getMonth()+1).padStart(2,'0')}.${String(dt.getDate()).padStart(2,'0')} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+  }
+  if(!confirm(`⚠️ 복원 확인\n\n"${fmtDate(s.ts)}" 시점의 데이터로 복원합니다.\n\n• 학생 ${s.studentCount||0}명\n• 스터디 멤버 ${s.studyMemberCount||0}명\n\n현재 데이터는 복원 전에 자동으로 스냅샷에 저장됩니다.\n\n계속하시겠습니까?`)) return;
+  // 현재 상태를 먼저 스냅샷
+  takeSnapshot('복원 직전 자동저장');
+  // 복원 적용
+  S.students = d.students||[];
+  S.trials = d.trials||[];
+  S.consults = d.consults||[];
+  S.calNotes = d.calNotes||{};
+  S.board = d.board||[];
+  S.teacherPrices = d.teacherPrices||{};
+  S.dailyNotes = d.dailyNotes||[];
+  S.study = d.study||{};
+  S.teacherInfo = d.teacherInfo||{};
+  save();
+  buildFilters();
+  renderAll();
+  renderRestorePage();
+  showToast(`✅ 복원 완료! 학생 ${(S.students||[]).length}명으로 복원되었습니다.`);
 }
 
 // ══ 네비 ══
@@ -3371,7 +3562,7 @@ function dashConsultAction(id, action){
       name:c.name, phone:c.phone, teacher:c.teacher||'', classTime:c.interest||'', isFromConsult:c.id
     });
   }
-  save();renderAll();
+  save('consults');renderAll();
 }
 
 function dashConsultPostpone(id){
@@ -3382,7 +3573,7 @@ function dashConsultPostpone(id){
   c.callbackDate=newDate;
   c.needCallback=true;
   c.result='callback';
-  save();renderAll();
+  save('consults');renderAll();
 }
 
 // ══ 구글 캘린더 연동 ══
@@ -3728,7 +3919,7 @@ function saveTeacherNotice(){
   const val = document.getElementById('teacher-notice-textarea')?.value||'';
   if(!S.teacherNotes) S.teacherNotes = {};
   S.teacherNotes[activeTeacher] = val;
-  save();
+  save('teacherInfo');
   alert('저장되었습니다.');
 }
 
@@ -4589,7 +4780,7 @@ function quickStatusChange(stuId, newStatus){
   s.status = newStatus;
   s.modifiedBy = currentManager?.name||'';
   s.modifiedAt = new Date().toISOString();
-  save(); renderStudents(); renderDashboard();
+  save('students'); renderStudents(); renderDashboard();
   showToast(`✅ ${s.name} 상태 → ${newStatus}`);
 }
 
@@ -4630,7 +4821,7 @@ function bulkPay(val){
     const s=S.students.find(x=>x.id===id);
     if(s){s.pay=val;getClasses(s).forEach(c=>c.pay=val);}
   });
-  save();selectedStudents.clear();renderAll();
+  save('students');selectedStudents.clear();renderAll();
   showToast(`✅ ${selectedStudents.size||'선택된'} 수강생 납부상태 → ${val}`);
 }
 function bulkStatus(val){
@@ -4638,7 +4829,7 @@ function bulkStatus(val){
     const s=S.students.find(x=>x.id===id);
     if(s){s.status=val;s.modifiedBy=currentManager?.name||'';s.modifiedAt=new Date().toISOString();}
   });
-  save();selectedStudents.clear();renderAll();
+  save('students');selectedStudents.clear();renderAll();
   showToast(`✅ 상태 → ${val} 일괄 변경 완료`);
 }
 
@@ -4685,7 +4876,7 @@ function confirmRefund(stuId){
   s.refundReason=reason;
   s.refundAmount=amount;
   s.modifiedBy=currentManager?.name||'';s.modifiedAt=refundedAt;
-  save();closeModal();renderAll();
+  save('students');closeModal();renderAll();
   showToast(`✅ ${s.name} 님 환불 처리 완료 (${refundDate})`);
 }
 function sBadge(s){
@@ -4776,8 +4967,8 @@ function renderTrials(){
   }).join('')}</tbody>
   </table>`;
 }
-function convTrial(id){const t=S.trials.find(x=>x.id===id);if(!t||!confirm(`${t.name} 님을 정규 수강생으로 등록하시겠습니까?`))return;const newId=gid('s');S.students.push({id:newId,name:t.name,phone:t.phone,teacher:t.teacher,classTime:t.classTime,startDate:today(),months:1,status:'재원',pay:'대기',memo:'청강 후 등록',classes:[{teacher:t.teacher,classTime:t.classTime,payDate:today(),startDate:today(),months:1,amount:0,pay:'대기',payMethods:[],discounts:[],discountAmt:0}]});S.trials=S.trials.filter(x=>x.id!==id);save();renderAll();openModal('edit',newId);}
-function delTrial(id){if(!confirm('삭제하시겠습니까?'))return;S.trials=S.trials.filter(x=>x.id!==id);save();renderAll();}
+function convTrial(id){const t=S.trials.find(x=>x.id===id);if(!t||!confirm(`${t.name} 님을 정규 수강생으로 등록하시겠습니까?`))return;const newId=gid('s');S.students.push({id:newId,name:t.name,phone:t.phone,teacher:t.teacher,classTime:t.classTime,startDate:today(),months:1,status:'재원',pay:'대기',memo:'청강 후 등록',classes:[{teacher:t.teacher,classTime:t.classTime,payDate:today(),startDate:today(),months:1,amount:0,pay:'대기',payMethods:[],discounts:[],discountAmt:0}]});S.trials=S.trials.filter(x=>x.id!==id);save('students');save('trials');renderAll();openModal('edit',newId);}
+function delTrial(id){if(!confirm('삭제하시겠습니까?'))return;pushUndo('청강 삭제');S.trials=S.trials.filter(x=>x.id!==id);save('trials');renderAll();}
 
 function addSecondTrial(id){
   const t = S.trials.find(x=>x.id===id);
@@ -4793,7 +4984,7 @@ function addSecondTrial(id){
     fee: '대기',
     memo: '1차 청강 후 이어진 2차 청강'
   });
-  save(); renderAll(); openModal('trial', newId);
+  save('trials'); renderAll(); openModal('trial', newId);
 }
 
 // ══ 신규 상담 빠른 등록 ══
@@ -5090,7 +5281,7 @@ function saveQuickConsult(){
     });
   }
 
-  save();closeModal();renderAll();
+  save('consults');closeModal();renderAll();
   if(isReg) goPage('teachers');
   else if(isTrial) goPage('trial');
   else goPage('consult');
@@ -5334,9 +5525,9 @@ function toggleConsult(id){
   el.style.display=open?'block':'none';
   if(head)head.classList.toggle('open',open);
 }
-function delConsult(id){if(!confirm('삭제하시겠습니까?'))return;S.consults=S.consults.filter(x=>x.id!==id);save();renderAll();}
+function delConsult(id){if(!confirm('삭제하시겠습니까?'))return;S.consults=S.consults.filter(x=>x.id!==id);save('consults');renderAll();}
 function convConsultTrial(id){const c=S.consults.find(x=>x.id===id);if(!c)return;openModal('trial', {name:c.name, phone:c.phone, teacher:c.teacher||'', classTime:c.interest||'', isFromConsult:c.id});}
-function convConsultStu(id){const c=S.consults.find(x=>x.id===id);if(!c||!confirm(`${c.name} 님을 수강생으로 등록하시겠습니까?`))return;S.students.push({id:gid('s'),name:c.name,phone:c.phone,teacher:c.teacher||'',classTime:c.interest||'',startDate:today(),months:1,status:'재원',pay:'대기',memo:'상담 후 등록'});c.result='registered';save();renderAll();}
+function convConsultStu(id){const c=S.consults.find(x=>x.id===id);if(!c||!confirm(`${c.name} 님을 수강생으로 등록하시겠습니까?`))return;S.students.push({id:gid('s'),name:c.name,phone:c.phone,teacher:c.teacher||'',classTime:c.interest||'',startDate:today(),months:1,status:'재원',pay:'대기',memo:'상담 후 등록'});c.result='registered';save('students');save('consults');renderAll();}
 
 // ══ 수강료 ══
 function renderPayments(){
@@ -5546,10 +5737,10 @@ function updPayByClass(stuId,classTime,val){
     if(classes.length===1){s.pay=val;}
     else{s.pay=getPayStatus(s);}
     if(!s.classes)s.pay=val;
-    save();renderPayments();renderDashboard();
+    save('students');renderPayments();renderDashboard();
   }
 }
-function updPay(id,val){const s=S.students.find(x=>x.id===id);if(s){s.pay=val;save();renderDashboard();}}
+function updPay(id,val){const s=S.students.find(x=>x.id===id);if(s){s.pay=val;save('students');renderDashboard();}}
 
 // ══ 필터 빌드 ══
 function buildFilters(){
@@ -5936,7 +6127,7 @@ function saveModalTeacher(){
 
   s.modifiedBy = currentManager?.name||'';
   s.modifiedAt = new Date().toISOString();
-  save(); closeModal(); renderAll();
+  save('students'); closeModal(); renderAll();
   showToast('✅ 저장되었습니다');
 }
 
@@ -6671,7 +6862,7 @@ function saveModal(){
   }
   const wasEdit=!!S.editId;
   const wasTrialEdit=(m==='trial'&&wasEdit);
-  save();closeModal();renderAll();
+  save('students');closeModal();renderAll();
   // 청강 정보 변경 시 토스트 알림
   if(wasTrialEdit) showToast('✅ 청강 정보가 변경되었습니다');
   else if(m==='edit') showToast('✅ 수강생 정보가 저장되었습니다');
@@ -6700,7 +6891,7 @@ function quickRenew(stuId){
   s.status='연장';
   s.modifiedBy=currentManager?.name||'';
   s.modifiedAt=new Date().toISOString();
-  save();renderAll();
+  save('students');renderAll();
   showToast(`✅ ${s.name} 님 연장 처리 완료 (시작일: ${newStart})`);
 }
 
@@ -6783,7 +6974,7 @@ function doQuickPay(stuId){
     if(!s.notes) s.notes=[];
     s.notes.push({text:memo, by:currentManager?.name||'', at:new Date().toISOString()});
   }
-  save(); closeModal(); renderAll();
+  save('students'); closeModal(); renderAll();
   showToast(`✅ ${s.name} 님 납입 완료! (${months}개월 / ${amount.toLocaleString()}원 / 시작: ${startDate})`);
 }
 
@@ -6882,7 +7073,7 @@ function doEditPayHistory(stuId, type, idx){
 
   s.modifiedBy=currentManager?.name||'';
   s.modifiedAt=new Date().toISOString();
-  save();
+  save('students');
   closeModal();
   // 수정 후 해당 학생 상세 다시 열기
   openModal('studentDetail', stuId);
@@ -6911,7 +7102,8 @@ function deletePayHistory(stuId, idx){
   if(!p || p.type==='current') { showToast('⚠️ 현재 결제는 삭제할 수 없습니다'); return; }
 
   const label=`${fmtDate(p.payDate)} · ${p.teacher||'-'} · ${(p.amount||0).toLocaleString()}원`;
-  if(!confirm(`이 결제 기록을 삭제할까요?\n\n${label}\n\n⚠️ 삭제 후 복구할 수 없습니다.`)) return;
+  if(!confirm(`이 결제 기록을 삭제할까요?\n\n${label}\n\n⚠️ Ctrl+Z로 실행취소 가능`)) return;
+  pushUndo(`결제기록 삭제`);
 
   // payHistory에서 해당 인덱스 제거
   if(p._hi!==undefined && s.payHistory) {
@@ -6920,7 +7112,7 @@ function deletePayHistory(stuId, idx){
 
   s.modifiedBy=currentManager?.name||'';
   s.modifiedAt=new Date().toISOString();
-  save();
+  save('students');
   closeModal();
   openModal('studentDetail', stuId);
   setTimeout(()=>{
@@ -6992,7 +7184,7 @@ function saveHold(stuId){
   s.holdReason=document.getElementById('f-hold-reason')?.value.trim()||'';
   s.modifiedBy=currentManager?.name||'';
   s.modifiedAt=new Date().toISOString();
-  save();closeModal();renderAll();
+  save('students');closeModal();renderAll();
   showToast(`✅ ${s.name} 님 홀딩 ${s.holdCredits}회 저장 완료`);
 }
 
@@ -7029,7 +7221,7 @@ function saveQuickNote(stuId){
   if(!s.notes)s.notes=[];
   s.notes.push({text,by:currentManager?.name||'',at:new Date().toISOString()});
   s.modifiedBy=currentManager?.name||'';s.modifiedAt=new Date().toISOString();
-  save();closeModal();renderAll();
+  save('students');closeModal();renderAll();
 }
 
 // ══ 데이터 백업/복구 ══
@@ -7081,7 +7273,7 @@ function restoreData(){
         if(!d.students)throw new Error('올바른 백업 파일이 아닙니다');
         S.students=d.students||[];S.trials=d.trials||[];S.consults=d.consults||[];
         S.calNotes=d.calNotes||{};S.board=d.board||[];S.teacherPrices=d.teacherPrices||{};
-        save();renderAll();
+        save('students');renderAll();
         showToast(`✅ 복구 완료! 수강생 ${S.students.length}명 / 상담 ${S.consults.length}건`);
       }catch(err){alert('복구 실패: '+err.message);}
     };
@@ -8026,7 +8218,7 @@ function saveMyDailyNote(){
     });
   }
   
-  save();
+  save('dailyNotes');
   ta.value = '';
   renderDaily();
   showToast('업무 노트가 저장되었습니다.');
@@ -8123,12 +8315,12 @@ function saveBoardPost(){
     link:document.getElementById('f-board-link')?.value.trim()||'',
     author:currentManager?.name||'', date:new Date().toISOString(),
   });
-  save();closeModal();renderBoard();
+  save('board');closeModal();renderBoard();
 }
 
 function delBoard(id){
   if(!confirm('삭제하시겠습니까?'))return;
-  S.board=S.board.filter(x=>x.id!==id);save();renderBoard();
+  S.board=S.board.filter(x=>x.id!==id);save('board');renderBoard();
 }
 
 // ══ 계정 관리 ══
@@ -8611,7 +8803,7 @@ function saveTeacherManage(oldName){
   // Firebase + 로컬에 영구 저장
   if(!S.teacherInfo) S.teacherInfo = {};
   S.teacherInfo[name] = teacherData;
-  save();
+  save('teacherInfo');
 
   closeModal(); renderAll(); renderAccounts();
   showToast(name + ' 강사 정보가 저장되었습니다. ✅');
@@ -8623,7 +8815,7 @@ function deleteTeacher(name){
   delete TEACHER_INFO[name];
   if(S.teacherInfo) delete S.teacherInfo[name];
   TEACHERS = Object.keys(TEACHER_INFO);
-  save();
+  save('teacherInfo');
   // 연결된 계정도 강사 역할 해제
   const acc=MANAGERS.find(m=>m.name===name&&m.role==='강사');
   if(acc){acc.role='매니저';saveManagers();}
@@ -8807,7 +8999,7 @@ async function delAccount(id){
   showToast('✅ 계정이 삭제되었습니다');
 }
 
-function delStu(id){const s=S.students.find(x=>x.id===id);if(!s||!confirm(`${s.name} 님을 삭제하시겠습니까?`))return;S.students=S.students.filter(x=>x.id!==id);save();renderAll();}
+function delStu(id){const s=S.students.find(x=>x.id===id);if(!s||!confirm(`${s.name} 님을 삭제하시겠습니까?`))return;pushUndo(`학생 삭제 (${s.name})`);S.students=S.students.filter(x=>x.id!==id);save('students');renderAll();}
 
 // ══ 월별 캘린더 렌더링 ══
 
@@ -8836,7 +9028,7 @@ function setCalNote(teacher,dateStr,note){
   if(!S.calNotes[teacher])S.calNotes[teacher]={};
   if(note===null)delete S.calNotes[teacher][dateStr];
   else S.calNotes[teacher][dateStr]=note;
-  save();
+  save('calNotes');
   renderCalendar();
 }
 
@@ -9137,7 +9329,119 @@ function renderStudyDashboard(groups){
     }
   });
 
+  // ── 오늘 연락할 사람 분류 ──
+  const todayContactList = (function(){
+    const result = { renew: [], extChange: [], levelCheck: [], overdue: [], unpaid: [] };
+    groups.forEach(function(g){
+      (g.members||[]).filter(m=>!m.isTutor).forEach(function(m){
+        const cr = m.credits ?? 0;
+        const totalCr = m.totalCredits || 16;
+        const sessionsUsed = totalCr - cr;
+        const dl = m.creditExpiry ? daysLeft(m.creditExpiry) : 9999;
+
+        // 미연장 상태
+        if(m.status === '미연장'){
+          result.renew.push({m, g, tag:'미연장', color:'var(--red)'});
+          return;
+        }
+        // 크레딧 1회 남음 → 연장 여부 확인
+        if(cr === 1){
+          result.renew.push({m, g, tag:'크레딧 1회', color:'var(--red)'});
+          return;
+        }
+        // 크레딧 만료 D-7 이내
+        if(dl >= 0 && dl <= 7 && m.creditExpiry){
+          result.renew.push({m, g, tag:`만료 D-${dl}`, color: dl<=3 ? 'var(--red)' : 'var(--amber)'});
+          return;
+        }
+        // 크레딧 4회 + 277k 결제 이력 → 연장변경 확인
+        if(cr === 4){
+          const has277k = (m.payHistory||[]).some(p => p.amount === 277000);
+          if(has277k) result.extChange.push({m, g, tag:'연장변경확인(4회)', color:'var(--accent)'});
+        }
+        // 크레딧 10회 → 레벨/적응 확인
+        if(cr === 10){
+          result.levelCheck.push({m, g, tag:'레벨·적응확인(10회)', color:'var(--teal)'});
+        }
+        // 만료일 지남
+        if(dl < 0 && m.creditExpiry && cr > 0){
+          result.overdue.push({m, g, tag:`만료 +${Math.abs(dl)}일`, color:'var(--red)'});
+        }
+        // 미납/대기
+        if(m.payStatus === '미납'){
+          result.unpaid.push({m, g, tag:'미납', color:'var(--red)'});
+        } else if(m.payStatus === '대기'){
+          result.unpaid.push({m, g, tag:'납부대기', color:'var(--amber)'});
+        }
+      });
+    });
+    return result;
+  })();
+
+  const totalContact = todayContactList.renew.length + todayContactList.extChange.length + todayContactList.levelCheck.length + todayContactList.overdue.length + todayContactList.unpaid.length;
+
+  function contactRows(list){
+    if(!list.length) return '<div style="font-size:12px;color:var(--text3);padding:14px 16px">해당 없음 ✅</div>';
+    return list.map(({m,g,tag,color})=>`
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border-bottom:1px solid var(--border);gap:8px">
+        <div style="display:flex;align-items:center;gap:8px;min-width:0">
+          <span style="font-size:10px;background:${color}22;color:${color};padding:2px 7px;border-radius:99px;font-weight:700;white-space:nowrap;flex-shrink:0">${tag}</span>
+          <span style="font-weight:600;font-size:13px;white-space:nowrap">${m.name}</span>
+          <span style="font-size:11px;color:var(--text3);white-space:nowrap">${g.leaderName}</span>
+          <span style="font-size:11px;color:var(--text2);white-space:nowrap">${m.phone||'-'}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+          <span style="font-size:11px;color:var(--text3)">잔여 ${m.credits??0}회 · 만료 ${m.creditExpiry||'-'}</span>
+          ${m.phone ? `<a href="tel:${m.phone}" style="font-size:11px;background:var(--teal-light);color:var(--teal);padding:2px 8px;border-radius:99px;font-weight:700;text-decoration:none;white-space:nowrap">📞 전화</a>` : ''}
+        </div>
+      </div>
+    `).join('');
+  }
+
   el.innerHTML=`
+    <!-- ★ 오늘 연락할 사람들 -->
+    <div class="card" style="margin-bottom:18px;border:2px solid ${totalContact>0?'var(--red)':'var(--border)'}">
+      <div class="card-head" style="background:${totalContact>0?'#fff0f3':'var(--bg2)'};cursor:pointer" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+        <span class="card-title" style="color:${totalContact>0?'var(--red)':'var(--text)'}">
+          📞 오늘 연락할 사람 ${totalContact>0?`<span style="font-size:12px;background:var(--red);color:#fff;padding:1px 8px;border-radius:99px;margin-left:6px">${totalContact}명</span>`:'<span style="font-size:12px;color:var(--teal);margin-left:6px">없음 ✅</span>'}
+        </span>
+        <span style="font-size:11px;color:var(--text3)">${dayLabel} 기준 · 클릭으로 접기/펼치기</span>
+      </div>
+      <div id="contact-panel">
+        <!-- 연장 문의 -->
+        <div style="padding:10px 14px 4px;font-size:11px;font-weight:700;color:var(--red);border-top:1px solid var(--border);background:#fff5f5">
+          🔴 연장 문의 필요 (${todayContactList.renew.length}명)
+        </div>
+        ${contactRows(todayContactList.renew)}
+
+        <!-- 연장변경 확인 -->
+        <div style="padding:10px 14px 4px;font-size:11px;font-weight:700;color:var(--accent);border-top:1px solid var(--border);background:var(--accent-light)">
+          🔵 연장변경 확인 (${todayContactList.extChange.length}명)
+        </div>
+        ${contactRows(todayContactList.extChange)}
+
+        <!-- 레벨·적응 확인 -->
+        <div style="padding:10px 14px 4px;font-size:11px;font-weight:700;color:var(--teal);border-top:1px solid var(--border);background:var(--teal-light)">
+          🟢 레벨·적응 확인 (${todayContactList.levelCheck.length}명)
+        </div>
+        ${contactRows(todayContactList.levelCheck)}
+
+        <!-- 만료 초과 -->
+        ${todayContactList.overdue.length ? `
+        <div style="padding:10px 14px 4px;font-size:11px;font-weight:700;color:var(--red);border-top:1px solid var(--border);background:#fff0f0">
+          ⛔ 만료 초과 (${todayContactList.overdue.length}명)
+        </div>
+        ${contactRows(todayContactList.overdue)}` : ''}
+
+        <!-- 미납/대기 -->
+        ${todayContactList.unpaid.length ? `
+        <div style="padding:10px 14px 4px;font-size:11px;font-weight:700;color:var(--amber);border-top:1px solid var(--border);background:var(--amber-light)">
+          🟡 수납 미처리 (${todayContactList.unpaid.length}명)
+        </div>
+        ${contactRows(todayContactList.unpaid)}` : ''}
+      </div>
+    </div>
+
     <div class="metrics" style="margin-bottom:18px">
       <div class="metric metric-accent">
         <div class="metric-label">${dayLabel} 전체 수강생</div>
@@ -9397,7 +9701,7 @@ function addSharedEvent(){
     createdAt: new Date().toISOString()
   });
   
-  save();
+  save('study');
   renderStudyCalendar();
   showToast('✅ 일정이 추가되었습니다');
 }
@@ -9406,7 +9710,7 @@ function deleteSharedEvent(eventId){
   if(!confirm('이 일정을 삭제하시겠습니까?')) return;
   
   S.sharedEvents = (S.sharedEvents || []).filter(e => e.id !== eventId);
-  save();
+  save('study');
   renderStudyCalendar();
   showToast('✅ 일정이 삭제되었습니다');
 }
@@ -9469,9 +9773,11 @@ function renderStudyGroups(groups){
   const DAY_COLORS={'월':'#4dabf7','화':'#ff8787','수':'#38d9a9','목':'#ffa94d','금':'#b197fc','토':'#ff6b6b','일':'#20c997'};
   const getGColor = (dg) => {
     if(!dg) return 'var(--accent)';
-    if(dg.startsWith('월수')) return '#1971c2'; // 월수: 딥 블루
-    if(dg.startsWith('화목')) return '#e8590c'; // 화목: 진한 오렌지
-    if(dg.startsWith('주말')) return '#862e9c'; // 주말: 딥 퍼플
+    if(dg==='monwed_am')  return '#1971c2'; // 월수오전: 딥 블루
+    if(dg==='monwed_pm')  return '#74c0fc'; // 월수오후: 라이트 블루
+    if(dg==='tuethu_am')  return '#e8590c'; // 화목오전: 딥 오렌지
+    if(dg==='tuethu_pm')  return '#ffa94d'; // 화목오후: 라이트 오렌지
+    if(dg==='satsun'||dg.startsWith('주말')) return '#862e9c'; // 주말: 딥 퍼플
     return DAY_COLORS[dg[0]] || 'var(--accent)';
   };
   // 크레딧 시각화 헬퍼
@@ -9479,20 +9785,32 @@ function renderStudyGroups(groups){
     const cr = m.credits || 0;
     const maxCr = m.totalCredits || 16;
     if(maxCr<=0) return '';
-    const label = `${cr}회`;
-    
-    let badges = '';
-    if(cr === 10) badges = '<span style="font-size:10px;background:var(--teal-light);color:var(--teal);padding:1px 6px;border-radius:4px;font-weight:700;white-space:nowrap">레벨/적응확인</span>';
-    if(cr === 4) {
-      const has277k = (m.payHistory||[]).some(p => p.amount === 277000);
-      if(has277k) badges = '<span style="font-size:10px;background:var(--accent-light);color:var(--accent);padding:1px 6px;border-radius:4px;font-weight:700;white-space:nowrap">연장변경확인</span>';
-    }
-    if(cr === 1) badges = '<span style="font-size:10px;background:var(--red-light);color:var(--red);padding:1px 6px;border-radius:4px;font-weight:700;white-space:nowrap">연장여부확인</span>';
-
+    const crColor = cr <= 1 ? 'var(--red)' : cr <= 4 ? 'var(--amber)' : 'var(--text)';
     return '<div style="display:flex;align-items:center;gap:6px;justify-content:flex-start;padding-left:12px">'
-      + '<span style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap">'+label+'</span>'
-      + (badges ? '<div style="flex-shrink:0">' + badges + '</div>' : '')
+      + '<span style="font-size:12px;font-weight:700;color:'+crColor+';white-space:nowrap">'+cr+'회</span>'
       + '</div>';
+  }
+  // 비고란용 뱃지 계산 함수
+  function memoBadges(m){
+    const cr = m.credits || 0;
+    const badges = [];
+    if(cr === 10) badges.push('<span style="font-size:9px;background:var(--teal-light);color:var(--teal);padding:1px 5px;border-radius:4px;font-weight:700;white-space:nowrap">레벨/적응확인</span>');
+    if(cr === 4){
+      const has277k = (m.payHistory||[]).some(p => p.amount === 277000);
+      if(has277k) badges.push('<span style="font-size:9px;background:var(--accent-light);color:var(--accent);padding:1px 5px;border-radius:4px;font-weight:700;white-space:nowrap">연장변경확인</span>');
+    }
+    if(cr === 1) badges.push('<span style="font-size:9px;background:var(--red-light);color:var(--red);padding:1px 5px;border-radius:4px;font-weight:700;white-space:nowrap">연장여부확인</span>');
+    // 추가 참여 그룹 (1차 그룹 기준)
+    if((m.extraGroupIds||[]).length){
+      const extraNames = (m.extraGroupIds||[]).map(eid=>{
+        const eg = (S.study.groups||[]).find(gg=>gg.id===eid);
+        return eg ? eg.leaderName : '';
+      }).filter(x=>x);
+      if(extraNames.length) badges.push('<span style="font-size:9px;background:#e3f2fd;color:#1565c0;padding:1px 5px;border-radius:4px;font-weight:700;white-space:nowrap">+'+extraNames.join(', ')+'</span>');
+    }
+    // 추가 참여자 (2차 그룹 기준)
+    if(m._isExtra) badges.push('<span style="font-size:9px;background:#e3f2fd;color:#1565c0;padding:1px 5px;border-radius:4px;font-weight:700;white-space:nowrap">+'+m._extraFromGroup+' 소속</span>');
+    return badges.join('');
   }
 
   const sgQ = (document.getElementById('sg-search')?.value||'').toLowerCase();
@@ -9500,9 +9818,9 @@ function renderStudyGroups(groups){
   const sgPay = document.getElementById('sg-pay-filter')?.value||'';
   const sgDayF = document.getElementById('sg-day-filter')?.value||'';
   
-  // Korean staff 담당 그룹 미리 매핑
+  // Korean staff 담당 그룹 미리 매핑 (off 상태 제외)
   const koreanByGroup = {};
-  (S.study.koreanStaff||[]).forEach(function(t){
+  (S.study.koreanStaff||[]).filter(function(t){ return t.status !== 'inactive'; }).forEach(function(t){
     (t.groups||[]).forEach(function(gid){ if(!koreanByGroup[gid]) koreanByGroup[gid]=[]; koreanByGroup[gid].push(t); });
   });
 
@@ -9572,7 +9890,13 @@ function renderStudyGroups(groups){
         presentDays: STUDY_DAY_MAP[g.dayGroup] || [] // 해당 그룹의 기본 요일 적용
       }));
 
-      const displayMembers = [...members, ...korMembers];
+      // 다른 그룹에 속하지만 이 그룹을 추가 참여 그룹으로 등록한 멤버들
+      const extraMembers = (S.study.groups||[]).filter(og=>og.id!==g.id).flatMap(og=>
+        (og.members||[]).filter(om=> !om.isTutor && (om.extraGroupIds||[]).includes(g.id))
+        .map(om=>({...om, _isExtra:true, _extraFromGroup:og.leaderName}))
+      );
+
+      const displayMembers = [...members, ...korMembers, ...extraMembers];
 
       // 정렬 적용
       if(sgSort.field){
@@ -9617,8 +9941,8 @@ function renderStudyGroups(groups){
             <span class="card-title" style="font-size:14px;cursor:pointer;color:${gColor}" 
                   onclick="const v=prompt('그룹명을 입력하세요', '${g.leaderName}'); if(v) updStudyGroup('${g.id}','leaderName',v)"
                   title="클릭하여 그룹명 수정">${g.leaderName}
-              <span style="font-size:11px;color:var(--text3);font-weight:400"> ${g.leaderEngName?'('+g.leaderEngName+')':''}</span>
-              ${(koreanByGroup[g.id]||[]).map(t=>`<span style="font-size:10px;padding:2px 7px;border-radius:99px;background:rgba(14,168,122,0.12);color:#0ea87a;font-weight:700;margin-left:3px">🇰🇷 ${t.name}</span>`).join('')}
+              <span style="font-size:11px;color:var(--text3);font-weight:400;cursor:pointer" title="클릭하여 영문 이름 수정" onclick="const v=prompt('영문 이름을 입력하세요', '${g.leaderEngName||''}'); if(v!==null) updStudyGroup('${g.id}','leaderEngName',v)"> ${g.leaderEngName?'('+g.leaderEngName+')':'(영문이름)'}</span>
+
             </span>
             <select onchange="updStudyGroup('${g.id}','level',this.value)"
               style="font-size:11px;padding:3px 8px;border:1px solid var(--border2);border-radius:var(--r);background:var(--bg2);color:${gColor};font-weight:600">
@@ -9700,9 +10024,9 @@ function renderStudyGroups(groups){
               let payStatusTag = '';
               const sessionsUsed = (m.totalCredits || 0) - (m.credits || 0);
               if (m.payType === '신규' && sessionsUsed < 8) {
-                payStatusTag = `<span style="font-size:10px;background:#ffe066;color:#000;padding:2px 6px;border-radius:4px;font-weight:800;margin-right:6px;box-shadow:0 1px 3px rgba(0,0,0,0.1);border:1px solid #fcc419">NEW (1달미만)</span>`;
+                payStatusTag = `<span style="font-size:9px;background:#ffe066;color:#7d5a00;padding:1px 5px;border-radius:4px;font-weight:700;white-space:nowrap;border:1px solid #fcc419">NEW</span>`;
               } else if (m.payType === '복귀') {
-                payStatusTag = `<span style="font-size:10px;background:var(--amber-light);color:var(--amber);padding:2px 6px;border-radius:4px;font-weight:800;margin-right:6px;border:1px solid var(--amber)">복귀</span>`;
+                payStatusTag = `<span style="font-size:9px;background:var(--amber-light);color:var(--amber);padding:1px 5px;border-radius:4px;font-weight:700;white-space:nowrap;border:1px solid var(--amber)">복귀</span>`;
               }
 
               return`<tr style="${rowBg}cursor:pointer"
@@ -9716,6 +10040,7 @@ function renderStudyGroups(groups){
                     ${m.name}${m.isShiftWorker ? ' 🔄' : ''}
                     ${m.isChanged ? `<span style="font-size:9px;background:var(--amber-light);color:var(--amber);padding:1px 5px;border-radius:4px;font-weight:700" title="${m.changeAt || ''} 변동사항 있음">변동</span>` : ''}
                     ${tutorTag}${holdTag}${acaTag}${notStartedTag}
+
                     ${m.isStaffLink ? '' : `<button class="btn btn-sm" style="padding:1px 4px;font-size:10px;border:none;background:none;color:var(--text3);margin-left:auto" 
                       onclick="event.stopPropagation();delStudyMember('${g.id}','${m.id}')" title="멤버삭제">✕</button>`}
                   </div>
@@ -9733,16 +10058,22 @@ function renderStudyGroups(groups){
                     ${STUDY_LEVELS.map(lv=>`<option value="${lv}" ${m.level===lv?'selected':''}>${lv}</option>`).join('')}
                   </select>
                 </td>
-                <td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${m.memo||''}">
-                  ${payStatusTag}
+                <td style="font-size:11px;max-width:160px;vertical-align:middle">
                   ${(function(){
-                    if (m.isTutor) {
-                      const tutees = members.filter(m2 => !m2.isTutor && m2.memo && (m2.memo.includes(m.name + ' 튜터') || m2.memo.includes(m.name + '튜터'))).map(m2 => m2.name);
-                      if (tutees.length > 0) {
-                        return `<span style="color:var(--teal);font-weight:700;background:var(--teal-light);padding:1px 4px;border-radius:3px;margin-right:4px">👤 ${tutees.join(', ')}</span>` + (m.memo || '');
-                      }
+                    if(m.isTutor){
+                      const tutees = members.filter(m2=>!m2.isTutor&&m2.memo&&(m2.memo.includes(m.name+' 튜터')||m2.memo.includes(m.name+'튜터'))).map(m2=>m2.name);
+                      return (tutees.length?`<span style="font-size:10px;color:var(--teal);font-weight:700">👤 ${tutees.join(', ')}</span><br>`:'')+(m.memo||'');
                     }
-                    return m.memo || '-';
+                    const lines = [];
+                    // 뱃지 한 줄 (작게)
+                    const bgs = [];
+                    if(payStatusTag) bgs.push(payStatusTag);
+                    const mb = memoBadges(m);
+                    if(mb) bgs.push(mb);
+                    if(bgs.length) lines.push(`<div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:${m.memo?'2px':'0'}">${bgs.join('')}</div>`);
+                    // 비고 텍스트
+                    if(m.memo) lines.push(`<div style="color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:155px" title="${m.memo}">${m.memo}</div>`);
+                    return lines.join('') || '<span style="color:var(--text3)">-</span>';
                   })()}
                 </td>
               </tr>`;
@@ -10096,7 +10427,7 @@ function batchDeductCredits(){
     });
   });
   
-  save();renderStudy();
+  save('study');renderStudy();
   alert(`✅ 출석 차감 처리 완료!\n\n- 정상 차감: ${count}명\n- 일일홀딩 제외 대상: ${holdCount}명\n- 튜터/원어민: ${tutorCount}명`);
 }
 
@@ -10114,7 +10445,7 @@ function addStudyHold(id){
   m.holdDates.push(h); m.holdDates.sort();
   if(!m.history) m.history = [];
   m.history.push({ date: new Date().toISOString().slice(0,16).replace('T',' '), msg: `일일 홀딩 등록 (${h})`, by: currentManager?.name||'' });
-  save(); renderStudy(); openModal('hold', id);
+  save('study'); renderStudy(); openModal('hold', id);
   showToast(`${h} 홀딩 등록됨`);
 }
 
@@ -10153,7 +10484,7 @@ function addStudyHoldRange(id){
     m.holdDates.sort();
     if(!m.history) m.history = [];
     m.history.push({ date: new Date().toISOString().slice(0,16).replace('T',' '), msg: `장기 홀딩 등록 (${weeks}주, 총 ${added}일)`, by: currentManager?.name||'' });
-    save(); renderStudy(); openModal('hold', id);
+    save('study'); renderStudy(); openModal('hold', id);
     showToast(`${added}일의 장기 홀딩이 등록되었습니다.`);
   } else {
     alert('해당 기간에 참여 요일이 없거나 이미 모두 등록되어 있습니다.');
@@ -10167,7 +10498,7 @@ function delStudyHold(id, date){
   m.holdDates = (m.holdDates||[]).filter(d => d !== date);
   if(!m.history) m.history = [];
   m.history.push({ date: new Date().toISOString().slice(0,16).replace('T',' '), msg: `일일 홀딩 취소 (${date})`, by: currentManager?.name||'' });
-  save(); renderStudy(); openModal('hold', id);
+  save('students'); renderStudy(); openModal('hold', id);
 }
 
 // ── 스터디 멤버 폼 (상세 / 편집) ──
@@ -10351,6 +10682,8 @@ function renderCreditDistribution(m){
 function studyMemberEditForm(m, g, isAdd){
   const groups = S.study.groups||[];
   const groupOpts = groups.map(gr => `<option value="${gr.id}" ${gr.id===g.id?'selected':''}>[${STUDY_DAY_LABELS[gr.dayGroup]||gr.dayGroup}] ${gr.leaderName} (${gr.timeSlot||''})</option>`).join('');
+  // 추가 그룹 옵션 (현재 그룹 제외, 현재 멤버의 extraGroupIds 반영)
+  const extraGroupOpts = `<option value="">없음</option>` + groups.filter(gr=>gr.id!==g.id).map(gr => `<option value="${gr.id}" ${(m.extraGroupIds||[]).includes(gr.id)?'selected':''}>[${STUDY_DAY_LABELS[gr.dayGroup]||gr.dayGroup}] ${gr.leaderName} (${gr.timeSlot||''})</option>`).join('');
 
   return `
     <input type="hidden" id="sm-m-id" value="${m.id}">
@@ -10372,6 +10705,16 @@ function studyMemberEditForm(m, g, isAdd){
           <option value="false" ${!m.isTutor?'selected':''}>일반 멤버 (크레딧 차감)</option>
           <option value="true" ${m.isTutor?'selected':''}>한국어 튜터 (무제한)</option>
         </select>
+      </div>
+    </div>
+
+    <div class="fg" style="margin-top:8px">
+      <div class="fgroup full">
+        <label class="flabel" style="color:var(--teal)">➕ 추가 참여 그룹 <span style="font-size:10px;font-weight:400;color:var(--text3)">(화목+월수 등 2개 반 참여 시)</span></label>
+        <select class="finput" id="sm-extra-group" multiple style="height:80px;font-size:12px" title="Ctrl/Cmd 클릭으로 복수 선택">
+          ${extraGroupOpts}
+        </select>
+        <div style="font-size:10px;color:var(--text3);margin-top:4px">💡 Ctrl(Mac: ⌘) + 클릭으로 여러 반 선택 가능. 선택한 반의 그룹 목록에도 함께 표시됩니다.</div>
       </div>
     </div>
 
@@ -10648,6 +10991,14 @@ function saveStudyMemberModal(isAdd){
   m.isAca = document.getElementById('sm-is-aca')?.checked || false;
   m.acaClass = document.getElementById('sm-aca-class')?.value || '';
 
+  // 추가 그룹 저장
+  const extraGroupSel = document.getElementById('sm-extra-group');
+  if(extraGroupSel){
+    m.extraGroupIds = Array.from(extraGroupSel.selectedOptions).map(o=>o.value).filter(v=>v && v!==newGid);
+  } else {
+    m.extraGroupIds = m.extraGroupIds||[];
+  }
+
   m.modifiedBy = currentManager?.name||'';
   m.modifiedAt = new Date().toISOString();
 
@@ -10718,7 +11069,7 @@ function saveStudyMemberModal(isAdd){
     });
   }
   
-  save();
+  save('study');
   renderStudy();
   closeModal();
   showToast(isAdd ? `✅ ${m.name} 멤버가 추가되었습니다.` : '스터디 멤버 정보가 저장되었습니다.');
@@ -10735,7 +11086,7 @@ function addStudyGroup(){
     id:gid('sg'), dayGroup:studyDay, leaderName:name, leaderEngName:eng,
     level, timeSlot:time, members:[], modifiedBy:currentManager?.name||'', modifiedAt:new Date().toISOString()
   });
-  save();renderStudy();showToast(`✅ ${name} 그룹이 추가되었습니다`);
+  save('study');renderStudy();showToast(`✅ ${name} 그룹이 추가되었습니다`);
 }
 
 function deleteStudyGroup(gid){
@@ -10749,8 +11100,9 @@ function deleteStudyGroup(gid){
   } else {
     if(!confirm(`"${g.leaderName}" 그룹을 삭제하시겠습니까?`)) return;
   }
+  pushUndo(`그룹 삭제 (${g.leaderName})`);
   S.study.groups = S.study.groups.filter(x=>x.id!==gid);
-  save(); renderStudy();
+  save('study'); renderStudy();
   showToast(`"${g.leaderName}" 그룹이 삭제되었습니다.`);
 }
 
@@ -10766,7 +11118,7 @@ function moveStudyGroup(gid, dir){
   const temp = S.study.groups[idx1];
   S.study.groups[idx1] = S.study.groups[idx2];
   S.study.groups[idx2] = temp;
-  save(); renderStudy();
+  save('study'); renderStudy();
 }
 
 function moveStudyMemberQuick(mid){
@@ -10784,13 +11136,13 @@ function moveStudyMemberQuick(mid){
   gOrig.members = gOrig.members.filter(x=>x.id !== mid);
   if(!gTarget.members) gTarget.members = [];
   gTarget.members.push(m);
-  save(); renderStudy();
+  save('study'); renderStudy();
   showToast(`${m.name} → ${gTarget.leaderName} 그룹으로 이동 완료`);
 }
 
 function updStudyGroup(gid,field,val){
   const g=S.study.groups.find(x=>x.id===gid);
-  if(g){g[field]=val;g.modifiedBy=currentManager?.name||'';g.modifiedAt=new Date().toISOString();save();renderStudy();}
+  if(g){g[field]=val;g.modifiedBy=currentManager?.name||'';g.modifiedAt=new Date().toISOString();save('study');renderStudy();}
 }
 
 function updStudyMemberLevel(gid, mid, level){
@@ -10799,7 +11151,7 @@ function updStudyMemberLevel(gid, mid, level){
   m.level=level;
   m.modifiedBy=currentManager?.name||'';
   m.modifiedAt=new Date().toISOString();
-  save();
+  save('study');
   showToast(`${m.name} 레벨 → ${level||'없음'}`);
 }
 
@@ -10828,14 +11180,16 @@ function editStudyMember(groupId,memberId){
   m.level=prompt('레벨:',m.level)||m.level;
   m.memo=prompt('비고:',m.memo)||'';
   m.modifiedBy=currentManager?.name||'';m.modifiedAt=new Date().toISOString();
-  save();renderStudy();showToast('✅ 멤버 정보가 수정되었습니다');
+  save('study');renderStudy();showToast('✅ 멤버 정보가 수정되었습니다');
 }
 
 function delStudyMember(groupId,memberId){
   if(!confirm('이 멤버를 삭제하시겠습니까?'))return;
   const g=S.study.groups.find(x=>x.id===groupId);if(!g)return;
+  const m=(g.members||[]).find(x=>x.id===memberId);
+  pushUndo(`멤버 삭제 (${m?.name||''})`);
   g.members=g.members.filter(x=>x.id!==memberId);
-  save();renderStudy();
+  save('students');renderStudy();
 }
 
 // ═══ 출석 차감 (요일별 일괄) ═══
@@ -10862,7 +11216,7 @@ function deductCreditsByDay(day){
   if(!confirm(`${day}요일 참여자 ${count}명의 크레딧을 각 -1 차감합니다.\n계속하시겠습니까?`))return;
   if(!S.study.creditLog) S.study.creditLog=[];
   S.study.creditLog.push(...logs);
-  save();renderStudy();
+  save('study');renderStudy();
   showToast(`✅ ${day}요일 ${count}명 크레딧 차감 완료`);
 }
 
@@ -10871,35 +11225,35 @@ function addStudyWaiting(){
   const name=prompt('이름:');if(!name)return;
   initStudyData();
   S.study.waiting.push({id:gid('sw'),dayGroup:studyDay,name,phone:prompt('연락처:')||'',level:prompt('레벨:')||'',preferDay:prompt('참여요일:')||'',waitDate:today(),memo:''});
-  save();renderStudy();
+  save('study');renderStudy();
 }
-function delStudyWaiting(id){S.study.waiting=S.study.waiting.filter(x=>x.id!==id);save();renderStudy();}
+function delStudyWaiting(id){S.study.waiting=S.study.waiting.filter(x=>x.id!==id);save('students');renderStudy();}
 
 function addStudyReturn(){
   const name=prompt('이름:');if(!name)return;
   initStudyData();
   S.study.returnList.push({id:gid('sr'),dayGroup:studyDay,name,phone:prompt('연락처:')||'',memo:prompt('비고:')||''});
-  save();renderStudy();
+  save('study');renderStudy();
 }
-function delStudyReturn(id){S.study.returnList=S.study.returnList.filter(x=>x.id!==id);save();renderStudy();}
+function delStudyReturn(id){S.study.returnList=S.study.returnList.filter(x=>x.id!==id);save('students');renderStudy();}
 
 function addStudyIndiv(){
   const name=prompt('이름:');if(!name)return;
   initStudyData();
   S.study.indivCredits.push({id:gid('si'),name,phone:prompt('연락처:')||'',group:prompt('반:')||'',credits:parseInt(prompt('크레딧 수:')||'0'),memo:prompt('비고:')||''});
-  save();renderStudy();
+  save('study');renderStudy();
 }
 function editStudyIndiv(id){
   const i=S.study.indivCredits.find(x=>x.id===id);if(!i)return;
   i.name=prompt('이름:',i.name)||i.name;
   i.credits=parseInt(prompt('크레딧:',i.credits)||i.credits);
   i.memo=prompt('비고:',i.memo)||'';
-  save();renderStudy();
+  save('study');renderStudy();
 }
 function delStudyIndiv(id){
   if(!confirm('삭제하시겠습니까?'))return;
   S.study.indivCredits=S.study.indivCredits.filter(x=>x.id!==id);
-  save();renderStudy();
+  save('students');renderStudy();
 }
 
 // 앱 시작 - DOM 완전히 로드된 후 실행
@@ -11171,7 +11525,7 @@ function saveStudyRenew(id){
     note:'스터디 연장'
   });
 
-  save(); renderStudy(); closeModal();
+  save('study'); renderStudy(); closeModal();
   showToast(`✅ ${m.name} 님 스터디 연장 완료 (시작: ${newStart}, ${credits}크레딧)`);
 }
 
@@ -11360,7 +11714,7 @@ function delStudyPayRecord(memberId, idx){
     if(logIdx>=0) S.study.creditLog.splice(logIdx,1);
     m.credits = Math.max(0,(m.credits||0) - removed.credits);
   }
-  save();
+  save('students');
   // 모달 이력 테이블만 새로고침
   const tbody = document.getElementById('spay-history-tbody');
   if(tbody) tbody.innerHTML = spayHistoryRows(m);
@@ -11429,7 +11783,7 @@ function saveStudyPay(id){
     m.modifiedBy = currentManager?.name||'';
     m.modifiedAt = new Date().toISOString();
 
-    save();
+    save('study');
 
     // 모달 내 이력 테이블 즉시 갱신 (모달 유지)
     const tbody = document.getElementById('spay-history-tbody');
@@ -11471,7 +11825,7 @@ window.toggleStaffStatus = function(type, id, isActive){
   const target = arr.find(x=>x.id===id);
   if(target){
     target.status = isActive ? 'active' : 'inactive';
-    save();
+    save('study');
     renderStudyStaff();
   }
 };
@@ -11645,7 +11999,7 @@ function saveStaffModal(){
   if(!arr){ showToast('데이터 오류'); return; }
   const idx = arr.findIndex(x=>x.id===data.id);
   if(idx>=0) arr[idx] = { ...arr[idx], ...data }; else arr.push(data);
-  save(); renderStudyStaff(); closeModal();
+  save('study'); renderStudyStaff(); closeModal();
   showToast(`✅ 저장 완료`);
 }
 
@@ -11754,7 +12108,7 @@ function moveToUnrenewed(mid){
   
   g.members = g.members.filter(x=>x.id!==mid);
   
-  save();
+  save('study');
   closeModal();
   renderStudy();
   showToast('보관함으로 이동되었습니다.');
@@ -11774,7 +12128,7 @@ function restoreFromUnrenewed(archiveIdx){
   g.members.push(entry.member);
   S.study.unrenewed.splice(archiveIdx, 1);
   
-  save();
+  save('study');
   renderStudy();
   showToast('그룹으로 복구되었습니다.');
 }
@@ -11782,7 +12136,7 @@ function restoreFromUnrenewed(archiveIdx){
 function deleteFromUnrenewed(archiveIdx){
   if(!confirm('보관함에서 영구 삭제하시겠습니까?')) return;
   S.study.unrenewed.splice(archiveIdx, 1);
-  save();
+  save('study');
   renderStudy();
 }
 
@@ -11953,7 +12307,7 @@ function openStaffImport(type){
     }
   });
   if(added > 0){
-    save(); renderStudy();
+    save('study'); renderStudy();
     showToast(`${added}명의 데이터가 추가되었습니다.`);
   }
 }
@@ -11964,7 +12318,7 @@ function toggleLeaderReward(id, month, isPaid){
   if(!l.rewards) l.rewards = [];
   if(isPaid) { if(!l.rewards.includes(month)) l.rewards.push(month); }
   else { l.rewards = l.rewards.filter(m => m !== month); }
-  save(); renderStudyLeaders();
+  save('study'); renderStudyLeaders();
   showToast(`${l.name}님 ${month} 리워드 상태 변경됨`);
 }
 
@@ -11972,10 +12326,10 @@ function addStudyLeader(){
   const name=prompt('이름:'); if(!name)return;
   const start=prompt('시작일 (YYYY-MM-DD):', today())||today();
   S.study.leaders.push({ id:gid('sl'), name, birth:prompt('생년월일:')||'', phone:prompt('연락처:')||'', startDate:start, groupName:prompt('운영반:')||'', rewards:[] });
-  save(); renderStudy();
+  save('study'); renderStudy();
 }
 
-function delStudyLeader(id){ if(confirm('삭제하시겠습니까?')){ S.study.leaders=S.study.leaders.filter(x=>x.id!==id); save(); renderStudy(); } }
+function delStudyLeader(id){ if(confirm('삭제하시겠습니까?')){ S.study.leaders=S.study.leaders.filter(x=>x.id!==id); save('students'); renderStudy(); } }
 
 function addStudyKorean(editId){
   // v2026-05-04-A: 강제 새로고침용 버전 주석
@@ -12098,27 +12452,27 @@ function saveKoreanStaff(editId){
   } else {
     S.study.koreanStaff.push({id:gid('ks'),name,phone,startDate,note,groups,tutees,qualifications});
   }
-  save(); renderStudy(); closeModal();
+  save('study'); renderStudy(); closeModal();
   showToast(name+' 선생님 정보가 저장되었습니다.');
 }
 
 function deleteKoreanStaff(id){
   if(!confirm('삭제하시겠습니까?')) return;
   S.study.koreanStaff = (S.study.koreanStaff||[]).filter(t=>t.id!==id);
-  save(); renderStudy(); closeModal();
+  save('study'); renderStudy(); closeModal();
 }
 
 function addStudyNative(){
   const name=prompt('가이드 이름:'); if(!name)return;
   S.study.nativeStaff.push({ id:gid('ns'), name, country:prompt('국적:')||'', phone:prompt('연락처:')||'', startDate:prompt('참여일:', today())||today() });
-  save(); renderStudy();
+  save('study'); renderStudy();
 }
 
 function delStudyStaff(type, id){
   if(confirm('삭제하시겠습니까?')){
     if(type==='korean') S.study.koreanStaff = S.study.koreanStaff.filter(x=>x.id!==id);
     else S.study.nativeStaff = S.study.nativeStaff.filter(x=>x.id!==id);
-    save(); renderStudy();
+    save('students'); renderStudy();
   }
 }
 
