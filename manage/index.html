@@ -5958,7 +5958,8 @@ function stuForm(s){
 
   const classRow=(cl,idx)=>{
     const info=cl.teacher&&TEACHER_INFO[cl.teacher];
-    const co=info?Object.keys(info.classes).map(ct=>`<option value="${ct}" ${cl.classTime===ct?'selected':''}>${ct}</option>`).join(''):'';
+    const co=info?Object.keys(info.classes).map(ct=>`<option value="${ct}" ${cl.classTime===ct?'selected':''}>${ct}</option>`).join(''):''
+    const co2=info?Object.keys(info.classes).map(ct=>`<option value="${ct}" ${cl.classTime2===ct?'selected':''}>${ct}</option>`).join(''):'';
     const teacherSel=TEACHERS.map(t=>`<option value="${t}" ${cl.teacher===t?'selected':''}>${t}</option>`).join('');
     // 납부방법 체크박스 (복합결제 지원)
     const savedMethods=cl.payMethods||[];
@@ -5998,7 +5999,7 @@ function stuForm(s){
         <div class="fgroup" id="ce-classtime2-wrap-${idx}" style="display:${(cl.classType||'w2')==='w4'?'block':'none'}">
           <label class="flabel">수업반 <span style="font-size:10px;color:var(--teal);font-weight:700">(2차 수업반)</span></label>
           <select class="finput ce-classtime2" data-idx="${idx}">
-            <option value="">선택</option>${co}
+            <option value="">선택</option>${co2}
           </select>
         </div>
         <div class="fgroup"><label class="flabel">결제일</label>
