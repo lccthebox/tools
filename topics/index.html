@@ -16,72 +16,91 @@
   --muted:#8A8880;--card:#FFFFFF;--surf:#F5F3EF;
   --text:#0D0D0D;--text2:#4A4845;--text3:#A09E9A;
   --radius:10px;
+  --sh1:0 1px 4px rgba(0,0,0,.06);
+  --sh2:0 4px 16px rgba(0,0,0,.09),0 1px 4px rgba(0,0,0,.04);
+  --sh3:0 12px 40px rgba(0,0,0,.13),0 4px 12px rgba(0,0,0,.06);
 }
 html{font-size:14px}
-body{font-family:'Instrument Sans',system-ui,sans-serif;background:var(--off);color:var(--text);min-height:100vh}
+body{font-family:'Instrument Sans',system-ui,sans-serif;background:#F4F5F7;color:var(--text);min-height:100vh}
 
 /* ── NAV ── */
-nav{height:50px;background:var(--black);display:flex;align-items:center;padding:0 22px;gap:14px;position:sticky;top:0;z-index:200}
-.logo{font-size:16px;font-weight:700;letter-spacing:2.5px;color:#fff;white-space:nowrap}
-.logo span{color:#ff5555}
-.nav-tag{font-size:9px;color:#3a3a3a;letter-spacing:2px;text-transform:uppercase;font-weight:600;border-left:1px solid #2a2a2a;padding-left:12px}
+nav{height:52px;background:var(--black);display:flex;align-items:center;padding:0 24px;gap:16px;position:sticky;top:0;z-index:200;border-bottom:1px solid #1a1a1a;box-shadow:0 2px 12px rgba(0,0,0,.25)}
+.logo{font-size:15px;font-weight:800;letter-spacing:3px;color:#fff;white-space:nowrap;display:flex;align-items:center;gap:0}
+.logo span{color:#ff4444}
+.logo-dot{width:5px;height:5px;border-radius:50%;background:#ff4444;margin-left:3px;margin-bottom:8px;display:inline-block;animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+.nav-tag{font-size:9px;color:#333;letter-spacing:2px;text-transform:uppercase;font-weight:600;border-left:1px solid #222;padding-left:14px}
 .nav-sp{flex:1}
-.nav-tabs{display:flex;gap:1px;background:#1a1a1a;border-radius:7px;padding:3px}
-.nav-tab{padding:4px 12px;font-size:10px;font-weight:600;color:#555;background:transparent;border:none;border-radius:5px;cursor:pointer;transition:all .15s;letter-spacing:.3px}
-.nav-tab:hover{color:#aaa}
-.nav-tab.active{color:#fff;background:#2e2e2e}
-.key-btn{font-size:10px;color:#555;background:#161616;border:1px solid #252525;border-radius:7px;padding:5px 11px;cursor:pointer;display:flex;align-items:center;gap:6px;letter-spacing:.2px;transition:border-color .15s}
-.key-btn:hover{border-color:#444;color:#888}
-.key-dot{width:7px;height:7px;border-radius:50%;background:#2a2a2a;flex-shrink:0;transition:background .2s}
-.key-dot.on{background:#22c55e}
+.nav-tabs{display:flex;gap:1px;background:#181818;border-radius:8px;padding:3px;border:1px solid #222}
+.nav-tab{padding:5px 13px;font-size:10px;font-weight:600;color:#555;background:transparent;border:none;border-radius:6px;cursor:pointer;transition:all .18s;letter-spacing:.4px}
+.nav-tab:hover{color:#999}
+.nav-tab.active{color:#fff;background:linear-gradient(135deg,#2a2a2a,#222);box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.key-btn{font-size:10px;color:#555;background:#131313;border:1px solid #222;border-radius:8px;padding:6px 13px;cursor:pointer;display:flex;align-items:center;gap:6px;letter-spacing:.3px;transition:all .18s}
+.key-btn:hover{border-color:#3a3a3a;color:#888;background:#1a1a1a}
+.key-dot{width:7px;height:7px;border-radius:50%;background:#2a2a2a;flex-shrink:0;transition:background .25s}
+.key-dot.on{background:#22c55e;box-shadow:0 0 6px rgba(34,197,94,.4)}
 
 /* ── VIEWS ── */
 .view{display:none}
 .view.active{display:block}
 
 /* ── CALENDAR LAYOUT ── */
-.cal-layout{display:grid;grid-template-columns:1fr 340px;min-height:calc(100vh - 50px)}
-.cal-left{padding:22px;border-right:1px solid var(--border);overflow-y:auto}
-.cal-head{display:flex;align-items:center;gap:8px;margin-bottom:16px}
-.cal-month-name{font-size:20px;font-weight:600;color:var(--text)}
-.cal-year{font-size:13px;color:var(--muted);font-weight:400;margin-left:1px}
-.cal-nav{width:30px;height:30px;border:1px solid var(--border);background:var(--card);border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--text);transition:background .12s}
-.cal-nav:hover{background:var(--surf)}
+.cal-layout{display:grid;grid-template-columns:1fr 380px;min-height:calc(100vh - 52px);padding:24px;gap:24px;max-width:1400px;margin:0 auto}
+.cal-left{background:#fff;border-radius:20px;padding:32px 36px;box-shadow:0 8px 30px rgba(0,0,0,.04);border:1px solid #EAEAEA;overflow-y:auto}
+.cal-head{display:flex;align-items:center;gap:10px;margin-bottom:24px}
+.cal-month-name{font-size:34px;font-weight:800;color:var(--text);letter-spacing:-1.2px}
+.cal-year{font-size:18px;color:var(--muted);font-weight:600;margin-left:4px;margin-bottom:2px}
+.cal-nav{width:36px;height:36px;border:1px solid #EAEAEA;background:var(--card);border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--text);transition:all .15s}
+.cal-nav:hover{background:#F8F9FA;border-color:#D0D0D0;transform:translateY(-1px)}
 
 /* ── STATS ── */
 .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:18px}
-.stat-c{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px}
-.stat-l{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.9px;margin-bottom:3px;font-weight:600}
-.stat-v{font-size:20px;font-weight:600;color:var(--text)}
+.stat-c{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;position:relative;overflow:hidden;transition:box-shadow .15s,transform .15s}
+.stat-c::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--red),#ff6b6b);opacity:0;transition:opacity .2s}
+.stat-c:hover{box-shadow:var(--sh2);transform:translateY(-1px)}
+.stat-c:hover::before{opacity:1}
+.stat-l{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;font-weight:700}
+.stat-v{font-size:22px;font-weight:700;color:var(--text);letter-spacing:-.5px}
 .stat-v.r{color:var(--red)}
 
 /* ── DOW + GRID ── */
-.dow-row{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:4px}
-.dow{font-size:9px;font-weight:600;color:var(--muted);text-align:center;padding:2px 0;text-transform:uppercase;letter-spacing:.6px}
-.grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
-.day{border-radius:9px;border:1px solid transparent;background:transparent;cursor:pointer;padding:6px 4px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;min-height:58px;transition:background .1s,border-color .1s;position:relative;overflow:hidden}
-.day:hover{background:var(--card);border-color:var(--border)}
+.dow-row{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:8px;gap:6px}
+.dow{font-size:11px;font-weight:700;color:var(--text2);text-align:center;padding:8px 0;text-transform:uppercase;letter-spacing:1px;background:#F8F9FA;border-radius:10px;border:none}
+.dow:first-child{color:#CC0014;background:#FFF5F5}
+.dow:last-child{color:#378ADD;background:#F0F6FF}
+.grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.day{border-radius:12px;border:1px solid #F0F0F0;background:#FAFAFA;cursor:pointer;padding:12px 6px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;min-height:106px;transition:all .2s cubic-bezier(0.16, 1, 0.3, 1);position:relative;overflow:hidden}
+.day:hover{border-color:var(--border-md);box-shadow:0 3px 12px rgba(0,0,0,.09);transform:translateY(-1px)}
 .day.empty{pointer-events:none;visibility:hidden}
-.day.has{background:var(--card);border-color:var(--border)}
-.day.has:hover{border-color:var(--border-md)}
-.day.today{border-color:var(--red)!important;background:var(--card)}
-.day.sel{background:var(--black)!important;border-color:var(--black)!important}
+.day.sun{background:#FFFAFA;border-color:#FFEFEF}
+.day.sat{background:#F6F9FF;border-color:#EBF2FF}
+.day.has{background:#fff;border-color:#E2E2E2;box-shadow:0 2px 8px rgba(0,0,0,.03)}
+.day.has:hover{box-shadow:0 8px 24px rgba(0,0,0,.08);transform:translateY(-2px);border-color:#D0D0D0}
+.day.today{border-color:var(--red)!important;background:#FFF0F0!important;box-shadow:0 0 0 3px rgba(204,0,20,.12)!important}
+.day.sel{background:var(--black)!important;border-color:var(--black)!important;box-shadow:0 8px 24px rgba(0,0,0,.2)!important;transform:translateY(-2px)}
 .day.busy{opacity:.5;animation:blink 1.1s ease-in-out infinite}
 @keyframes blink{0%,100%{opacity:.5}50%{opacity:1}}
-.dn{font-size:11px;font-weight:600;color:var(--text);line-height:1}
-.day.today .dn{color:var(--red)}
+.dn{font-size:18px;font-weight:700;color:var(--text);line-height:1;letter-spacing:-.5px;margin-bottom:2px}
+.day.sun .dn{color:#CC0014}
+.day.sat .dn{color:#378ADD}
+.day.today .dn{color:var(--red);font-size:17px}
 .day.sel .dn{color:#fff}
-.ddot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
-.dtxt{font-size:7px;color:var(--muted);text-align:center;line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;width:100%}
-.day.sel .dtxt{color:rgba(255,255,255,.4)}
-.dfmt{position:absolute;bottom:2px;right:3px;font-size:6px;font-weight:600;color:var(--text3);letter-spacing:.3px;text-transform:uppercase}
-.day.sel .dfmt{color:rgba(255,255,255,.2)}
-.gen-all{display:block;width:100%;margin-top:14px;padding:12px;background:var(--black);color:#fff;border:none;border-radius:var(--radius);font-family:'Instrument Sans',sans-serif;font-size:11px;font-weight:600;letter-spacing:.4px;cursor:pointer;transition:background .15s}
-.gen-all:hover{background:#1e1e1e}
-.gen-all:disabled{background:#b0aea9;cursor:not-allowed}
+.today-badge{font-size:7px;font-weight:800;color:var(--red);letter-spacing:1px;text-transform:uppercase;background:#FFD5D8;padding:2px 6px;border-radius:4px;position:absolute;top:7px;right:7px}
+.day.sel .today-badge{background:rgba(255,255,255,.2);color:rgba(255,255,255,.9)}
+.ddot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:2px}
+.dtxt{font-size:10px;color:var(--text2);text-align:center;line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;width:95%;font-weight:600;margin-top:1px}
+.day.sel .dtxt{color:rgba(255,255,255,.7)}
+.dfmt{margin-top:auto;font-size:8px;font-weight:700;color:#888;letter-spacing:.3px;text-transform:uppercase;padding:2px 6px;border-radius:4px;margin-bottom:2px;background:#F0F0F0;border:1px solid #E6E6E6;max-width:90%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.day.sel .dfmt{background:rgba(255,255,255,.15);color:rgba(255,255,255,.7);border-color:transparent}
+.gen-all{display:block;width:100%;margin-top:16px;padding:14px;background:linear-gradient(135deg,#1a1a1a,#0D0D0D);color:#fff;border:none;border-radius:var(--radius);font-family:'Instrument Sans',sans-serif;font-size:12px;font-weight:700;letter-spacing:.5px;cursor:pointer;transition:all .18s;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.gen-all:hover{background:linear-gradient(135deg,#252525,#181818);box-shadow:0 4px 16px rgba(0,0,0,.22);transform:translateY(-1px)}
+.gen-all:active{transform:translateY(0)}
+.gen-all:disabled{background:#b0aea9;cursor:not-allowed;box-shadow:none;transform:none}
+.del-all-subtle{margin-left:14px;padding:0 14px;height:36px;border:1px solid #eaeaea;background:#fff;border-radius:10px;cursor:pointer;font-family:'Instrument Sans',sans-serif;font-size:11px;font-weight:700;color:var(--muted);transition:all .15s;}
+.del-all-subtle:hover{background:#fff0f0;border-color:#ffb3b8;color:var(--red);}
 
 /* ── RIGHT PANEL ── */
-.right-p{background:var(--card);display:flex;flex-direction:column;min-height:calc(100vh - 50px)}
+.right-p{background:#fff;border-radius:20px;display:flex;flex-direction:column;box-shadow:0 8px 30px rgba(0,0,0,.04);border:1px solid #EAEAEA;overflow:hidden;height:100%}
 .r-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--muted);padding:28px;text-align:center}
 .r-empty-ico{font-size:28px;opacity:.15;line-height:1}
 .r-empty p{font-size:12px;line-height:1.75}
@@ -108,13 +127,14 @@ nav{height:50px;background:var(--black);display:flex;align-items:center;padding:
 .sq-q{font-size:8px;font-weight:700;color:var(--red);white-space:nowrap;padding-top:2px;letter-spacing:.3px}
 .scen-box{font-size:11px;color:var(--text2);line-height:1.7;padding:10px 12px;background:var(--surf);border-radius:8px;margin-bottom:10px;border-left:3px solid var(--border-md)}
 .expr{font-size:11px;font-style:italic;padding:5px 0 5px 10px;border-left:2px solid var(--border);margin-bottom:4px;line-height:1.5;color:var(--text2)}
-.r-actions{padding:14px 18px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px}
-.btn-dl{width:100%;padding:12px;background:var(--red);color:#fff;border:none;border-radius:9px;font-family:'Instrument Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:.2px;transition:background .15s}
-.btn-dl:hover{background:var(--red-h)}
-.btn-dl:disabled{background:var(--border-md);cursor:not-allowed}
+.r-actions{padding:14px 18px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px;background:var(--surf)}
+.btn-dl{width:100%;padding:13px;background:linear-gradient(135deg,var(--red),#e8001a);color:#fff;border:none;border-radius:10px;font-family:'Instrument Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.3px;transition:all .18s;box-shadow:0 2px 8px rgba(204,0,20,.25)}
+.btn-dl:hover{background:linear-gradient(135deg,var(--red-h),#c00010);box-shadow:0 4px 16px rgba(204,0,20,.35);transform:translateY(-1px)}
+.btn-dl:active{transform:translateY(0)}
+.btn-dl:disabled{background:var(--border-md);cursor:not-allowed;box-shadow:none;transform:none}
 .btn-row{display:flex;gap:7px}
-.btn-s{flex:1;padding:9px;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:8px;font-family:'Instrument Sans',sans-serif;font-size:11px;font-weight:500;cursor:pointer;transition:background .12s}
-.btn-s:hover{background:var(--surf)}
+.btn-s{flex:1;padding:9px;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:9px;font-family:'Instrument Sans',sans-serif;font-size:11px;font-weight:500;cursor:pointer;transition:all .15s}
+.btn-s:hover{background:var(--surf);border-color:var(--border-md);box-shadow:var(--sh1)}
 .btn-s:disabled{opacity:.4;cursor:not-allowed}
 
 /* ── SETTINGS ── */
@@ -141,6 +161,10 @@ nav{height:50px;background:var(--black);display:flex;align-items:center;padding:
 .add-btn{padding:9px 14px;background:var(--black);color:#fff;border:none;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;font-family:'Instrument Sans',sans-serif}
 .add-btn:hover{background:#1e1e1e}
 .tip{font-size:10px;color:var(--text3);margin-top:9px;line-height:1.65;font-style:italic}
+.ai-update-btn{background:linear-gradient(135deg,#6A5ACD,#483D8B);color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:10.5px;font-weight:600;cursor:pointer;font-family:'Instrument Sans',sans-serif;box-shadow:0 2px 6px rgba(106,90,205,0.25);transition:all 0.15s;letter-spacing:0.3px;}
+.ai-update-btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(106,90,205,0.4);background:linear-gradient(135deg,#7B68EE,#483D8B);}
+.ai-update-btn:active{transform:translateY(0);}
+.ai-update-btn:disabled{background:#ccc;cursor:not-allowed;box-shadow:none;transform:none;}
 
 /* ── MODAL ── */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:999;backdrop-filter:blur(4px)}
@@ -157,6 +181,53 @@ nav{height:50px;background:var(--black);display:flex;align-items:center;padding:
 /* ── TOAST ── */
 .toast-el{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--black);color:#fff;padding:10px 20px;border-radius:99px;font-size:11px;font-weight:500;z-index:9999;animation:tin .2s ease;white-space:nowrap;pointer-events:none;box-shadow:0 6px 24px rgba(0,0,0,.25)}
 @keyframes tin{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+/* ════════════════════════════════
+   📱 MOBILE (max-width: 768px)
+   ════════════════════════════════ */
+.mob-bar{display:none;position:fixed;bottom:0;left:0;right:0;height:62px;background:#fff;border-top:1px solid #eaeaea;z-index:140;box-shadow:0 -2px 16px rgba(0,0,0,.07);}
+.mob-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:10px;font-weight:700;color:#aaa;border:none;background:transparent;cursor:pointer;letter-spacing:.3px;text-transform:uppercase;-webkit-tap-highlight-color:transparent;transition:color .15s;font-family:'Instrument Sans',sans-serif;padding-bottom:4px;}
+.mob-btn svg{width:22px;height:22px;}
+.mob-btn.active{color:#CC0014;}
+.mob-spacer{display:none;height:62px;}
+.sheet-close{display:none;position:absolute;top:14px;right:16px;width:32px;height:32px;background:#f0f0f0;border:none;border-radius:50%;font-size:16px;cursor:pointer;z-index:10;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;}
+@media(max-width:768px){
+  nav{padding:0 14px;gap:8px;height:48px;}
+  .nav-tag,.nav-tabs{display:none;}
+  .key-btn{padding:4px 8px;font-size:10px;}
+  #key-lbl,#sync-lbl{display:none;}
+  .cal-layout{display:block;padding:12px 12px 0;max-width:100%;}
+  .cal-left{border-radius:16px;padding:16px 14px;margin-bottom:12px;}
+  .cal-month-name{font-size:22px;}
+  .cal-year{font-size:13px;}
+  .cal-nav{width:32px;height:32px;font-size:14px;border-radius:8px;}
+  .del-all-subtle{padding:0 10px;height:32px;font-size:10px;}
+  .dow-row{gap:2px;margin-bottom:4px;}
+  .dow{font-size:9px;padding:4px 0;border-radius:6px;}
+  .grid{gap:3px;}
+  .day{min-height:56px;padding:7px 3px 4px;border-radius:10px;gap:2px;}
+  .dn{font-size:13px;letter-spacing:0;}
+  .dtxt{font-size:8px;-webkit-line-clamp:1;}
+  .dfmt{font-size:6px;padding:1px 4px;}
+  .today-badge{font-size:6px;padding:1px 4px;}
+  .stats-row{grid-template-columns:repeat(2,1fr);gap:6px;margin-top:12px;}
+  .stat-v{font-size:18px;}
+  .gen-all{padding:12px;font-size:11px;margin-top:12px;}
+  .right-p{position:fixed;bottom:0;left:0;right:0;height:0;border-radius:24px 24px 0 0;z-index:150;box-shadow:0 -8px 40px rgba(0,0,0,.2);transition:height 0.35s cubic-bezier(0.16,1,0.3,1);overflow:hidden;border:none;background:#fff;}
+  .right-p.open{height:85vh;}
+  .right-p.open .r-body{overflow-y:auto;-webkit-overflow-scrolling:touch;}
+  .right-p::before{content:'';display:block;width:40px;height:4px;background:#ddd;border-radius:99px;margin:12px auto 0;flex-shrink:0;}
+  .sheet-close{display:flex!important;}
+  .toast-el{bottom:74px;}
+  .settings-wrap{padding:14px 12px 80px;}
+  .settings-wrap h2{font-size:16px;}
+  .set-sec{padding:14px;}
+  .add-row{flex-wrap:wrap;gap:6px;}
+  .add-inp.wide{flex:1 1 100%;}
+  .mob-bar{display:flex!important;}
+  .mob-spacer{display:block!important;}
+}
+
 </style>
 </head>
 <body>
@@ -169,6 +240,10 @@ nav{height:50px;background:var(--black);display:flex;align-items:center;padding:
     <button class="nav-tab active" data-view="calendar">달력</button>
     <button class="nav-tab" data-view="settings">설정</button>
   </div>
+  <button class="key-btn" id="sync-btn" style="margin-right:4px" title="GitHub Gist 동기화 상태">
+    <div class="key-dot" id="sync-dot"></div>
+    <span id="sync-lbl">Gist 미연결</span>
+  </button>
   <button class="key-btn" id="key-btn">
     <div class="key-dot" id="key-dot"></div>
     <span id="key-lbl">API 키 입력</span>
@@ -184,18 +259,19 @@ nav{height:50px;background:var(--black);display:flex;align-items:center;padding:
         <div style="flex:1"></div>
         <button class="cal-nav" id="prev">&#8592;</button>
         <button class="cal-nav" id="next" style="margin-left:5px">&#8594;</button>
+        <button class="del-all-subtle" onclick="delAll()" title="이 달의 전체 토픽 초기화">✕ 초기화</button>
       </div>
-      <div class="stats-row">
+      <div class="dow-row" id="dows"></div>
+      <div class="grid" id="cal-grid"></div>
+      <button class="gen-all" id="gen-all-btn">✦ 전체 생성</button>
+      <div class="stats-row" style="margin-top:20px;margin-bottom:0">
         <div class="stat-c"><div class="stat-l">생성 완료</div><div class="stat-v r" id="s-done">0</div></div>
         <div class="stat-c"><div class="stat-l">전체 일수</div><div class="stat-v" id="s-total">0</div></div>
         <div class="stat-c"><div class="stat-l">달성률</div><div class="stat-v" id="s-pct">0%</div></div>
         <div class="stat-c"><div class="stat-l">포맷 종류</div><div class="stat-v" id="s-fmts">0</div></div>
       </div>
-      <div class="dow-row" id="dows"></div>
-      <div class="grid" id="cal-grid"></div>
-      <button class="gen-all" id="gen-all-btn">✦ 전체 생성</button>
     </div>
-    <div class="right-p" id="right-p"></div>
+    <div class="right-p" id="right-p"><button class="sheet-close" onclick="mobClose()" aria-label="닫기">✕</button></div>
   </div>
 </div>
 
@@ -204,7 +280,10 @@ nav{height:50px;background:var(--black);display:flex;align-items:center;padding:
     <h2>설정</h2>
     <p class="s-sub">포맷과 소스를 직접 추가·삭제·수정할 수 있어요. 새 포맷을 추가하면 AI가 그 방식에 맞게 토픽을 자동 구성합니다.</p>
     <div class="set-sec">
-      <h3>액티비티 포맷 <span class="set-badge" id="fmt-cnt-badge">0</span></h3>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+        <h3 style="margin:0">액티비티 포맷 <span class="set-badge" id="fmt-cnt-badge">0</span></h3>
+        <button class="ai-update-btn" id="ai-fmt-btn" onclick="aiUpdateFormats()">🤖 AI 신규 액티비티 생성</button>
+      </div>
       <p class="set-desc">● 활성화된 포맷만 랜덤 선택됩니다. 새 포맷을 추가하면 다음 생성부터 바로 반영돼요.</p>
       <div class="items-list" id="fmt-list"></div>
       <div class="add-row">
@@ -213,16 +292,62 @@ nav{height:50px;background:var(--black);display:flex;align-items:center;padding:
       </div>
       <p class="tip">💡 추가 가능: Hot Seat, Two Truths One Lie, Fishbowl, Role Reversal, Deal or No Deal, Speed Debate...</p>
     </div>
+    <!-- 크롤러 섹션 -->
+    <div class="set-sec" style="border:2px solid #1a7f37">
+      <h3 style="display:flex;align-items:center;gap:8px">
+        <span>🌐 실시간 트렌드 크롤러</span>
+        <span class="set-badge" id="crawler-badge" style="background:#555">미설정</span>
+      </h3>
+      <p class="set-desc">Cloudflare Worker URL 연결 시 네이버·유튜브·구글 트렌드를 실시간으로 가져와 토픽 생성에 사용해요. 미연결 시 아래 Fallback 소스풀을 사용합니다.</p>
+      <div class="add-row" style="margin-bottom:8px">
+        <input class="add-inp wide" id="crawler-url-inp" placeholder="https://thebox-crawler.your-name.workers.dev">
+        <button class="add-btn" id="crawler-save-btn" style="background:#1a7f37">저장</button>
+      </div>
+      <button class="add-btn" id="crawler-test-btn" style="background:#555;width:100%;margin-bottom:8px">🔍 연결 테스트</button>
+      <div id="crawler-preview" style="display:none;background:var(--surf);border-radius:8px;padding:10px;font-size:10px;color:var(--muted);max-height:140px;overflow-y:auto;margin-bottom:6px;line-height:1.7"></div>
+      <p class="tip">💡 Worker 배포: <a href="https://workers.cloudflare.com" target="_blank" style="color:var(--black);font-weight:600">workers.cloudflare.com</a> → Create Worker → thebox-worker.js 붙여넣기 → Deploy (무료)</p>
+    </div>
+
+    <!-- Fallback 소스풀 섹션 -->
     <div class="set-sec">
-      <h3>소스 풀 <span class="set-badge" id="src-cnt-badge">0</span></h3>
-      <p class="set-desc">매 생성 시 랜덤으로 3개 선택. 최신 뉴스레터·유튜브 주제를 직접 추가할수록 토픽이 풍부해져요.</p>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h3 style="margin:0">Fallback 소스풀 <span class="set-badge" id="src-cnt-badge" style="background:#888">0</span></h3>
+        <button class="ai-update-btn" id="ai-src-btn" onclick="aiUpdateSources()">🤖 AI로 소스 추가</button>
+      </div>
+      <div id="src-status-bar" style="padding:8px 12px;border-radius:8px;font-size:11px;margin-bottom:10px;background:#fefce8;border:1px solid #fef08a;display:flex;align-items:center;gap:8px">
+        <span id="src-status-icon">🟡</span>
+        <span id="src-status-text">크롤러 미연결 — 이 소스풀에서 랜덤 3개 사용 중이에요.</span>
+      </div>
+      <p class="set-desc">크롤러 연결 시 자동으로 실시간 트렌드가 우선 사용되고, 이 목록은 backup으로만 작동합니다.</p>
       <div class="items-list" id="src-list"></div>
       <div class="add-row">
         <input class="add-inp" id="src-name-inp" placeholder="소스명">
         <input class="add-inp wide" id="src-angle-inp" placeholder="이슈·각도 (예: 요즘 MZ 직장 문화 변화)">
         <button class="add-btn" id="src-add-btn">+ 추가</button>
       </div>
-      <p class="tip">💡 뉴닉 최신 뉴스레터, 유튜브 영상 주제, SNS 핫이슈를 직접 붙여넣어 주세요.</p>
+      <p class="tip">💡 크롤러 없을 때의 보험이에요. 크롤러 연결하면 네이버·유튜브·구글트렌드가 자동으로 들어와요.</p>
+    </div>
+    <div class="set-sec" style="border:2px solid var(--black)">
+      <h3 style="display:flex;align-items:center;gap:8px">
+        <span>☁️ GitHub Gist 동기화</span>
+        <span class="set-badge" id="gist-status-badge" style="background:#555">미연결</span>
+      </h3>
+      <p class="set-desc">GitHub Gist에 토픽을 저장하면 어느 컴퓨터에서든 동일한 데이터를 볼 수 있어요. A에서 생성 → B에서 바로 확인 가능.</p>
+      <div class="add-row" style="margin-bottom:8px">
+        <input class="add-inp wide" id="gist-token-inp" type="password" placeholder="GitHub Personal Access Token (gist 권한 필요)">
+        <button class="add-btn" id="gist-token-save">저장</button>
+      </div>
+      <div class="add-row" style="margin-bottom:8px">
+        <input class="add-inp wide" id="gist-id-inp" placeholder="Gist ID (최초 저장 시 자동 생성, 또는 기존 ID 입력)">
+        <button class="add-btn" id="gist-pull-btn" style="background:#1a7f37">↓ 불러오기</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button class="add-btn" id="gist-push-btn" style="flex:1;background:var(--black)">↑ 지금 저장 (Push)</button>
+        <button class="add-btn" id="gist-pull-now-btn" style="flex:1;background:#1a7f37">↓ 지금 불러오기 (Pull)</button>
+      </div>
+      <p class="tip">💡 토큰 발급: <a href="https://github.com/settings/tokens/new?scopes=gist&description=TheBox+Topics" target="_blank" style="color:var(--black);font-weight:600">github.com/settings/tokens</a> → Generate new token → gist 체크 → 복사<br>
+      💡 처음엔 "지금 저장"을 누르면 새 Gist가 자동 생성되고 ID가 저장돼요.<br>
+      💡 다른 컴퓨터에서는 같은 토큰 + Gist ID 입력 후 "불러오기"를 누르세요.</p>
     </div>
     <div class="set-sec">
       <h3>Anthropic API 키</h3>
@@ -232,6 +357,14 @@ nav{height:50px;background:var(--black);display:flex;align-items:center;padding:
         <button class="add-btn" id="api-save-btn">저장</button>
       </div>
       <p class="tip">💡 키 발급: <a href="https://console.anthropic.com" target="_blank" style="color:var(--black);font-weight:600">console.anthropic.com</a> → API Keys → Create Key</p>
+    </div>
+    
+    <!-- 데이터 관리 섹션 (추가) -->
+    <div class="set-sec" style="border:1px solid #ddd; background:#fafafa">
+      <h3 style="margin-bottom:8px">⚙️ 데이터 관리</h3>
+      <p class="set-desc">기존에 생성된 토픽들을 새로운 빙고판/주석 폼에 맞게 최적화합니다. (내용은 유지하면서 구조만 변경)</p>
+      <button class="add-btn" style="width:100%; background:#444" onclick="migrateAllData()">기존 데이터 일괄 최적화 (구조 변환)</button>
+      <p class="tip">💡 새로 바뀐 빙고판 디자인이 기존 토픽에서도 잘 보이게 설정합니다. 해석이 비어있는 칸은 직접 편집하거나 '재생성'을 이용하세요.</p>
     </div>
   </div>
 </div>
@@ -247,6 +380,7 @@ nav{height:50px;background:var(--black);display:flex;align-items:center;padding:
 </div>
 
 <script>
+window.onerror=function(msg,src,line){document.body.insertAdjacentHTML('afterbegin','<div style="position:fixed;top:60px;left:0;right:0;background:red;color:#fff;padding:12px 20px;font-size:13px;z-index:9999;font-family:monospace">JS ERROR line '+line+': '+msg+'</div>');return false;};
 const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DOWS_L=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const CAT_COLORS={Money:'#E24B4A',Work:'#378ADD',Love:'#D4537E',Food:'#EF9F27',Travel:'#1D9E75',Health:'#639922',AI:'#7F77DD',SNS:'#BA7517',Lifestyle:'#3B6D11','Korea Trend':'#D85A30',Friendship:'#185FA5',Community:'#993556'};
@@ -267,34 +401,39 @@ const DEFAULT_FORMATS=[
   {id:'f13',name:'Fishbowl',desc:'안팎 그룹 토론',on:false},
   {id:'f14',name:'Role Reversal',desc:'반대 입장 설득',on:false},
   {id:'f15',name:'Deal or No Deal',desc:'조건 협상 게임',on:false},
+  {id:'f16',name:'Confession Box',desc:'익명 고백 + 추측',on:true},
+  {id:'f17',name:'This or That Blitz',desc:'초고속 A/B 선택',on:true},
+  {id:'f18',name:'Pitch & Vote',desc:'아이디어 피치 후 투표',on:true},
+  {id:'f19',name:'Myth Busters',desc:'사실 vs 편견 판별',on:true},
+  {id:'f20',name:'Time Machine',desc:'과거현재미래 토론',on:true},
+  {id:'f21',name:'Expert Panel',desc:'역할극 전문가 패널',on:false},
+  {id:'f22',name:'Price Check',desc:'가격 추측 게임',on:false},
+  {id:'f23',name:'Roast and Toast',desc:'칭찬+저격 돌아가기',on:false},
+  {id:'f24',name:'Headline Writer',desc:'헤드라인으로 요약',on:false},
+  {id:'f25',name:'Liar Game',desc:'라이어 찾기 토크',on:true},
+  {id:'f26',name:'Mafia Game',desc:'마피아 vs 시민 토크',on:true},
+  {id:'f27',name:'Minefield Talk Show',desc:'금지어 피하며 토크',on:true},
+  {id:'f28',name:'The Blind Director',desc:'안 보고 지시하기',on:true},
+  {id:'f29',name:'Heads Up',desc:'이마 위 단어 맞추기',on:true},
 ];
 
+/* ── Fallback 소스풀 (크롤러 미연결 시에만 사용) ── */
 const DEFAULT_SOURCES=[
-  {id:'s1',name:'뉴닉',angle:'MZ세대 야근 vs 칼퇴 직장 문화',on:true},
-  {id:'s2',name:'뉴닉',angle:'혼밥·혼술 문화 혼자가 편한 사람들',on:true},
-  {id:'s3',name:'슈카월드',angle:'배달앱 수수료 올라도 계속 쓰는 이유',on:true},
-  {id:'s4',name:'슈카월드',angle:'2030 내집마련 포기 vs 도전',on:true},
-  {id:'s5',name:'슈카월드',angle:'주식 vs 부동산 vs 그냥 통장',on:true},
-  {id:'s6',name:'유튜브 트렌드',angle:'숏폼 중독 집중력 저하',on:true},
-  {id:'s7',name:'인스타 트렌드',angle:'SNS 잘 사는 척 언팔 욕구',on:true},
-  {id:'s8',name:'직장인 커뮤니티',angle:'직장 동료와 친구 사이 선긋기',on:true},
-  {id:'s9',name:'커뮤니티',angle:'구독 서비스 해지 못 하는 이유',on:true},
-  {id:'s10',name:'연애 트렌드',angle:'연인 폰 비번 신뢰 vs 프라이버시',on:true},
-  {id:'s11',name:'연애 트렌드',angle:'데이트 통장 vs 각자 내기',on:true},
-  {id:'s12',name:'맛집 유튜브',angle:'점심 메뉴 혼자 결정 못 하는 이유',on:true},
-  {id:'s13',name:'직장인 커뮤니티',angle:'재택근무 vs 사무실 출근',on:true},
-  {id:'s14',name:'링크드인',angle:'N잡러 부업이 본업보다 재밌다',on:true},
-  {id:'s15',name:'헬스 유튜브',angle:'헬스장 끊고 실제로 다닌 기간 고백',on:true},
-  {id:'s16',name:'테크 뉴스',angle:'AI가 내 직업 뺏을 것 같아',on:true},
-  {id:'s17',name:'당근마켓',angle:'중고거래 신기한 경험',on:true},
-  {id:'s18',name:'웰니스 트렌드',angle:'수면 루틴 챙기기 vs 그냥 쓰러져 자기',on:true},
-  {id:'s19',name:'소비 트렌드',angle:'명품 vs 가성비 어디 돈 쓰는 게 맞아',on:true},
-  {id:'s20',name:'틱톡 트렌드',angle:'챌린지 문화 안 하면 소외감',on:true},
-  {id:'s21',name:'직장인 커뮤니티',angle:'회식 강요 아직도 있어',on:true},
-  {id:'s22',name:'연애 트렌드',angle:'소개팅 앱 실제 만남으로 이어진 경험',on:true},
-  {id:'s23',name:'커뮤니티',angle:'친구한테 돈 빌려줬다 어떻게 됐어',on:true},
-  {id:'s24',name:'SNS 트렌드',angle:'온라인 친구 vs 오프라인 친구',on:true},
-  {id:'s25',name:'편의점 트렌드',angle:'편의점 신상 꼭 사보는 사람',on:true},
+  {id:'f1',name:'직장인 커뮤니티',angle:'퇴근 후 상사 카톡 오면 — 바로 답장 vs 내일 아침에',on:true},
+  {id:'f2',name:'연애 트렌드',angle:'썸 탈 때 먼저 연락하는 사람 vs 기다리는 사람',on:true},
+  {id:'f3',name:'소비 트렌드',angle:'충동구매 후 바로 반품한 경험 — 어떤 거 샀어',on:true},
+  {id:'f4',name:'SNS 트렌드',angle:'인스타 스토리 올리기 두려운 순간 — 어떨 때',on:true},
+  {id:'f5',name:'직장인 커뮤니티',angle:'재택근무 할 때 가장 많이 하는 딴짓 뭐야',on:true},
+  {id:'f6',name:'관계 트렌드',angle:'친구한테 고민 상담했다가 후회한 경험 있어',on:true},
+  {id:'f7',name:'헬스 트렌드',angle:'헬스장 등록하고 실제로 간 횟수 고백 타임',on:true},
+  {id:'f8',name:'음식 트렌드',angle:'점심 메뉴 혼자 못 고르는 사람들 — 결정 장애 실화',on:true},
+  {id:'f9',name:'여행 트렌드',angle:'국내 여행 vs 해외 여행 — 같은 돈이면 어디 가',on:true},
+  {id:'f10',name:'유튜브 트렌드',angle:'숏폼만 보다가 긴 영상 보면 집중 안 돼 — 공감해',on:true},
+  {id:'f11',name:'쇼핑 트렌드',angle:'옷 사두고 한 번도 안 입은 것들 — 옷장 현실 고백',on:true},
+  {id:'f12',name:'수면 트렌드',angle:'유튜브 틀어놓고 자는 거 — 습관이야 vs 나쁜 거 알아',on:true},
+  {id:'f13',name:'인간관계',angle:'단톡방 나가고 싶은데 못 나가고 있는 거 있어',on:true},
+  {id:'f14',name:'돈 트렌드',angle:'용돈 기입장·가계부 써 vs 그냥 카드 긁어',on:true},
+  {id:'f15',name:'번아웃 트렌드',angle:'번아웃 왔을 때 나만의 회복법 뭐야',on:true},
 ];
 
 const FMT_GUIDE={
@@ -313,18 +452,61 @@ const FMT_GUIDE={
   'Fishbowl':'roles: ["Inner Circle","Outer Circle"]',
   'Role Reversal':'roles: ["Reversed A","Reversed B"]',
   'Deal or No Deal':'roles: ["The Dealer","The Challenger"]',
+  'Confession Box':'roles: ["The Confessor","The Detectives"]',
+  'This or That Blitz':'roles: 초고속 선택지 A/B 6개 이상',
+  'Pitch & Vote':'roles: ["The Pitcher","The Investors"]',
+  'Myth Busters':'roles: ["MYTH","FACT"] — statements to bust 5개',
+  'Time Machine':'roles: ["Past Self","Present Self","Future Self"]',
+  'Expert Panel':'roles: 전문가 직함 3개 (예: Psychologist / Economist / Influencer)',
+  'Price Check':'roles: 가격 맞출 아이템 5개 (실제 가격 포함)',
+  'Roast and Toast':'roles: ["Roaster","Toaster"]',
+  'Headline Writer':'roles: ["The Editor","The Reporter"]',
+  'Liar Game':'roles: ["The Liar","The Truth Tellers"]',
+  'Mafia Game':'roles: ["The Mafia","The Citizens"]',
+  'Minefield Talk Show':'roles: ["The Talker","The Mine Setter"]',
+  'The Blind Director':'roles: ["The Director","The Actors"]',
+  'Heads Up':'roles: ["The Guesser","The Clue Givers"]',
+};
+
+const KR_FMT_GUIDE={
+  'Advice Lab':'Split into 3 roles — Angel (supportive), Judge (realistic), Joker (wild card). Each gives advice from their perspective. The funnier and more honest, the better!',
+  'Debate':'Divide into 2 teams with opposing views. Make your case in English and try to win the room over. Most convincing argument wins!',
+  'Ranking Game':'Rank all the options from #1 to last place. Then compare your rankings with others — defend your choices!',
+  'Shopping Game':'You have a set budget. Decide what to buy and why. Share your priorities and see how different everyone\'s spending logic is!',
+  'Survival Scenario':'You\'re stuck in a crisis. Work as a team to figure out how to survive. Get creative — there\'s no wrong answer!',
+  'Unpopular Opinion':'Share an opinion most people would disagree with — and mean it. The more controversial, the better the conversation!',
+  'Would You Rather':'Pick one of two options. No "both" or "neither" allowed! Explain your choice and see who agrees.',
+  'Hot Seat':'One person sits in the hot seat and answers questions from everyone else. The more honest the answers, the more fun!',
+  'Two Truths One Lie':'Say 2 true things and 1 lie about yourself. Everyone tries to guess the lie. The more convincing your lie, the better!',
+  'Story Chain':'Build a story together, one person at a time. Each person adds a sentence or two. The more unexpected the twist, the better!',
+  'Agree/Disagree Spectrum':'Show how much you agree with a statement — from strongly agree to strongly disagree. Find your crew!',
+  'Speed Debate':'30 seconds. Pick a side. Argue it fast. Go!',
+  'Fishbowl':'Inner group debates while the outer group watches silently. Then switch roles and react to what you heard.',
+  'Role Reversal':'Argue for the side you actually disagree with. Convince others — even if you don\'t believe it yourself!',
+  'Deal or No Deal':'Negotiate the terms of a deal. Accept or reject — but only in English!',
+  'Confession Box':'One person makes a secret confession; others grill them to guess if it is a lie or true.',
+  'This or That Blitz':'Rapid-fire A or B choices. No overthinking, just gut feeling!',
+  'Pitch & Vote':'Pitch an idea like you are on Shark Tank. Others vote with their "investor" money.',
+  'Myth Busters':'Debunk common misconceptions. Pick a myth, explain why it is wrong, and provide the truth.',
+  'Time Machine':'Discuss a past, present, and future version of a topic or yourself.',
 };
 
 let year,month,selected=null,loading=false,genDay=null;
 
 function getTopics(){try{return JSON.parse(localStorage.getItem('tb_topics_v5')||'{}')}catch{return{}}}
-function saveTopics(t){localStorage.setItem('tb_topics_v5',JSON.stringify(t))}
+function saveTopics(t){
+  localStorage.setItem('tb_topics_v5',JSON.stringify(t));
+  clearTimeout(window._apTimer);
+  window._apTimer=setTimeout(function(){if(typeof getGistToken==='function'&&getGistToken()&&getGistId())gistPush();},2000);
+}
 function getFormats(){try{return JSON.parse(localStorage.getItem('tb_fmts_v2')||'null')||DEFAULT_FORMATS}catch{return DEFAULT_FORMATS}}
 function saveFormats(f){localStorage.setItem('tb_fmts_v2',JSON.stringify(f))}
-function getSources(){try{return JSON.parse(localStorage.getItem('tb_srcs_v2')||'null')||DEFAULT_SOURCES}catch{return DEFAULT_SOURCES}}
-function saveSources(s){localStorage.setItem('tb_srcs_v2',JSON.stringify(s))}
+function getSources(){try{return JSON.parse(localStorage.getItem('tb_srcs_v3')||'null')||DEFAULT_SOURCES}catch{return DEFAULT_SOURCES}}
+function saveSources(s){localStorage.setItem('tb_srcs_v3',JSON.stringify(s))}
 function getApiKey(){return localStorage.getItem('tb_api_key_v2')||''}
 function saveApiKey(k){localStorage.setItem('tb_api_key_v2',k)}
+function getLevel(){return localStorage.getItem('tb_level')||'Intermediate'}
+function saveLevel(l){localStorage.setItem('tb_level',l)}
 
 let toastTimer=null;
 function showToast(msg){
@@ -337,7 +519,7 @@ function showToast(msg){
 
 function topicKey(d){return`${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`}
 
-async function generateTopic(day){
+async function generateTopic(day, forceFmt){
   const apiKey=getApiKey();
   if(!apiKey){
     document.getElementById('modal').style.display='flex';
@@ -348,37 +530,158 @@ async function generateTopic(day){
   const srcs=getSources().filter(s=>s.on);
   if(!fmts.length){showToast('활성 포맷 없음 — 설정에서 켜주세요');return}
 
+  const level = getLevel();
+  const levelPrompt = level === 'Beginner' ? 'EASY (A2-B1 level), simple daily words, no hard idioms.' : 
+                    level === 'Advanced' ? 'ADVANCED (C1 level), sophisticated vocabulary, complex nuances.' : 
+                    'NATURAL INTERMEDIATE (B2 level), common idioms, relatable slang.';
+
   const k=topicKey(day);
   loading=true;genDay=day;selected=day;
   renderCal();renderRight();
 
-  const fmt=fmts[Math.floor(Math.random()*fmts.length)].name;
-  const picked=[...srcs].sort(()=>Math.random()-.5).slice(0,3);
+  const fmt=forceFmt || fmts[Math.floor(Math.random()*fmts.length)].name;
   const tops=getTopics();
-  const rcats=[];
-  for(let i=1;i<=7;i++){
-    const dd=new Date(year,month,day);dd.setDate(dd.getDate()-i);
+
+  // ── 최근 30일 토픽 수집 (중복 방지) ─────────────────────────────
+  const recentTitles=[], recentCats=[], recentSrcNames=new Set();
+  for(let i=1;i<=30;i++){
+    const dd=new Date(year,month,day); dd.setDate(dd.getDate()-i);
     const rk=`${dd.getFullYear()}-${String(dd.getMonth()+1).padStart(2,'0')}-${String(dd.getDate()).padStart(2,'0')}`;
-    if(tops[rk]?.category)rcats.push(tops[rk].category);
+    const rt=tops[rk];
+    if(rt){
+      if(rt.main_title) recentTitles.push(rt.main_title);
+      if(rt.category)   recentCats.push(rt.category);
+      if(rt.source_name) recentSrcNames.add(rt.source_name);
+    }
   }
-  const avoid=[...new Set(rcats)];
-  const avoidS=avoid.length?`\n카테고리 피하기: ${avoid.join(',')}`:'';
-  const srcBlock=picked.map(s=>`[${s.name}] "${s.angle}"`).join(' / ');
+  const avoid7=[...new Set(recentCats.slice(0,7))];
+  const avoidCatStr=avoid7.length?`\n⛔ 최근 7일 카테고리 피하기: ${avoid7.join(', ')}`:'';
+  const avoidTitleStr=recentTitles.length
+    ?`\n⛔ 이미 사용한 토픽 (유사한 것도 금지):\n${recentTitles.slice(0,15).map((t,i)=>`  ${i+1}. ${t}`).join('\n')}`:'';
+  const avoidS=avoidCatStr+avoidTitleStr;
+
+  // ── 실시간 크롤링 시도 → fallback: 소스풀 ────────────────────────
+  let liveTrends=null;
+  try{ liveTrends=await fetchLiveTrends(); }catch(e){}
+
+  let picked, srcBlock;
+  if(liveTrends&&liveTrends.length>=3){
+    const shuffled=[...liveTrends].sort(()=>Math.random()-.5).slice(0,5);
+    srcBlock=shuffled.map(i=>`[${i.source}] "${i.title}${i.desc?' — '+i.desc.slice(0,50):''}"`).join('\n');
+    picked=shuffled.map(i=>({name:i.source,angle:i.title}));
+  } else {
+    const fresh=srcs.filter(s=>!recentSrcNames.has(s.name));
+    const pool=fresh.length>=3?fresh:srcs;
+    picked=[...pool].sort(()=>Math.random()-.5).slice(0,3);
+    srcBlock=picked.map(s=>`[${s.name}] "${s.angle}"`).join(' / ');
+  }
   const fmtHint=FMT_GUIDE[fmt]||`roles: 역할 2개`;
 
-  const prompt=`TheBox English Networking Club — topic card generator.
+  const prompt=`TheBox English Networking Club — weekly topic card generator.
 Date: ${MONTHS[month]} ${day}, ${year} | Format: ${fmt}${avoidS}
-Sources: ${srcBlock}
+Today's sources (${liveTrends ? '🔴 LIVE crawled — '+new Date().toLocaleDateString('ko-KR') : '📋 fallback pool'}):
+${srcBlock}
+${liveTrends ? "\n⚡ These are REAL trending topics in Korea RIGHT NOW. Don't copy the headline — find the human conflict, lifestyle tension, or opinion split hidden inside." : ""}
 
-PHILOSOPHY: This is English NETWORKING, not study. People should want to talk for 30+ mins.
-- Concrete situations & numbers only (no abstract topics)
-- ALL text must be in natural English (questions, words, everything)
-- Icebreakers: super easy personal questions anyone can answer instantly
-- Spark words: 6 short everyday words that unlock personal stories (e.g. Regret, Boss, Ghost, Budget, Routine, Late Night)
-- Format guide: ${fmtHint}
+=== ORIGINALITY MANDATE ===
+${avoidS ? avoidS+'\n\n🚫 The topics above are ALL ALREADY USED. Do NOT repeat them — not the same theme, not the same angle. If you feel tempted to use any similar topic, STOP and pick something completely different.\n' : ''}
+=== CORE PHILOSOPHY ===
+This is ENGLISH NETWORKING — gossip session disguised as English practice.
+Every topic must pass this test: "Can Korean 20-30s gossip about this for 30 mins straight?"
+If it sounds like a textbook, news article, or academic paper → REJECT IT.
+If it sounds like a KakaoTalk group chat at 11pm arguing over something silly → PERFECT.
 
-Return ONLY raw JSON, no markdown fences:
-{"main_title":"punchy English title max 8 words","category":"Money|Work|Love|Food|Travel|Health|AI|SNS|Lifestyle|Korea Trend|Friendship|Community","korean_angle":"한국어로 왜 수다거리인지 1-2문장","source_name":"${picked[0]?.name||''}","session1":{"spark_title":"short catchy title for word section","spark_words":["word1","word2","word3","word4","word5","word6"],"icebreakers":["super easy personal Q1","Q2","Q3"]},"session2":{"format":"${fmt}","title":"activity title","subtitle_kr":"짧은 한국어 부제","scenario":"specific English situation 2-3 sentences with numbers/places","roles":["role1","role2"],"questions":["discussion Q1","Q2","Q3"],"vote":"final vote question","expressions":["I get your point, but...","e2","e3","e4","e5"]}}`;
+=== DIFFICULTY & ACCESSIBILITY ===
+- TARGET LEVEL: ${levelPrompt}
+- LANGUAGE: ${level === 'Beginner' ? 'Super simple and clear' : level === 'Advanced' ? 'Sophisticated and diverse' : 'Natural and modern'}.
+- ANNOTATIONS: Provide Korean meanings for ALL Spark Words and Useful Expressions.
+
+=== HOW TO MAKE IT FUN (THE NEW RULES) ===
+1. PROVOCATIVE TITLES: No "News Headlines". Use polarizing, provocative questions. (e.g., "Would you take a pay cut for a 4-day workweek?")
+2. RELATABLE KEYWORDS: Use relatable slang or idioms (e.g., "Zombie mode", "Impulse buy", "Pet peeve").
+3. BINGO WITH A TWIST: Spark words must trigger a specific memory/story.
+4. JUICY SCENARIOS: Add specific amounts (₩50,000), brand names, app names, relatable situations. 
+5. HYPER FRESHNESS (NO CLICHES): DO NOT use cliché topics (Work-life balance, Mint Choco, Cats vs Dogs). Invent UNPREDICTABLE, HYPER-REALISTIC modern angles.
+✗ Never: politics, environment, abstract philosophy, vague generalities.
+6. UNIQUENESS CHECK: Before finalizing, compare your topic to the ALREADY USED TOPICS list. Any overlap → regenerate completely.
+
+=== SESSION 1 — Ice Breaking ===
+Spark Words (6 words):
+→ Casual slang, idioms, or highly relatable daily phrases.
+→ Must trigger a specific memory/story.
+→ Provide each word with its Korean meaning.
+
+Icebreakers (3 questions):
+→ Dead simple. Anyone answers without hesitation.
+→ GREAT: "What's the most expensive useless thing collecting dust in your room?"
+
+=== SESSION 2 — The Conflict Zone / Games ===
+- If the format is a Debate/Scenario: Create one JUICY scenario. The A vs B split must make people genuinely disagree.
+- If the format is a Game: Provide specific words, roles, or situations needed to play the game related to the topic.
+
+=== ROLE NAMES ===
+**Role names MUST be SHORT — max 3-4 words each.** (e.g., "Cancel It Now" / "Keep It Just In Case")
+
+=== NUTRITIOUS EXPRESSIONS (MUST LEARN) ===
+Members want to learn HIGH-LEVEL, native-like English expressions. 
+Provide exactly 6 natural idioms, phrasal verbs, or collocations related to the topic.
+DO NOT give basic middle-school English ("I agree"). Give them native "찐 어휘"!
+Every expression MUST have a Korean meaning.
+
+=== OUTPUT FORMAT ===
+Format: ${fmt}
+${fmtHint}
+
+Return ONLY raw JSON (no markdown fences):
+{
+  "main_title":"Provocative question title",
+  "category":"Money|Work|Love|Food|Travel|Health|AI|SNS|Lifestyle|Korea Trend|Friendship|Community",
+  "korean_angle":"Korean description (1-2 sentences)",
+  "source_name":"${picked[0]?.name||''}",
+  "session1":{
+    "spark_title":"short title",
+    "spark_words":[
+      {"en":"Word1","kr":"Meaning1"},
+      {"en":"Word2","kr":"Meaning2"},
+      {"en":"Word3","kr":"Meaning3"},
+      {"en":"Word4","kr":"Meaning4"},
+      {"en":"Word5","kr":"Meaning5"},
+      {"en":"Word6","kr":"Meaning6"}
+    ],
+    "icebreakers":["Q1","Q2","Q3"]
+  },
+  "session2":{
+    "format":"${fmt}",
+    "title":"title",
+    "subtitle_kr":"Korean title",
+    "scenario":"Detailed scenario (4-5 sentences)",
+    "roles":["Label A","Label B"],
+    "questions":["Q1","Q2","Q3"],
+    "vote":"Vote question",
+    "expressions":[
+      {"en":"Expression1","kr":"Meaning1"},
+      {"en":"Expression2","kr":"Meaning2"},
+      {"en":"Expression3","kr":"Meaning3"},
+      {"en":"Expression4","kr":"Meaning4"},
+      {"en":"Expression5","kr":"Meaning5"},
+      {"en":"Expression6","kr":"Meaning6"}
+    ]
+  },
+  "session3":{
+    "left_title":"게임 진행 순서",
+    "left_rules":["룰 1","룰 2","룰 3"],
+    "left_tips_title":"💡 질문 할 때 팁",
+    "left_tips":["팁 1","팁 2","팁 3","팁 4"],
+    "right_title":"막힐 때 던져볼만한 질문",
+    "right_items":[
+      {"context":"상황","en":"English Q","kr":"Korean translation"},
+      {"context":"...","en":"...","kr":"..."},
+      {"context":"...","en":"...","kr":"..."},
+      {"context":"...","en":"...","kr":"..."}
+    ]
+  }
+}
+// Note: session3.right_items MUST contain exactly 4 items.`;
 
   const steps=['소스 분석 중...','트렌드 파악 중...',`${fmt} 생성 중...`,'마무리 중...'];
   let si=0;
@@ -393,17 +696,19 @@ Return ONLY raw JSON, no markdown fences:
         'anthropic-version':'2023-06-01',
         'anthropic-dangerous-direct-browser-access':'true'
       },
-      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1600,messages:[{role:'user',content:prompt}]})
+      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:2500,messages:[{role:'user',content:prompt}]})
     });
     if(!res.ok){const e=await res.json();throw new Error(e.error?.message||`HTTP ${res.status}`)}
     const data=await res.json();
-    const raw=data.content[0].text.trim().replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
-    const result=JSON.parse(raw);
+    const content=data.content[0].text;
+    const match=content.match(/\{[\s\S]*\}/);
+    if(!match) throw new Error('응답에서 유효한 JSON을 찾을 수 없습니다.');
+    const result=JSON.parse(match[0]);
     const updated=getTopics();updated[k]=result;saveTopics(updated);
     showToast(`"${result.main_title}" 생성 완료!`);
   }catch(e){
     console.error(e);
-    showToast('오류: '+(e.message||'').slice(0,60));
+    showToast('오류: '+(e.message||'').slice(0,100));
   }finally{
     clearInterval(stepTimer);loading=false;genDay=null;
     renderCal();renderRight();
@@ -415,134 +720,220 @@ async function genAll(){
   if(!apiKey){document.getElementById('modal').style.display='flex';return}
   const dim=new Date(year,month+1,0).getDate();
   const tops=getTopics();
+  
+  // 2026년 한국 주요 공휴일 (대체공휴일 포함)
+  const holidays = [
+    '2026-01-01','2026-02-16','2026-02-17','2026-02-18','2026-03-01','2026-03-02',
+    '2026-05-05','2026-05-24','2026-05-25','2026-06-06','2026-08-15','2026-08-17',
+    '2026-09-24','2026-09-25','2026-09-26','2026-10-03','2026-10-09','2026-12-25'
+  ];
+
   for(let d=1;d<=dim;d++){
-    if(!tops[topicKey(d)]){await generateTopic(d);await new Promise(r=>setTimeout(r,400))}
+    const dateObj = new Date(year, month, d);
+    const dow = dateObj.getDay();
+    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    
+    // 금요일(5) 및 공휴일 제외 (토, 일은 생성됨)
+    if(dow===5 || holidays.includes(dateStr)) continue;
+
+    if(!tops[topicKey(d)]){
+      await generateTopic(d);
+      await new Promise(r=>setTimeout(r,400));
+    }
   }
   showToast(`${MONTHS[month]} 전체 생성 완료!`);
 }
 
+function delAll(){
+  if(!confirm('생성된 이번 달의 모든 토픽을 삭제하시겠습니까?\\n(이 작업은 되돌릴 수 없습니다)')) return;
+  const tops=getTopics();
+  const dim=new Date(year,month+1,0).getDate();
+  let deleted = false;
+  for(let d=1;d<=dim;d++){
+    const k=topicKey(d);
+    if(tops[k]){
+      delete tops[k];
+      deleted = true;
+    }
+  }
+  if(deleted){
+    saveTopics(tops);
+    renderCal();
+    renderRight();
+    showToast(`${MONTHS[month]} 전체 초기화 완료`);
+  } else {
+    showToast('삭제할 토픽이 없습니다.');
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   PDF — 읽기 편하고 이해하기 쉬운 2-페이지 폼
+   ══════════════════════════════════════════════════════ */
 function downloadPDF(day){
   const k=topicKey(day);const t=getTopics()[k];if(!t)return;
-  const s1=t.session1||{},s2=t.session2||{};
+  const s1=t.session1||{},s2=t.session2||{},s3=t.session3||{};
   const catColor=CAT_COLORS[t.category]||'#888';
-  const sparks=(s1.spark_words||s1.bingo_words||[]).slice(0,6);
-  const icebreakers=(s1.icebreakers||s1.small_talk||[]);
+  const sparks=(s1.spark_words||[]).slice(0,6);
+  const icebreakers=(s1.icebreakers||[]);
   const exprs=s2.expressions||[];
   const qs=s2.questions||[];
   const roles=s2.roles||['Team A','Team B'];
+  const fmt=(s2.format||'').toLowerCase();
 
-  /* ── Page 1: Spark Words as a clean tag cloud row ── */
-  const sparkHTML=sparks.map((w,i)=>{
-    const accent=i===0?'background:#0D0D0D;color:#fff':(i===1?`background:${catColor};color:#fff`:'background:#F0EEE9;color:#0D0D0D;border:1.5px solid #ddd');
-    return `<div style="display:inline-flex;align-items:center;justify-content:center;padding:10px 18px;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:11pt;font-weight:700;letter-spacing:.5px;text-transform:uppercase;${accent}">${w}</div>`;
-  }).join('');
+  /* Spark words — 빙고판 느낌으로 3x2 또는 2x3 그리드 */
+  const sparkHTML = `<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; width:100%;">` + sparks.map((w, i) => {
+    const en = typeof w === 'object' ? w.en : w;
+    const kr = typeof w === 'object' ? w.kr : '';
+    // 검은색 배경 피하기 -> 테두리와 연한 배경 사용
+    const styles = [
+      `border:2px solid #0D0D0D; background:#fff; color:#0D0D0D;`,
+      `border:2px solid ${catColor}; background:#fff; color:${catColor};`,
+      `border:2px solid #0D0D0D; background:#F5F3EF; color:#0D0D0D;`,
+      `border:2px solid ${catColor}; background:#F5F3EF; color:${catColor};`,
+      `border:1.5px solid #ccc; background:#fff; color:#0D0D0D;`,
+      `border:1.5px solid #ccc; background:#fff; color:#0D0D0D;`
+    ];
+    return `
+    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:75px; border-radius:8px; padding:8px; text-align:center; ${styles[i]||styles[5]}">
+      <div style="font-family:'DM Sans',sans-serif; font-size:10pt; font-weight:800; letter-spacing:.5px; text-transform:uppercase; margin-bottom:2px">${en}</div>
+      ${kr ? `<div style="font-family:'DM Sans',sans-serif; font-size:7pt; font-weight:500; opacity:0.7">${kr}</div>` : ''}
+    </div>`;
+  }).join('') + `</div>`;
 
-  /* ── Page 1: Icebreakers ── */
+  /* How to play 설명 텍스트 */
+  const howToPlay=`<div style="background:#F7F6F3;border-radius:10px;padding:12px 16px;margin-bottom:16px;border-left:4px solid ${catColor}">
+    <div style="font-family:'DM Sans',sans-serif;font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:${catColor};margin-bottom:5px">🎯 BINGO RULE</div>
+    <div style="font-family:'DM Sans',sans-serif;font-size:9.5pt;color:#333;line-height:1.7">
+      단어만 말하면 무효! 무조건 <strong>자신의 경험이나 에피소드</strong>를 썰로 풀어야 빙고 칸을 채울 수 있습니다. (검은색 펜으로 편하게 체크하세요!)
+    </div>
+  </div>`;
+
+  /* Icebreakers — 번호 크게, 질문 크고 선명하게 */
   const ibHTML=icebreakers.slice(0,3).map((q,i)=>`
-    <div style="display:flex;gap:14px;align-items:flex-start;padding:10px 0;border-bottom:1px solid #EBEBEA">
-      <div style="flex-shrink:0;width:24px;height:24px;border-radius:50%;background:${i===0?catColor:'#0D0D0D'};display:flex;align-items:center;justify-content:center;font-family:\'DM Sans\',sans-serif;font-size:9pt;font-weight:700;color:#fff;margin-top:1px">${i+1}</div>
-      <div style="font-family:\'DM Sans\',sans-serif;font-size:10pt;font-weight:500;line-height:1.5;color:#1a1a1a;padding-top:3px">${q}</div>
+    <div style="display:flex;gap:14px;align-items:flex-start;padding:11px 0;border-bottom:1px solid #EBEBEA">
+      <div style="flex-shrink:0;width:28px;height:28px;border-radius:50%;background:${i===0?catColor:'#0D0D0D'};display:flex;align-items:center;justify-content:center;font-family:'DM Sans',sans-serif;font-size:10pt;font-weight:700;color:#fff;margin-top:1px">${i+1}</div>
+      <div style="font-family:'DM Sans',sans-serif;font-size:11pt;font-weight:500;line-height:1.55;color:#1a1a1a;padding-top:3px">${q}</div>
     </div>`).join('');
 
-  /* ── Page 2: Role cards (format-aware) ── */
-  const fmt=(s2.format||'').toLowerCase();
+  /* Role cards — format aware */
   let roleHTML='';
   if(fmt.includes('advice')){
-    const descs=['Feel & support them','Reality check','Wild card idea'];
+    const descs=['Support & empathize','Be realistic & honest','Go wild & creative'];
     const icons=['♡','⚖','★'];
-    const bgs=['#0D0D0D',catColor,'#2a2a2a'];
-    roleHTML=`<div style="display:flex;gap:8px;margin-bottom:14px">${roles.slice(0,3).map((r,i)=>`
-      <div style="flex:1;border-radius:10px;overflow:hidden;border:1.5px solid #e0e0de">
-        <div style="background:${bgs[i]};padding:12px 10px;text-align:center">
-          <div style="font-size:18pt;color:#fff;margin-bottom:4px">${icons[i]}</div>
-          <div style="font-family:\'DM Sans\',sans-serif;font-size:9.5pt;font-weight:700;color:#fff;letter-spacing:.5px">${r}</div>
-          <div style="font-family:\'DM Sans\',sans-serif;font-size:7.5pt;color:rgba(255,255,255,.6);margin-top:2px">${descs[i]||''}</div>
+    const borderColors=['#0D0D0D',catColor,'#666'];
+    roleHTML=`<div style="display:flex;gap:10px;margin-bottom:16px">${roles.slice(0,3).map((r,i)=>`
+      <div style="flex:1;border-radius:12px;overflow:hidden;border:2px solid ${borderColors[i]}">
+        <div style="background:#fff; padding:14px 12px; text-align:center; border-bottom:1px solid ${borderColors[i]}15">
+          <div style="font-size:18pt; margin-bottom:4px">${icons[i]}</div>
+          <div style="font-family:'DM Sans',sans-serif;font-size:10pt;font-weight:800;color:${borderColors[i]};letter-spacing:.5px;text-transform:uppercase">${r}</div>
+          <div style="font-family:'DM Sans',sans-serif;font-size:7.5pt;color:#888;margin-top:3px">${descs[i]||''}</div>
         </div>
-        <div style="padding:10px 10px 8px;background:#fafaf9">
-          <div style="font-family:\'DM Sans\',sans-serif;font-size:7pt;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#aaa;margin-bottom:5px">Your advice</div>
-          <div style="border-bottom:1px dashed #ddd;height:14px;margin-bottom:6px"></div>
-          <div style="border-bottom:1px dashed #ddd;height:14px"></div>
+        <div style="padding:12px 10px;background:#fafaf9">
+          <div style="font-family:'DM Sans',sans-serif;font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#aaa;margin-bottom:7px">My advice →</div>
+          <div style="border-bottom:1px dashed #ddd;height:18px;margin-bottom:7px"></div>
+          <div style="border-bottom:1px dashed #ddd;height:18px"></div>
         </div>
       </div>`).join('')}</div>`;
   } else if(fmt.includes('ranking')){
-    roleHTML=`<div style="margin-bottom:14px">${roles.slice(0,6).map((item,i)=>`
-      <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #EBEBEA">
-        <div style="width:28px;height:28px;border-radius:6px;background:${i<2?catColor:'#f0eeea'};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:\'DM Sans\',sans-serif;font-size:10pt;font-weight:700;color:${i<2?'#fff':'#888'}">${i+1}</div>
-        <div style="flex:1;font-family:\'DM Sans\',sans-serif;font-size:10pt;font-weight:500;color:#1a1a1a">${item}</div>
-        <div style="width:80px;border-bottom:1.5px dashed #ddd"></div>
+    roleHTML=`<div style="margin-bottom:16px">${roles.slice(0,6).map((item,i)=>`
+      <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #EBEBEA">
+        <div style="width:32px;height:32px;border-radius:8px;background:${i<2?catColor:'#f0eeea'};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'DM Sans',sans-serif;font-size:12pt;font-weight:800;color:${i<2?'#fff':'#999'}">${i+1}</div>
+        <div style="flex:1;font-family:'DM Sans',sans-serif;font-size:10.5pt;font-weight:500;color:#1a1a1a">${item}</div>
+        <div style="width:90px;border-bottom:1.5px dashed #ddd"></div>
       </div>`).join('')}</div>`;
   } else {
-    /* Debate / WYR / Shopping / default — 2 big cards */
-    const accA=`background:#0D0D0D`;const accB=`background:${catColor}`;
-    roleHTML=`<div style="display:flex;gap:10px;margin-bottom:14px;position:relative">${roles.slice(0,2).map((r,i)=>`
-      <div style="flex:1;border-radius:10px;overflow:hidden;border:1.5px solid #e0e0de">
-        <div style="${i===0?accA:accB};padding:14px 12px">
-          <div style="font-family:\'DM Sans\',sans-serif;font-size:11pt;font-weight:700;color:#fff;letter-spacing:.3px">${r}</div>
-          <div style="font-family:\'DM Sans\',sans-serif;font-size:7.5pt;color:rgba(255,255,255,.55);margin-top:3px">Members: _______________</div>
+    roleHTML=`<div style="display:flex;gap:12px;margin-bottom:16px;position:relative">${roles.slice(0,2).map((r,i)=>`
+      <div style="flex:1;border-radius:12px;overflow:hidden;border:2px solid ${i===0?'#0D0D0D':catColor}; background-color: #fff;">
+        <div style="background-color:#fff; padding:16px 14px; border-bottom:1px solid ${i===0?'#eee':catColor+'15'}">
+          <div style="font-family:'DM Sans',sans-serif;font-size:11pt;font-weight:800;color:${i===0?'#0D0D0D':catColor};letter-spacing:.3px">${r}</div>
+          <div style="font-family:'DM Sans',sans-serif;font-size:8pt;color:#999;margin-top:4px">Members: _______________</div>
         </div>
-        <div style="padding:10px 12px;background:#fafaf9">
-          <div style="font-family:\'DM Sans\',sans-serif;font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#aaa;margin-bottom:5px">Our argument</div>
-          <div style="border-bottom:1px dashed #ddd;height:14px;margin-bottom:5px"></div>
-          <div style="border-bottom:1px dashed #ddd;height:14px"></div>
+        <div style="padding:12px 14px;background:#fafaf9">
+          <div style="font-family:'DM Sans',sans-serif;font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#aaa;margin-bottom:7px">Our argument →</div>
+          <div style="border-bottom:1px dashed #ddd;height:18px;margin-bottom:6px"></div>
+          <div style="border-bottom:1px dashed #ddd;height:18px"></div>
         </div>
       </div>`).join('')}
-      ${fmt.includes('debate')||fmt.includes('rather')?`<div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:1.5px solid #e0e0de;font-family:\'DM Sans\',sans-serif;font-size:8.5pt;font-weight:700;color:#cc0014">VS</div>`:''}
+      ${fmt.includes('debate')||fmt.includes('rather')?`<div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:2px solid #e0e0de;font-family:'DM Sans',sans-serif;font-size:9pt;font-weight:800;color:#cc0014">VS</div>`:''}
     </div>`;
   }
 
-  /* ── Discussion questions ── */
+  /* Korean format guide */
+  const fObj = getFormats().find(x=>x.name === s2.format);
+  const krFmt = (fObj && fObj.desc) ? fObj.desc : (KR_FMT_GUIDE[s2.format]||'팀을 나눠 주어진 주제로 영어로 자유롭게 대화해봐요!');
+
+  /* Discussion questions — 더 가볍고 깔끔한 텍스트 위주 디자인 */
+  const levelLabels=['Q1. Personal','Q2. Social','Q3. Hypothetical'];
   const dqHTML=qs.slice(0,3).map((q,i)=>`
-    <div style="display:flex;gap:12px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #EBEBEA">
-      <div style="flex-shrink:0;width:20px;height:20px;border-radius:4px;background:${catColor};display:flex;align-items:center;justify-content:center;font-family:\'DM Sans\',sans-serif;font-size:8.5pt;font-weight:700;color:#fff;margin-top:2px">${i+1}</div>
-      <div style="font-family:\'DM Sans\',sans-serif;font-size:9.5pt;font-weight:500;line-height:1.5;color:#1a1a1a;padding-top:1px">${q}</div>
+    <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px">
+      <div style="flex-shrink:0;color:${catColor};font-family:'DM Sans',sans-serif;font-size:9pt;font-weight:800;margin-top:1px">${levelLabels[i]||`Q${i+1}`}</div>
+      <div style="font-family:'DM Sans',sans-serif;font-size:10pt;color:#333;line-height:1.45">${q}</div>
     </div>`).join('');
 
-  /* ── Expressions grid ── */
-  const exprHTML=exprs.slice(0,6).map(e=>`
-    <div style="padding:7px 10px;background:#F7F6F3;border-radius:6px;font-family:\'DM Sans\',sans-serif;font-size:8.5pt;font-style:italic;color:#333;border-left:3px solid ${catColor};line-height:1.4">${e}</div>`).join('');
+  /* Expressions — 무거운 블록 대신 깔끔한 글머리 기호 리스트로 변경 */
+  const exprHTML=exprs.slice(0,6).map(e=>{
+    const en = typeof e === 'object' ? e.en : e;
+    const kr = typeof e === 'object' ? e.kr : '';
+    return `<div style="font-family:'DM Sans',sans-serif;font-size:9pt;color:#333;line-height:1.4;display:flex;gap:6px;align-items:flex-start">
+      <div style="color:${catColor};font-weight:800;margin-top:1px">•</div>
+      <div>
+        <div style="font-weight:700">${en}</div>
+        ${kr ? `<div style="font-size:8pt;color:#888;margin-top:1px">${kr}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
 
-  const css=`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&display=swap');
+  /* Vote tally — 차분한 라벨 디자인 (텍스트 잘림 없음) */
+  const voteTallyHTML=roles.slice(0,2).map(function(r,ri){
+    var dotCol=ri===0?'#0D0D0D':catColor;
+    return '<div style="background:#fff;border:1.5px solid #EBEBEA;border-radius:8px;padding:8px 12px;text-align:left;min-width:100px;max-width:150px;box-shadow:0 2px 6px rgba(0,0,0,.03)">'
+      +'<div style="font-family:\'DM Sans\',sans-serif;font-size:8pt;font-weight:700;color:#1a1a1a;line-height:1.35;margin-bottom:6px;display:flex;align-items:flex-start;gap:6px"><div style="width:6px;height:6px;border-radius:50%;background:'+dotCol+';flex-shrink:0;margin-top:3px"></div><div>'+r+'</div></div>'
+      +'<div style="font-family:\'DM Sans\',sans-serif;font-size:12pt;color:#E8E6E0;letter-spacing:1px;text-align:center">___</div>'
+      +'</div>';
+  }).join('');
+
+  const css=`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;0,9..40,800;1,9..40,400&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#0D0D0D}
 .page{width:210mm;min-height:297mm;display:flex;flex-direction:column;background:#fff;page-break-after:always}
-.top-bar{height:10px;background:${catColor}}
-.header{background:#0D0D0D;padding:11px 18px 10px;display:flex;align-items:center;justify-content:space-between}
-.logo{font-size:17pt;font-weight:700;letter-spacing:2.5px;color:#fff}
+.accent-bar{height:8px;background:${catColor}}
+.header{background:#0D0D0D;padding:13px 20px 12px;display:flex;align-items:center;justify-content:space-between}
+.logo{font-size:18pt;font-weight:800;letter-spacing:2.5px;color:#fff}
 .logo span{color:#ff5555}
 .header-right{text-align:right}
-.header-date{font-size:7.5pt;color:#666;margin-bottom:3px}
-.cat-tag{display:inline-block;background:${catColor};color:#fff;font-size:6.5pt;font-weight:700;padding:2px 9px;border-radius:4px;letter-spacing:.8px;text-transform:uppercase}
-.session-bar{background:#F7F6F3;border-bottom:1px solid #E8E6E0;padding:9px 18px;display:flex;align-items:center;gap:0}
-.session-num{font-size:9pt;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#0D0D0D}
-.session-sep{width:1px;height:14px;background:#D0CEC8;margin:0 10px}
-.session-sub{font-size:8pt;color:#888;font-weight:400;letter-spacing:.3px}
-.session-title{margin-left:auto;font-size:8pt;font-weight:600;color:#0D0D0D;letter-spacing:.2px;max-width:45%}
-.body{padding:16px 18px;flex:1;display:flex;flex-direction:column;gap:0}
-.names-bar{display:flex;align-items:center;gap:12px;background:#F7F6F3;border-radius:7px;padding:9px 14px;margin-bottom:14px;border:1px solid #E8E6E0}
-.names-label{font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:${catColor};white-space:nowrap;flex-shrink:0}
-.names-line{flex:1;height:1px;background:#D5D3CE}
-.section-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-.section-label{font-size:7pt;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:#aaa}
-.section-rule{flex:1;height:1px;background:#E8E6E0}
-.footer{background:#0D0D0D;padding:7px 18px;display:flex;align-items:center;justify-content:space-between;margin-top:auto}
-.footer-brand{font-size:7.5pt;font-weight:700;letter-spacing:1.5px;color:#555}
+.header-date{font-size:8pt;color:#888;margin-bottom:4px;letter-spacing:.5px}
+.cat-tag{display:inline-block;background:${catColor};color:#fff;font-size:7pt;font-weight:700;padding:3px 11px;border-radius:5px;letter-spacing:1px;text-transform:uppercase}
+.session-bar{background:#F7F6F3;border-bottom:2px solid #E8E6E0;padding:10px 20px;display:flex;align-items:center;gap:0}
+.session-num{font-size:10pt;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#0D0D0D}
+.session-sep{width:1px;height:16px;background:#D0CEC8;margin:0 12px}
+.session-sub{font-size:8.5pt;color:#888;font-weight:400}
+.session-title{margin-left:auto;font-size:9pt;font-weight:700;color:#0D0D0D;letter-spacing:.2px;max-width:45%}
+.body{padding:18px 20px;flex:1;display:flex;flex-direction:column}
+.names-bar{display:flex;align-items:center;gap:14px;background:#F7F6F3;border-radius:8px;padding:18px 20px;margin-bottom:16px;border:1.5px solid #E8E6E0;min-height:54px}
+.names-label{font-size:9pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:${catColor};white-space:nowrap;flex-shrink:0}
+.names-line{flex:1;height:1.5px;background:#D5D3CE}
+.section-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;margin-top:4px}
+.section-label{font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#888}
+.section-rule{flex:1;height:1.5px;background:#E8E6E0}
+.footer{background:#0D0D0D;padding:8px 20px;display:flex;align-items:center;justify-content:space-between;margin-top:auto}
+.footer-brand{font-size:8pt;font-weight:700;letter-spacing:1.5px;color:#555}
 .footer-brand b{color:#ff5555}
-.footer-pg{font-size:9pt;font-weight:700;color:#444}
-.scen{background:#F7F6F3;border-radius:8px;padding:11px 14px;margin-bottom:14px;border-left:4px solid #0D0D0D}
-.scen-label{font-size:7pt;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:${catColor};margin-bottom:4px}
-.scen-text{font-size:9.5pt;font-weight:500;line-height:1.6;color:#1a1a1a}
-.vote-bar{display:flex;align-items:center;gap:12px;border:2px solid ${catColor};border-radius:8px;padding:9px 14px;margin:12px 0}
-.vote-label{font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:${catColor};white-space:nowrap;flex-shrink:0}
-.vote-q{font-size:9pt;font-weight:500;flex:1;color:#1a1a1a}
-.vote-tally{display:flex;gap:5px}
-.tally-box{border:1.5px solid #0D0D0D;border-radius:4px;padding:3px 10px;font-size:7.5pt;font-weight:700;text-align:center;min-width:40px}
+.footer-pg{font-size:10pt;font-weight:700;color:#444}
+.scen{background:#fdfcfb;border:1px solid #e0dfdb;border-radius:8px;padding:12px 14px;margin-bottom:14px}
+.scen-label{font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:${catColor};margin-bottom:4px}
+.scen-text{font-size:10pt;font-weight:500;line-height:1.6;color:#333}
+.vote-bar{display:flex;align-items:center;gap:12px;background:#faf9f7;border-left:3px solid ${catColor};border-radius:6px;padding:10px 14px;margin:12px 0}
+.vote-label{font-size:8.5pt;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:${catColor};white-space:nowrap;flex-shrink:0}
+.vote-q{font-size:9.5pt;font-weight:500;flex:1;color:#1a1a1a}
+.vote-tally{display:flex;gap:6px}
+.tally-box{border:2px solid #0D0D0D;border-radius:6px;padding:4px 12px;font-size:8pt;font-weight:700;text-align:center;min-width:44px}
 @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}@page{size:A4;margin:0}.page{page-break-after:always}}`;
 
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${css}</style></head><body>
 
-<!-- PAGE 1 -->
+<!-- PAGE 1 — ICE BREAKING -->
 <div class="page">
-  <div class="top-bar"></div>
+  <div class="accent-bar"></div>
   <div class="header">
     <div class="logo">THE<span>BOX</span></div>
     <div class="header-right">
@@ -551,35 +942,41 @@ body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#0D0D0D}
     </div>
   </div>
   <div class="session-bar">
-    <span class="session-num">1st conversation</span>
+    <span class="session-num">Session 1</span>
     <div class="session-sep"></div>
-    <span class="session-sub">Warm Up · Spark Words</span>
+    <span class="session-sub">Ice Breaking · Warm Up</span>
     <span class="session-title">${t.main_title||''}</span>
   </div>
   <div class="body">
     <div class="names-bar">
-      <span class="names-label">Names</span>
+      <span class="names-label">Today's Members</span>
       <div class="names-line"></div>
     </div>
+    ${t.korean_angle?`<div style="background:${catColor}18;border-radius:10px;padding:11px 15px;margin-bottom:14px;border-left:4px solid ${catColor}">
+      <div style="font-family:'DM Sans',sans-serif;font-size:7.5pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:${catColor};margin-bottom:5px">📌 Why This Topic?</div>
+      <div style="font-family:'DM Sans',sans-serif;font-size:10pt;color:#1a1a1a;line-height:1.65;font-weight:500">${t.korean_angle}</div>
+    </div>`:''}
 
-    <div class="section-head"><span class="section-label">Ice Breakers</span><div class="section-rule"></div></div>
-    <div style="margin-bottom:16px">${ibHTML}</div>
 
-    <div class="section-head"><span class="section-label">Spark Words — ${s1.spark_title||s1.bingo_title||'Talk Triggers'}</span><div class="section-rule"></div></div>
-    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px">${sparkHTML}</div>
-    <div style="font-family:'DM Sans',sans-serif;font-size:8pt;color:#aaa;margin-top:8px;line-height:1.6">
-      Pick any word → share a story or memory it triggers → let the conversation flow naturally. No rules, just talk.
+    <div class="section-head"><span class="section-label">🔥 Icebreaker Questions</span><div class="section-rule"></div></div>
+    <div style="margin-bottom:18px">${ibHTML}</div>
+
+    <div class="section-head"><span class="section-label">💬 Spark Words — ${s1.spark_title||'Talk Triggers'}</span><div class="section-rule"></div></div>
+    ${howToPlay}
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px">${sparkHTML}</div>
+    <div style="font-family:'DM Sans',sans-serif;font-size:8pt;color:#aaa;line-height:1.7;margin-top:4px">
+      → 단어 선택 → 관련된 흑역사나 개인적인 썰 풀기 → 대화의 흐름에 몸을 맡기세요! 정답은 없습니다.
     </div>
   </div>
   <div class="footer">
     <div class="footer-brand">THE<b>BOX</b> ENGLISH NETWORKING</div>
-    <div class="footer-pg">1 / 2</div>
+    <div class="footer-pg">1 / ${s3.left_rules ? '3' : '2'}</div>
   </div>
 </div>
 
-<!-- PAGE 2 -->
+<!-- PAGE 2 — ACTIVITY -->
 <div class="page">
-  <div class="top-bar"></div>
+  <div class="accent-bar"></div>
   <div class="header">
     <div class="logo">THE<span>BOX</span></div>
     <div class="header-right">
@@ -588,38 +985,96 @@ body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#0D0D0D}
     </div>
   </div>
   <div class="session-bar">
-    <span class="session-num">2nd activity</span>
+    <span class="session-num">Session 2</span>
     <div class="session-sep"></div>
     <span class="session-sub">${s2.format||''}</span>
     <span class="session-title">${s2.title||''}</span>
   </div>
   <div class="body">
+    <div style="background:#FFFDF5;border:1px solid #F1EACB;border-radius:8px;padding:10px 14px;margin-bottom:12px;">
+      <div style="font-family:'DM Sans',sans-serif;font-size:8.5pt;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:#B48A00;margin-bottom:2px">💡 HOW TO PLAY</div>
+      <div style="font-family:'DM Sans',sans-serif;font-size:9pt;color:#555;line-height:1.5">${krFmt}</div>
+    </div>
     <div class="scen">
-      <div class="scen-label">Situation</div>
+      <div class="scen-label">📍 Situation</div>
       <div class="scen-text">${s2.scenario||''}</div>
     </div>
 
     ${roleHTML}
 
-    <div class="section-head"><span class="section-label">Discussion</span><div class="section-rule"></div></div>
-    <div style="margin-bottom:12px">${dqHTML}</div>
+    <div class="section-head"><span class="section-label">💡 Discussion Questions</span><div class="section-rule"></div></div>
+    <div style="margin-bottom:14px">${dqHTML}</div>
 
     <div class="vote-bar">
-      <span class="vote-label">Vote</span>
+      <span class="vote-label">🗳 Vote</span>
       <span class="vote-q">${s2.vote||''}</span>
-      <div class="vote-tally">${roles.slice(0,2).map(r=>`<div class="tally-box">${r.length>8?r.slice(0,8)+'…':r}<br><span style="font-size:10pt">___</span></div>`).join('')}</div>
+      <div class="vote-tally">${voteTallyHTML}</div>
     </div>
 
-    <div class="section-head"><span class="section-label">Useful Expressions</span><div class="section-rule"></div></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">${exprHTML}</div>
+    <div class="section-head"><span class="section-label">🗣 Useful Expressions — Use These Today!</span><div class="section-rule"></div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px">${exprHTML}</div>
   </div>
   <div class="footer">
     <div class="footer-brand">THE<b>BOX</b> ENGLISH NETWORKING</div>
-    <div class="footer-pg">2 / 2</div>
+    <div class="footer-pg">2 / ${s3.left_rules ? '3' : '2'}</div>
   </div>
 </div>
+${s3.left_rules ? `
+<!-- PAGE 3 — LEADER'S GUIDE (2-COLUMN) -->
+<div class="page" style="display:flex; height:297mm; overflow:hidden;">
+  <!-- Left Column -->
+  <div style="flex:1; padding:40px; border-right:1px solid #ccc; background:#fff;">
+    <div style="background:#cc0000; color:#fff; font-family:'Instrument Sans',sans-serif; font-size:18pt; font-weight:800; padding:12px 20px; margin-bottom:20px;">
+      ${s2.format || 'Activity Guide'}
+    </div>
+    
+    <div style="font-family:'DM Sans',sans-serif; font-size:10pt; font-weight:700; color:#111; margin-bottom:14px;">
+      ${s3.left_title || '게임 진행 순서'}
+    </div>
+    
+    <ol style="font-family:'DM Sans',sans-serif; font-size:9.5pt; color:#111; line-height:1.7; padding-left:20px; margin-bottom:30px;">
+      ${(s3.left_rules||[]).map(r=>`<li style="margin-bottom:12px">${r}</li>`).join('')}
+    </ol>
+    
+    <div style="font-family:'DM Sans',sans-serif; font-size:10pt; font-weight:800; background:#ffff00; display:inline-block; padding:4px 8px; margin-bottom:14px;">
+      ${s3.left_tips_title || '💡 질문 할 때 팁'}
+    </div>
+    
+    <ol style="font-family:'DM Sans',sans-serif; font-size:9.5pt; color:#111; line-height:1.7; padding-left:20px;">
+      ${(s3.left_tips||[]).map(t=>`<li style="margin-bottom:12px">${t}</li>`).join('')}
+    </ol>
+  </div>
+  
+  <!-- Right Column -->
+  <div style="flex:1; padding:40px; background:#fff; position:relative;">
+    <div style="font-family:'DM Sans',sans-serif; font-size:13pt; font-weight:800; color:#cc0000; margin-bottom:20px; text-transform:uppercase;">
+      ${s3.right_title || 'TOPIC QUESTIONS'}
+    </div>
+    
+    <div style="display:flex; flex-direction:column; gap:20px;">
+      ${(s3.right_items||[]).map(i=>`
+        <div style="border-bottom:1px solid #eaeaea; padding-bottom:16px;">
+          <div style="font-family:'DM Sans',sans-serif; font-size:9.5pt; font-weight:800; background:#ffff00; display:inline-block; padding:2px 6px; margin-bottom:8px;">
+            ${i.context}
+          </div>
+          <div style="font-family:'DM Sans',sans-serif; font-size:10pt; color:#111; margin-bottom:6px; line-height:1.4;">
+            ${i.en}
+          </div>
+          <div style="font-family:'DM Sans',sans-serif; font-size:9pt; color:#555; line-height:1.4;">
+            ${i.kr}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+    
+    <div class="footer" style="position:absolute; bottom:20px; left:40px; right:40px;">
+      <div class="footer-brand">THE<b>BOX</b> ENGLISH NETWORKING</div>
+      <div class="footer-pg">3 / 3</div>
+    </div>
+  </div>
+</div>` : ''}
 
-<script>window.onload=()=>window.print()<\/script>
+<scr'+'ipt>window.onload=()=>window.print()</scr'+'ipt>
 </body></html>`;
   const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}
 }
@@ -639,14 +1094,26 @@ function renderCal(){
   document.getElementById('s-total').textContent=dim;
   document.getElementById('s-pct').textContent=Math.round(done/dim*100)+'%';
   document.getElementById('s-fmts').textContent=usedFmts.size;
-  document.getElementById('dows').innerHTML=DOWS_L.map(d=>`<div class="dow">${d}</div>`).join('');
+  document.getElementById('dows').innerHTML=DOWS_L.map((d,i)=>{
+    const cls=i===0?'dow dow-sun':i===6?'dow dow-sat':'dow';
+    return `<div class="${cls}">${d}</div>`;
+  }).join('');
   let cells='';
   for(let i=0;i<fdow;i++)cells+=`<div class="day empty"></div>`;
   for(let d=1;d<=dim;d++){
-    const k=topicKey(d),t=tops[k],has=!!t,isGen=genDay===d,isSel=selected===d;
-    const cls=['day',has?'has':'',isToday(d)?'today':'',isSel?'sel':'',isGen?'busy':''].filter(Boolean).join(' ');
+    const k=topicKey(d),t=tops[k],has=!!t,isGen=genDay===d,isSel=selected===d,tod=isToday(d);
+    const dow=new Date(year,month,d).getDay();
+    const isSun=dow===0,isSat=dow===6;
+    const cls=['day',isSun?'sun':isSat?'sat':'',has?'has':'',tod?'today':'',isSel?'sel':'',isGen?'busy':''].filter(Boolean).join(' ');
     const dc=t?(CAT_COLORS[t.category]||'#888'):'';
-    cells+=`<div class="${cls}" data-d="${d}"><div class="dn">${d}</div>${has?`<div class="ddot" style="background:${dc}"></div>`:''}${has?`<div class="dtxt">${t.main_title||''}</div>`:''}${has?`<div class="dfmt">${(t.session2?.format||'').slice(0,3)}</div>`:''}</div>`;
+    const fmtShort=has?(t.session2?.format||'').replace('Agree/Disagree Spectrum','Spectrum').replace('Would You Rather','W.Y.R').replace('Unpopular Opinion','Unpopular').replace('Survival Scenario','Survival').replace('Two Truths One Lie','2 Truths 1 Lie').replace('Deal or No Deal','Deal/No Deal').replace('This or That Blitz','This/That').replace('Confession Box','Confession').replace('Headline Writer','Headline').replace('Roast and Toast','Roast/Toast').replace('Minefield Talk Show','Minefield').replace('The Blind Director','Blind Dir.'):'';
+    cells+=`<div class="${cls}" data-d="${d}">`
+      +`<div class="dn">${d}</div>`
+      +(tod?`<div class="today-badge">TODAY</div>`:'')
+      +(has?`<div class="ddot" style="background:${dc}"></div>`:'')
+      +(has?`<div class="dtxt">${t.main_title||''}</div>`:'')
+      +(has?`<div class="dfmt">${fmtShort}</div>`:'')
+      +`</div>`;
   }
   const grid=document.getElementById('cal-grid');
   grid.innerHTML=cells;
@@ -669,17 +1136,95 @@ function renderRight(){
   }
   const k=topicKey(selected),t=getTopics()[k];
   if(!t){
-    panel.innerHTML=`<div class="r-empty"><div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px">${MONTHS[month]} ${selected}일</div><p>아직 토픽이 없어요</p><button onclick="window._tbGen(${selected})" style="margin-top:10px;padding:10px 20px;background:var(--red);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">✦ 토픽 생성</button></div>`;
+    panel.innerHTML=`<div class="r-empty">
+      <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:12px">${MONTHS[month]} ${selected}일</div>
+      <p>아직 토픽이 없어요</p>
+      <button onclick="window._tbGen(${selected})" style="margin-top:10px;padding:10px 20px;background:var(--red);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">✦ 토픽 생성</button>
+    </div>`;
     return;
   }
   const s1=t.session1||{},s2=t.session2||{},cc=CAT_COLORS[t.category]||'#888';
-  panel.innerHTML=`<div class="r-body"><div class="date-row"><div class="date-big">${String(selected).padStart(2,'0')}</div><div style="display:flex;flex-direction:column;gap:3px"><div class="date-mo">${MONTHS[month]} ${year}</div><div class="cpill" style="background:${cc}">${t.category||''}</div></div><div class="fmtpill"><div class="fmtdot"></div>${s2.format||''}</div></div><div class="r-title">${t.main_title||''}</div><div class="r-angle">${t.korean_angle||''}</div><div class="src-chip">소스: ${t.source_name||''}</div><div class="sec"><div class="sec-l">1ST — Small Talk</div><div class="sec-line"></div></div>${(s1.icebreakers||s1.small_talk||[]).map((q,i)=>`<div class="sq"><span class="sq-q">Q${i+1}</span><span>${q}</span></div>`).join('')}<div class="sec" style="margin-top:10px"><div class="sec-l">Spark Words — ${s1.spark_title||''}</div><div class="sec-line"></div></div><div class="bingo" style="grid-template-columns:repeat(3,1fr);gap:3px">${(s1.spark_words||[]).map(w=>`<div class="bc" style="font-size:10px;padding:7px 4px;letter-spacing:.5px">${w}</div>`).join('')}</div><div class="sec"><div class="sec-l">2ND — ${s2.format||''}</div><div class="sec-line"></div></div><div style="font-size:12px;font-weight:600;margin-bottom:4px">${s2.title||''} <span style="font-size:10px;color:var(--muted);font-weight:400">${s2.subtitle_kr||''}</span></div><div class="scen-box">${s2.scenario||''}</div><div style="font-size:9px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:5px">Useful Expressions</div>${(s2.expressions||[]).map(e=>`<div class="expr">${e}</div>`).join('')}</div><div class="r-actions"><button class="btn-dl" onclick="window._tbPDF(${selected})">↓  A4 PDF 인쇄 / 다운로드</button><div class="btn-row"><button class="btn-s" onclick="window._tbGen(${selected})" ${loading?'disabled':''}>↺ 재생성</button><button class="btn-s" onclick="window._tbDel(${selected})">✕ 삭제</button></div></div>`;
+  const fObj = getFormats().find(x=>x.name === s2.format);
+  const krFmt = (fObj && fObj.desc) ? fObj.desc : (KR_FMT_GUIDE[s2.format]||'주제에 맞게 자유롭게 대화하세요!');
+  panel.innerHTML=`<div class="r-body">
+    <div class="date-row"><div class="date-big">${String(selected).padStart(2,'0')}</div><div style="display:flex;flex-direction:column;gap:3px"><div class="date-mo">${MONTHS[month]} ${year}</div><div class="cpill" style="background:${cc}">${t.category||''}</div></div><div class="fmtpill"><div class="fmtdot"></div>${s2.format||''}</div></div>
+    <div class="r-title" contenteditable="true" onblur="window._tbEdit(${selected},'main_title',this.innerText)">${t.main_title||''}</div>
+    <div class="r-angle" contenteditable="true" onblur="window._tbEdit(${selected},'korean_angle',this.innerText)">${t.korean_angle||''}</div>
+    <div class="sec"><div class="sec-l">1ST — Ice Breaking</div><div class="sec-line"></div></div>
+    ${(s1.icebreakers||[]).map((q,i)=>`<div class="sq"><span class="sq-q">Q${i+1}</span><span contenteditable="true" onblur="window._tbEdit(${selected},'s1.ib.${i}',this.innerText)">${q}</span></div>`).join('')}
+    <div class="sec" style="margin-top:10px"><div class="sec-l">Spark Words — ${s1.spark_title||''}</div><div class="sec-line"></div></div>
+    <div class="bingo" style="grid-template-columns:repeat(3,1fr);gap:4px">
+      ${(s1.spark_words||[]).map((w,i)=>{
+        const en = typeof w === 'object' ? w.en : w;
+        const kr = typeof w === 'object' ? w.kr : '';
+        return `
+        <div class="bc" style="font-size:10px; padding:8px 4px; border:1px solid ${kr?'var(--border-md)':'var(--border)'}; display:flex; flex-direction:column; gap:2px; height:50px; justify-content:center; background:${kr?'#fff':'var(--surf)'}">
+          <div contenteditable="true" onblur="window._tbEdit(${selected},'s1.sw.en.${i}',this.innerText)" style="font-weight:800; color:var(--text)">${en}</div>
+          ${kr ? `<div contenteditable="true" onblur="window._tbEdit(${selected},'s1.sw.kr.${i}',this.innerText)" style="font-size:8px; color:var(--muted); font-weight:400">${kr}</div>` : ''}
+        </div>`;
+      }).join('')}
+    </div>
+    
+    <div class="sec"><div class="sec-l">2ND — ${s2.format||''}</div><div class="sec-line"></div></div>
+    
+    <!-- 한국어 룰 설명 (추가됨) -->
+    <div style="background:#FFFDF5; border:1px solid #F1EACB; border-radius:8px; padding:10px; margin-bottom:12px;">
+      <div style="font-size:10.5px; font-weight:800; color:#B48A00; margin-bottom:3px; letter-spacing:0.5px">💡 HOW TO PLAY</div>
+      <div style="font-size:11px; color:#555; line-height:1.5">${krFmt}</div>
+    </div>
+    
+    <div style="font-size:12px;font-weight:600;margin-bottom:4px">${s2.title||''} <span style="font-size:10px;color:var(--muted);font-weight:400">${s2.subtitle_kr||''}</span></div>
+    <div class="scen-box" contenteditable="true" onblur="window._tbEdit(${selected},'s2.scen',this.innerText)">${t.session2?.scenario||''}</div>
+    
+    <!-- 어휘 섹션 아코디언 (접어두기) -->
+    <details style="background:#F8F9FA; border:1px solid #EAEAEA; border-radius:8px; padding:10px 12px; margin-bottom:10px; cursor:pointer">
+      <summary style="font-size:11px; font-weight:700; color:#333; list-style:none; display:flex; justify-content:space-between; align-items:center;">
+        <span>🔥 찐 원어민 어휘 (Nutritious Expressions)</span>
+        <span style="font-size:9px; color:#888;">클릭해서 보기 ▼</span>
+      </summary>
+      <div style="margin-top:10px; padding-top:10px; border-top:1px dashed #DDD; display:flex; flex-direction:column; gap:8px;">
+        ${(s2.expressions||[]).map((e,i)=>{
+          const en = typeof e === 'object' ? e.en : e;
+          const kr = typeof e === 'object' ? e.kr : '';
+          return `
+          <div style="font-size:11px; line-height:1.45; color:#444;">
+            <div contenteditable="true" onblur="window._tbEdit(${selected},'s2.ex.en.${i}',this.innerText)" style="font-weight:700">• ${en}</div>
+            ${kr ? `<div contenteditable="true" onblur="window._tbEdit(${selected},'s2.ex.kr.${i}',this.innerText)" style="font-size:10px; color:#888; margin-left:10px">${kr}</div>` : ''}
+          </div>`;
+        }).join('')}
+      </div>
+    </details>
+    
+    </div><div class="r-actions">
+    <button class="btn-dl" onclick="window._tbPDF(${selected})">↓  A4 PDF 인쇄 / 다운로드</button>
+    
+    <div style="margin-top:12px; background:var(--surf); padding:10px; border-radius:10px; border:1px solid var(--border)">
+      <div style="font-size:9px; font-weight:800; color:var(--muted); text-transform:uppercase; margin-bottom:8px; letter-spacing:0.5px">⚡ 어휘 레벨 맞춤 교체 (AI)</div>
+      <div style="display:flex; gap:4px">
+        <button class="btn-s" onclick="lowerVocabLevel(${selected}, 'Beginner')" style="flex:1; background:#22c55e; color:#fff; border:none">🟢 초급</button>
+        <button class="btn-s" onclick="lowerVocabLevel(${selected}, 'Intermediate')" style="flex:1; background:#eab308; color:#fff; border:none">🟡 중급</button>
+        <button class="btn-s" onclick="lowerVocabLevel(${selected}, 'Advanced')" style="flex:1; background:#ef4444; color:#fff; border:none">🔴 고급</button>
+      </div>
+    </div>
+
+    <div class="btn-row" style="margin-top:10px">
+      <select id="regen-fmt" style="flex:1; padding:8px; border-radius:8px; border:1px solid #EAEAEA; font-family:inherit; font-size:11px; font-weight:700; outline:none; cursor:pointer; background:#F8F9FA; color:#333;" ${loading?'disabled':''}>
+        <option value="">🎲 랜덤 포맷</option>
+        ${getFormats().filter(f=>f.on).map(f=>`<option value="${f.name}">${f.name}</option>`).join('')}
+      </select>
+      <button class="btn-s" onclick="window._tbGen(${selected})" ${loading?'disabled':''} style="flex:1">↺ 전체 재생성</button>
+      <button class="btn-s" onclick="window._tbDel(${selected})" style="flex:0.6;background:#fff;border:1px solid #EAEAEA;color:#888">✕ 삭제</button>
+    </div></div>`;
 }
 
 function renderSettings(){
   const fmts=getFormats(),srcs=getSources();
   document.getElementById('fmt-cnt-badge').textContent=fmts.filter(f=>f.on).length+'/'+fmts.length;
   document.getElementById('src-cnt-badge').textContent=srcs.filter(s=>s.on).length+'/'+srcs.length;
+  updateCrawlerBadge();
+  updateSrcStatus();
+  const _cInp2=document.getElementById('crawler-url-inp');
+  if(_cInp2&&getCrawlerUrl()&&!_cInp2.value) _cInp2.value=getCrawlerUrl();
   const fmtList=document.getElementById('fmt-list');
   fmtList.innerHTML=fmts.map(f=>`<div class="item-row"><div style="flex:1;min-width:0"><div class="item-label">${f.name}</div>${f.desc?`<div class="item-sub">${f.desc}</div>`:''}</div><button class="item-tog ${f.on?'on':''}" data-tog="${f.id}">${f.on?'●':'○'}</button><button class="item-del" data-df="${f.id}">✕</button></div>`).join('');
   fmtList.querySelectorAll('[data-tog]').forEach(btn=>btn.onclick=()=>{const f=getFormats().map(f=>f.id===btn.dataset.tog?{...f,on:!f.on}:f);saveFormats(f);renderSettings()});
@@ -691,17 +1236,286 @@ function renderSettings(){
   document.getElementById('api-key-inp').value=getApiKey()?'••••••••••••••••':'';
 }
 
+function migrateAllData(){
+  const tops = getTopics();
+  let count = 0;
+  for(let k in tops){
+    const t = tops[k];
+    let changed = false;
+    // Spark Words 변환
+    if(t.session1 && t.session1.spark_words){
+      t.session1.spark_words = t.session1.spark_words.map(w => {
+        if(typeof w === 'string') { changed = true; return {en: w, kr: ''}; }
+        return w;
+      });
+    }
+    // Expressions 변환
+    if(t.session2 && t.session2.expressions){
+      t.session2.expressions = t.session2.expressions.map(e => {
+        if(typeof e === 'string') { changed = true; return {en: e, kr: ''}; }
+        return e;
+      });
+    }
+    if(changed) count++;
+  }
+  if(count > 0){
+    saveTopics(tops);
+    renderCal(); renderRight();
+    showToast(`${count}개의 토픽 구조를 최적화했습니다!`);
+  } else {
+    showToast('이미 모든 토픽이 최적화된 상태입니다.');
+  }
+}
+
 function updateNavKey(){
   const k=getApiKey();
   document.getElementById('key-dot').className='key-dot'+(k?' on':'');
   document.getElementById('key-lbl').textContent=k?'API 키 등록됨':'API 키 입력';
 }
 
-window._tbGen=d=>generateTopic(d);
+window._tbGen=d=>{
+  const s=document.getElementById('regen-fmt');
+  generateTopic(d, s && s.value ? s.value : undefined);
+};
+window._tbEdit=(d,path,val)=>{
+  const tops=getTopics();const k=topicKey(d);if(!tops[k])return;
+  const t=tops[k];
+  if(path==='main_title')t.main_title=val;
+  if(path==='korean_angle')t.korean_angle=val;
+  if(path==='s2.scen')t.session2.scenario=val;
+  if(path.startsWith('s1.ib.')){const idx=parseInt(path.split('.')[2]);t.session1.icebreakers[idx]=val;}
+  if(path.startsWith('s1.sw.')){
+    const parts=path.split('.'); const lang=parts[2]; const idx=parseInt(parts[3]);
+    if(typeof t.session1.spark_words[idx] !== 'object') t.session1.spark_words[idx] = {en:t.session1.spark_words[idx], kr:''};
+    t.session1.spark_words[idx][lang]=val;
+  }
+  if(path.startsWith('s2.ex.')){
+    const parts=path.split('.'); const lang=parts[2]; const idx=parseInt(parts[3]);
+    if(typeof t.session2.expressions[idx] !== 'object') t.session2.expressions[idx] = {en:t.session2.expressions[idx], kr:''};
+    t.session2.expressions[idx][lang]=val.replace(/^•\s*/,'');
+  }
+  saveTopics(tops);renderCal();showToast('수정사항 저장됨');
+};
+window._tbSetLv=l=>{saveLevel(l);renderRight();showToast(`난이도가 ${l}로 설정되었습니다.`)};
 window._tbDel=d=>{if(!confirm('삭제?'))return;const t=getTopics();delete t[topicKey(d)];saveTopics(t);renderCal();renderRight();showToast('삭제됨')};
 window._tbPDF=d=>downloadPDF(d);
 
+async function aiUpdateFormats(){
+  const apiKey=getApiKey();
+  if(!apiKey){showToast('API 키를 먼저 입력해주세요');return;}
+  const btn = document.getElementById('ai-fmt-btn');
+  btn.disabled = true; btn.textContent = '생성 중...';
+  try {
+    const prompt = `Invent 3 completely new, highly engaging networking conversation/activity formats for Korean 20-30s. Similar to Mafia Game, Hot Seat, Speed Debate. Return ONLY a JSON array. Format: [{ "name": "English Name", "desc": "직관적이고 찰진 한국어 룰 설명 (1-2문장, How to play)" }]`;
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1000,messages:[{role:'user',content:prompt}]})
+    });
+    if(!res.ok) throw new Error('API Error');
+    const raw=(await res.json()).content[0].text.trim().replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
+    const newFmts = JSON.parse(raw);
+    let fmts = getFormats(), turnedOff = 0;
+    for(let i=fmts.length-1; i>=0; i--){ if(fmts[i].on){ fmts[i].on=false; turnedOff++; } if(turnedOff>=3) break; }
+    newFmts.forEach(f => fmts.unshift({id:'f'+Date.now()+Math.floor(Math.random()*100), name:f.name, desc:f.desc, on:true}));
+    saveFormats(fmts); renderSettings(); showToast(`신규 액티비티 ${newFmts.length}개 추가 및 기존 3개 비활성화!`);
+  } catch(e){ console.error(e); showToast('오류 발생: '+e.message); } finally { btn.disabled = false; btn.textContent = '🤖 AI 신규 액티비티 생성'; }
+}
+
+async function lowerVocabLevel(day, level){
+  const apiKey=getApiKey();
+  if(!apiKey){showToast('API 키가 필요합니다'); return;}
+  const tops=getTopics(); const k=topicKey(day); const t=tops[k];
+  if(!t) return;
+  
+  showToast(`${level} 수준으로 어휘를 생성 중입니다...`);
+  
+  const levelPrompt = level === 'Beginner' ? 'EASY (A2-B1 level), simple daily words, no hard idioms.' : 
+                    level === 'Advanced' ? 'ADVANCED (C1 level), sophisticated vocabulary, complex nuances.' : 
+                    'NATURAL INTERMEDIATE (B2 level), common idioms, relatable slang.';
+
+  const prompt = `Topic: "${t.main_title}"\nScenario: "${t.session2?.scenario || ''}"\n\nTask: Keep the topic but REPLACE the vocabulary (Spark Words & Expressions) to match ${levelPrompt}. Also provide Korean translations for each.\n\nReturn ONLY raw JSON:\n{\n  "spark_words": [\n    {"en":"Word1","kr":"뜻1"},\n    {"en":"Word2","kr":"뜻2"},\n    {"en":"Word3","kr":"뜻3"},\n    {"en":"Word4","kr":"뜻4"},\n    {"en":"Word5","kr":"뜻5"},\n    {"en":"Word6","kr":"뜻6"}\n  ],\n  "expressions": [\n    {"en":"Exp1","kr":"뜻1"},\n    {"en":"Exp2","kr":"뜻2"},\n    {"en":"Exp3","kr":"뜻3"},\n    {"en":"Exp4","kr":"뜻4"},\n    {"en":"Exp5","kr":"뜻5"},\n    {"en":"Exp6","kr":"뜻6"}\n  ]\n}`;
+
+  try {
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST', headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1000,messages:[{role:'user',content:prompt}]})
+    });
+    if(!res.ok) throw new Error('API Error');
+    const raw=(await res.json()).content[0].text.trim().replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
+    const result = JSON.parse(raw);
+    
+    t.session1.spark_words = result.spark_words;
+    t.session2.expressions = result.expressions;
+    
+    saveTopics(tops);
+    renderRight();
+    showToast(`${level} 수준 어휘로 교체되었습니다! ✓`);
+  } catch(e){
+    console.error(e);
+    showToast('오류 발생: '+e.message);
+  }
+}
+
+async function aiUpdateSources(){
+  const apiKey=getApiKey();
+  if(!apiKey){showToast('API 키를 먼저 입력해주세요');return;}
+  const btn = document.getElementById('ai-src-btn');
+  btn.disabled = true; btn.textContent = '가져오는 중...';
+  try {
+    const prompt = `Korean 20-30s English networking club source ideas. Invent 5 completely fresh, highly relatable, modern trending topics/angles (e.g. recent dating trends, office life annoyances, money saving memes). Return ONLY a JSON array. Format: [{ "name": "Short Name (e.g. 탕후루 다이어트)", "angle": "Specific angle to debate (e.g. 식비 절약하려고 삼각김밥 먹으면서 탕후루는 4천원 주고 사먹는 심리)" }]`;
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1000,messages:[{role:'user',content:prompt}]})
+    });
+    if(!res.ok) throw new Error('API Error');
+    const raw=(await res.json()).content[0].text.trim().replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
+    const newSrcs = JSON.parse(raw);
+    let srcs = getSources(), turnedOff = 0;
+    for(let i=srcs.length-1; i>=0; i--){ if(srcs[i].on){ srcs[i].on=false; turnedOff++; } if(turnedOff>=5) break; }
+    newSrcs.forEach(s => srcs.unshift({id:'s'+Date.now()+Math.floor(Math.random()*100), name:s.name, angle:s.angle, on:true}));
+    saveSources(srcs); renderSettings(); showToast(`최신 소스 ${newSrcs.length}개 추가 및 기존 5개 비활성화!`);
+  } catch(e){ console.error(e); showToast('오류 발생: '+e.message); } finally { btn.disabled = false; btn.textContent = '🤖 AI 최신 트렌드 소스 수집'; }
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   GITHUB GIST SYNC
+   ═══════════════════════════════════════════════════════ */
+function getGistToken(){ return localStorage.getItem('tb_gist_token')||''; }
+function saveGistToken(t){ localStorage.setItem('tb_gist_token',t); }
+function getGistId(){ return localStorage.getItem('tb_gist_id')||''; }
+function saveGistId(id){ localStorage.setItem('tb_gist_id',id); }
+
+function updateSyncStatus(){
+  const token=getGistToken(), id=getGistId();
+  const dot=document.getElementById('sync-dot');
+  const lbl=document.getElementById('sync-lbl');
+  const badge=document.getElementById('gist-status-badge');
+  if(!dot||!lbl) return;
+  if(token && id){
+    dot.className='key-dot on';
+    lbl.textContent='Gist 연결됨';
+    if(badge){ badge.textContent='연결됨'; badge.style.background='#1a7f37'; }
+  } else if(token){
+    dot.className='key-dot';
+    dot.style.background='#f59e0b';
+    lbl.textContent='토큰만 등록';
+    if(badge){ badge.textContent='ID 없음'; badge.style.background='#f59e0b'; }
+  } else {
+    dot.className='key-dot';
+    lbl.textContent='Gist 미연결';
+    if(badge){ badge.textContent='미연결'; badge.style.background='#555'; }
+  }
+}
+
+async function gistPush(){
+  var _iv=(document.getElementById('gist-id-inp')||{}).value||'';
+  var _tv=(document.getElementById('gist-token-inp')||{}).value||'';
+  if(_iv)saveGistId(_iv);
+  if(_tv&&!_tv.startsWith('•'))saveGistToken(_tv);
+  const token=getGistToken();
+  if(!token){showToast('GitHub 토큰을 먼저 입력해주세요');return;}
+  const topics=getTopics();
+  const content=JSON.stringify(topics,null,2);
+  const gistId=getGistId();
+
+  showToast('저장 중...');
+  try{
+    let res, data;
+    if(gistId){
+      /* PATCH — update existing gist */
+      res=await fetch('https://api.github.com/gists/'+gistId,{
+        method:'PATCH',
+        headers:{'Authorization':'token '+token,'Content-Type':'application/json','Accept':'application/vnd.github+json'},
+        body:JSON.stringify({files:{'thebox-topics.json':{content:content}}})
+      });
+    } else {
+      /* POST — create new gist */
+      res=await fetch('https://api.github.com/gists',{
+        method:'POST',
+        headers:{'Authorization':'token '+token,'Content-Type':'application/json','Accept':'application/vnd.github+json'},
+        body:JSON.stringify({
+          description:'TheBox English Networking — Topic Data',
+          public:false,
+          files:{'thebox-topics.json':{content:content}}
+        })
+      });
+    }
+    if(!res.ok){ const e=await res.json(); throw new Error(e.message||'GitHub API error'); }
+    data=await res.json();
+    if(!gistId){
+      saveGistId(data.id);
+      /* update the ID field in settings if visible */
+      const inp=document.getElementById('gist-id-inp');
+      if(inp) inp.value=data.id;
+      showToast('✓ 새 Gist 생성됨! ID: '+data.id.slice(0,8)+'...');
+    } else {
+      showToast('✓ Gist 저장 완료 ('+new Date().toLocaleTimeString()+')');
+    }
+    updateSyncStatus();
+  }catch(e){
+    console.error(e);
+    showToast('❌ 저장 실패: '+e.message.slice(0,50));
+  }
+}
+
+async function gistPull(){
+  var _iv=(document.getElementById('gist-id-inp')||{}).value||'';
+  var _tv=(document.getElementById('gist-token-inp')||{}).value||'';
+  if(_iv)saveGistId(_iv);
+  if(_tv&&!_tv.startsWith('•'))saveGistToken(_tv);
+  const token=getGistToken(),id=getGistId();
+  if(!token||!id){showToast('토큰과 Gist ID를 모두 입력해주세요');return;}
+  showToast('불러오는 중...');
+  try{
+    const res=await fetch('https://api.github.com/gists/'+id,{
+      headers:{'Authorization':'token '+token,'Accept':'application/vnd.github+json'}
+    });
+    if(!res.ok){ const e=await res.json(); throw new Error(e.message||'GitHub API error'); }
+    const data=await res.json();
+    const fileContent=data.files['thebox-topics.json']?.content;
+    if(!fileContent) throw new Error('thebox-topics.json 파일을 찾을 수 없어요');
+    const topics=JSON.parse(fileContent);
+    localStorage.setItem('tb_topics_v5',JSON.stringify(topics));
+    renderCal(); renderRight();
+    showToast('✓ 불러오기 완료! '+Object.keys(topics).length+'개 토픽 로드됨');
+    updateSyncStatus();
+  }catch(e){
+    console.error(e);
+    showToast('❌ 불러오기 실패: '+e.message.slice(0,50));
+  }
+}
+
+/* auto-push built into saveTopics */
+
+/* Auto-pull on page load if connected */
+async function autoSyncOnLoad(){
+  if(getGistToken()&&getGistId()){
+    updateSyncStatus();
+    showToast('Gist에서 최신 데이터 확인 중...');
+    try{
+      const res=await fetch('https://api.github.com/gists/'+getGistId(),{
+        headers:{'Authorization':'token '+getGistToken(),'Accept':'application/vnd.github+json'}
+      });
+      if(!res.ok) return;
+      const data=await res.json();
+      const fileContent=data.files['thebox-topics.json']?.content;
+      if(!fileContent) return;
+      const remoteTops=JSON.parse(fileContent);
+      const localTops=JSON.parse(localStorage.getItem('tb_topics_v5')||'{}');
+      const remoteCount=Object.keys(remoteTops).length;
+      const localCount=Object.keys(localTops).length;
+      /* merge: remote wins for any key that's in remote */
+      const merged={...localTops,...remoteTops};
+      localStorage.setItem('tb_topics_v5',JSON.stringify(merged));
+      renderCal(); renderRight();
+      showToast('✓ 동기화 완료 ('+remoteCount+'개 토픽)');
+    }catch(e){ console.warn('Auto-sync failed:',e); }
+  }
+}
+
 document.addEventListener('DOMContentLoaded',()=>{
+
   const now=new Date();year=now.getFullYear();month=now.getMonth();
 
   document.querySelectorAll('.nav-tab').forEach(tab=>tab.addEventListener('click',()=>{
@@ -758,8 +1572,220 @@ document.addEventListener('DOMContentLoaded',()=>{
     document.getElementById('api-key-inp').value='••••••••••••••••';
   });
 
-  updateNavKey();renderCal();renderRight();
+  updateNavKey();updateSyncStatus();updateCrawlerBadge();renderCal();renderRight();
+
+  // 크롤러 이벤트
+  const _cSave=document.getElementById('crawler-save-btn');
+  if(_cSave) _cSave.addEventListener('click',function(){
+    const u=document.getElementById('crawler-url-inp').value.trim();
+    if(!u){showToast('Worker URL을 입력해주세요');return;}
+    saveCrawlerUrl(u);updateCrawlerBadge();
+    updateSrcStatus();
+    showToast('크롤러 URL 저장됨 ✓');
+  });
+  const _cTest=document.getElementById('crawler-test-btn');
+  if(_cTest) _cTest.addEventListener('click',testCrawler);
+  const _cInp=document.getElementById('crawler-url-inp');
+  if(_cInp&&getCrawlerUrl()) _cInp.value=getCrawlerUrl();
+
+  /* Gist token save */
+  document.getElementById('gist-token-save').addEventListener('click',()=>{
+    const t=document.getElementById('gist-token-inp').value.trim();
+    if(!t||t.startsWith('•'))return;
+    saveGistToken(t);
+    document.getElementById('gist-token-inp').value='••••••••••••••••';
+    const existingId=document.getElementById('gist-id-inp').value.trim();
+    if(existingId) saveGistId(existingId);
+    updateSyncStatus();
+    showToast('토큰 저장됨');
+  });
+
+  /* Gist ID input save on blur */
+  document.getElementById('gist-id-inp').addEventListener('change',()=>{
+    const id=document.getElementById('gist-id-inp').value.trim();
+    if(id){ saveGistId(id); updateSyncStatus(); showToast('Gist ID 저장됨'); }
+  });
+
+  /* Pull button in settings */
+  document.getElementById('gist-pull-btn').addEventListener('click',function(){
+    var iv=document.getElementById('gist-id-inp').value.trim();
+    var tv=document.getElementById('gist-token-inp').value.trim();
+    if(iv)saveGistId(iv);
+    if(tv&&!tv.startsWith('•'))saveGistToken(tv);
+    gistPull();
+  });
+
+  /* Push now */
+  document.getElementById('gist-push-btn').addEventListener('click',function(){
+    var iv=document.getElementById('gist-id-inp').value.trim();
+    var tv=document.getElementById('gist-token-inp').value.trim();
+    if(iv)saveGistId(iv);
+    if(tv&&!tv.startsWith('•'))saveGistToken(tv);
+    gistPush();
+  });
+
+  /* Pull now */
+  document.getElementById('gist-pull-now-btn').addEventListener('click',function(){
+    var iv=document.getElementById('gist-id-inp').value.trim();
+    var tv=document.getElementById('gist-token-inp').value.trim();
+    if(iv)saveGistId(iv);
+    if(tv&&!tv.startsWith('•'))saveGistToken(tv);
+    gistPull();
+  });
+
+  /* Sync status button in nav — click to open settings */
+  document.getElementById('sync-btn').addEventListener('click',()=>{
+    document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.querySelector('[data-view="settings"]').classList.add('active');
+    document.getElementById('view-settings').classList.add('active');
+    renderSettings();
+    setTimeout(()=>{
+      const el=document.getElementById('gist-token-inp');
+      if(el) el.scrollIntoView({behavior:'smooth',block:'center'});
+    },200);
+  });
+
+  /* Pre-fill gist fields if already saved */
+  const savedToken=getGistToken();
+  const savedId=getGistId();
+  if(savedToken) document.getElementById('gist-token-inp').value='••••••••••••••••';
+  if(savedId) document.getElementById('gist-id-inp').value=savedId;
+
+  /* Auto-pull on load */
+  autoSyncOnLoad();
 });
+
+/* ════════════════════════════════
+   🌐 실시간 트렌드 크롤러
+   ════════════════════════════════ */
+function getCrawlerUrl(){ return localStorage.getItem('tb_crawler_url')||''; }
+function saveCrawlerUrl(u){ localStorage.setItem('tb_crawler_url',u); }
+
+function updateCrawlerBadge(){
+  const badge=document.getElementById('crawler-badge');
+  if(!badge) return;
+  const url=getCrawlerUrl();
+  badge.textContent=url?'연결됨':'미설정';
+  badge.style.background=url?'#1a7f37':'#555';
+}
+
+async function fetchLiveTrends(){
+  const url=getCrawlerUrl();
+  if(!url) return null;
+  try{
+    const res=await fetch(url+'?source=all',{signal:AbortSignal.timeout(8000)});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    return (data.ok&&data.items?.length)?data.items:null;
+  }catch(e){ console.warn('크롤러 실패:',e.message); return null; }
+}
+
+async function testCrawler(){
+  const btn=document.getElementById('crawler-test-btn');
+  const preview=document.getElementById('crawler-preview');
+  const urlInp=document.getElementById('crawler-url-inp');
+  const url=(urlInp?urlInp.value.trim():'')||getCrawlerUrl();
+  if(!url){showToast('Worker URL을 먼저 입력해주세요');return;}
+  if(btn){btn.disabled=true;btn.textContent='테스트 중...';}
+  if(preview) preview.style.display='none';
+  try{
+    const res=await fetch(url+'?source=all',{signal:AbortSignal.timeout(10000)});
+    const data=await res.json();
+    if(data.ok&&data.items?.length){
+      if(preview){
+        preview.style.display='block';
+        preview.innerHTML=`<div style="font-weight:600;color:#1a7f37;margin-bottom:6px">✓ 연결 성공 — ${data.items.length}개 트렌드 수집</div>`
+          +data.items.slice(0,6).map(i=>`<div style="padding:2px 0;border-bottom:1px solid #eee"><span style="color:#cc0014;font-weight:600">[${i.source}]</span> ${i.title}</div>`).join('');
+      }
+      showToast(`✓ ${data.items.length}개 트렌드 수집 성공!`);
+    } else { throw new Error(data.error||'데이터 없음'); }
+  }catch(e){
+    if(preview){preview.style.display='block';preview.innerHTML=`<div style="color:#cc0014">✗ 실패: ${e.message}</div>`;}
+    showToast('연결 실패: '+e.message.slice(0,40));
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='🔍 연결 테스트';}
+  }
+}
+
+
+function updateSrcStatus(){
+  const bar=document.getElementById('src-status-bar');
+  const icon=document.getElementById('src-status-icon');
+  const txt=document.getElementById('src-status-text');
+  if(!bar||!icon||!txt) return;
+  if(getCrawlerUrl()){
+    bar.style.background='#f0fdf4';bar.style.border='1px solid #bbf7d0';
+    icon.textContent='🟢';
+    txt.textContent='크롤러 연결됨 — 실시간 트렌드가 우선 사용돼요. 이 목록은 크롤러 실패 시에만 작동합니다.';
+  } else {
+    bar.style.background='#fefce8';bar.style.border='1px solid #fef08a';
+    icon.textContent='🟡';
+    txt.textContent='크롤러 미연결 — 이 소스풀에서 랜덤 3개를 사용 중이에요.';
+  }
+}
+
+
+/* ════ Mobile JS ════ */
+(function(){
+  function isMob(){return window.innerWidth<=768;}
+  window.mobClose=function(){var rp=document.getElementById('right-p');if(rp){rp.classList.remove('open');document.body.style.overflow='';}};
+  window.mobOpen=function(){if(!isMob())return;var rp=document.getElementById('right-p');if(rp){rp.classList.add('open');document.body.style.overflow='hidden';}};
+  window.mobNav=function(view){
+    document.querySelectorAll('.nav-tab').forEach(function(t){t.classList.remove('active');});
+    document.querySelectorAll('.view').forEach(function(v){v.classList.remove('active');});
+    var tab=document.querySelector('[data-view="'+view+'"]');if(tab)tab.classList.add('active');
+    var el=document.getElementById('view-'+view);if(el)el.classList.add('active');
+    var ca=document.getElementById('mob-cal');var se=document.getElementById('mob-set');
+    if(ca)ca.classList.toggle('active',view==='calendar');
+    if(se)se.classList.toggle('active',view==='settings');
+    if(view==='settings'&&typeof renderSettings==='function')renderSettings();
+    mobClose();
+  };
+  document.querySelectorAll('.nav-tab').forEach(function(tab){
+    tab.addEventListener('click',function(){
+      var v=tab.dataset.view;
+      var ca=document.getElementById('mob-cal');var se=document.getElementById('mob-set');
+      if(ca)ca.classList.toggle('active',v==='calendar');
+      if(se)se.classList.toggle('active',v==='settings');
+    });
+  });
+  // 날짜 클릭 → 시트 오픈 (이벤트 위임)
+  document.addEventListener('click',function(e){
+    if(!isMob())return;
+    var dayEl=e.target.closest('.day[data-d]');if(!dayEl)return;
+    setTimeout(function(){
+      var rp=document.getElementById('right-p');
+      if(rp&&(rp.querySelector('.r-body')||rp.querySelector('.r-loading'))){mobOpen();}
+    },100);
+  });
+  // 스와이프 다운으로 닫기
+  var _sy=0;
+  document.addEventListener('touchstart',function(e){_sy=e.touches[0].clientY;},{passive:true});
+  document.addEventListener('touchend',function(e){
+    var rp=document.getElementById('right-p');
+    if(!rp||!rp.classList.contains('open'))return;
+    if(e.changedTouches[0].clientY-_sy>80)mobClose();
+  },{passive:true});
+  document.addEventListener('touchstart',function(e){
+    var rp=document.getElementById('right-p');
+    if(rp&&rp.classList.contains('open')&&!rp.contains(e.target))mobClose();
+  },{passive:true});
+})();
+
 </script>
+
+<div class="mob-spacer"></div>
+<div class="mob-bar" id="mob-bar">
+  <button class="mob-btn active" id="mob-cal" onclick="mobNav('calendar')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2.5"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    달력
+  </button>
+  <button class="mob-btn" id="mob-set" onclick="mobNav('settings')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    설정
+  </button>
+</div>
+
 </body>
 </html>
