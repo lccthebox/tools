@@ -671,6 +671,7 @@ body {
       <button class="hbtn no-print" id="btnAuto">⚡ 자동배치</button>
       <button class="hbtn no-print" onclick="printAttendance()">📄 출석부</button>
       <button class="hbtn no-print" onclick="printBoard()">📋 게시판</button>
+      <button class="hbtn no-print" onclick="window.open('https://lccthebox.github.io/tools/topics/','_blank')">🗒 토픽 인쇄</button>
       <button class="hbtn no-print" id="btnReset">↺ 초기화</button>
     </div>
     <div class="hbtns" id="holdingBtns" style="display:none;">
@@ -1160,8 +1161,9 @@ function toggleMemberNew(id) { setMemberNewDay(id, 1); } // 하위 호환
 const PRESETS = {
   '월': {
     '오전': [
-      { name: 'SINA반',  natives: ['SINA'] },
-      { name: 'MINGI반', natives: ['MINGI'] },
+      { name: 'SINA반',        natives: ['SINA'] },
+      { name: 'MINGI(CHOI)반', natives: ['MINGI'] },
+      { name: 'JEFF반',        natives: ['JEFF'] },
     ],
     '오후': [
       { name: 'YUMIN반', natives: ['YUMIN'] },
@@ -1173,8 +1175,9 @@ const PRESETS = {
   },
   '수': {
     '오전': [
-      { name: 'SINA반',  natives: ['SINA'] },
-      { name: 'MINGI반', natives: ['MINGI'] },
+      { name: 'SINA반',        natives: ['SINA'] },
+      { name: 'MINGI(CHOI)반', natives: ['MINGI'] },
+      { name: 'JEFF반',        natives: ['JEFF'] },
     ],
     '오후': [
       { name: 'YUMIN반', natives: ['YUMIN'] },
@@ -1214,13 +1217,11 @@ const PRESETS = {
   },
   '토일': {
     '오후': [
-      { name: 'LUCY&AMELIE반', natives: ['LUCY', 'AMELIE'] },
-      { name: 'YURIM반',       natives: ['YURIM'] },
-      { name: 'ARO반',         natives: ['ARO'] },
-      { name: 'JAY반',         natives: ['JAY'] },
-      { name: 'TYLER반',       natives: ['TYLER'] },
-      { name: 'YEYEON반',      natives: ['YEYEON'] },
-      { name: 'NINA반',        natives: ['NINA'] },
+      { name: 'YURIM & AMELIE반', natives: ['YURIM', 'AMELIE'] },
+      { name: 'YEYEON반',         natives: ['YEYEON'] },
+      { name: 'JAY반',            natives: ['JAY'] },
+      { name: 'TYLER반',          natives: ['TYLER'] },
+      { name: 'MINGI반',          natives: ['MINGI'] },
     ],
   },
 };
@@ -1366,6 +1367,15 @@ function addOneGroup() {
 }
 function removeGroup(gid) {
   groups = groups.filter(g=>g.id!==gid);
+  renderAll();
+}
+
+function moveGroup(gid, dir) {
+  const idx = groups.findIndex(g => g.id === gid);
+  if (idx < 0) return;
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= groups.length) return;
+  [groups[idx], groups[newIdx]] = [groups[newIdx], groups[idx]];
   renderAll();
 }
 
@@ -1570,7 +1580,30 @@ function renderGroups() {
       });
     }
 
-    head.appendChild(num); head.appendChild(nameWrap); head.appendChild(tBadgeWrap); head.appendChild(delBtn);
+    head.appendChild(num); head.appendChild(nameWrap); head.appendChild(tBadgeWrap);
+
+    // ↑↓ 순서 변경 버튼
+    const moveWrap = document.createElement('div');
+    moveWrap.className = 'no-print';
+    moveWrap.style.cssText = 'display:flex;flex-direction:column;gap:1px;flex-shrink:0;';
+    const btnUp = document.createElement('button');
+    btnUp.textContent = '▲';
+    btnUp.title = '위로';
+    btnUp.style.cssText = 'background:none;border:none;cursor:pointer;font-size:9px;line-height:1;padding:1px 3px;color:#AAAAAA;transition:color .1s;';
+    btnUp.onmouseenter = () => btnUp.style.color = '#333333';
+    btnUp.onmouseleave = () => btnUp.style.color = '#AAAAAA';
+    btnUp.addEventListener('click', () => moveGroup(g.id, -1));
+    const btnDn = document.createElement('button');
+    btnDn.textContent = '▼';
+    btnDn.title = '아래로';
+    btnDn.style.cssText = 'background:none;border:none;cursor:pointer;font-size:9px;line-height:1;padding:1px 3px;color:#AAAAAA;transition:color .1s;';
+    btnDn.onmouseenter = () => btnDn.style.color = '#333333';
+    btnDn.onmouseleave = () => btnDn.style.color = '#AAAAAA';
+    btnDn.addEventListener('click', () => moveGroup(g.id, +1));
+    moveWrap.appendChild(btnUp); moveWrap.appendChild(btnDn);
+
+    head.appendChild(moveWrap);
+    head.appendChild(delBtn);
     card.appendChild(head);
 
     /* ── 테이블 섹션 ── */
