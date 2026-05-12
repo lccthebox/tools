@@ -4589,7 +4589,7 @@ function renderClassSheet(){
       <td style="font-family:var(--font-mono);font-size:12px">${fmtDate(pri.startDate)}</td>
       <td style="text-align:center;font-family:var(--font-mono);font-size:12px">${pri.months||1}</td>
       <td style="font-family:var(--font-mono);font-size:12px">${fmtDate(end)}${['재원','신규','연장','복귀'].includes(s.status)?`<span class="dchip" style="background:${dBg};color:${dCol};margin-left:4px">${dl<=0?'만료':'D-'+dl}</span>`:''}</td>
-      <td style="text-align:center">${pBadge(payStatus)}</td>
+      <td style="text-align:center">${pBadge(payStatus, s)}</td>
       <td style="text-align:center">${sBadge(s.status)}</td>
       <td style="font-size:12px;cursor:pointer" onclick="event.stopPropagation();openQuickNote('${s.id}')">${noteDisplay}</td>
     </tr>`;
@@ -4779,7 +4779,7 @@ function sheetTableHTML(list){
       <td style="font-family:var(--font-mono);font-size:12px">${fmtDate(pri.startDate)}</td>
       <td style="font-family:var(--font-mono);font-size:12px">${fmtDate(end)}${expB}</td>
       <td onclick="event.stopPropagation()">${statusCell(s,isTeacher())}</td>
-      <td>${pBadge(payStatus)}</td>
+      <td>${pBadge(payStatus, s)}</td>
       <td style="font-size:11px;color:var(--text3);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${noteText}">${noteText||''}</td>
       <td onclick="event.stopPropagation()" style="text-align:center"><button onclick="quickPayModal('${s.id}')" style="background:var(--accent);color:#fff;border:none;border-radius:99px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:'Noto Sans KR',sans-serif">💳 납입</button></td>
     </tr>`;
@@ -4929,14 +4929,21 @@ function sBadge(s){
   const color=s==='미연장'?'var(--red)':s==='홀딩'?'var(--amber)':s==='복귀'||s==='복귀예정'?'var(--teal)':s==='환불'?'var(--red)':'var(--text2)';
   return`<span style="font-size:12px;color:${color};font-weight:500">${txt}</span>`;
 }
-function pBadge(p){
+function pBadge(p, s){
   const m={
     '완료':'b-green',
     '미납':'b-red',
     '대기':'b-amber',
+    '선금':'b-amber',
     '연장확정':'b-blue',
     '결제예정':'b-indigo'
   };
+  if(p==='선금' && s){
+    const pri=getPrimary(s);
+    const remain=(pri.amount||0)-(pri.prepayAmount||0);
+    const remainStr=remain>0?`<br><span style="font-size:9px;color:var(--red);font-weight:700">잔금 ${remain.toLocaleString()}원</span>`:'';
+    return `<span class="badge b-amber">선금</span>${remainStr}`;
+  }
   return `<span class="badge ${m[p]||'b-gray'}">${p}</span>`;
 }
 
@@ -6018,11 +6025,28 @@ function stuForm(s){
           <input class="finput ce-amount" data-idx="${idx}" type="text" inputmode="numeric" value="${(cl.amount||0).toLocaleString()}" placeholder="0" oninput="moneyAutoFmt(this)">
         </div>
         <div class="fgroup"><label class="flabel">납부상태</label>
-          <select class="finput ce-pay" data-idx="${idx}">
+          <select class="finput ce-pay" data-idx="${idx}" onchange="onPayStatusChange(${idx}, this.value)">
             <option value="완료" ${cl.pay==='완료'?'selected':''}>납부완료</option>
+            <option value="선금" ${cl.pay==='선금'?'selected':''}>선금납부 (분할)</option>
             <option value="미납" ${cl.pay==='미납'?'selected':''}>미납</option>
             <option value="대기" ${cl.pay==='대기'?'selected':''}>대기</option>
           </select>
+        </div>
+        <div id="ce-prepay-wrap-${idx}" style="grid-column:1/-1;display:${cl.pay==='선금'?'grid':'none'};grid-template-columns:1fr 1fr 1fr;gap:8px;background:var(--amber-light);border:1px dashed var(--amber);border-radius:var(--r);padding:10px 12px;margin-bottom:4px">
+          <div class="fgroup"><label class="flabel" style="color:var(--amber)">선금액 💰</label>
+            <input class="finput ce-prepay-amount" data-idx="${idx}" type="text" inputmode="numeric"
+              value="${cl.prepayAmount?cl.prepayAmount.toLocaleString():''}" placeholder="0"
+              oninput="moneyAutoFmt(this);updateRemain(${idx})">
+          </div>
+          <div class="fgroup"><label class="flabel" style="color:var(--red)">잔금</label>
+            <input class="finput" id="ce-remain-${idx}" type="text" readonly
+              style="background:var(--bg3);color:var(--red);font-weight:700"
+              value="${cl.prepayAmount&&cl.amount?(cl.amount-cl.prepayAmount).toLocaleString()+'원':''}">
+          </div>
+          <div class="fgroup"><label class="flabel" style="color:var(--amber)">잔금 예정일</label>
+            <input class="finput ce-remain-date" data-idx="${idx}" type="date"
+              value="${cl.remainDate||''}">
+          </div>
         </div>
         <div class="fgroup full" style="grid-column:1/-1">
           <label class="flabel">납부방법 (복합결제 가능)</label>
@@ -6257,6 +6281,23 @@ function updateClassType(idx){
   if(label) label.textContent=isW4?'(1차 수업반)':'';
 }
 
+function onPayStatusChange(idx, val){
+  const wrap = document.getElementById('ce-prepay-wrap-'+idx);
+  if(wrap) wrap.style.display = val==='선금' ? 'grid' : 'none';
+}
+
+function updateRemain(idx){
+  const amountEl = document.querySelector('.ce-amount[data-idx="'+idx+'"]');
+  const prepayEl = document.querySelector('.ce-prepay-amount[data-idx="'+idx+'"]');
+  const remainEl = document.getElementById('ce-remain-'+idx);
+  if(!amountEl||!prepayEl||!remainEl) return;
+  const total = parseInt((amountEl.value||'0').replace(/,/g,''))||0;
+  const prepay = parseInt((prepayEl.value||'0').replace(/,/g,''))||0;
+  const remain = total - prepay;
+  remainEl.value = remain >= 0 ? remain.toLocaleString()+'원' : '⚠ 초과';
+  remainEl.style.color = remain < 0 ? 'var(--red)' : remain === 0 ? 'var(--teal)' : 'var(--amber)';
+}
+
 function getClassEntriesFromForm(){
   const entries=document.querySelectorAll('.class-entry');
   return [...entries].map(el=>{
@@ -6266,6 +6307,9 @@ function getClassEntriesFromForm(){
     const discountAmt=parseInt(el.querySelector(`.ce-discamt[data-idx="${idx}"]`)?.value)||0;
     const classType=el.querySelector(`.ce-classtype[data-idx="${idx}"]`)?.value||'w2';
     const classTime2=classType==='w4'?(el.querySelector(`.ce-classtime2[data-idx="${idx}"]`)?.value||''):'';
+    const pay=el.querySelector(`.ce-pay[data-idx="${idx}"]`)?.value||'대기';
+    const prepayAmount=pay==='선금'?(parseInt((el.querySelector(`.ce-prepay-amount[data-idx="${idx}"]`)?.value||'0').replace(/,/g,''))||0):0;
+    const remainDate=pay==='선금'?(el.querySelector(`.ce-remain-date[data-idx="${idx}"]`)?.value||''):'';
     return{
       teacher:el.querySelector(`.ce-teacher[data-idx="${idx}"]`)?.value||'',
       classTime:el.querySelector(`.ce-classtime[data-idx="${idx}"]`)?.value||'',
@@ -6275,7 +6319,7 @@ function getClassEntriesFromForm(){
       startDate:el.querySelector(`.ce-start[data-idx="${idx}"]`)?.value||'',
       months:parseInt(el.querySelector(`.ce-months[data-idx="${idx}"]`)?.value)||1,
       amount:parseInt((el.querySelector(`.ce-amount[data-idx="${idx}"]`)?.value||'0').replace(/,/g,''))||0,
-      pay:el.querySelector(`.ce-pay[data-idx="${idx}"]`)?.value||'대기',
+      pay, prepayAmount, remainDate,
       payMethods,discounts,discountAmt,
     };
   }).filter(c=>c.teacher&&c.classTime);
@@ -13743,9 +13787,9 @@ function handleExcelImport(input){
     const reader = new FileReader();
     reader.onload = function(e){
       try{
-        const wb = XLSX.read(e.target.result, {type:'array'});
-        const ws = wb.Sheets[wb.SheetNames[0]]; // 첫번째 시트
-        const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+        const wb = XLSX.read(e.target.result, {type:'array', cellDates:false});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:true});
 
         // 헤더 행(3행) 이후 데이터 (4행부터, 0-indexed: 3)
         // 컬럼: 이름(0),연락처(1),수강상태(2),비고(3),강사(4),수업유형(5),수업반1(6),수업반2(7),
@@ -13812,7 +13856,7 @@ function handleExcelImport(input){
           </div>
           <div style="overflow-x:auto">
           <table class="sheet-table" style="font-size:11px">
-            <thead><tr><th>#</th><th>이름</th><th>연락처</th><th>상태</th><th>강사 / 수업반</th><th>개월</th><th>금액</th><th>중복</th></tr></thead>
+            <thead><tr><th>#</th><th>이름</th><th>연락처</th><th>상태</th><th>강사 / 수업반</th><th>시작일</th><th>개월</th><th>금액</th><th>중복</th></tr></thead>
             <tbody>${parsed.map(function(s,i){
               const dup = existingSet.has(s.name+(s.phone||'').replace(/-/g,''));
               return '<tr style="'+(dup?'color:var(--text3);':'')+'">'+
@@ -13821,14 +13865,18 @@ function handleExcelImport(input){
                 '<td style="font-family:monospace">'+s.phone+'</td>'+
                 '<td><span style="font-size:10px;background:var(--accent-light);color:var(--accent);padding:1px 5px;border-radius:4px">'+s.status+'</span></td>'+
                 '<td>'+s.teacher+' / '+(s.classTime||'-')+'</td>'+
+                '<td style="font-family:monospace;font-size:11px">'+(s.startDate||'-')+'</td>'+
                 '<td>'+s.months+'개월</td>'+
                 '<td>'+(s.amount?s.amount.toLocaleString()+'원':'-')+'</td>'+
                 '<td>'+(dup?'<span style="color:var(--amber);font-size:10px">중복</span>':'')+'</td>'+
               '</tr>';
             }).join('')}</tbody>
           </table></div>
-          ${toAdd.length>0?`<button class="btn btn-primary" style="margin-top:14px" onclick="executeExcelImport(${JSON.stringify(toAdd).replace(/</g,'\\u003c')})">🚀 ${toAdd.length}명 임포트 실행</button>`:''}
+          ${toAdd.length>0?'<button class="btn btn-primary" style="margin-top:14px" onclick="executeExcelImport()">🚀 '+toAdd.length+'명 임포트 실행</button>':''}
         `;
+
+        // 전역 변수에 저장 (onclick에 JSON 직접 넣으면 깨짐)
+        window._excelImportData = toAdd;
 
         statusEl.style.borderLeftColor = 'var(--teal)';
         statusEl.textContent = `✅ 파일 파싱 완료 — ${parsed.length}명 발견 / 추가 가능 ${toAdd.length}명`;
@@ -13841,13 +13889,15 @@ function handleExcelImport(input){
   });
 }
 
-function executeExcelImport(students){
+function executeExcelImport(){
+  const students = window._excelImportData;
   if(!students||!students.length) return;
   if(!confirm(students.length+'명을 임포트하시겠습니까?')) return;
   pushUndo('엑셀 임포트');
   students.forEach(function(s){ S.students.push(s); });
   save('students');
   renderAll();
+  window._excelImportData = null;
   const statusEl = document.getElementById('excel-import-status');
   if(statusEl){
     statusEl.style.borderLeftColor = 'var(--teal)';
@@ -13860,8 +13910,16 @@ function executeExcelImport(students){
 
 // 날짜 정규화 (2024.01.15 → 2024-01-15)
 function normalizeDate(s){
-  if(!s||s==='-') return '';
-  s = s.trim().replace(/\./g,'-').replace(/\//g,'-').replace(/\s+/g,'');
+  if(s===null||s===undefined||s===''||s==='-') return '';
+  // 엑셀 날짜 시리얼 숫자 처리 (예: 46200 → 2026-05-04)
+  if(typeof s === 'number' || (typeof s === 'string' && /^\d{4,6}$/.test(s.trim()) && parseInt(s) > 1000)) {
+    const serial = parseInt(s);
+    if(serial > 40000 && serial < 60000) { // 엑셀 날짜 범위
+      const date = new Date(Date.UTC(1899, 11, 30) + serial * 86400000);
+      return date.getUTCFullYear()+'-'+String(date.getUTCMonth()+1).padStart(2,'0')+'-'+String(date.getUTCDate()).padStart(2,'0');
+    }
+  }
+  s = String(s).trim().replace(/\./g,'-').replace(/\//g,'-').replace(/\s+/g,'');
   s = s.replace(/-+/g,'-').replace(/^-|-$/g,'');
   if(/^\d{8}$/.test(s)) return s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8);
   var m = s.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
