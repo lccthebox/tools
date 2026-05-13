@@ -2132,15 +2132,15 @@ textarea.finput{resize:vertical;min-height:60px}
 </div>
 
 <script>
-// ══ storage 폴리필 (Antigravity 앱 전용 API → 일반 브라우저에서는 localStorage 사용) ══
+// ══ storage 폴리필 (일반 브라우저에서는 localStorage 사용) ══
 if(!window.storage){
   window.storage={
     get:function(key){
       try{
         const v=localStorage.getItem(key);
         if(v===null) return Promise.resolve(null);
+        return Promise.resolve({value:v});
       }catch(e){ return Promise.resolve(null); }
-      }catch(e){ return Promise.reject(e); }
     },
     set:function(key,val){
       try{localStorage.setItem(key,val);}catch(e){}
@@ -6165,7 +6165,7 @@ function stuFormTeacher(s){
       return Object.keys(info2.classes||{}).map(ct=>`<option value="${ct}" ${cl.classTime===ct?'selected':''}>[${t}] ${ct}</option>`).join('');
     }).join('');
     return`<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:10px 12px;margin-bottom:8px">
-      <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px">수업 ${i+1} — 현재: <span style="color:var(--accent)">${cl.teacher||''} / ${cl.classTime||'-'}${cl.classTime2?' + '+cl.classTime2:''}</span>${cl.classType==='w4'?'<span style="font-size:9px;background:var(--teal-light);color:var(--teal);padding:1px 5px;border-radius:4px;margin-left:4px;font-weight:700">주4회 연강</span>':cl.classType==='w3'?'<span style="font-size:9px;background:#eef2ff;color:#6366f1;padding:1px 5px;border-radius:4px;margin-left:4px;font-weight:700">주3회</span>':cl.classType==='w1'?'<span style="font-size:9px;background:#f3f4f6;color:#6b7280;padding:1px 5px;border-radius:4px;margin-left:4px;font-weight:700">주1회</span>':\'\'}</div>
+      <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px">수업 ${i+1} — 현재: <span style="color:var(--accent)">${cl.teacher||''} / ${cl.classTime||'-'}${cl.classTime2?' + '+cl.classTime2:''}</span>${cl.classType==='w4'?'<span style="font-size:9px;background:var(--teal-light);color:var(--teal);padding:1px 5px;border-radius:4px;margin-left:4px;font-weight:700">주4회 연강</span>':cl.classType==='w3'?'<span style="font-size:9px;background:#eef2ff;color:#6366f1;padding:1px 5px;border-radius:4px;margin-left:4px;font-weight:700">주3회</span>':cl.classType==='w1'?'<span style="font-size:9px;background:#f3f4f6;color:#6b7280;padding:1px 5px;border-radius:4px;margin-left:4px;font-weight:700">주1회</span>':''}</div>
       <div class="fgroup" style="margin:0">
         <label class="flabel">수업반 변경 (반이동)</label>
         <select class="finput" id="f-teacher-classtime-${i}">
@@ -7428,7 +7428,6 @@ function openHoldModal(stuId){
       <input class="finput" id="f-hold-memo" placeholder="추가 메모" value="${s.holdMemo||''}">
     </div>`;
   const footer=overlay.querySelector('.modal-footer');
-  const isHolding = s.status==='홀딩';
   if(footer)footer.innerHTML=`
     <button style='background:transparent;border:1px solid var(--border2);border-radius:7px;padding:6px 11px;font-size:12px;font-family:Noto Sans KR,sans-serif;cursor:pointer;color:var(--text2)' onclick="closeModal()">닫기</button>
     ${isHolding?`<button style='background:#0ea882;border:none;border-radius:7px;padding:6px 14px;font-size:12px;font-family:Noto Sans KR,sans-serif;cursor:pointer;color:#fff;font-weight:700' onclick="resumeFromHold('${stuId}')">✅ 수업 복귀</button>`:''}
