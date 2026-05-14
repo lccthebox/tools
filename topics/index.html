@@ -286,19 +286,6 @@ nav{height:52px;background:var(--black);display:flex;align-items:center;padding:
   <div class="settings-wrap">
     <h2>설정</h2>
     <p class="s-sub">포맷과 소스를 직접 추가·삭제·수정할 수 있어요. 새 포맷을 추가하면 AI가 그 방식에 맞게 토픽을 자동 구성합니다.</p>
-    <div class="set-sec">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
-        <h3 style="margin:0">액티비티 포맷 <span class="set-badge" id="fmt-cnt-badge">0</span></h3>
-        <button class="ai-update-btn" id="ai-fmt-btn" onclick="aiUpdateFormats()">🤖 AI 신규 액티비티 생성</button>
-      </div>
-      <p class="set-desc">● 활성화된 포맷만 랜덤 선택됩니다. 새 포맷을 추가하면 다음 생성부터 바로 반영돼요.</p>
-      <div class="items-list" id="fmt-list"></div>
-      <div class="add-row">
-        <input class="add-inp wide" id="fmt-inp" placeholder="새 포맷 이름 (예: Question Spotlight, Story Chain...)">
-        <button class="add-btn" id="fmt-add-btn">+ 추가</button>
-      </div>
-      <p class="tip">💡 추가 가능: Question Spotlight, Two Truths One Lie, Fishbowl, Role Reversal, Deal or No Deal, Speed Debate...</p>
-    </div>
     <!-- 크롤러 섹션 -->
     <div class="set-sec" style="border:2px solid #1a7f37">
       <h3 style="display:flex;align-items:center;gap:8px">
@@ -2255,87 +2242,6 @@ function renderRight(){
     </div></div>`;
 }
 
-async function aiUpdateFormats(){
-  const apiKey=getApiKey();
-  if(!apiKey){showToast('API 키를 먼저 입력해주세요');return;}
-  const btn = document.getElementById('ai-fmt-btn');
-  btn.disabled = true; btn.textContent = '생성 중...';
-  try {
-    const prompt = `Invent 3 completely new, highly engaging networking conversation/activity formats for Korean 20-30s. Similar to Mafia Game, Question Spotlight, Speed Debate. Return ONLY a JSON array. Format: [{ "name": "English Name", "desc": "직관적이고 찰진 한국어 룰 설명 (1-2문장, How to play)" }]`;
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1000,messages:[{role:'user',content:prompt}]})
-    });
-    if(!res.ok) throw new Error('API Error');
-    const raw=(await res.json()).content[0].text.trim().replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
-    const newFmts = JSON.parse(raw);
-    let fmts = getFormats(), turnedOff = 0;
-    for(let i=fmts.length-1; i>=0; i--){ if(fmts[i].on){ fmts[i].on=false; turnedOff++; } if(turnedOff>=3) break; }
-    newFmts.forEach(f => fmts.unshift({id:'f'+Date.now()+Math.floor(Math.random()*100), name:f.name, desc:f.desc, on:true}));
-    saveFormats(fmts); renderSettings(); showToast(`신규 액티비티 ${newFmts.length}개 추가 및 기존 3개 비활성화!`);
-  } catch(e){ console.error(e); showToast('오류 발생: '+e.message); } finally { btn.disabled = false; btn.textContent = '🤖 AI 신규 액티비티 생성'; }
-}
-
-async function lowerVocabLevel(day, level){
-  const apiKey=getApiKey();
-  if(!apiKey){showToast('API 키가 필요합니다'); return;}
-  const tops=getTopics(); const k=topicKey(day); const t=tops[k];
-  if(!t) return;
-  
-  showToast(`${level} 수준으로 어휘를 생성 중입니다...`);
-  
-  const levelPrompt = level === 'Beginner' ? 'EASY (A2-B1 level), simple daily words, no hard idioms.' : 
-                    level === 'Advanced' ? 'ADVANCED (C1 level), sophisticated vocabulary, complex nuances.' : 
-                    'NATURAL INTERMEDIATE (B2 level), common idioms, relatable slang.';
-
-  const prompt = `Topic: "${t.main_title}"\nScenario: "${t.session2?.scenario || ''}"\n\nTask: Keep the topic but REPLACE the vocabulary (Spark Words & Expressions) to match ${levelPrompt}. Also provide Korean translations for each.\n\nReturn ONLY raw JSON:\n{\n  "spark_words": [\n    {"en":"Word1","kr":"뜻1"},\n    {"en":"Word2","kr":"뜻2"},\n    {"en":"Word3","kr":"뜻3"},\n    {"en":"Word4","kr":"뜻4"},\n    {"en":"Word5","kr":"뜻5"},\n    {"en":"Word6","kr":"뜻6"}\n  ],\n  "expressions": [\n    {"en":"Exp1","kr":"뜻1"},\n    {"en":"Exp2","kr":"뜻2"},\n    {"en":"Exp3","kr":"뜻3"},\n    {"en":"Exp4","kr":"뜻4"},\n    {"en":"Exp5","kr":"뜻5"},\n    {"en":"Exp6","kr":"뜻6"}\n  ]\n}`;
-
-  try {
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST', headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1000,messages:[{role:'user',content:prompt}]})
-    });
-    if(!res.ok) throw new Error('API Error');
-    const raw=(await res.json()).content[0].text.trim().replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
-    const result = JSON.parse(raw);
-    
-    t.session1.spark_words = result.spark_words;
-    t.session2.expressions = result.expressions;
-    
-    saveTopics(tops);
-    renderRight();
-    showToast(`${level} 수준 어휘로 교체되었습니다! ✓`);
-  } catch(e){
-    console.error(e);
-    showToast('오류 발생: '+e.message);
-  }
-}
-
-async function aiUpdateSources(){
-  const apiKey=getApiKey();
-  if(!apiKey){showToast('API 키를 먼저 입력해주세요');return;}
-  const btn = document.getElementById('ai-src-btn');
-  btn.disabled = true; btn.textContent = '가져오는 중...';
-  try {
-    const prompt = `Korean 20-30s English networking club source ideas. Invent 5 completely fresh, highly relatable, modern trending topics/angles (e.g. recent dating trends, office life annoyances, money saving memes). Return ONLY a JSON array. Format: [{ "name": "Short Name (e.g. 탕후루 다이어트)", "angle": "Specific angle to debate (e.g. 식비 절약하려고 삼각김밥 먹으면서 탕후루는 4천원 주고 사먹는 심리)" }]`;
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1000,messages:[{role:'user',content:prompt}]})
-    });
-    if(!res.ok) throw new Error('API Error');
-    const raw=(await res.json()).content[0].text.trim().replace(/^```json\s*/,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
-    const newSrcs = JSON.parse(raw);
-    let srcs = getSources(), turnedOff = 0;
-    for(let i=srcs.length-1; i>=0; i--){ if(srcs[i].on){ srcs[i].on=false; turnedOff++; } if(turnedOff>=5) break; }
-    newSrcs.forEach(s => srcs.unshift({id:'s'+Date.now()+Math.floor(Math.random()*100), name:s.name, angle:s.angle, on:true}));
-    saveSources(srcs); renderSettings(); showToast(`최신 소스 ${newSrcs.length}개 추가 및 기존 5개 비활성화!`);
-  } catch(e){ console.error(e); showToast('오류 발생: '+e.message); } finally { btn.disabled = false; btn.textContent = '🤖 AI 최신 트렌드 소스 수집'; }
-}
-
-
-/* ═══════════════════════════════════════════════════════
-   GITHUB GIST SYNC
-   ═══════════════════════════════════════════════════════ */
 function getGistToken(){ return localStorage.getItem('tb_gist_token')||''; }
 function saveGistToken(t){ localStorage.setItem('tb_gist_token',t); }
 function getGistId(){ return localStorage.getItem('tb_gist_id')||''; }
@@ -2478,7 +2384,6 @@ document.addEventListener('DOMContentLoaded',()=>{
     document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
     tab.classList.add('active');
     document.getElementById('view-'+tab.dataset.view).classList.add('active');
-    if(tab.dataset.view==='settings')renderSettings();
   }));
 
   document.getElementById('prev').addEventListener('click',()=>{if(month===0){month=11;year--}else month--;selected=null;renderCal();renderRight()});
@@ -2502,22 +2407,6 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('modal-key-inp').addEventListener('keydown',e=>{if(e.key==='Enter')saveModal()});
   document.getElementById('modal').addEventListener('click',e=>{if(e.target===document.getElementById('modal'))document.getElementById('modal').style.display='none'});
 
-  document.getElementById('fmt-add-btn').addEventListener('click',()=>{
-    const nm=document.getElementById('fmt-inp').value.trim();
-    if(!nm)return;
-    const f=getFormats();f.push({id:'f'+Date.now(),name:nm,desc:'',on:true});
-    saveFormats(f);document.getElementById('fmt-inp').value='';renderSettings();showToast(`"${nm}" 추가됨`);
-  });
-  document.getElementById('fmt-inp').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('fmt-add-btn').click()});
-
-  document.getElementById('src-add-btn').addEventListener('click',()=>{
-    const nm=document.getElementById('src-name-inp').value.trim();
-    const angle=document.getElementById('src-angle-inp').value.trim();
-    if(!nm||!angle){showToast('소스명과 이슈 내용을 입력해주세요');return}
-    const s=getSources();s.unshift({id:'s'+Date.now(),name:nm,angle,on:true});
-    saveSources(s);document.getElementById('src-name-inp').value='';document.getElementById('src-angle-inp').value='';
-    renderSettings();showToast(`"${nm}" 소스 추가됨`);
-  });
   document.getElementById('src-angle-inp').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('src-add-btn').click()});
 
   document.getElementById('api-save-btn').addEventListener('click',()=>{
@@ -2594,7 +2483,6 @@ document.addEventListener('DOMContentLoaded',()=>{
     document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
     document.querySelector('[data-view="settings"]').classList.add('active');
     document.getElementById('view-settings').classList.add('active');
-    renderSettings();
     setTimeout(()=>{
       const el=document.getElementById('gist-token-inp');
       if(el) el.scrollIntoView({behavior:'smooth',block:'center'});
@@ -2694,7 +2582,6 @@ function updateSrcStatus(){
     var ca=document.getElementById('mob-cal');var se=document.getElementById('mob-set');
     if(ca)ca.classList.toggle('active',view==='calendar');
     if(se)se.classList.toggle('active',view==='settings');
-    if(view==='settings'&&typeof renderSettings==='function')renderSettings();
     mobClose();
   };
   document.querySelectorAll('.nav-tab').forEach(function(tab){
