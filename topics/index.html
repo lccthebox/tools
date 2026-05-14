@@ -240,6 +240,9 @@ nav{height:52px;background:var(--black);display:flex;align-items:center;padding:
     <button class="nav-tab active" data-view="calendar">달력</button>
     <button class="nav-tab" data-view="settings">설정</button>
   </div>
+  <button class="key-btn" onclick="downloadMonthlyZip()" title="이달 토픽 PDF 일괄 다운로드 (ZIP)" style="margin-right:4px;background:#1a1a1a;color:#fff;border:none" id="zip-btn">
+    <span>📦 PDF 일괄저장</span>
+  </button>
   <button class="key-btn" onclick="printMonthlySchedule()" title="월별 토픽 스케줄 B4 인쇄" style="margin-right:4px;background:#CC0014;color:#fff;border:none">
     <span>🗓 월별 인쇄</span>
   </button>
@@ -392,9 +395,9 @@ const DEFAULT_FORMATS=[
   /* ── 게임형 ── */
   {id:'f9', name:'Two Truths One Lie',  desc:'팀전 라이어 게임',          on:true},
   {id:'f25',name:'Liar Game',           desc:'라이어는 거짓으로만 대답',  on:true},
-  {id:'f27',name:'Minefield Talk Show', desc:'Taboo 금지어 게임',         on:true},
+  {id:'f27',name:'Taboo Game', desc:'Taboo 금지어 게임',         on:true},
   {id:'f29',name:'Heads Up',            desc:'포스트잇 키워드 맞추기',    on:true},
-  {id:'f17',name:'This or That Blitz',  desc:'극단적 밸런스 게임',        on:true},
+  {id:'f17',name:'Balance Game',  desc:'극단 밸런스 체크리스트',        on:true},
   {id:'f10',name:'Story Chain',         desc:'단어 끼워넣기 팀 게임',     on:true},
   /* ── 디베이트형 ── */
   {id:'f2', name:'Debate',              desc:'A vs B 팀 토론',            on:true},
@@ -453,14 +456,14 @@ const FMT_GUIDE={
   'Would You Rather':'roles: 선택지 2개',
   'Question Spotlight':'roles: ["The Star","The Questioners"]',
   'Two Truths One Lie':'roles: ["The Speaker","The Guessers"]',
-  'Story Chain':'roles: ["Team A","Team B"]',
+  'Story Chain':'IMPORTANT — roles[] MUST have EXACTLY 100 single English words. NOT 2 words. NOT team names. 100 individual words like ["nervous","cancel","remind","obvious","pressure","choice","ignore","survive","awkward","handle","worth","trust","admit","regret","delay","signal","proud","express","refuse","notice","accept","force","claim","prove","spread","react","balance","raise","shift","build","depend","reduce","suggest","connect","achieve","arrange","confuse","protect","support","escape","demand","replace","warn","rush","launch"]',
   'Agree/Disagree Spectrum':'roles: ["Strongly Agree","Strongly Disagree"]',
   'Speed Debate':'roles: ["PRO","CON"]',
   'Fishbowl':'roles: ["Inner Circle","Outer Circle"]',
   'Role Reversal':'roles: ["Reversed A","Reversed B"]',
   'Deal or No Deal':'roles: ["The Dealer","The Challenger"]',
   'Confession Box':'roles: ["The Confessor","The Detectives"]',
-  'This or That Blitz':'roles: 초고속 선택지 A/B 6개 이상',
+  'Balance Game':'roles: 극단적 밸런스 선택지 A vs B 최소 8개',
   'Pitch & Vote':'roles: ["The Pitcher","The Investors"]',
   'Myth Busters':'roles: 참/거짓 판단할 진술문 5개 (영어). 각 문장은 사실처럼 들리지만 실제론 myth일 수도 있고 fact일 수도 있게. 15단어 이내. 예: "Expensive wine always tastes better than cheap wine." / "Reading before bed helps you sleep better."',
   'Time Machine':'roles: ["Past Self","Present Self","Future Self"]',
@@ -470,7 +473,7 @@ const FMT_GUIDE={
   'Headline Writer':'roles: ["The Editor","The Reporter"]',
   'Liar Game':'roles: ["The Liar","The Truth Tellers"]',
   'Mafia Game':'roles: ["The Mafia","The Citizens"]',
-  'Minefield Talk Show':'roles: ["The Talker","The Mine Setter"]',
+  'Taboo Game':'roles: 금기어 6개 (단어)',
   'The Blind Director':'roles: ["The Director","The Actors"]',
   'Heads Up':'roles: ["The Guesser","The Clue Givers"]',
 };
@@ -492,23 +495,52 @@ const KR_FMT_GUIDE={
   'Role Reversal':'평소 내 생각이랑 반대 입장을 대신 말해봐요. 믿지 않아도 괜찮아요!',
   'Deal or No Deal':'조건을 협상해봐요. 수락할지 거절할지 — 영어로만!',
   'Confession Box':'한 명이 고백을 해요. 나머지가 진짜인지 거짓인지 맞혀봐요!',
-  'This or That Blitz':'나는 A인지 B인지 선택하고, 이야기를 나눠봅시다.',
+  'Balance Game':'나는 A인지 B인지 선택하고, 이야기를 나눠봅시다.',
   'Pitch & Vote':'아이디어를 짧게 발표하고, 나머지가 투표해봐요. 설득 안 해도 괜찮아요!',
   'Myth Busters':'각 문장을 읽고 MYTH(거짓)인지 FACT(사실)인지 골라봐요. 다 고르면 팀이랑 비교하고 왜 그렇게 생각했는지 얘기해봐요!',
   'Time Machine':'과거·현재·미래 버전을 각자 정하고 한 명씩 공개해봐요!',
   'Price Check':'이 물건, 얼마일 것 같아요? 각자 적고 한꺼번에 공개해봐요!',
   'Liar Game':'라이어는 질문에 거짓으로만 대답해요. 누가 거짓말을 하고 있는지 맞춰봐요!',
   'Mafia Game':'마피아가 숨어 있어요. 대화하면서 누가 마피아인지 찾아봐요!',
-  'Minefield Talk Show':'Taboo 게임이 시작됩니다. 포스트잇에 오른쪽 옆사람에게 줄 키워드를 적으세요. 상대방의 말에 귀기울여 금기어를 말한 횟수를 기록하세요.',
+  'Taboo Game':'Taboo 게임이 시작됩니다. 포스트잇에 오른쪽 옆사람에게 줄 키워드를 적으세요. 상대방의 말에 귀기울여 금기어를 말한 횟수를 기록하세요.',
   'The Blind Director':'말로만 설명해서 상대가 정확히 따라 하게 만들어봐요!',
   'Heads Up':'포스트잇에 오른쪽 옆사람에게 줄 키워드를 적으세요. 키워드는 아래 주제와 관련된 것이어야 해요. 질문으로 내 포스트잇이 뭔지 맞혀봐요!',
 };
 
+const DEFAULT_LEADER_GUIDE={"Liar Game": {"left_title": "게임 진행 순서", "left_rules": ["한 명을 라이어로 정한다.", "리더가 질문할 때, 라이어는 거짓으로만 대답하고, 나머지는 솔직하게 대답하게 한다.", "각 질문 후 모두가 의견을 말하고, 누가 거짓말 했는지 투표해요."], "left_tips_title": "💡 막힐 때 이렇게!", "left_tips": ["라이어가 답변을 못 했으면: \"예/아니오\"로라도 빨리 대답하게 해요.", "진실 쌍들이 서로 다르게 대답했으면: \"너희 둘 다 진짜야?\" 물어봐요.", "거짓말 같은데 확신 못 하면: \"그게 진짜 예시 줄 수 있어?\" 추가로 물어봐요.", "분위기가 조용하면: \"왜 그렇게 생각해?\" 계속 물어봐요."]}, "Taboo Game": {"left_title": "게임 진행 순서", "left_rules": ["각 멤버는 주제에 관련된 금지어를 정해서 포스트잇에 적어 오른쪽 사람에게 넘겨준다.", "정해진 금지어를 발언하는지 체크리스트에 체크를 한다.", "누가 더 적게 금지어를 말하는지 센다."], "left_tips_title": "💡 막힐 때 이렇게!", "left_tips": ["금지어를 피하기 위해 \"그거\" \"저거\" 같은 표현이나 제스처를 써도 괜찮아요.", "질문을 많이 하면 상대방이 말을 많이 하니까 금지어를 피하기 쉬워요.", "느낌, 감정, 감각으로 설명해보세요 — \"it looks beautiful\" \"it feels good\""]}, "Two Truths One Lie": {"left_title": "게임 진행 순서", "left_rules": ["스피커를 정합니다. 스피커는 주제와 관련된 자신의 경험 세 가지를 이야기한다. (둘은 사실, 하나는 거짓)", "다른 사람들은 각 이야기마다 1-2개 질문을 하고, 어느 것이 거짓인지 투표한다.", "정답을 공개한 후, 스피커를 바꿔서 반복한다."], "left_tips_title": "💡 막힐 때 이렇게!", "left_tips": ["너무 어려운 이야기 말고, 최근 경험이나 친숙한 상황으로 간단하게 시작하세요.", "거짓 이야기도 가능해 보여야 해요 — 너무 이상하면 금방 들켜요.", "스피커가 말을 끝내기 전에 끼어들면 안 돼요 — 전체 이야기를 다 들은 후 질문하세요.", "단어로 막혔으면 손짓이나 그림으로 표현해도 괜찮아요."]}, "Heads Up": {"left_title": "게임 진행 순서", "left_rules": ["포스트잇에 주제에 관련된 단어나 활동을 1개 적는다.", "옆사람(시계방향)에게 포스트잇을 붙여준다.", "자신의 포스트잇에 적힌 키워드를 맞추기 위해 질문한다."], "left_tips_title": "💡 막힐 때 이렇게!", "left_tips": ["질문이 안 나오면: \"Is it expensive?\" / \"Can I use it today?\" 처럼 단순하게.", "상대가 답을 안 하면: 스스로 포스트잇을 붙인 사람에게 힌트를 받아도 돼.", "영어가 짧아도 괜찮아: \"Is it ... thing?\" 또는 손가락으로 크기를 보여줘도 된다.", "맞췄으면: \"좋은 질문이었어!\" / \"도움이 됐어!\" 이렇게 반응해주기."]}, "Story Chain": {"left_title": "게임 진행 순서", "left_rules": ["팀 A와 B는 문장을 번갈아가면서 스토리를 만들어 간다.", "문장을 만들 때 아래에 제공된 단어를 무조건 하나는 사용하여야 하고, 한 문장에 하나의 단어만 체크할 수 있다.", "완성된 이야기를 읽고 어떤 팀이 더 설득력 있는지 확인해본다."], "left_tips_title": "💡 막힐 때 이렇게!", "left_tips": ["단어를 무조건 순서대로 쓸 필요는 없습니다. 이야기에 맞게 섞어 쓰세요.", "어려운 단어는 건너뛰고 쉬운 단어부터 시작하세요.", "같은 팀원과 함께 문장을 만들어도 괜찮습니다.", "이야기가 현실적일수록 더 재미있습니다 — 상황을 구체적으로 만들어보세요."]}, "Debate": {"left_title": "게임 진행 순서", "left_rules": ["팀 A가 30초 동안 자신의 입장을 설명한다.", "팀 B가 30초 동안 다른 의견을 말한다.", "서로서로 반박을 할 수 있도록 판을 깔아준다."], "left_tips_title": "💡 막힐 때 이렇게!", "left_tips": ["한 단어만이라도 괜찮아요 — \"편하다\", \"불공평하다\" 정도면 됩니다.", "반대 팀에 질문하세요 — \"What about...?\" 또는 \"Don't you think...?\"", "자신의 경험을 말해봐요 — \"내 친구는...\" 또는 \"나는...\"", "리더가 단어를 도와줄 거예요 — 모르는 단어가 있으면 손 들어요!"]}, "Would You Rather": {"left_title": "게임 진행 순서", "left_rules": ["팀 A가 30초 동안 자신의 입장을 설명한다.", "팀 B가 30초 동안 다른 의견을 말한다.", "서로서로 반박을 할 수 있도록 판을 깔아준다."], "left_tips_title": "💡 막힐 때 이렇게!", "left_tips": ["한 단어만이라도 괜찮아요 — \"편하다\", \"불공평하다\" 정도면 됩니다.", "반대 팀에 질문하세요 — \"What about...?\" 또는 \"Don't you think...?\"", "자신의 경험을 말해봐요 — \"내 친구는...\" 또는 \"나는...\"", "리더가 단어를 도와줄 거예요 — 모르는 단어가 있으면 손 들어요!"]}, "Myth Busters": {"left_title": "게임 진행 순서", "left_rules": ["2인 팀으로 5개 진술문을 읽게 한다.", "각 진술문이 MYTH(거짓)인지 FACT(사실)인지 선택한다.", "전체가 다 고르면 답을 공개하고, 팀별로 비교한 후 \"왜 그렇게 생각했는지\" 설명하게 한다.", "리더가 답을 불러준다 (오른쪽 답 참고)."], "left_tips_title": "💡 막힐 때 이렇게!", "left_tips": ["\"I think it's true because...\" 또는 \"That sounds like a myth because...\"로 시작하세요.", "팀원과 의견이 다르면 \"I see your point, but I think...\" 라고 말해보세요.", "예시를 들어도 좋아요: 내 경험이나 친구 경험을 말해보세요.", "완벽한 영어가 아니어도 괜찮아요. 아이디어를 나누는 게 목표입니다!"]}, "Advice Lab": {"left_title": "게임 진행 순서", "left_rules": ["3명씩 팀을 나누거나 한 사람이 한 역할씩 대표로 한다.", "Angel이 먼저 찬성 입장으로 1분 동안 조언을 한다. (자기가 찬성입장이 아니라도, 무조건 찬성해야 함)", "Judge가 반대 입장으로 1분 동안 조언을 한다. (뭐가 문제일지)", "Joker가 웃기는 입장으로 1분 동안 해요. (이상하거나 재미있는 상황들)", "그 다음 3개의 What if 질문을 돌아가며 답해본다."], "left_tips_title": "💡 막힐 때 이렇게!", "left_tips": ["Angel: \"돈을 벌 수 있다\" \"유명해진다\" \"자신감이 생긴다\"는 식으로 긍정적인 것만 말하세요.", "Judge: \"개인정보\" \"나이\" \"피로함\" \"존중받지 못함\" 같은 문제점들을 지적하세요.", "Joker: 웃긴 상황을 만들어보세요 — \"만약 이렇게 된다면?\" 같은 식으로.", "모르는 단어는 손을 들고 리더한테 물어봐도 괜찮아요!"]}, "Ranking Game": {"left_title": "게임 진행 순서", "left_rules": ["각자 6가지 항목을 1등부터 6등까지 순위 매기기.", "모두 동시에 순위 공개하기 (숫자만 말하거나 손가락으로 표시).", "같은 항목을 1등으로 뽑은 사람끼리 모여서 \"왜 이걸 1등으로 뽑았어?\" 대화하기."], "left_tips_title": "💡 막힐 때 이렇게!", "left_tips": ["의견이 안 나올 때 → \"너는 어떻게 생각해?\" 하나씩 묻기.", "같은 순위를 뽑은 사람이 없을 때 → 가장 다른 순위 2명을 짝지어주기.", "영어가 막힐 때 → 리더가 한국어로 정리해주고 \"영어로 뭐라고 말할까?\"로 자연스럽게 넘어가기.", "너무 침묵할 때 → \"처음 뽑을 때 뭐가 제일 먼저 떠올랐어?\" 물어보기."]}, "Survival Scenario": {"left_title": "게임 진행 순서", "left_rules": ["팀별로 3분간 자기 전략의 장점을 생각해요.", "각 팀이 2분씩 왜 자기 방식이 더 낫다고 생각하는지 영어로 말해요.", "다른 팀이 반박할 시간을 줘요."], "left_tips_title": "💡 막힐 때 이렇게!", "left_tips": ["그냥 \"I think... is better\" 한 문장도 좋아요.", "자신의 경험이나 친구 경험을 말해도 돼요.", "팀이 완전히 같은 의견일 필요 없어요. 개인 의견도 괜찮아요.", "틀린 영어 괜찮아요. 뜻이 전달되면 OK!"]}};
+
+
 let year,month,selected=null,loading=false,genDay=null;
 
-function getTopics(){try{return JSON.parse(localStorage.getItem('tb_topics_v5')||'{}')}catch{return{}}}
+function getTopics(){
+  try{
+    const t=JSON.parse(localStorage.getItem('tb_topics_v5')||'{}');
+    // __ref: 이미지 복원
+    for(const k in t){
+      const img=t[k]?.session2?.custom_image;
+      if(img&&img.startsWith('__ref:')){
+        const stored=localStorage.getItem('tb_img_'+img.slice(6));
+        if(stored)t[k].session2.custom_image=stored;
+      }
+    }
+    return t;
+  }catch{return{}}
+}
 function saveTopics(t){
-  localStorage.setItem('tb_topics_v5',JSON.stringify(t));
+  // 이미지 base64를 분리 저장 (localStorage 용량 초과 방지)
+  const slim=JSON.parse(JSON.stringify(t));
+  for(const k in slim){
+    const img=slim[k]?.session2?.custom_image;
+    if(img&&img.startsWith('data:')){
+      try{localStorage.setItem('tb_img_'+k,img);}catch(e){}
+      slim[k].session2.custom_image='__ref:'+k;
+    }
+  }
+  try{
+    localStorage.setItem('tb_topics_v5',JSON.stringify(slim));
+  }catch(e){
+    console.error('saveTopics failed:',e);
+  }
   clearTimeout(window._apTimer);
   window._apTimer=setTimeout(function(){if(typeof getGistToken==='function'&&getGistToken()&&getGistId())gistPush();},2000);
 }
@@ -552,7 +584,25 @@ async function generateTopic(day, forceFmt){
   loading=true;genDay=day;selected=day;
   renderCal();renderRight();
 
-  const fmt=forceFmt || fmts[Math.floor(Math.random()*fmts.length)].name;
+  // ── 포맷 균등 분배 로직 ──────────────────────────────────────────
+  // 이달 이미 생성된 토픽에서 포맷 사용 횟수 집계
+  let fmt;
+  if(forceFmt){
+    fmt=forceFmt;
+  } else {
+    const pfx=`${year}-${String(month+1).padStart(2,'0')}`;
+    const monthTops=getTopics();
+    const fmtCount={};
+    fmts.forEach(f=>fmtCount[f.name]=0);
+    Object.keys(monthTops).filter(k=>k.startsWith(pfx)).forEach(k=>{
+      const f=monthTops[k]?.session2?.format;
+      if(f&&fmtCount[f]!==undefined) fmtCount[f]++;
+    });
+    // 가장 적게 사용된 포맷 중에서 랜덤 선택
+    const minCount=Math.min(...fmts.map(f=>fmtCount[f.name]));
+    const leastUsed=fmts.filter(f=>fmtCount[f.name]===minCount);
+    fmt=leastUsed[Math.floor(Math.random()*leastUsed.length)].name;
+  }
   const tops=getTopics();
 
   // ── 최근 30일 토픽 수집 (중복 방지) ─────────────────────────────
@@ -722,11 +772,12 @@ ${fmt.toLowerCase().includes('heads up') ? `
 
 ${fmt.toLowerCase().includes('myth') ? `
 🔍 MYTH BUSTERS FORMAT
-- scenario = 1 sentence introducing the theme (e.g. "Let's find out what's really true about money.")
+- scenario = 1 sentence introducing the theme.
 - how_to_play_kr = "각 문장을 읽고 MYTH(거짓)인지 FACT(사실)인지 골라봐요. 다 고르면 팀이랑 비교하고 왜 그렇게 생각했는지 얘기해봐요!"
-- roles = exactly 5 statements to judge as MYTH or FACT. Each under 15 words. Plain English. Should sound plausible but could go either way.
-  GOOD: "Drinking 8 glasses of water a day is necessary for everyone." / "Expensive products are always better quality."
-  BAD: vague opinions, obviously true/false statements
+- roles = exactly 5 statements. Each statement MUST include the answer at the end in brackets.
+  Format: "Statement text. [MYTH]" or "Statement text. [FACT]"
+  Make statements plausible — should NOT be obvious which is correct.
+  Example: ["Expensive wine always tastes better than cheap wine. [MYTH]", "Reading before bed helps you sleep better. [FACT]", "Humans use only 10% of their brain. [MYTH]"]
 - questions = 3 "What if" questions exploring the theme further
 ` : ''}
 
@@ -758,8 +809,8 @@ ${fmt.toLowerCase().includes('ranking') ? `
   Example: ["Who got the same #1?", "Did anyone put the same thing last?", "Whose list was most different?"]
 ` : ''}
 
-${fmt.toLowerCase().includes('minefield') ? `
-💣 MINEFIELD TALK SHOW (TABOO GAME)
+${(fmt.toLowerCase().includes('minefield')||fmt.toLowerCase().includes('taboo game')) ? `
+💣 TABOO GAME
 - scenario = "" (empty)
 - how_to_play_kr = "Taboo 게임이 시작됩니다. 포스트잇에 오른쪽 옆사람에게 줄 키워드를 적으세요. 상대방의 말에 귀기울여 금기어를 말한 횟수를 기록하세요."
 - roles = 6 TABOO keywords related to the topic. Single words only. These are the forbidden words players must avoid saying.
@@ -777,12 +828,15 @@ ${fmt.toLowerCase().includes('advice lab') ? `
 ` : ''}
 
 ${fmt.toLowerCase().includes('story chain') ? `
-📖 STORY CHAIN
-- scenario = "" (empty)
-- how_to_play_kr = "Team A와 B를 정해서 게임을 시작한다. 아래 랜덤으로 주어진 단어를 가장 많이 사용하는 팀이 이긴다."
-- roles = 45 random English words related to the topic. Mix freely: nouns, verbs, adjectives, adverbs. Each = 1 word only (no phrases). Arrange in random order, not grouped by type.
-  Example: ["nervous","cancel","remind","lately","obvious","pressure","random","choice","ignore","survive","awkward","handle","worth","trust","admit","regret","familiar","replace","warn","avoid","simple","rush","honest","blame","curious","delay","signal","proud","express","expect","refuse","notice","accept","force","claim","prove","spread","react","impact","measure","balance","raise","shift","describe","build"]
-- questions = [] (empty — word bank IS the activity, no discussion questions needed)
+📖 STORY CHAIN — WORD BANK GAME
+⚠️ WARNING: roles[] MUST contain 45 individual English words. If you put team names or fewer than 10 words, it is WRONG.
+
+- scenario = 1 opening sentence to start the story (e.g. "It was a rainy Monday when...")
+- how_to_play_kr = "팀 A와 B로 나눠서, 주어진 단어들을 최대한 많이 사용해서 이 상황에 대한 이야기를 만들어보세요."
+- roles = EXACTLY 100 single English words. Each array item = ONE word only. Mixed: nouns, verbs, adjectives, adverbs. Related to the topic. NO team names. NO phrases.
+  CORRECT: ["nervous","cancel","remind","obvious","pressure","choice","ignore","survive","awkward","handle","worth","trust","admit","regret","delay","signal","proud","express","refuse","notice","accept","force","claim","prove","spread","react","balance","raise","shift","build","depend","reduce","suggest","connect","achieve","arrange","confuse","protect","support","escape","demand","replace","warn","rush","launch"]
+  WRONG: ["Team A","Team B"] or ["adds next sentence"] — these are NOT allowed
+- questions = [] (empty array)
 ` : ''}
 
 ${fmt.toLowerCase().includes('price check') ? `
@@ -793,15 +847,20 @@ ${fmt.toLowerCase().includes('price check') ? `
 - questions = ["Who was closest?", "Which price surprised you most?", "Would you buy this?"]
 ` : ''}
 
-${fmt.toLowerCase().includes('this or that') ? `
-⚡ THIS OR THAT — BALANCE GAME
+${(fmt.toLowerCase().includes('this or that')||fmt.toLowerCase().includes('balance game')) ? `
+⚡ BALANCE GAME
 - scenario = "" (empty)
 - how_to_play_kr = "나는 A인지 B인지 선택하고, 이야기를 나눠봅시다."
-- roles = 8 EXTREME balance game choices related to the topic. Format: "A or B". Each under 8 words each side.
-  Make them provocative and slightly uncomfortable — the kind where people genuinely disagree.
-  GOOD: ["Never eat meat again OR never eat carbs again?", "Always be 30 min early OR always be 30 min late?", "Read your partner's texts OR let them read yours?"]
-  BAD: ["Coffee or tea?", "Morning or night?"] — too boring
-- questions = [] (no questions — the choices ARE the activity)
+- roles = EXACTLY 8 extreme balance game choices related to the topic.
+  Format for each: "Option A 👈 vs 👉 Option B" — both sides clearly separated.
+  Rules:
+  - Both sides must be EXTREME and opposite — not mild preferences
+  - Should make people genuinely split and want to explain their choice
+  - Related to the topic but universally relatable
+  - GOOD: "Earn ₩1M/month doing work you hate 👈 vs 👉 Earn ₩300K/month doing work you love"
+  - GOOD: "Read your partner's phone secretly 👈 vs 👉 Let them read yours whenever they want"
+  - BAD: "Coffee or tea?" — too mild
+- questions = [] (empty — checklist IS the activity)
 ` : ''}
 
 ${fmt.toLowerCase().includes('survival') ? `
@@ -841,7 +900,7 @@ Return ONLY raw JSON (no markdown fences):
     "subtitle_kr":"한국어 부제",
     "how_to_play_kr":"1문장. 뭘 하는지만.",
     "scenario":"MAX 1 sentence or empty string",
-    "roles":["Role/Item 1","Role/Item 2"],
+    "roles":${fmt.toLowerCase().includes('story chain') ? '["word1","word2","word3",...] — MUST be 100 single English words, NO team names' : '["Role/Item 1","Role/Item 2"]'},
     "questions":["Q1 — format appropriate","Q2 — format appropriate","Q3 — format appropriate"],
     "expressions":[
       {"en":"Expression1","kr":"Meaning1"},{"en":"Expression2","kr":"Meaning2"},
@@ -942,9 +1001,9 @@ ${fmt.toLowerCase().includes('debate') || fmt.toLowerCase().includes('unpopular'
 ${fmt.toLowerCase().includes('rather') ? 'WOULD YOU RATHER: roles=the 2 choices. questions=3 What if twist questions.' : ''}
 ${fmt.toLowerCase().includes('ranking') ? 'RANKING: roles=6 specific short items to rank (real situations, under 6 words each). questions=3 light comparison questions (NOT What If).' : ''}
 ${fmt.toLowerCase().includes('advice lab') ? 'ADVICE LAB: roles=["The Angel","The Judge","The Joker"]. questions=3 What if follow-up questions.' : ''}
-${fmt.toLowerCase().includes('story chain') ? 'STORY CHAIN: scenario=fun opening line. questions=3 twist prompts to throw in when story gets stuck.' : ''}
+${fmt.toLowerCase().includes('story chain') ? '⚠️ STORY CHAIN: scenario=1 opening sentence. how_to_play_kr="팀 A와 B로 나눠서, 주어진 단어들을 최대한 많이 사용해서 이 상황에 대한 이야기를 만들어보세요." roles=EXACTLY 100 individual English words (each item = 1 word, NO team names, NO phrases). questions=[].' : ''}
 ${fmt.toLowerCase().includes('price check') ? 'PRICE CHECK: roles=5 real items with ₩ prices. questions=["Who was closest?","Which surprised you most?","Would you buy this?"]' : ''}
-${fmt.toLowerCase().includes('this or that') ? 'THIS OR THAT: scenario="". roles=8 rapid A/B choices under 6 words each. questions=[]' : ''}
+${(fmt.toLowerCase().includes('this or that')||fmt.toLowerCase().includes('balance game')) ? 'BALANCE GAME: scenario="". roles=8 rapid A/B choices under 6 words each. questions=[]' : ''}
 ${fmt.toLowerCase().includes('survival') ? 'SURVIVAL: roles=["Team A","Team B"]. questions=3 What if twist questions.' : ''}
 
 === NO VOTE ===
@@ -959,7 +1018,7 @@ Return ONLY raw JSON:
   "subtitle_kr":"한국어 부제",
   "how_to_play_kr":"1문장. 뭘 하는지만. 친구한테 말하듯.",
   "scenario":"MAX 1 sentence or empty string",
-  "roles":["Role/Item 1","Role/Item 2"],
+  "roles":${fmt.toLowerCase().includes('story chain') ? '["word1","word2","word3",...] — EXACTLY 100 single English words related to topic, NO team names, NO phrases' : '["Role/Item 1","Role/Item 2"]'},
   "questions":["Q1 — format appropriate","Q2 — format appropriate","Q3 — format appropriate"],
   "expressions":[
     {"en":"Expression1","kr":"Meaning1"},
@@ -1061,6 +1120,210 @@ function delAll(){
 /* ══════════════════════════════════════════════════════
    PDF — 읽기 편하고 이해하기 쉬운 2-페이지 폼
    ══════════════════════════════════════════════════════ */
+async function downloadMonthlyZip(){
+  const btn=document.getElementById('zip-btn');
+  const tops=getTopics();
+  const pfx=`${year}-${String(month+1).padStart(2,'0')}`;
+  const days=Object.keys(tops).filter(k=>k.startsWith(pfx)).sort();
+
+  if(!days.length){showToast('이달 생성된 토픽이 없어요');return;}
+
+  btn.disabled=true;
+  btn.querySelector('span').textContent='⏳ 준비 중...';
+
+  // JSZip 동적 로드
+  if(!window.JSZip){
+    await new Promise((res,rej)=>{
+      const s=document.createElement('script');
+      s.src='https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+      s.onload=res; s.onerror=rej;
+      document.head.appendChild(s);
+    });
+  }
+
+  // html2pdf / print-to-pdf는 브라우저 제한 있으므로
+  // 각 토픽을 인쇄용 HTML 파일로 ZIP에 담기
+  const zip=new JSZip();
+  const folder=zip.folder(`TheBox_${pfx}`);
+
+  let count=0;
+  for(const k of days){
+    const t=tops[k];
+    if(!t)continue;
+    const html=buildTopicHTML(k,t);
+    const safeTitle=(t.main_title||'topic').replace(/[\\/:*?"<>|]/g,'').slice(0,40);
+    const filename=`[${k}] ${safeTitle}.html`;
+    folder.file(filename, html);
+    count++;
+    btn.querySelector('span').textContent=`⏳ ${count}/${days.length} 처리 중...`;
+  }
+
+  const blob=await zip.generateAsync({type:'blob'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=`TheBox_${year}년_${MONTHS[month]}_토픽.zip`;
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),3000);
+
+  btn.disabled=false;
+  btn.querySelector('span').textContent='📦 PDF 일괄저장';
+  showToast(`✓ ${count}개 파일 ZIP 다운로드 완료!`);
+}
+
+// 토픽 1-2페이지 HTML 생성 (리더가이드 제외)
+function buildTopicHTML(k, t){
+  const s1=t.session1||{}, s2=t.session2||{};
+  const catColor=CAT_COLORS[t.category]||'#CC0014';
+  const fmt=(s2.format||'').toLowerCase();
+  const roles=s2.roles||[];
+  const qs=s2.questions||[];
+  const exprs=s2.expressions||[];
+  const sparks=(s1.spark_words||[]).slice(0,6);
+  const krFmt=s2.how_to_play_kr||KR_FMT_GUIDE[s2.format]||'';
+
+  // downloadPDF에서 CSS/page1/page2 재사용
+  // — 임시 방법: downloadPDF를 호출해서 HTML 문자열만 얻기
+  // 직접 page1/page2 HTML을 재생성
+  const tempDay=parseInt(k.split('-')[2]);
+  const origSelected=selected;
+  selected=tempDay;
+
+  // page1 & page2 HTML 조립 (downloadPDF 로직 인라인)
+  const css=`
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,700;0,9..40,800;1,9..40,400&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#111;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.page{width:210mm;min-height:297mm;display:flex;flex-direction:column;background:#fff;page-break-after:always;position:relative}
+img{-webkit-print-color-adjust:exact;print-color-adjust:exact;max-width:100%!important;display:block!important}
+@media print{@page{size:A4;margin:0}.page{page-break-after:always}}
+.top-bar{height:8px;background:${catColor}}
+.hdr{background:#111;padding:12px 22px;display:flex;align-items:center;justify-content:space-between}
+.hdr-logo{font-size:17pt;font-weight:800;letter-spacing:2px;color:#fff}.hdr-logo span{color:#ff4444}
+.hdr-right{text-align:right}
+.hdr-date{font-size:8pt;color:#888;margin-bottom:3px}
+.hdr-cat{background:${catColor};color:#fff;font-size:7pt;font-weight:700;padding:3px 10px;border-radius:4px;letter-spacing:1px;text-transform:uppercase;display:inline-block}
+.session-bar{background:#F5F3EF;border-bottom:2px solid #E0DDD8;padding:10px 22px;display:flex;align-items:center;gap:12px}
+.session-num{font-size:10pt;font-weight:800;letter-spacing:2px;color:#111}
+.session-div{width:1px;height:16px;background:#ccc}
+.session-sub{font-size:8.5pt;color:#888}
+.session-title{margin-left:auto;font-size:9pt;font-weight:700;color:#111;max-width:50%;text-align:right}
+.body{padding:20px 22px;flex:1;display:flex;flex-direction:column}
+.ftr{background:#111;padding:8px 22px;display:flex;align-items:center;justify-content:space-between;margin-top:auto}
+.ftr-brand{font-size:8pt;font-weight:700;letter-spacing:1.5px;color:#555}.ftr-brand b{color:#ff4444}
+.ftr-pg{font-size:10pt;font-weight:700;color:#444}
+`;
+
+  // page1 스파크워드 / 아이스브레이커
+  const sparkHTML=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">`+sparks.map((w,i)=>{
+    const en=typeof w==='object'?w.en:w, kr=typeof w==='object'?w.kr:'';
+    const bgs=['#111','#fff','#F5F3EF','#fff','#F5F3EF','#111'];
+    const clrs=['#fff',catColor,'#111',catColor,'#111','#fff'];
+    return `<div style="border:2px solid ${catColor};background:${bgs[i]};color:${clrs[i]};border-radius:8px;padding:10px 6px;text-align:center;min-height:68px;display:flex;flex-direction:column;align-items:center;justify-content:center">
+      <div style="font-size:11pt;font-weight:800;text-transform:uppercase">${en}</div>
+      ${kr?`<div style="font-size:8pt;opacity:.7">${kr}</div>`:''}
+    </div>`;
+  }).join('')+`</div>`;
+
+  const ibHTML=(s1.icebreakers||[]).slice(0,3).map((q,i)=>`
+    <div style="display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid #EBEBEA">
+      <div style="flex-shrink:0;width:26px;height:26px;border-radius:50%;background:${i===0?catColor:'#111'};display:flex;align-items:center;justify-content:center;font-size:10pt;font-weight:700;color:#fff">${i+1}</div>
+      <div style="font-size:10.5pt;font-weight:500;line-height:1.5;color:#1a1a1a;padding-top:3px">${q}</div>
+    </div>`).join('');
+
+  const page1=`<div class="page">
+  <div class="top-bar"></div>
+  <div class="hdr"><div class="hdr-logo">THE<span>BOX</span></div>
+    <div class="hdr-right"><div class="hdr-date">${k}</div><div class="hdr-cat">${t.category||''}</div></div></div>
+  <div class="session-bar">
+    <span class="session-num">SESSION 1</span><div class="session-div"></div>
+    <span class="session-sub">Ice Breaking · Warm Up</span>
+    <span class="session-title">${t.main_title||''}</span>
+  </div>
+  <div class="body">
+    ${t.korean_angle?`<div style="background:${catColor}18;border-left:4px solid ${catColor};border-radius:6px;padding:10px 14px;margin-bottom:16px">
+      <div style="font-size:7.5pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:${catColor};margin-bottom:4px">📌 WHY THIS TOPIC?</div>
+      <div style="font-size:10pt;color:#1a1a1a;line-height:1.6">${t.korean_angle}</div></div>`:''}
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#888">🔥 ICEBREAKER QUESTIONS</div>
+      <div style="flex:1;height:1px;background:#E0DDD8"></div></div>
+    <div style="margin-bottom:18px">${ibHTML}</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#888">💬 SPARK WORDS</div>
+      <div style="flex:1;height:1px;background:#E0DDD8"></div></div>
+    <div style="background:#F7F6F3;border-radius:8px;padding:10px 14px;margin-bottom:12px;border-left:3px solid ${catColor}">
+      <div style="font-size:9.5pt;color:#333">뭐든 자유롭게 얘기해봐요! 이 단어 보고 뭐가 제일 먼저 떠올라요? 정답은 없어요 😊</div></div>
+    ${sparkHTML}
+  </div>
+  <div class="ftr"><div class="ftr-brand">THE<b>BOX</b> ENGLISH NETWORKING</div><div class="ftr-pg">1 / 2</div></div>
+</div>`;
+
+  // page2는 downloadPDF 내부 로직을 재호출 — 간단하게 iframe 방식 대신
+  // page2 HTML을 직접 생성 (포맷별 분기는 복잡하므로 기본 레이아웃 사용)
+  const exprHTML=(exprs||[]).slice(0,6).map(e=>{
+    const en=typeof e==='object'?e.en:e, kr=typeof e==='object'?e.kr:'';
+    return `<div style="display:flex;gap:6px;align-items:flex-start;font-size:9pt;line-height:1.4">
+      <div style="color:${catColor};font-weight:800;flex-shrink:0">•</div>
+      <div><div style="font-weight:700">${en}</div>${kr?`<div style="font-size:8pt;color:#888">${kr}</div>`:''}</div></div>`;
+  }).join('');
+
+  const howToPlayBlock=krFmt?`<div style="background:#FFFDF5;border-left:4px solid ${catColor};border-radius:6px;padding:10px 16px;margin-bottom:14px">
+    <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#B48A00;margin-bottom:4px">💡 HOW TO PLAY</div>
+    <div style="font-size:10pt;color:#333;line-height:1.55">${krFmt}</div></div>`:'';
+
+  const qsHTML=(qs||[]).slice(0,3).map((q,i)=>`
+    <div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #EBEBEA">
+      <div style="color:${catColor};font-size:9pt;font-weight:800;flex-shrink:0">Q${i+1}</div>
+      <div style="font-size:10pt;color:#1a1a1a;line-height:1.45">${q}</div></div>`).join('');
+
+  const rolesHTML=roles.slice(0,2).map((r,i)=>`
+    <div style="flex:1;border:2px solid ${i===0?'#111':catColor};border-radius:8px;padding:12px;text-align:center">
+      <div style="font-size:12pt;font-weight:800;color:${i===0?'#111':catColor}">${r}</div></div>`).join('');
+
+  const page2=`<div class="page">
+  <div class="top-bar"></div>
+  <div class="hdr"><div class="hdr-logo">THE<span>BOX</span></div>
+    <div class="hdr-right"><div class="hdr-date">${k}</div><div class="hdr-cat">${t.category||''}</div></div></div>
+  <div class="session-bar">
+    <span class="session-num">SESSION 2</span><div class="session-div"></div>
+    <span class="session-sub">${s2.format||''}</span>
+    <span class="session-title">${s2.title||''}</span>
+  </div>
+  <div class="body">
+    ${howToPlayBlock}
+    ${s2.scenario?`<div style="background:#F5F3EF;border-radius:8px;padding:12px 16px;margin-bottom:14px;border-left:3px solid ${catColor}">
+      <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:${catColor};margin-bottom:5px">📍 SITUATION</div>
+      <div style="font-size:10.5pt;color:#1a1a1a;line-height:1.6">${s2.scenario}</div></div>`:''}
+    ${roles.length>2?'':`<div style="display:flex;gap:10px;margin-bottom:14px">${rolesHTML}</div>`}
+    ${qs.length?`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#888">💡 DISCUSSION</div>
+      <div style="flex:1;height:1px;background:#E0DDD8"></div></div>
+    <div style="margin-bottom:12px">${qsHTML}</div>`:''}
+    ${exprs.length?`<div style="display:flex;align-items:center;gap:10px;margin-top:12px;margin-bottom:8px">
+      <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#888">💬 USEFUL EXPRESSIONS</div>
+      <div style="flex:1;height:1px;background:#E0DDD8"></div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${exprHTML}</div>`:''}
+  </div>
+  <div class="ftr"><div class="ftr-brand">THE<b>BOX</b> ENGLISH NETWORKING</div><div class="ftr-pg">2 / 2</div></div>
+</div>`;
+
+  selected=origSelected;
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+<style>${css}</style></head><body>
+${page1}${page2}
+<scr`+`ipt>
+window.onload=()=>{
+  const imgs=document.querySelectorAll('img');
+  if(!imgs.length){window.print();return;}
+  let n=imgs.length,done=0;
+  const go=()=>{if(++done>=n)window.print();};
+  imgs.forEach(img=>{if(img.complete)go();else{img.onload=go;img.onerror=go;}});
+}
+</scr`+`ipt>
+</body></html>`;
+}
+
 function printMonthlySchedule(){
   const tops=getTopics();
   const dim=new Date(year,month+1,0).getDate();
@@ -1087,7 +1350,7 @@ function printMonthlySchedule(){
     const bgColor=isSun?'#FFF8F8':isSat?'#F8F8FF':'#fff';
     const cc=t?(CAT_COLORS[t.category]||'#888'):'';
     const fmt=t?(t.session2?.format||''):'';
-    const fmtShort=fmt.replace('Agree/Disagree Spectrum','Spectrum').replace('Would You Rather','W.Y.R').replace('Unpopular Opinion','Unpopular').replace('Survival Scenario','Survival').replace('Two Truths One Lie','2 Truths').replace('This or That Blitz','This/That').replace('Minefield Talk Show','Taboo').replace('Liar Game','Liar');
+    const fmtShort=fmt.replace('Agree/Disagree Spectrum','Spectrum').replace('Would You Rather','W.Y.R').replace('Unpopular Opinion','Unpopular').replace('Survival Scenario','Survival').replace('Two Truths One Lie','2 Truths').replace('This or That Blitz','This/That').replace('Minefield Talk Show','Taboo').replace('Taboo Game','Taboo').replace('Liar Game','Liar');
 
     cells+=`<td style="border:1px solid #E8E6E2;background:${bgColor};height:88px;vertical-align:top;padding:6px 7px">
       <div style="font-size:11pt;font-weight:800;color:${numColor};margin-bottom:4px;line-height:1">${d}</div>
@@ -1185,6 +1448,12 @@ function downloadPDF(day){
   const sparks=(s1.spark_words||[]).slice(0,6);
   const icebreakers=(s1.icebreakers||[]);
   const krFmt=s2.how_to_play_kr||KR_FMT_GUIDE[s2.format]||'';
+
+  function resolveImage(ref){
+    if(!ref)return '';
+    if(ref.startsWith('__ref:'))return localStorage.getItem('tb_img_'+ref.slice(6))||'';
+    return ref; // base64 or url
+  }
 
   /* ── shared CSS ── */
   const css=`
@@ -1332,9 +1601,9 @@ body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#111;-webkit-p
   const isLiarGame=fmt.toLowerCase().includes('liar game');
   const isTwoTruths=fmt.toLowerCase().includes('two truths');
   const isHeadsUp=fmt.toLowerCase().includes('heads up');
-  const isThisOrThat=fmt.toLowerCase().includes('this or that');
+  const isThisOrThat=fmt.toLowerCase().includes('this or that')||fmt.toLowerCase().includes('balance game');
   const isStoryChain=fmt.toLowerCase().includes('story chain');
-  const isMinefield=fmt.toLowerCase().includes('minefield');
+  const isMinefield=fmt.toLowerCase().includes('minefield')||fmt.toLowerCase().includes('taboo game');
 
   if(isGame){
     const howToPlayBlock=krFmt?`<div style="background:#FFFDF5;border-left:4px solid ${catColor};border-radius:6px;padding:10px 16px;margin-bottom:14px">
@@ -1439,37 +1708,68 @@ body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#111;-webkit-p
     ${exprBlock}
   </div>`;
 
-    /* ── This or That Blitz ── */
+    /* ── Balance Game ── */
     } else if(isThisOrThat){
-      const choices=roles.slice(0,8);
-      const choiceRows=choices.map((c,i)=>{
-        const parts=c.split(' or ');
-        const sideA=parts[0]||c, sideB=parts[1]||'B';
-        return `<div style="display:flex;gap:0;border:1px solid #E0DDD8;border-radius:8px;overflow:hidden;margin-bottom:6px">
-          <div style="flex:1;padding:10px 12px;border-right:1px solid #E0DDD8;font-size:10pt;font-weight:600;color:#111">${sideA}</div>
-          <div style="width:36px;display:flex;align-items:center;justify-content:center;background:#F5F3EF;font-size:9pt;font-weight:800;color:#888">OR</div>
-          <div style="flex:1;padding:10px 12px;border-left:1px solid #E0DDD8;font-size:10pt;font-weight:600;color:${catColor}">${sideB}</div>
+      const choices=roles.slice(0,10);
+      const checkRows=choices.map((c,i)=>{
+        // "A 👈 vs 👉 B" 또는 "A or B" 형식 파싱
+        let sideA, sideB;
+        if(c.includes(' vs ')) {
+          const parts=c.split(' vs ');
+          sideA=parts[0].replace('👈','').trim();
+          sideB=parts[1].replace('👉','').trim();
+        } else if(c.includes(' OR ')) {
+          const parts=c.split(' OR ');
+          sideA=parts[0].trim(); sideB=parts[1].trim();
+        } else {
+          const parts=c.split(' or ');
+          sideA=parts[0].trim(); sideB=parts[1]||'B';
+        }
+        const rowBg=i%2===0?'#fff':'#FAFAF9';
+        return `<div style="display:grid;grid-template-columns:1fr 40px 1fr;gap:0;border:1px solid #E0DDD8;border-radius:8px;overflow:hidden;margin-bottom:6px;background:${rowBg}">
+          <div style="padding:11px 14px;display:flex;align-items:center;gap:8px">
+            <div style="width:20px;height:20px;border:2px solid #111;border-radius:4px;flex-shrink:0"></div>
+            <div style="font-size:9.5pt;font-weight:600;color:#111;line-height:1.35">${sideA}</div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:center;background:#111;font-size:7.5pt;font-weight:800;color:#fff;letter-spacing:.5px">VS</div>
+          <div style="padding:11px 14px;display:flex;align-items:center;gap:8px">
+            <div style="font-size:9.5pt;font-weight:600;color:${catColor};line-height:1.35;text-align:right;flex:1">${sideB}</div>
+            <div style="width:20px;height:20px;border:2px solid ${catColor};border-radius:4px;flex-shrink:0"></div>
+          </div>
         </div>`;
       }).join('');
       page2body=`
   <div class="body">
     ${howToPlayBlock}
-    <div style="text-align:center;padding:10px 0 14px;border-bottom:2px solid #111;margin-bottom:14px">
-      <div style="font-size:20pt;font-weight:800;color:#111">${s2.title||'This or That'}</div>
+    <div style="text-align:center;padding:8px 0 12px;border-bottom:2px solid #111;margin-bottom:14px">
+      <div style="font-size:18pt;font-weight:800;color:#111">${s2.title||'Balance Game'}</div>
       ${s2.subtitle_kr?`<div style="font-size:10pt;color:#888;margin-top:4px">${s2.subtitle_kr}</div>`:''}
     </div>
-    <div style="margin-bottom:4px">${choiceRows}</div>
+    <!-- 헤더 라벨 -->
+    <div style="display:grid;grid-template-columns:1fr 40px 1fr;margin-bottom:6px">
+      <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#888;padding:0 14px">☑ A Side</div>
+      <div></div>
+      <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:${catColor};padding:0 14px;text-align:right">B Side ☑</div>
+    </div>
+    <div>${checkRows}</div>
     ${exprBlock}
   </div>`;
 
     /* ── Story Chain ── */
     } else if(isStoryChain){
-      const words=roles||[];
-      const wordCloud=words.map(w=>`<span style="display:inline-block;background:#F5F3EF;border:1px solid #E0DDD8;border-radius:4px;padding:4px 8px;font-size:9pt;font-weight:600;margin:2px;color:#111">${w}</span>`).join('');
+      const rawRoles=roles||[];
+      // roles에 3개 이상 = 단어뱅크. 2개 이하 = 기존 팀이름 데이터 → 재생성 안내
+      const hasWordBank=rawRoles.length>2;
+      const wordCloud=hasWordBank
+        ? rawRoles.map(w=>`<span style="display:inline-block;background:#F5F3EF;border:1px solid #E0DDD8;border-radius:4px;padding:4px 8px;font-size:8.5pt;font-weight:600;margin:2px 3px;color:#111">${w}</span>`).join('')
+        : `<div style="background:#FFF8E7;border:1.5px dashed #F0C040;border-radius:8px;padding:14px 16px;text-align:center;color:#9A7B00;font-size:9pt;font-weight:600">
+            ⚠️ 이 토픽은 단어뱅크가 없어요.<br>
+            <span style="font-size:8.5pt;font-weight:400;color:#B8960A;margin-top:4px;display:block">"↺ 2페이지만" 버튼으로 재생성하면 단어 100개가 채워져요!</span>
+          </div>`;
       page2body=`
   <div class="body">
     ${howToPlayBlock}
-    <div style="display:flex;gap:10px;margin-bottom:14px">
+    <div style="display:flex;gap:10px;margin-bottom:12px">
       <div style="flex:1;border:2px solid #111;border-radius:8px;padding:12px;text-align:center">
         <div style="font-size:11pt;font-weight:800;color:#111">🔵 TEAM A</div>
         <div style="font-size:8pt;color:#888;margin-top:3px">Members: ___________</div>
@@ -1479,7 +1779,7 @@ body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#111;-webkit-p
         <div style="font-size:8pt;color:#888;margin-top:3px">Members: ___________</div>
       </div>
     </div>
-    <div style="background:#F5F3EF;border-radius:8px;padding:6px 10px;margin-bottom:8px;display:flex;align-items:center;gap:8px">
+    <div style="background:#F5F3EF;border-radius:8px;padding:6px 10px;margin-bottom:10px;display:flex;align-items:center;gap:8px">
       <div style="font-size:8pt;font-weight:800;color:${catColor};white-space:nowrap">🏆 SCORE</div>
       <div style="flex:1;display:flex;gap:12px">
         <div style="font-size:8pt;color:#888">Team A: ___ words</div>
@@ -1490,56 +1790,71 @@ body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#111;-webkit-p
       <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#888">📝 WORD BANK — USE THESE!</div>
       <div style="flex:1;height:1px;background:#E0DDD8"></div>
     </div>
-    <div style="margin-bottom:4px;line-height:2">${wordCloud}</div>
+    <div style="line-height:2.1">${wordCloud}</div>
     ${exprBlock}
   </div>`;
 
-    /* ── Minefield Talk Show (Taboo) ── */
+    /* ── Taboo Game ── */
     } else if(isMinefield){
       const tabooWords=roles.slice(0,6);
       const tabooCards=tabooWords.map(w=>`
-        <div style="border:2px solid #111;border-radius:8px;padding:10px;text-align:center;background:#fff">
-          <div style="font-size:11pt;font-weight:800;color:#111">${w}</div>
-          <div style="font-size:7pt;color:#cc0014;font-weight:700;margin-top:2px">TABOO WORD</div>
+        <div style="border:2px solid #111;border-radius:8px;padding:12px 8px;text-align:center;background:#fff">
+          <div style="font-size:13pt;font-weight:800;color:#111;line-height:1.2">${w}</div>
+          <div style="font-size:7pt;color:#cc0014;font-weight:700;margin-top:4px;letter-spacing:.5px">🚫 TABOO</div>
         </div>`).join('');
-      const memberCount=6;
+
+      const tabooQs=qs.slice(0,3).map((q,i)=>`
+        <div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #EBEBEA">
+          <div style="background:${catColor};color:#fff;font-size:8pt;font-weight:800;padding:2px 7px;border-radius:4px;flex-shrink:0;white-space:nowrap;margin-top:2px">Q${i+1}</div>
+          <div style="font-size:10pt;color:#1a1a1a;line-height:1.45">${q}</div>
+        </div>`).join('');
+
+      const memberCount=8;
       const scoreRows=Array.from({length:memberCount},(_,i)=>`
         <tr>
-          <td style="padding:8px 10px;border:1px solid #E0DDD8;font-size:9pt;color:#888">Player ${i+1}</td>
-          ${Array.from({length:5},()=>`<td style="padding:8px;border:1px solid #E0DDD8;width:36px;text-align:center"></td>`).join('')}
-          <td style="padding:8px;border:1px solid #E0DDD8;width:50px;text-align:center;font-weight:800;color:${catColor}">Total</td>
+          <td style="padding:7px 10px;border:1px solid #E0DDD8;font-size:9pt;color:#555">Player ${i+1}</td>
+          ${Array.from({length:5},()=>`<td style="padding:7px;border:1px solid #E0DDD8;width:34px;text-align:center"></td>`).join('')}
+          <td style="padding:7px;border:1px solid #E0DDD8;width:50px;text-align:center;font-weight:800;color:${catColor}">Total</td>
         </tr>`).join('');
+
       page2body=`
   <div class="body">
     ${howToPlayBlock}
-    <div style="text-align:center;padding:10px 0 14px;border-bottom:2px solid #111;margin-bottom:14px">
+    <div style="text-align:center;padding:8px 0 12px;border-bottom:2px solid #111;margin-bottom:14px">
       <div style="font-size:22pt;font-weight:800;color:#111">${s2.title||'Taboo Game'}</div>
       ${s2.subtitle_kr?`<div style="font-size:10pt;color:#888;margin-top:4px">${s2.subtitle_kr}</div>`:''}
     </div>
+    <!-- Taboo 키워드 -->
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
       <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#888">🚫 TABOO KEYWORDS</div>
       <div style="flex:1;height:1px;background:#E0DDD8"></div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">${tabooCards}</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">${tabooCards}</div>
+    <!-- 질문 3개 -->
+    ${tabooQs?`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#888">💬 DISCUSSION</div>
+      <div style="flex:1;height:1px;background:#E0DDD8"></div>
+    </div>
+    <div style="margin-bottom:14px">${tabooQs}</div>`:''}
+    <!-- 점수 테이블 -->
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
       <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#cc0014">📊 TABOO COUNT</div>
       <div style="flex:1;height:1px;background:#E0DDD8"></div>
     </div>
-    <table style="width:100%;border-collapse:collapse;margin-bottom:4px">
+    <table style="width:100%;border-collapse:collapse">
       <thead>
         <tr>
           <th style="padding:7px 10px;border:1px solid #E0DDD8;background:#111;color:#fff;font-size:8.5pt;text-align:left">Name</th>
-          <th style="padding:7px;border:1px solid #E0DDD8;background:#111;color:#fff;font-size:8.5pt;width:36px">1</th>
-          <th style="padding:7px;border:1px solid #E0DDD8;background:#111;color:#fff;font-size:8.5pt;width:36px">2</th>
-          <th style="padding:7px;border:1px solid #E0DDD8;background:#111;color:#fff;font-size:8.5pt;width:36px">3</th>
-          <th style="padding:7px;border:1px solid #E0DDD8;background:#111;color:#fff;font-size:8.5pt;width:36px">4</th>
-          <th style="padding:7px;border:1px solid #E0DDD8;background:#111;color:#fff;font-size:8.5pt;width:36px">5</th>
+          <th style="padding:7px;border:1px solid #E0DDD8;background:#111;color:#fff;font-size:8.5pt;width:34px">1</th>
+          <th style="padding:7px;border:1px solid #E0DDD8;background:#111;color:#fff;font-size:8.5pt;width:34px">2</th>
+          <th style="padding:7px;border:1px solid #E0DDD8;background:#111;color:#fff;font-size:8.5pt;width:34px">3</th>
+          <th style="padding:7px;border:1px solid #E0DDD8;background:#111;color:#fff;font-size:8.5pt;width:34px">4</th>
+          <th style="padding:7px;border:1px solid #E0DDD8;background:#111;color:#fff;font-size:8.5pt;width:34px">5</th>
           <th style="padding:7px;border:1px solid #E0DDD8;background:${catColor};color:#fff;font-size:8.5pt;width:50px">TOTAL</th>
         </tr>
       </thead>
       <tbody>${scoreRows}</tbody>
     </table>
-    ${exprBlock}
   </div>`;
 
     /* ── 기타 게임 (기본) ── */
@@ -1571,6 +1886,47 @@ body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#111;-webkit-p
   /* ════════════════════════════════
      📊 RANKING LAYOUT
   ════════════════════════════════ */
+  } else if(isStoryChain){
+      const rawRoles=roles||[];
+      const hasWordBank=rawRoles.length>2;
+      const wordCloud=hasWordBank
+        ? rawRoles.map(w=>`<span style="display:inline-block;background:#F5F3EF;border:1px solid #E0DDD8;border-radius:4px;padding:4px 8px;font-size:8.5pt;font-weight:600;margin:2px 3px;color:#111">${w}</span>`).join('')
+        : `<div style="background:#FFF8E7;border:1.5px dashed #F0C040;border-radius:8px;padding:14px 16px;text-align:center;color:#9A7B00;font-size:9pt;font-weight:600">⚠️ 단어뱅크 없음 — "↺ 2페이지만"으로 재생성하세요!</div>`;
+      page2body=`
+  <div class="body">
+    ${krFmt?`<div style="background:#FFFDF5;border-left:4px solid ${catColor};border-radius:6px;padding:10px 16px;margin-bottom:14px">
+      <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#B48A00;margin-bottom:4px">💡 HOW TO PLAY</div>
+      <div style="font-size:10pt;color:#333;line-height:1.55">${krFmt}</div>
+    </div>`:''}
+    ${s2.scenario?`<div style="background:#F5F3EF;border-radius:8px;padding:10px 14px;margin-bottom:12px;border-left:3px solid ${catColor}">
+      <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:${catColor};margin-bottom:4px">📍 SITUATION</div>
+      <div style="font-size:10pt;color:#1a1a1a;line-height:1.55">${s2.scenario}</div>
+    </div>`:''}
+    <div style="display:flex;gap:10px;margin-bottom:12px">
+      <div style="flex:1;border:2px solid #111;border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:11pt;font-weight:800;color:#111">🔵 TEAM A</div>
+        <div style="font-size:8pt;color:#888;margin-top:3px">Members: ___________</div>
+      </div>
+      <div style="flex:1;border:2px solid ${catColor};border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:11pt;font-weight:800;color:${catColor}">🔴 TEAM B</div>
+        <div style="font-size:8pt;color:#888;margin-top:3px">Members: ___________</div>
+      </div>
+    </div>
+    <div style="background:#F5F3EF;border-radius:8px;padding:6px 10px;margin-bottom:10px;display:flex;align-items:center;gap:8px">
+      <div style="font-size:8pt;font-weight:800;color:${catColor};white-space:nowrap">🏆 SCORE</div>
+      <div style="flex:1;display:flex;gap:12px">
+        <div style="font-size:8pt;color:#888">Team A: ___ words</div>
+        <div style="font-size:8pt;color:#888">Team B: ___ words</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#888">📝 WORD BANK — USE THESE!</div>
+      <div style="flex:1;height:1px;background:#E0DDD8"></div>
+    </div>
+    <div style="line-height:2.1">${wordCloud}</div>
+    ${exprBlock}
+  </div>`;
+
   } else if(isRanking){
     const rankItems=roles.slice(0,10).map((item,i)=>`
       <tr>
@@ -1670,18 +2026,25 @@ body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#111;-webkit-p
      🔍 MYTH BUSTERS LAYOUT
   ════════════════════════════════ */
   } else if(isMythBusters){
-    // roles = 5 myth/fact statements
     const statements=roles.slice(0,5);
-    const stmtRows=statements.map((stmt,i)=>`
-      <tr>
-        <td style="padding:10px 12px;border:1px solid #E0DDD8;font-size:10pt;color:#1a1a1a;line-height:1.45">${stmt}</td>
-        <td style="padding:10px 8px;border:1px solid #E0DDD8;text-align:center;width:60px">
-          <div style="display:flex;gap:6px;justify-content:center">
-            <div style="border:1.5px solid #111;border-radius:4px;padding:3px 8px;font-size:8pt;font-weight:800;color:#111">MYTH</div>
-            <div style="border:1.5px solid ${catColor};border-radius:4px;padding:3px 8px;font-size:8pt;font-weight:800;color:${catColor}">FACT</div>
+    const hasStatements=statements.length>=3;
+
+    const stmtRows=hasStatements ? statements.map((stmt,i)=>{
+      const cleanStmt=stmt.replace(/\[(MYTH|FACT)\]/i,'').trim();
+      return `<tr style="background:${i%2===0?'#fff':'#FAFAF9'}">
+        <td style="padding:4px 8px;border:1px solid #E0DDD8;font-size:8pt;font-weight:800;color:#888;text-align:center;width:24px">${i+1}</td>
+        <td style="padding:11px 14px;border:1px solid #E0DDD8;font-size:10pt;color:#1a1a1a;line-height:1.45">${cleanStmt}</td>
+        <td style="padding:8px;border:1px solid #E0DDD8;text-align:center;width:80px">
+          <div style="display:flex;gap:5px;justify-content:center">
+            <div style="border:1.5px solid #CC0014;border-radius:5px;padding:4px 9px;font-size:8pt;font-weight:800;color:#CC0014">MYTH</div>
+            <div style="border:1.5px solid ${catColor};border-radius:5px;padding:4px 9px;font-size:8pt;font-weight:800;color:${catColor}">FACT</div>
           </div>
         </td>
-      </tr>`).join('');
+      </tr>`;
+    }).join('')
+    : `<tr><td colspan="3" style="padding:20px;text-align:center;color:#9A7B00;font-size:9pt;font-weight:600;background:#FFF8E7;border:1.5px dashed #F0C040">
+        ⚠️ 진술문 없음 — "↺ 2페이지만" 버튼으로 재생성하면 진술문 5개가 채워져요!
+      </td></tr>`;
 
     const mythQs=qs.slice(0,3).map((q,i)=>`
       <div style="display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid #EBEBEA">
@@ -1695,22 +2058,20 @@ body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#111;-webkit-p
       <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#B48A00;margin-bottom:4px">💡 HOW TO PLAY</div>
       <div style="font-size:10pt;color:#333;line-height:1.55">${krFmt}</div>
     </div>`:''}
-    <!-- 제목 -->
-    <div style="text-align:center;padding:8px 0 14px;border-bottom:2px solid #111;margin-bottom:14px">
+    <div style="text-align:center;padding:8px 0 12px;border-bottom:2px solid #111;margin-bottom:14px">
       <div style="font-size:16pt;font-weight:800;color:#111;line-height:1.3">${s2.title||'Myth or Fact?'}</div>
       ${s2.subtitle_kr?`<div style="font-size:10pt;color:#888;margin-top:4px">${s2.subtitle_kr}</div>`:''}
     </div>
-    <!-- MYTH/FACT 진술문 테이블 -->
     <table style="width:100%;border-collapse:collapse;margin-bottom:14px">
       <thead>
         <tr>
-          <th style="padding:8px 12px;border:1px solid #E0DDD8;background:#111;color:#fff;font-size:9pt;text-align:left">Statement</th>
-          <th style="padding:8px 8px;border:1px solid #E0DDD8;background:#111;color:#fff;font-size:9pt;width:130px;text-align:center">My Answer</th>
+          <th style="padding:8px 6px;border:1px solid #E0DDD8;background:#111;color:#fff;font-size:9pt;width:24px">#</th>
+          <th style="padding:8px 14px;border:1px solid #E0DDD8;background:#111;color:#fff;font-size:9pt;text-align:left">Statement</th>
+          <th style="padding:8px;border:1px solid #E0DDD8;background:#111;color:#fff;font-size:9pt;width:80px;text-align:center">MYTH / FACT</th>
         </tr>
       </thead>
       <tbody>${stmtRows}</tbody>
     </table>
-    <!-- What If 질문 -->
     ${qs.length?`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
       <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#888">💡 WHAT IF?</div>
       <div style="flex:1;height:1px;background:#E0DDD8"></div>
@@ -1718,45 +2079,89 @@ body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#111;-webkit-p
     <div style="margin-bottom:4px">${mythQs}</div>`:''}
     ${exprBlock}
   </div>`;
+
+  /* ════════════════════════════════
+     🧑‍⚕️ ADVICE LAB LAYOUT
+  ════════════════════════════════ */
+  } else if(isAdvice){
     const adviceRoles=(roles.length>=3)?roles.slice(0,3):['The Angel','The Judge','The Joker'];
-    const icons=['♡','⚖','★'];
-    const colors=['#111',catColor,'#CC0014'];
-    const roleCards=adviceRoles.map((r,i)=>`
-      <div style="border:2px solid ${colors[i]};border-radius:10px;overflow:hidden;flex:1">
-        <div style="background:${colors[i]};padding:12px;text-align:center">
-          <div style="font-size:18pt;color:#fff;margin-bottom:4px">${icons[i]}</div>
-          <div style="font-size:11pt;font-weight:800;color:#fff;letter-spacing:.3px">${r}</div>
+    const adviceRoleNames=adviceRoles;
+    const roleSetup=[
+      {icon:'♡',color:'#111',label:'THE ANGEL',desc:'찬성 입장 — 왜 좋은지 1분'},
+      {icon:'⚖',color:catColor,label:'THE JUDGE',desc:'반대 입장 — 뭐가 문제인지 1분'},
+      {icon:'★',color:'#CC0014',label:'THE JOKER',desc:'웃긴 입장 — 이상한 상황들 1분'},
+    ];
+    const roleCards=roleSetup.map((rs,i)=>{
+      const name=adviceRoleNames[i]||rs.label;
+      return `<div style="border:2px solid ${rs.color};border-radius:10px;overflow:hidden;flex:1">
+        <div style="background:${rs.color};padding:10px 8px;text-align:center">
+          <div style="font-size:16pt;color:#fff;margin-bottom:3px">${rs.icon}</div>
+          <div style="font-size:10pt;font-weight:800;color:#fff;line-height:1.2">${name}</div>
+          <div style="font-size:7pt;color:rgba(255,255,255,.75);margin-top:3px">${rs.desc}</div>
         </div>
-        <div style="padding:12px;background:#fafaf9;min-height:70px">
-          <div style="font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#aaa;margin-bottom:8px">My advice →</div>
-          <div style="border-bottom:1px dashed #ddd;height:20px;margin-bottom:7px"></div>
-          <div style="border-bottom:1px dashed #ddd;height:20px"></div>
+        <div style="padding:10px;background:#fafaf9;min-height:60px">
+          <div style="font-size:7pt;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#aaa;margin-bottom:7px">My advice →</div>
+          <div style="border-bottom:1px dashed #ddd;height:18px;margin-bottom:6px"></div>
+          <div style="border-bottom:1px dashed #ddd;height:18px"></div>
         </div>
+      </div>`;
+    }).join('');
+
+    const adviceQs=qs.slice(0,3).map((q,i)=>`
+      <div style="display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid #EBEBEA">
+        <div style="background:${catColor};color:#fff;font-size:8pt;font-weight:800;padding:2px 7px;border-radius:4px;flex-shrink:0;white-space:nowrap;margin-top:2px">What If ${i+1}</div>
+        <div style="font-size:10pt;color:#1a1a1a;line-height:1.45">${q}</div>
       </div>`).join('');
 
     page2body=`
   <div class="body">
-    ${krFmt?`<div style="background:#FFFDF5;border-left:4px solid ${catColor};border-radius:6px;padding:10px 16px;margin-bottom:14px">
+    ${krFmt?`<div style="background:#FFFDF5;border-left:4px solid ${catColor};border-radius:6px;padding:10px 16px;margin-bottom:12px">
       <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#B48A00;margin-bottom:4px">💡 HOW TO PLAY</div>
       <div style="font-size:10pt;color:#333;line-height:1.55">${krFmt}</div>
     </div>`:''}
-    <div style="background:#fff;border:1.5px solid #E0DDD8;border-radius:10px;padding:14px 16px;margin-bottom:14px">
-      <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:${catColor};margin-bottom:6px">📍 SITUATION</div>
-      <div style="font-size:11pt;font-weight:500;color:#1a1a1a;line-height:1.65">${s2.scenario||''}</div>
+    <div style="background:#fff;border:1.5px solid #E0DDD8;border-radius:10px;padding:12px 16px;margin-bottom:12px">
+      <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:${catColor};margin-bottom:5px">📍 SITUATION</div>
+      <div style="font-size:10.5pt;font-weight:500;color:#1a1a1a;line-height:1.6">${s2.scenario||''}</div>
     </div>
-    <div style="display:flex;gap:10px;margin-bottom:16px">${roleCards}</div>
-    ${qs.length?`<div style="display:flex;flex-direction:column;gap:7px;margin-bottom:4px">
-      ${qs.map((q,i)=>`<div style="display:flex;gap:8px;font-size:10pt;color:#333;line-height:1.45">
-        <span style="color:${catColor};font-weight:800;flex-shrink:0">Q${i+1}</span><span>${q}</span>
-      </div>`).join('')}
-    </div>`:''}
+    <!-- 3 역할 카드 -->
+    <div style="display:flex;gap:8px;margin-bottom:12px">${roleCards}</div>
+    <!-- What If 질문 -->
+    ${adviceQs?`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#888">💡 WHAT IF?</div>
+      <div style="flex:1;height:1px;background:#E0DDD8"></div>
+    </div>
+    <div style="margin-bottom:4px">${adviceQs}</div>`:''}
     ${exprBlock}
   </div>`;
 
   /* ════════════════════════════════
-     🔵 DEFAULT (Story Chain, Price Check 등)
+     ✏️ 자율 토픽 LAYOUT
   ════════════════════════════════ */
-  } else {
+  } else if(fmt==='자율 토픽'){
+    const customNotes=s2.custom_notes||'';
+    const customImage=resolveImage(s2.custom_image||'');
+    const contentLines=(s2.scenario||'').split('\n').filter(l=>l.trim());
+    const contentHTML=contentLines.map(line=>`
+      <div style="padding:9px 14px;margin-bottom:6px;background:#FAFAF9;border-radius:6px;border-left:3px solid ${catColor};font-size:10.5pt;color:#1a1a1a;line-height:1.5">${line}</div>`).join('');
+
+    page2body=`
+  <div class="body" style="display:flex;flex-direction:column;align-items:center;justify-content:${customImage?'flex-start':'flex-start'}">
+    ${krFmt?`<div style="background:#FFFDF5;border-left:4px solid ${catColor};border-radius:6px;padding:10px 16px;margin-bottom:14px;width:100%">
+      <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#B48A00;margin-bottom:4px">💡 HOW TO PLAY</div>
+      <div style="font-size:10pt;color:#333;line-height:1.55">${krFmt}</div>
+    </div>`:''}
+    ${s2.title?`<div style="width:100%;border:2px solid ${catColor};border-radius:8px;padding:14px;text-align:center;margin-bottom:16px">
+      <div style="font-size:20pt;font-weight:800;color:${catColor};letter-spacing:-0.3px">${s2.title}</div>
+    </div>`:''}
+    ${customImage?`<div style="width:100%;text-align:center;flex:1;display:flex;align-items:center;justify-content:center;margin-bottom:${contentHTML||customNotes?'14px':'0'}">
+      <img src="${customImage}" style="width:100%;max-height:480px;object-fit:contain;border-radius:10px;display:block">
+    </div>`:''}
+    ${contentHTML?`<div style="width:100%">${contentHTML}</div>`:''}
+    ${customNotes?`<div style="margin-top:14px;width:100%;background:#F5F3EF;border-radius:8px;padding:12px 14px;border-left:3px solid #888">
+      <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:5px">📝 NOTES</div>
+      <div style="font-size:9.5pt;color:#555;line-height:1.6;white-space:pre-line">${customNotes}</div>
+    </div>`:''}
+  </div>`;
     const defQs=qs.slice(0,3).map((q,i)=>`
       <div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #EBEBEA">
         <div style="color:${catColor};font-size:9pt;font-weight:800;flex-shrink:0;margin-top:1px">Q${i+1}</div>
@@ -1790,17 +2195,23 @@ body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#111;-webkit-p
      PAGE 3 — LEADER'S GUIDE (항상 포함)
   ══════════════════════════════════════════ */
   const s3=t.session3||{};
-  const leaderRules=(s3.left_rules||[]).map((r,i)=>`
+  // 포맷별 기본 리더 가이드 적용
+  const fmtKey=Object.keys(DEFAULT_LEADER_GUIDE).find(k=>fmt.includes(k.toLowerCase()));
+  const defGuide=fmtKey?DEFAULT_LEADER_GUIDE[fmtKey]:{};
+  const leaderRules=((s3.left_rules&&s3.left_rules.length)?s3.left_rules:(defGuide.left_rules||[])).map((r,i)=>`
     <div style="display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid #E0DDD8">
       <div style="flex-shrink:0;width:24px;height:24px;border-radius:50%;background:${catColor};color:#fff;display:flex;align-items:center;justify-content:center;font-size:9pt;font-weight:800">${i+1}</div>
       <div style="font-size:10pt;color:#1a1a1a;line-height:1.55">${r}</div>
     </div>`).join('');
 
-  const leaderTips=(s3.left_tips||[]).map(tip=>`
+  const tipsTitle=(s3.left_tips_title)||(defGuide.left_tips_title)||'💡 막힐 때 이렇게!';
+  const leaderTips=((s3.left_tips&&s3.left_tips.length)?s3.left_tips:(defGuide.left_tips||[])).map(tip=>`
     <div style="display:flex;gap:8px;align-items:flex-start;padding:6px 0">
       <div style="color:${catColor};font-weight:800;flex-shrink:0;font-size:11pt;line-height:1">→</div>
       <div style="font-size:9.5pt;color:#333;line-height:1.5">${tip}</div>
     </div>`).join('');
+
+  const leftTitle=(s3.left_title)||(defGuide.left_title)||'게임 진행 순서';
 
   const rightItems=(s3.right_items||[]).map(item=>`
     <div style="padding:12px 0;border-bottom:1px solid #EBEBEA">
@@ -1808,6 +2219,30 @@ body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#111;-webkit-p
       <div style="font-size:10.5pt;font-weight:600;color:#111;margin-bottom:3px;line-height:1.4">${item.en||''}</div>
       <div style="font-size:9pt;color:#666;line-height:1.4">${item.kr||''}</div>
     </div>`).join('');
+
+  // Myth Busters 전용: 정답 섹션
+  const mythAnswerBlock=isMythBusters&&roles.length>=3?`
+    <div style="margin-top:0">
+      <div style="font-size:10pt;font-weight:800;color:#CC0014;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">✅ ANSWER KEY</div>
+      ${roles.slice(0,5).map((stmt,i)=>{
+        // [MYTH] 또는 [FACT] 태그 파싱
+        const mythMatch=stmt.match(/\[MYTH\]/i);
+        const factMatch=stmt.match(/\[FACT\]/i);
+        const answer=mythMatch?'MYTH':factMatch?'FACT':'?';
+        const cleanStmt=stmt.replace(/\[(MYTH|FACT)\]/i,'').trim();
+        const answerBg=answer==='MYTH'?'#CC0014':answer==='FACT'?catColor:'#888';
+        return `<div style="padding:10px 12px;margin-bottom:6px;border-radius:8px;border:1px solid #E0DDD8;background:${i%2===0?'#fff':'#FAFAF9'}">
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <div style="flex-shrink:0;font-size:9pt;font-weight:800;color:#888;width:16px">${i+1}</div>
+            <div style="flex:1;font-size:9.5pt;color:#1a1a1a;line-height:1.4;margin-right:10px">${cleanStmt}</div>
+            <div style="flex-shrink:0;padding:4px 12px;border-radius:5px;font-size:9pt;font-weight:800;background:${answerBg};color:#fff;white-space:nowrap">${answer}</div>
+          </div>
+        </div>`;
+      }).join('')}
+      <div style="margin-top:10px;background:#FFF8E7;border:1px solid #F0C040;border-radius:6px;padding:8px 12px;font-size:8.5pt;color:#9A7B00">
+        💡 멤버들이 다 고른 후 정답을 공개하세요!
+      </div>
+    </div>`:null;
 
   const page3=`
 <div class="page">
@@ -1827,15 +2262,16 @@ body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#111;-webkit-p
   <div style="display:flex;flex:1;overflow:hidden">
     <!-- 왼쪽: 진행 순서 + 팁 -->
     <div style="flex:1;padding:22px;border-right:1px solid #E0DDD8">
-      <div style="font-size:10pt;font-weight:800;color:#CC0014;text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">${s3.left_title||'게임 진행 순서'}</div>
+      <div style="font-size:10pt;font-weight:800;color:#CC0014;text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">${leftTitle}</div>
       <div style="margin-bottom:24px">${leaderRules||'<div style="color:#aaa;font-size:10pt">정보 없음</div>'}</div>
-      <div style="display:inline-block;background:#ffff00;font-size:9pt;font-weight:800;padding:4px 10px;margin-bottom:12px;border-radius:3px;color:#111">${s3.left_tips_title||'💡 막힐 때 이렇게!'}</div>
+      <div style="display:inline-block;background:#ffff00;font-size:9pt;font-weight:800;padding:4px 10px;margin-bottom:12px;border-radius:3px;color:#111">${tipsTitle}</div>
       <div>${leaderTips||'<div style="color:#aaa;font-size:10pt">정보 없음</div>'}</div>
     </div>
-    <!-- 오른쪽: 대화 부스터 질문 -->
+    <!-- 오른쪽: Myth Busters면 정답, 아니면 대화 부스터 -->
     <div style="flex:1;padding:22px">
+      ${mythAnswerBlock||`
       <div style="font-size:10pt;font-weight:800;color:#CC0014;text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">${s3.right_title||'대화 부스터 질문'}</div>
-      <div>${rightItems||'<div style="color:#aaa;font-size:10pt">정보 없음</div>'}</div>
+      <div>${rightItems||'<div style="color:#aaa;font-size:10pt">정보 없음</div>'}</div>`}
     </div>
   </div>
   <div class="ftr"><div class="ftr-brand">THE<b>BOX</b> ENGLISH NETWORKING</div><div class="ftr-pg">3 / 3</div></div>
@@ -1952,7 +2388,11 @@ function renderRight(){
     ${s2.format&&s2.format.toLowerCase().includes('story chain')?`
     <div class="sec" style="margin-top:8px"><div class="sec-l">📝 Word Bank</div><div class="sec-line"></div></div>
     <div style="margin-top:6px;line-height:2.4">
-      ${(s2.roles||[]).map(w=>`<span style="display:inline-block;background:#F5F3EF;border:1px solid #E0DDD8;border-radius:4px;padding:3px 8px;margin:2px;font-size:10px;font-weight:600;color:#111">${w}</span>`).join('')}
+      ${(()=>{
+        const r=s2.roles||[];
+        if(r.length>2) return r.map(w=>`<span style="display:inline-block;background:#F5F3EF;border:1px solid #E0DDD8;border-radius:4px;padding:3px 8px;margin:2px;font-size:10px;font-weight:600;color:#111">${w}</span>`).join('');
+        return `<div style="background:#FFF8E7;border:1.5px dashed #F0C040;border-radius:6px;padding:10px 12px;font-size:10px;color:#9A7B00;font-weight:600;line-height:1.6">⚠️ 단어뱅크가 없어요. <span style="font-weight:400">"↺ 2페이지만" 버튼으로 재생성하면 단어 100개가 채워져요!</span></div>`;
+      })()}
     </div>`:`
     <div class="sec" style="margin-top:8px"><div class="sec-l">Discussion</div><div class="sec-line"></div></div>
     ${(s2.questions||[]).map((q,i)=>`
@@ -1994,6 +2434,7 @@ function renderRight(){
     <div class="btn-row" style="margin-top:10px">
       <select id="regen-fmt" style="flex:1; padding:8px; border-radius:8px; border:1px solid #EAEAEA; font-family:inherit; font-size:11px; font-weight:700; outline:none; cursor:pointer; background:#F8F9FA; color:#333;" ${loading?'disabled':''}>
         <option value="">🎲 랜덤 포맷</option>
+        <option value="__custom__">✏️ 자율 토픽</option>
         ${getFormats().filter(f=>f.on).map(f=>`<option value="${f.name}">${f.name}</option>`).join('')}
       </select>
       <button class="btn-s" onclick="window._tbGenS2(${selected})" ${loading?'disabled':''} style="flex:1;background:#1a1a1a;color:#fff;border:none">↺ 2페이지만</button>
@@ -2064,8 +2505,140 @@ window._tbGen=d=>{
 };
 window._tbGenS2=d=>{
   const s=document.getElementById('regen-fmt');
-  generateSession2(d, s && s.value ? s.value : undefined);
+  const val=s&&s.value?s.value:undefined;
+  if(val==='__custom__'){
+    openCustomModal(d);
+  } else {
+    generateSession2(d, val||undefined);
+  }
 };
+
+function openCustomModal(day){
+  const k=topicKey(day);
+  const t=getTopics()[k];
+  const s2=t?.session2||{};
+  const isCustom=s2.format==='자율 토픽';
+  const title=isCustom?(s2.title||''):'';
+  const howTo=isCustom?(s2.how_to_play_kr||''):'';
+  const scen=isCustom?(s2.scenario||''):'';
+  const notes=isCustom?(s2.custom_notes||''):'';
+  const imgData=isCustom?(s2.custom_image||''):'';
+  window._customImgData='';
+
+  // 별도 편집창 열기
+  const w=window.open('','_blank','width=700,height=860');
+  if(!w){showToast('팝업이 차단됐어요. 팝업 허용 후 다시 시도하세요.');return;}
+
+  const esc=v=>String(v||"").replace(/`/g,"'");
+  const escTitle=esc(title),escHowTo=esc(howTo),escScen=esc(scen),escNotes=esc(notes);
+
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>자율 토픽 편집</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#f5f5f5;padding:24px}
+.card{background:#fff;border-radius:12px;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,.1)}
+h2{font-size:16px;font-weight:800;margin-bottom:20px;color:#111}
+label{display:block;font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px;margin-top:14px}
+input,textarea{width:100%;padding:9px 12px;border:1.5px solid #E0DDD8;border-radius:8px;font-size:13px;font-family:inherit;outline:none;resize:vertical}
+input:focus,textarea:focus{border-color:#CC0014}
+.img-preview{margin:8px 0;display:none}
+.img-preview img{max-width:100%;max-height:200px;border-radius:8px;border:1px solid #E0DDD8;object-fit:contain}
+.upload-label{display:block;padding:10px;border:1.5px dashed #E0DDD8;border-radius:8px;text-align:center;cursor:pointer;font-size:12px;color:#888;background:#fafaf9;margin-top:6px}
+.upload-label:hover{border-color:#CC0014;color:#CC0014}
+.btns{display:flex;gap:10px;margin-top:20px}
+.btn-save{flex:2;padding:12px;background:#CC0014;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer}
+.btn-cancel{flex:1;padding:12px;background:#fff;border:1.5px solid #E0DDD8;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#555}
+.btn-save:hover{background:#aa0010}
+</style>
+</head><body>
+<div class="card">
+  <h2>✏️ 자율 토픽 편집</h2>
+  <label>액티비티 제목</label>
+  <input id="e-title" type="text" value="${escTitle}" placeholder="예: 마피아 게임">
+  <label>HOW TO PLAY (한국어)</label>
+  <textarea id="e-howto" rows="2" placeholder="진행 방법을 입력하세요">${escHowTo}</textarea>
+  <label>내용 / 질문 / 게임 항목</label>
+  <textarea id="e-scen" rows="5" placeholder="게임 항목, 질문 목록 등 자유롭게">${escScen}</textarea>
+  <label>🖼 이미지 (파일 선택)</label>
+  <div class="img-preview" id="img-preview">
+    <img id="img-thumb" src="${imgData}" style="${imgData?'':'display:none'}">
+    <button onclick="removeImg()" style="margin-top:6px;padding:3px 8px;border:1px solid #ddd;border-radius:4px;font-size:11px;cursor:pointer;background:#fff">🗑 제거</button>
+  </div>
+  ${imgData?'<script>document.getElementById("img-preview").style.display="block";<\/script>':''}
+  <label class="upload-label" for="img-input">📁 이미지 파일 선택 (PNG/JPG/GIF)</label>
+  <input id="img-input" type="file" accept="image/*" style="display:none" onchange="pickImg(this)">
+  <label>추가 메모 (리더용)</label>
+  <textarea id="e-notes" rows="2" placeholder="리더 참고 사항">${escNotes}</textarea>
+  <div class="btns">
+    <button class="btn-cancel" onclick="window.close()">취소</button>
+    <button class="btn-save" onclick="doSave()">저장하기</button>
+  </div>
+</div>
+<script>
+let imgB64='${imgData}';
+function pickImg(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const im=new Image();
+    im.onload=()=>{
+      const MAX=1000,cv=document.createElement('canvas');
+      let w=im.width,h=im.height;
+      if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
+      if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}
+      cv.width=w;cv.height=h;
+      cv.getContext('2d').drawImage(im,0,0,w,h);
+      imgB64=cv.toDataURL('image/jpeg',0.85);
+      document.getElementById('img-thumb').src=imgB64;
+      document.getElementById('img-thumb').style.display='block';
+      document.getElementById('img-preview').style.display='block';
+    };
+    im.src=ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+function removeImg(){imgB64='';document.getElementById('img-preview').style.display='none';document.getElementById('img-input').value='';}
+function doSave(){
+  const data={
+    title:document.getElementById('e-title').value.trim(),
+    howTo:document.getElementById('e-howto').value.trim(),
+    scen:document.getElementById('e-scen').value.trim(),
+    notes:document.getElementById('e-notes').value.trim(),
+    img:imgB64
+  };
+  if(!data.title){alert('제목을 입력해주세요.');return;}
+  window.opener&&window.opener._saveCustomFromPopup&&window.opener._saveCustomFromPopup(${JSON.stringify(k)},data);
+  window.close();
+}
+<\/script>
+</body></html>`);
+  w.document.close();
+}
+
+
+// 팝업에서 자율 토픽 저장 수신
+window._saveCustomFromPopup=function(k,data){
+  const tops=getTopics();
+  if(!tops[k]){showToast('토픽이 없어요.');return;}
+  tops[k].session2={
+    format:'자율 토픽',
+    title:data.title,subtitle_kr:'',
+    how_to_play_kr:data.howTo,
+    scenario:data.scen,
+    custom_notes:data.notes,
+    custom_image:data.img,
+    roles:[],questions:[],expressions:[]
+  };
+  saveTopics(tops);
+  showToast('✓ 자율 토픽 저장 완료!');
+  renderRight();
+};
+
+function saveCustomTopic(day){
+  // legacy - openCustomModal이 팝업으로 대체됨
+}
+
 window._tbEdit=(d,path,val)=>{
   const tops=getTopics();const k=topicKey(d);if(!tops[k])return;
   const t=tops[k];
