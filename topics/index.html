@@ -134,6 +134,7 @@ nav{height:52px;background:var(--black);display:flex;align-items:center;padding:
 .btn-dl:disabled{background:var(--border-md);cursor:not-allowed;box-shadow:none;transform:none}
 .btn-row{display:flex;gap:7px}
 .btn-s{flex:1;padding:9px;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:9px;font-family:'Instrument Sans',sans-serif;font-size:11px;font-weight:500;cursor:pointer;transition:all .15s}
+.lv-btn{flex:1;padding:7px 4px;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;text-align:center}
 .btn-s:hover{background:var(--surf);border-color:var(--border-md);box-shadow:var(--sh1)}
 .btn-s:disabled{opacity:.4;cursor:not-allowed}
 
@@ -392,39 +393,18 @@ const DOWS_L=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const CAT_COLORS={Money:'#E24B4A',Work:'#378ADD',Love:'#D4537E',Food:'#EF9F27',Travel:'#1D9E75',Health:'#639922',AI:'#7F77DD',SNS:'#BA7517',Lifestyle:'#3B6D11','Korea Trend':'#D85A30',Friendship:'#185FA5',Community:'#993556'};
 
 const DEFAULT_FORMATS=[
-  /* ── 게임형 ── */
-  {id:'f9', name:'Two Truths One Lie',  desc:'팀전 라이어 게임',          on:true},
   {id:'f25',name:'Liar Game',           desc:'라이어는 거짓으로만 대답',  on:true},
-  {id:'f27',name:'Taboo Game', desc:'Taboo 금지어 게임',         on:true},
+  {id:'f27',name:'Taboo Game',           desc:'Taboo 금지어 게임',         on:true},
+  {id:'f9', name:'Two Truths One Lie',  desc:'팀전 라이어 게임',          on:true},
   {id:'f29',name:'Heads Up',            desc:'포스트잇 키워드 맞추기',    on:true},
-  {id:'f17',name:'Balance Game',  desc:'극단 밸런스 체크리스트',        on:true},
   {id:'f10',name:'Story Chain',         desc:'단어 끼워넣기 팀 게임',     on:true},
-  /* ── 디베이트형 ── */
   {id:'f2', name:'Debate',              desc:'A vs B 팀 토론',            on:true},
   {id:'f7', name:'Would You Rather',    desc:'양자택일 딜레마',           on:true},
   {id:'f19',name:'Myth Busters',        desc:'MYTH vs FACT 판별',         on:true},
-  /* ── 기타 ── */
-  {id:'f1', name:'Advice Lab',          desc:'Angel / Judge / Joker 역할',on:true},
+  {id:'f1', name:'Advice Lab',          desc:'Angel / Judge / Joker',     on:true},
   {id:'f3', name:'Ranking Game',        desc:'선택지 순위 매기기',        on:true},
   {id:'f5', name:'Survival Scenario',   desc:'가상 상황 생존',            on:true},
-  /* ── 비활성 ── */
-  {id:'f26',name:'Mafia Game',          desc:'마피아 vs 시민 토크',       on:false},
-  {id:'f16',name:'Confession Box',      desc:'익명 고백 + 추측',          on:false},
-  {id:'f8', name:'Question Spotlight',  desc:'한 명에게 집중 질문',       on:false},
-  {id:'f22',name:'Price Check',         desc:'가격 추측 게임',            on:false},
-  {id:'f6', name:'Unpopular Opinion',   desc:'반전 의견 공유',            on:false},
-  {id:'f11',name:'Agree/Disagree Spectrum',desc:'동의 스펙트럼',         on:false},
-  {id:'f12',name:'Speed Debate',        desc:'30초 빠른 찬반',            on:false},
-  {id:'f4', name:'Shopping Game',       desc:'예산 배분 게임',            on:false},
-  {id:'f18',name:'Pitch & Vote',        desc:'아이디어 피치 후 투표',     on:false},
-  {id:'f20',name:'Time Machine',        desc:'과거현재미래 토론',         on:false},
-  {id:'f13',name:'Fishbowl',            desc:'안팎 그룹 토론',            on:false},
-  {id:'f14',name:'Role Reversal',       desc:'반대 입장 설득',            on:false},
-  {id:'f15',name:'Deal or No Deal',     desc:'조건 협상 게임',            on:false},
-  {id:'f28',name:'The Blind Director',  desc:'안 보고 지시하기',          on:false},
-  {id:'f21',name:'Expert Panel',        desc:'역할극 전문가 패널',        on:false},
-  {id:'f23',name:'Roast and Toast',     desc:'칭찬+저격 돌아가기',        on:false},
-  {id:'f24',name:'Headline Writer',     desc:'헤드라인으로 요약',         on:false},
+  {id:'f30',name:'Balance Game',         desc:'극단 밸런스 체크리스트',     on:true},
 ];
 
 /* ── Fallback 소스풀 (크롤러 미연결 시에만 사용) ── */
@@ -447,67 +427,34 @@ const DEFAULT_SOURCES=[
 ];
 
 const FMT_GUIDE={
-  'Advice Lab':'roles: ["THE ANGEL","THE JUDGE","THE JOKER"]',
-  'Debate':'roles: 팀 이름 2개',
-  'Ranking Game':'roles: 실제로 순위 매길 구체적인 상황/행동/항목 6개. 추상적인 기준(Dealbreaker 등) 절대 금지. 각 항목은 짧고 직관적인 영어 문장으로. 예: "Showing up 20 min late without texting" / "Eating your leftovers without asking" / "Replying with just \'k\'"',
-  'Shopping Game':'roles: 플레이어 이름 2개',
-  'Survival Scenario':'roles: 생존 전략/팀 2개',
-  'Unpopular Opinion':'roles: ["Popular View","My Real Take"]',
-  'Would You Rather':'roles: 선택지 2개',
-  'Question Spotlight':'roles: ["The Star","The Questioners"]',
-  'Two Truths One Lie':'roles: ["The Speaker","The Guessers"]',
-  'Story Chain':'IMPORTANT — roles[] MUST have EXACTLY 100 single English words. NOT 2 words. NOT team names. 100 individual words like ["nervous","cancel","remind","obvious","pressure","choice","ignore","survive","awkward","handle","worth","trust","admit","regret","delay","signal","proud","express","refuse","notice","accept","force","claim","prove","spread","react","balance","raise","shift","build","depend","reduce","suggest","connect","achieve","arrange","confuse","protect","support","escape","demand","replace","warn","rush","launch"]',
-  'Agree/Disagree Spectrum':'roles: ["Strongly Agree","Strongly Disagree"]',
-  'Speed Debate':'roles: ["PRO","CON"]',
-  'Fishbowl':'roles: ["Inner Circle","Outer Circle"]',
-  'Role Reversal':'roles: ["Reversed A","Reversed B"]',
-  'Deal or No Deal':'roles: ["The Dealer","The Challenger"]',
-  'Confession Box':'roles: ["The Confessor","The Detectives"]',
-  'Balance Game':'roles: 극단적 밸런스 선택지 A vs B 최소 8개',
-  'Pitch & Vote':'roles: ["The Pitcher","The Investors"]',
-  'Myth Busters':'roles: 참/거짓 판단할 진술문 5개 (영어). 각 문장은 사실처럼 들리지만 실제론 myth일 수도 있고 fact일 수도 있게. 15단어 이내. 예: "Expensive wine always tastes better than cheap wine." / "Reading before bed helps you sleep better."',
-  'Time Machine':'roles: ["Past Self","Present Self","Future Self"]',
-  'Expert Panel':'roles: 전문가 직함 3개 (예: Psychologist / Economist / Influencer)',
-  'Price Check':'roles: 가격 맞출 아이템 5개 (실제 가격 포함)',
-  'Roast and Toast':'roles: ["Roaster","Toaster"]',
-  'Headline Writer':'roles: ["The Editor","The Reporter"]',
   'Liar Game':'roles: ["The Liar","The Truth Tellers"]',
-  'Mafia Game':'roles: ["The Mafia","The Citizens"]',
   'Taboo Game':'roles: 금기어 6개 (단어)',
-  'The Blind Director':'roles: ["The Director","The Actors"]',
-  'Heads Up':'roles: ["The Guesser","The Clue Givers"]',
+  'Two Truths One Lie':'roles: ["The Speaker","The Guessers"]',
+  'Heads Up':'roles: 주제 관련 키워드 예시 8개',
+  'Story Chain':'IMPORTANT — roles[] MUST have EXACTLY 100 single English words. NOT 2 words. NOT team names.',
+  'Debate':'roles: ["Team A","Team B"]',
+  'Would You Rather':'roles: ["Choice A","Choice B"]',
+  'Myth Busters':'roles: 참/거짓 판단할 진술문 5개 (영어, 정답 [MYTH]/[FACT] 포함)',
+  'Advice Lab':'roles: ["THE ANGEL","THE JUDGE","THE JOKER"]',
+  'Ranking Game':'roles: 순위 매길 항목 6개',
+  'Survival Scenario':'roles: ["Team A","Team B"]',
+  'Balance Game':'IMPORTANT: roles[] MUST have EXACTLY 8 extreme A-vs-B balance choices. Format each as "Option A 👈 vs 👉 Option B". Make them provocative extremes that split people.',
 };
-
 const KR_FMT_GUIDE={
-  'Advice Lab':'Angel, Judge, Joker — 세 역할로 나눠서 각자 입장에서 한마디씩 해봐요. 틀려도 괜찮고, 솔직할수록 재밌어요!',
-  'Debate':'두 팀으로 나눠요. 한 팀은 A 입장, 다른 팀은 B 입장으로 서로 설득해봐요. 자, 시작!',
-  'Ranking Game':'아래 항목들을 내 기준으로 1등부터 순서대로 적어봐요. 다 적으면 한 명씩 공개하고 비교해봐요!',
-  'Shopping Game':'정해진 예산으로 뭘 살지 정해서 적어봐요. 다 적으면 공개하고 서로 비교해봐요!',
-  'Survival Scenario':'팀끼리 생존 전략을 짜봐요. 다 되면 다른 팀이랑 비교하고 리액션해봐요!',
-  'Unpopular Opinion':'아마 다들 반대할 내 솔직한 생각을 말해봐요. 설득 안 해도 돼요, 반응만 해줘도 OK!',
-  'Would You Rather':'둘 중 하나만 골라야 해요. 고르고 나서 이유 한마디씩 해봐요!',
-  'Question Spotlight':'한 명이 주인공이 되고, 나머지가 번갈아가며 질문해봐요. 자, 누가 먼저 앉을까요?',
-  'Two Truths One Lie':'팀전입니다. 거짓말 할 사람을 한명 정합니다. 주제와 관련된 자신의 경험을 이야기하되, 라이어는 경험하지 않은 내용을 거짓으로 꾸며내서 말합니다.',
-  'Story Chain':'Team A와 B를 정해서 게임을 시작합니다. 아래 주어진 단어들을 가장 많이 사용하는 팀이 이겨요. 단어를 끼워넣어서 문장을 만들어봐요!',
-  'Agree/Disagree Spectrum':'이 말에 동의해요, 안 해요? 각자 정하고 한 명씩 말해봐요. 이유도 한마디씩!',
-  'Speed Debate':'30초씩 돌아가며 빠르게 의견 말하기! 한 쪽 편 정하고 바로 시작해요!',
-  'Fishbowl':'안쪽 그룹이 얘기하는 동안 바깥은 조용히 들어봐요. 끝나면 역할 바꾸고 반응 나눠봐요.',
-  'Role Reversal':'평소 내 생각이랑 반대 입장을 대신 말해봐요. 믿지 않아도 괜찮아요!',
-  'Deal or No Deal':'조건을 협상해봐요. 수락할지 거절할지 — 영어로만!',
-  'Confession Box':'한 명이 고백을 해요. 나머지가 진짜인지 거짓인지 맞혀봐요!',
-  'Balance Game':'나는 A인지 B인지 선택하고, 이야기를 나눠봅시다.',
-  'Pitch & Vote':'아이디어를 짧게 발표하고, 나머지가 투표해봐요. 설득 안 해도 괜찮아요!',
-  'Myth Busters':'각 문장을 읽고 MYTH(거짓)인지 FACT(사실)인지 골라봐요. 다 고르면 팀이랑 비교하고 왜 그렇게 생각했는지 얘기해봐요!',
-  'Time Machine':'과거·현재·미래 버전을 각자 정하고 한 명씩 공개해봐요!',
-  'Price Check':'이 물건, 얼마일 것 같아요? 각자 적고 한꺼번에 공개해봐요!',
   'Liar Game':'라이어는 질문에 거짓으로만 대답해요. 누가 거짓말을 하고 있는지 맞춰봐요!',
-  'Mafia Game':'마피아가 숨어 있어요. 대화하면서 누가 마피아인지 찾아봐요!',
   'Taboo Game':'Taboo 게임이 시작됩니다. 포스트잇에 오른쪽 옆사람에게 줄 키워드를 적으세요. 상대방의 말에 귀기울여 금기어를 말한 횟수를 기록하세요.',
-  'The Blind Director':'말로만 설명해서 상대가 정확히 따라 하게 만들어봐요!',
+  'Two Truths One Lie':'팀전입니다. 거짓말 할 사람을 한명 정합니다. 주제와 관련된 자신의 경험을 이야기하되, 라이어는 경험하지 않은 내용을 거짓으로 꾸며내서 말합니다.',
   'Heads Up':'포스트잇에 오른쪽 옆사람에게 줄 키워드를 적으세요. 키워드는 아래 주제와 관련된 것이어야 해요. 질문으로 내 포스트잇이 뭔지 맞혀봐요!',
+  'Story Chain':'Team A와 B를 정해서 게임을 시작합니다. 아래 주어진 단어들을 가장 많이 사용하는 팀이 이겨요. 단어를 끼워넣어서 문장을 만들어봐요!',
+  'Debate':'두 팀으로 나눠서 서로 설득해봐요!',
+  'Would You Rather':'둘 중 하나만 골라요. 이유를 한마디씩 말해봐요!',
+  'Myth Busters':'각 문장을 읽고 MYTH(거짓)인지 FACT(사실)인지 골라봐요. 다 고르면 팀이랑 비교하고 왜 그렇게 생각했는지 얘기해봐요!',
+  'Advice Lab':'Angel, Judge, Joker 역할을 정해요. 각자 입장에서 조언 한마디씩 해봐요!',
+  'Ranking Game':'아래 항목들을 내 기준으로 순위 매기고 공개해봐요. 1등이 겹치면 대화 시작!',
+  'Survival Scenario':'두 팀으로 나눠요. 각자 입장에서 생존 전략을 말해봐요!',
+  'Balance Game':'나는 A인지 B인지 선택하고, 이유를 이야기해봐요!',
 };
-
-const DEFAULT_LEADER_GUIDE={"Liar Game": {"left_title": "게임 진행 순서", "left_rules": ["한 명을 라이어로 정한다.", "리더가 질문할 때, 라이어는 거짓으로만 대답하고, 나머지는 솔직하게 대답하게 한다.", "각 질문 후 모두가 의견을 말하고, 누가 거짓말 했는지 투표해요."], "left_tips_title": "💡 막힐 때 이렇게!", "left_tips": ["라이어가 답변을 못 했으면: \"예/아니오\"로라도 빨리 대답하게 해요.", "진실 쌍들이 서로 다르게 대답했으면: \"너희 둘 다 진짜야?\" 물어봐요.", "거짓말 같은데 확신 못 하면: \"그게 진짜 예시 줄 수 있어?\" 추가로 물어봐요.", "분위기가 조용하면: \"왜 그렇게 생각해?\" 계속 물어봐요."]}, "Taboo Game": {"left_title": "게임 진행 순서", "left_rules": ["각 멤버는 주제에 관련된 금지어를 정해서 포스트잇에 적어 오른쪽 사람에게 넘겨준다.", "정해진 금지어를 발언하는지 체크리스트에 체크를 한다.", "누가 더 적게 금지어를 말하는지 센다."], "left_tips_title": "💡 막힐 때 이렇게!", "left_tips": ["금지어를 피하기 위해 \"그거\" \"저거\" 같은 표현이나 제스처를 써도 괜찮아요.", "질문을 많이 하면 상대방이 말을 많이 하니까 금지어를 피하기 쉬워요.", "느낌, 감정, 감각으로 설명해보세요 — \"it looks beautiful\" \"it feels good\""]}, "Two Truths One Lie": {"left_title": "게임 진행 순서", "left_rules": ["스피커를 정합니다. 스피커는 주제와 관련된 자신의 경험 세 가지를 이야기한다. (둘은 사실, 하나는 거짓)", "다른 사람들은 각 이야기마다 1-2개 질문을 하고, 어느 것이 거짓인지 투표한다.", "정답을 공개한 후, 스피커를 바꿔서 반복한다."], "left_tips_title": "💡 막힐 때 이렇게!", "left_tips": ["너무 어려운 이야기 말고, 최근 경험이나 친숙한 상황으로 간단하게 시작하세요.", "거짓 이야기도 가능해 보여야 해요 — 너무 이상하면 금방 들켜요.", "스피커가 말을 끝내기 전에 끼어들면 안 돼요 — 전체 이야기를 다 들은 후 질문하세요.", "단어로 막혔으면 손짓이나 그림으로 표현해도 괜찮아요."]}, "Heads Up": {"left_title": "게임 진행 순서", "left_rules": ["포스트잇에 주제에 관련된 단어나 활동을 1개 적는다.", "옆사람(시계방향)에게 포스트잇을 붙여준다.", "자신의 포스트잇에 적힌 키워드를 맞추기 위해 질문한다."], "left_tips_title": "💡 막힐 때 이렇게!", "left_tips": ["질문이 안 나오면: \"Is it expensive?\" / \"Can I use it today?\" 처럼 단순하게.", "상대가 답을 안 하면: 스스로 포스트잇을 붙인 사람에게 힌트를 받아도 돼.", "영어가 짧아도 괜찮아: \"Is it ... thing?\" 또는 손가락으로 크기를 보여줘도 된다.", "맞췄으면: \"좋은 질문이었어!\" / \"도움이 됐어!\" 이렇게 반응해주기."]}, "Story Chain": {"left_title": "게임 진행 순서", "left_rules": ["팀 A와 B는 문장을 번갈아가면서 스토리를 만들어 간다.", "문장을 만들 때 아래에 제공된 단어를 무조건 하나는 사용하여야 하고, 한 문장에 하나의 단어만 체크할 수 있다.", "완성된 이야기를 읽고 어떤 팀이 더 설득력 있는지 확인해본다."], "left_tips_title": "💡 막힐 때 이렇게!", "left_tips": ["단어를 무조건 순서대로 쓸 필요는 없습니다. 이야기에 맞게 섞어 쓰세요.", "어려운 단어는 건너뛰고 쉬운 단어부터 시작하세요.", "같은 팀원과 함께 문장을 만들어도 괜찮습니다.", "이야기가 현실적일수록 더 재미있습니다 — 상황을 구체적으로 만들어보세요."]}, "Debate": {"left_title": "게임 진행 순서", "left_rules": ["팀 A가 30초 동안 자신의 입장을 설명한다.", "팀 B가 30초 동안 다른 의견을 말한다.", "서로서로 반박을 할 수 있도록 판을 깔아준다."], "left_tips_title": "💡 막힐 때 이렇게!", "left_tips": ["한 단어만이라도 괜찮아요 — \"편하다\", \"불공평하다\" 정도면 됩니다.", "반대 팀에 질문하세요 — \"What about...?\" 또는 \"Don't you think...?\"", "자신의 경험을 말해봐요 — \"내 친구는...\" 또는 \"나는...\"", "리더가 단어를 도와줄 거예요 — 모르는 단어가 있으면 손 들어요!"]}, "Would You Rather": {"left_title": "게임 진행 순서", "left_rules": ["팀 A가 30초 동안 자신의 입장을 설명한다.", "팀 B가 30초 동안 다른 의견을 말한다.", "서로서로 반박을 할 수 있도록 판을 깔아준다."], "left_tips_title": "💡 막힐 때 이렇게!", "left_tips": ["한 단어만이라도 괜찮아요 — \"편하다\", \"불공평하다\" 정도면 됩니다.", "반대 팀에 질문하세요 — \"What about...?\" 또는 \"Don't you think...?\"", "자신의 경험을 말해봐요 — \"내 친구는...\" 또는 \"나는...\"", "리더가 단어를 도와줄 거예요 — 모르는 단어가 있으면 손 들어요!"]}, "Myth Busters": {"left_title": "게임 진행 순서", "left_rules": ["2인 팀으로 5개 진술문을 읽게 한다.", "각 진술문이 MYTH(거짓)인지 FACT(사실)인지 선택한다.", "전체가 다 고르면 답을 공개하고, 팀별로 비교한 후 \"왜 그렇게 생각했는지\" 설명하게 한다.", "리더가 답을 불러준다 (오른쪽 답 참고)."], "left_tips_title": "💡 막힐 때 이렇게!", "left_tips": ["\"I think it's true because...\" 또는 \"That sounds like a myth because...\"로 시작하세요.", "팀원과 의견이 다르면 \"I see your point, but I think...\" 라고 말해보세요.", "예시를 들어도 좋아요: 내 경험이나 친구 경험을 말해보세요.", "완벽한 영어가 아니어도 괜찮아요. 아이디어를 나누는 게 목표입니다!"]}, "Advice Lab": {"left_title": "게임 진행 순서", "left_rules": ["3명씩 팀을 나누거나 한 사람이 한 역할씩 대표로 한다.", "Angel이 먼저 찬성 입장으로 1분 동안 조언을 한다. (자기가 찬성입장이 아니라도, 무조건 찬성해야 함)", "Judge가 반대 입장으로 1분 동안 조언을 한다. (뭐가 문제일지)", "Joker가 웃기는 입장으로 1분 동안 해요. (이상하거나 재미있는 상황들)", "그 다음 3개의 What if 질문을 돌아가며 답해본다."], "left_tips_title": "💡 막힐 때 이렇게!", "left_tips": ["Angel: \"돈을 벌 수 있다\" \"유명해진다\" \"자신감이 생긴다\"는 식으로 긍정적인 것만 말하세요.", "Judge: \"개인정보\" \"나이\" \"피로함\" \"존중받지 못함\" 같은 문제점들을 지적하세요.", "Joker: 웃긴 상황을 만들어보세요 — \"만약 이렇게 된다면?\" 같은 식으로.", "모르는 단어는 손을 들고 리더한테 물어봐도 괜찮아요!"]}, "Ranking Game": {"left_title": "게임 진행 순서", "left_rules": ["각자 6가지 항목을 1등부터 6등까지 순위 매기기.", "모두 동시에 순위 공개하기 (숫자만 말하거나 손가락으로 표시).", "같은 항목을 1등으로 뽑은 사람끼리 모여서 \"왜 이걸 1등으로 뽑았어?\" 대화하기."], "left_tips_title": "💡 막힐 때 이렇게!", "left_tips": ["의견이 안 나올 때 → \"너는 어떻게 생각해?\" 하나씩 묻기.", "같은 순위를 뽑은 사람이 없을 때 → 가장 다른 순위 2명을 짝지어주기.", "영어가 막힐 때 → 리더가 한국어로 정리해주고 \"영어로 뭐라고 말할까?\"로 자연스럽게 넘어가기.", "너무 침묵할 때 → \"처음 뽑을 때 뭐가 제일 먼저 떠올랐어?\" 물어보기."]}, "Survival Scenario": {"left_title": "게임 진행 순서", "left_rules": ["팀별로 3분간 자기 전략의 장점을 생각해요.", "각 팀이 2분씩 왜 자기 방식이 더 낫다고 생각하는지 영어로 말해요.", "다른 팀이 반박할 시간을 줘요."], "left_tips_title": "💡 막힐 때 이렇게!", "left_tips": ["그냥 \"I think... is better\" 한 문장도 좋아요.", "자신의 경험이나 친구 경험을 말해도 돼요.", "팀이 완전히 같은 의견일 필요 없어요. 개인 의견도 괜찮아요.", "틀린 영어 괜찮아요. 뜻이 전달되면 OK!"]}};
+const DEFAULT_LEADER_GUIDE={"Liar Game": {"left_title": "게임 진행 순서", "left_rules": ["한 명을 라이어로 정한다.", "리더가 질문할 때, 라이어는 거짓으로만 대답하고, 나머지는 솔직하게 대답하게 한다.", "각 질문 후 모두가 의견을 말하고, 누가 거짓말 했는지 투표해요."], "left_tips_title": "💡 막힐 때 이렇게!", "left_tips": ["라이어가 답변을 못 했으면: \"예/아니오\"로라도 빨리 대답하게 해요.", "진실 쌍들이 서로 다르게 대답했으면: \"너희 둘 다 진짜야?\" 물어봐요.", "거짓말 같은데 확신 못 하면: \"그게 진짜 예시 줄 수 있어?\" 추가로 물어봐요.", "분위기가 조용하면: \"왜 그렇게 생각해?\" 계속 물어봐요."]}, "Taboo Game": {"left_title": "게임 진행 순서", "left_rules": ["각 멤버는 주제에 관련된 금지어를 정해서 포스트잇에 적어 오른쪽 사람에게 넘겨준다.", "정해진 금지어를 발언하는지 체크리스트에 체크를 한다.", "누가 더 적게 금지어를 말하는지 센다."], "left_tips_title": "💡 막힐 때 이렇게!", "left_tips": ["금지어를 피하기 위해 \"그거\" \"저거\" 같은 표현이나 제스처를 써도 괜찮아요.", "질문을 많이 하면 상대방이 말을 많이 하니까 금지어를 피하기 쉬워요.", "느낌, 감정, 감각으로 설명해보세요 — \"it looks beautiful\" \"it feels good\""]}, "Two Truths One Lie": {"left_title": "게임 진행 순서", "left_rules": ["스피커를 정합니다. 스피커는 주제와 관련된 자신의 경험 세 가지를 이야기한다. (둘은 사실, 하나는 거짓)", "다른 사람들은 각 이야기마다 1-2개 질문을 하고, 어느 것이 거짓인지 투표한다.", "정답을 공개한 후, 스피커를 바꿔서 반복한다."], "left_tips_title": "💡 막힐 때 이렇게!", "left_tips": ["너무 어려운 이야기 말고, 최근 경험이나 친숙한 상황으로 간단하게 시작하세요.", "거짓 이야기도 가능해 보여야 해요 — 너무 이상하면 금방 들켜요.", "스피커가 말을 끝내기 전에 끼어들면 안 돼요 — 전체 이야기를 다 들은 후 질문하세요.", "단어로 막혔으면 손짓이나 그림으로 표현해도 괜찮아요."]}, "Heads Up": {"left_title": "게임 진행 순서", "left_rules": ["포스트잇에 주제에 관련된 단어나 활동을 1개 적는다.", "옆사람(시계방향)에게 포스트잇을 붙여준다.", "자신의 포스트잇에 적힌 키워드를 맞추기 위해 질문한다."], "left_tips_title": "💡 막힐 때 이렇게!", "left_tips": ["질문이 안 나오면: \"Is it expensive?\" / \"Can I use it today?\" 처럼 단순하게.", "상대가 답을 안 하면: 스스로 포스트잇을 붙인 사람에게 힌트를 받아도 돼.", "영어가 짧아도 괜찮아: \"Is it ... thing?\" 또는 손가락으로 크기를 보여줘도 된다.", "맞췄으면: \"좋은 질문이었어!\" / \"도움이 됐어!\" 이렇게 반응해주기."]}, "Story Chain": {"left_title": "게임 진행 순서", "left_rules": ["팀 A와 B는 문장을 번갈아가면서 스토리를 만들어 간다.", "문장을 만들 때 아래에 제공된 단어를 무조건 하나는 사용하여야 하고, 한 문장에 하나의 단어만 체크할 수 있다.", "완성된 이야기를 읽고 어떤 팀이 더 설득력 있는지 확인해본다."], "left_tips_title": "💡 막힐 때 이렇게!", "left_tips": ["단어를 무조건 순서대로 쓸 필요는 없습니다. 이야기에 맞게 섞어 쓰세요.", "어려운 단어는 건너뛰고 쉬운 단어부터 시작하세요.", "같은 팀원과 함께 문장을 만들어도 괜찮습니다.", "이야기가 현실적일수록 더 재미있습니다 — 상황을 구체적으로 만들어보세요."]}, "Debate": {"left_title": "게임 진행 순서", "left_rules": ["팀 A가 30초 동안 자신의 입장을 설명한다.", "팀 B가 30초 동안 다른 의견을 말한다.", "서로서로 반박을 할 수 있도록 판을 깔아준다."], "left_tips_title": "💡 막힐 때 이렇게!", "left_tips": ["한 단어만이라도 괜찮아요 — \"편하다\", \"불공평하다\" 정도면 됩니다.", "반대 팀에 질문하세요 — \"What about...?\" 또는 \"Don't you think...?\"", "자신의 경험을 말해봐요 — \"내 친구는...\" 또는 \"나는...\"", "리더가 단어를 도와줄 거예요 — 모르는 단어가 있으면 손 들어요!"]}, "Would You Rather": {"left_title": "게임 진행 순서", "left_rules": ["팀 A가 30초 동안 자신의 입장을 설명한다.", "팀 B가 30초 동안 다른 의견을 말한다.", "서로서로 반박을 할 수 있도록 판을 깔아준다."], "left_tips_title": "💡 막힐 때 이렇게!", "left_tips": ["한 단어만이라도 괜찮아요 — \"편하다\", \"불공평하다\" 정도면 됩니다.", "반대 팀에 질문하세요 — \"What about...?\" 또는 \"Don't you think...?\"", "자신의 경험을 말해봐요 — \"내 친구는...\" 또는 \"나는...\"", "리더가 단어를 도와줄 거예요 — 모르는 단어가 있으면 손 들어요!"]}, "Myth Busters": {"left_title": "게임 진행 순서", "left_rules": ["2인 팀으로 5개 진술문을 읽게 한다.", "각 진술문이 MYTH(거짓)인지 FACT(사실)인지 선택한다.", "전체가 다 고르면 답을 공개하고, 팀별로 비교한 후 \"왜 그렇게 생각했는지\" 설명하게 한다.", "리더가 답을 불러준다 (오른쪽 답 참고)."], "left_tips_title": "💡 막힐 때 이렇게!", "left_tips": ["\"I think it's true because...\" 또는 \"That sounds like a myth because...\"로 시작하세요.", "팀원과 의견이 다르면 \"I see your point, but I think...\" 라고 말해보세요.", "예시를 들어도 좋아요: 내 경험이나 친구 경험을 말해보세요.", "완벽한 영어가 아니어도 괜찮아요. 아이디어를 나누는 게 목표입니다!"]}, "Advice Lab": {"left_title": "게임 진행 순서", "left_rules": ["3명씩 팀을 나누거나 한 사람이 한 역할씩 대표로 한다.", "Angel이 먼저 찬성 입장으로 1분 동안 조언을 한다. (자기가 찬성입장이 아니라도, 무조건 찬성해야 함)", "Judge가 반대 입장으로 1분 동안 조언을 한다. (뭐가 문제일지)", "Joker가 웃기는 입장으로 1분 동안 해요. (이상하거나 재미있는 상황들)", "그 다음 3개의 What if 질문을 돌아가며 답해본다."], "left_tips_title": "💡 막힐 때 이렇게!", "left_tips": ["Angel: \"돈을 벌 수 있다\" \"유명해진다\" \"자신감이 생긴다\"는 식으로 긍정적인 것만 말하세요.", "Judge: \"개인정보\" \"나이\" \"피로함\" \"존중받지 못함\" 같은 문제점들을 지적하세요.", "Joker: 웃긴 상황을 만들어보세요 — \"만약 이렇게 된다면?\" 같은 식으로.", "모르는 단어는 손을 들고 리더한테 물어봐도 괜찮아요!"]}, "Ranking Game": {"left_title": "게임 진행 순서", "left_rules": ["각자 6가지 항목을 1등부터 6등까지 순위 매기기.", "모두 동시에 순위 공개하기 (숫자만 말하거나 손가락으로 표시).", "같은 항목을 1등으로 뽑은 사람끼리 모여서 \"왜 이걸 1등으로 뽑았어?\" 대화하기."], "left_tips_title": "💡 막힐 때 이렇게!", "left_tips": ["의견이 안 나올 때 → \"너는 어떻게 생각해?\" 하나씩 묻기.", "같은 순위를 뽑은 사람이 없을 때 → 가장 다른 순위 2명을 짝지어주기.", "영어가 막힐 때 → 리더가 한국어로 정리해주고 \"영어로 뭐라고 말할까?\"로 자연스럽게 넘어가기.", "너무 침묵할 때 → \"처음 뽑을 때 뭐가 제일 먼저 떠올랐어?\" 물어보기."]}, "Survival Scenario": {"left_title": "게임 진행 순서", "left_rules": ["팀별로 3분간 자기 전략의 장점을 생각해요.", "각 팀이 2분씩 왜 자기 방식이 더 낫다고 생각하는지 영어로 말해요.", "다른 팀이 반박할 시간을 줘요."], "left_tips_title": "💡 막힐 때 이렇게!", "left_tips": ["그냥 \"I think... is better\" 한 문장도 좋아요.", "자신의 경험이나 친구 경험을 말해도 돼요.", "팀이 완전히 같은 의견일 필요 없어요. 개인 의견도 괜찮아요.", "틀린 영어 괜찮아요. 뜻이 전달되면 OK!"],"Balance Game":{"left_title":"게임 진행 순서","left_rules":["A와 B 중 하나를 선택하고 체크박스에 표시해요.","돌아가면서 자신의 선택과 이유를 한마디씩 말해요.","의견이 다른 사람과 왜 다르게 선택했는지 이야기해봐요."],"left_tips_title":"💡 막힐 때 이렇게!","left_tips":["이유가 없어도 괜찮아요 — 그냥 느낌으로 골라도 돼요.","같은 선택을 한 사람끼리 이유가 다를 수 있어요 — 비교해봐요.","반대로 골랐다면: \"Why did you choose that?\" 물어봐요.","영어가 막히면: \"I chose A because...\" 한 단어라도 OK!"]}}};
 
 
 let year,month,selected=null,loading=false,genDay=null;
@@ -1605,12 +1552,13 @@ body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#111;-webkit-p
   const isStoryChain=fmt.toLowerCase().includes('story chain');
   const isMinefield=fmt.toLowerCase().includes('minefield')||fmt.toLowerCase().includes('taboo game');
 
-  if(isGame){
-    const howToPlayBlock=krFmt?`<div style="background:#FFFDF5;border-left:4px solid ${catColor};border-radius:6px;padding:10px 16px;margin-bottom:14px">
-      <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#B48A00;margin-bottom:4px">💡 HOW TO PLAY</div>
-      <div style="font-size:10pt;color:#333;line-height:1.55">${krFmt}</div>
-    </div>`:'';
+  // 공통 HOW TO PLAY 블록 (모든 레이아웃에서 사용)
+  const howToPlayBlock=krFmt?`<div style="background:#FFFDF5;border-left:4px solid ${catColor};border-radius:6px;padding:10px 16px;margin-bottom:14px">
+    <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#B48A00;margin-bottom:4px">💡 HOW TO PLAY</div>
+    <div style="font-size:10pt;color:#333;line-height:1.55">${krFmt}</div>
+  </div>`:'';
 
+  if(isGame){
     /* ── Liar Game ── */
     if(isLiarGame){
       const liarQs=qs.slice(0,3).map((q,i)=>`
@@ -1708,184 +1656,54 @@ body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#111;-webkit-p
     ${exprBlock}
   </div>`;
 
-    /* ── Balance Game ── */
-    } else if(isThisOrThat){
-      const choices=roles.slice(0,10);
-      const checkRows=choices.map((c,i)=>{
-        // "A 👈 vs 👉 B" 또는 "A or B" 형식 파싱
-        let sideA, sideB;
-        if(c.includes(' vs ')) {
-          const parts=c.split(' vs ');
-          sideA=parts[0].replace('👈','').trim();
-          sideB=parts[1].replace('👉','').trim();
-        } else if(c.includes(' OR ')) {
-          const parts=c.split(' OR ');
-          sideA=parts[0].trim(); sideB=parts[1].trim();
-        } else {
-          const parts=c.split(' or ');
-          sideA=parts[0].trim(); sideB=parts[1]||'B';
-        }
-        const rowBg=i%2===0?'#fff':'#FAFAF9';
-        return `<div style="display:grid;grid-template-columns:1fr 40px 1fr;gap:0;border:1px solid #E0DDD8;border-radius:8px;overflow:hidden;margin-bottom:6px;background:${rowBg}">
-          <div style="padding:11px 14px;display:flex;align-items:center;gap:8px">
-            <div style="width:20px;height:20px;border:2px solid #111;border-radius:4px;flex-shrink:0"></div>
-            <div style="font-size:9.5pt;font-weight:600;color:#111;line-height:1.35">${sideA}</div>
-          </div>
-          <div style="display:flex;align-items:center;justify-content:center;background:#111;font-size:7.5pt;font-weight:800;color:#fff;letter-spacing:.5px">VS</div>
-          <div style="padding:11px 14px;display:flex;align-items:center;gap:8px">
-            <div style="font-size:9.5pt;font-weight:600;color:${catColor};line-height:1.35;text-align:right;flex:1">${sideB}</div>
-            <div style="width:20px;height:20px;border:2px solid ${catColor};border-radius:4px;flex-shrink:0"></div>
-          </div>
-        </div>`;
-      }).join('');
-      page2body=`
-  <div class="body">
-    ${howToPlayBlock}
-    <div style="text-align:center;padding:8px 0 12px;border-bottom:2px solid #111;margin-bottom:14px">
-      <div style="font-size:18pt;font-weight:800;color:#111">${s2.title||'Balance Game'}</div>
-      ${s2.subtitle_kr?`<div style="font-size:10pt;color:#888;margin-top:4px">${s2.subtitle_kr}</div>`:''}
-    </div>
-    <!-- 헤더 라벨 -->
-    <div style="display:grid;grid-template-columns:1fr 40px 1fr;margin-bottom:6px">
-      <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#888;padding:0 14px">☑ A Side</div>
-      <div></div>
-      <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:${catColor};padding:0 14px;text-align:right">B Side ☑</div>
-    </div>
-    <div>${checkRows}</div>
-    ${exprBlock}
-  </div>`;
+    } // end isMinefield (inner)
 
-    /* ── Story Chain ── */
-    } else if(isStoryChain){
-      const rawRoles=roles||[];
-      // roles에 3개 이상 = 단어뱅크. 2개 이하 = 기존 팀이름 데이터 → 재생성 안내
-      const hasWordBank=rawRoles.length>2;
-      const wordCloud=hasWordBank
-        ? rawRoles.map(w=>`<span style="display:inline-block;background:#F5F3EF;border:1px solid #E0DDD8;border-radius:4px;padding:4px 8px;font-size:8.5pt;font-weight:600;margin:2px 3px;color:#111">${w}</span>`).join('')
-        : `<div style="background:#FFF8E7;border:1.5px dashed #F0C040;border-radius:8px;padding:14px 16px;text-align:center;color:#9A7B00;font-size:9pt;font-weight:600">
-            ⚠️ 이 토픽은 단어뱅크가 없어요.<br>
-            <span style="font-size:8.5pt;font-weight:400;color:#B8960A;margin-top:4px;display:block">"↺ 2페이지만" 버튼으로 재생성하면 단어 100개가 채워져요!</span>
-          </div>`;
-      page2body=`
-  <div class="body">
-    ${howToPlayBlock}
-    <div style="display:flex;gap:10px;margin-bottom:12px">
-      <div style="flex:1;border:2px solid #111;border-radius:8px;padding:12px;text-align:center">
-        <div style="font-size:11pt;font-weight:800;color:#111">🔵 TEAM A</div>
-        <div style="font-size:8pt;color:#888;margin-top:3px">Members: ___________</div>
+  } else if(isThisOrThat){
+  const choices=roles.slice(0,10);
+  const checkRows=choices.map((c,i)=>{
+  // "A 👈 vs 👉 B" 또는 "A or B" 형식 파싱
+  let sideA, sideB;
+  if(c.includes(' vs ')) {
+      const parts=c.split(' vs ');
+      sideA=parts[0].replace('👈','').trim();
+      sideB=parts[1].replace('👉','').trim();
+  } else if(c.includes(' OR ')) {
+      const parts=c.split(' OR ');
+      sideA=parts[0].trim(); sideB=parts[1].trim();
+  } else {
+      const parts=c.split(' or ');
+      sideA=parts[0].trim(); sideB=parts[1]||'B';
+  }
+  const rowBg=i%2===0?'#fff':'#FAFAF9';
+  return `<div style="display:grid;grid-template-columns:1fr 40px 1fr;gap:0;border:1px solid #E0DDD8;border-radius:8px;overflow:hidden;margin-bottom:6px;background:${rowBg}">
+      <div style="padding:11px 14px;display:flex;align-items:center;gap:8px">
+      <div style="width:20px;height:20px;border:2px solid #111;border-radius:4px;flex-shrink:0"></div>
+      <div style="font-size:9.5pt;font-weight:600;color:#111;line-height:1.35">${sideA}</div>
       </div>
-      <div style="flex:1;border:2px solid ${catColor};border-radius:8px;padding:12px;text-align:center">
-        <div style="font-size:11pt;font-weight:800;color:${catColor}">🔴 TEAM B</div>
-        <div style="font-size:8pt;color:#888;margin-top:3px">Members: ___________</div>
+      <div style="display:flex;align-items:center;justify-content:center;background:#111;font-size:7.5pt;font-weight:800;color:#fff;letter-spacing:.5px">VS</div>
+      <div style="padding:11px 14px;display:flex;align-items:center;gap:8px">
+      <div style="font-size:9.5pt;font-weight:600;color:${catColor};line-height:1.35;text-align:right;flex:1">${sideB}</div>
+      <div style="width:20px;height:20px;border:2px solid ${catColor};border-radius:4px;flex-shrink:0"></div>
       </div>
-    </div>
-    <div style="background:#F5F3EF;border-radius:8px;padding:6px 10px;margin-bottom:10px;display:flex;align-items:center;gap:8px">
-      <div style="font-size:8pt;font-weight:800;color:${catColor};white-space:nowrap">🏆 SCORE</div>
-      <div style="flex:1;display:flex;gap:12px">
-        <div style="font-size:8pt;color:#888">Team A: ___ words</div>
-        <div style="font-size:8pt;color:#888">Team B: ___ words</div>
-      </div>
-    </div>
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-      <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#888">📝 WORD BANK — USE THESE!</div>
-      <div style="flex:1;height:1px;background:#E0DDD8"></div>
-    </div>
-    <div style="line-height:2.1">${wordCloud}</div>
-    ${exprBlock}
   </div>`;
-
-    /* ── Taboo Game ── */
-    } else if(isMinefield){
-      const tabooWords=roles.slice(0,6);
-      const tabooCards=tabooWords.map(w=>`
-        <div style="border:2px solid #111;border-radius:8px;padding:12px 8px;text-align:center;background:#fff">
-          <div style="font-size:13pt;font-weight:800;color:#111;line-height:1.2">${w}</div>
-          <div style="font-size:7pt;color:#cc0014;font-weight:700;margin-top:4px;letter-spacing:.5px">🚫 TABOO</div>
-        </div>`).join('');
-
-      const tabooQs=qs.slice(0,3).map((q,i)=>`
-        <div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #EBEBEA">
-          <div style="background:${catColor};color:#fff;font-size:8pt;font-weight:800;padding:2px 7px;border-radius:4px;flex-shrink:0;white-space:nowrap;margin-top:2px">Q${i+1}</div>
-          <div style="font-size:10pt;color:#1a1a1a;line-height:1.45">${q}</div>
-        </div>`).join('');
-
-      const memberCount=8;
-      const scoreRows=Array.from({length:memberCount},(_,i)=>`
-        <tr>
-          <td style="padding:7px 10px;border:1px solid #E0DDD8;font-size:9pt;color:#555">Player ${i+1}</td>
-          ${Array.from({length:5},()=>`<td style="padding:7px;border:1px solid #E0DDD8;width:34px;text-align:center"></td>`).join('')}
-          <td style="padding:7px;border:1px solid #E0DDD8;width:50px;text-align:center;font-weight:800;color:${catColor}">Total</td>
-        </tr>`).join('');
-
-      page2body=`
+  }).join('');
+  page2body=`
   <div class="body">
-    ${howToPlayBlock}
-    <div style="text-align:center;padding:8px 0 12px;border-bottom:2px solid #111;margin-bottom:14px">
-      <div style="font-size:22pt;font-weight:800;color:#111">${s2.title||'Taboo Game'}</div>
-      ${s2.subtitle_kr?`<div style="font-size:10pt;color:#888;margin-top:4px">${s2.subtitle_kr}</div>`:''}
-    </div>
-    <!-- Taboo 키워드 -->
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-      <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#888">🚫 TABOO KEYWORDS</div>
-      <div style="flex:1;height:1px;background:#E0DDD8"></div>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">${tabooCards}</div>
-    <!-- 질문 3개 -->
-    ${tabooQs?`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-      <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#888">💬 DISCUSSION</div>
-      <div style="flex:1;height:1px;background:#E0DDD8"></div>
-    </div>
-    <div style="margin-bottom:14px">${tabooQs}</div>`:''}
-    <!-- 점수 테이블 -->
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-      <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#cc0014">📊 TABOO COUNT</div>
-      <div style="flex:1;height:1px;background:#E0DDD8"></div>
-    </div>
-    <table style="width:100%;border-collapse:collapse">
-      <thead>
-        <tr>
-          <th style="padding:7px 10px;border:1px solid #E0DDD8;background:#111;color:#fff;font-size:8.5pt;text-align:left">Name</th>
-          <th style="padding:7px;border:1px solid #E0DDD8;background:#111;color:#fff;font-size:8.5pt;width:34px">1</th>
-          <th style="padding:7px;border:1px solid #E0DDD8;background:#111;color:#fff;font-size:8.5pt;width:34px">2</th>
-          <th style="padding:7px;border:1px solid #E0DDD8;background:#111;color:#fff;font-size:8.5pt;width:34px">3</th>
-          <th style="padding:7px;border:1px solid #E0DDD8;background:#111;color:#fff;font-size:8.5pt;width:34px">4</th>
-          <th style="padding:7px;border:1px solid #E0DDD8;background:#111;color:#fff;font-size:8.5pt;width:34px">5</th>
-          <th style="padding:7px;border:1px solid #E0DDD8;background:${catColor};color:#fff;font-size:8.5pt;width:50px">TOTAL</th>
-        </tr>
-      </thead>
-      <tbody>${scoreRows}</tbody>
-    </table>
+  ${howToPlayBlock}
+  <div style="text-align:center;padding:8px 0 12px;border-bottom:2px solid #111;margin-bottom:14px">
+  <div style="font-size:18pt;font-weight:800;color:#111">${s2.title||'Balance Game'}</div>
+  ${s2.subtitle_kr?`<div style="font-size:10pt;color:#888;margin-top:4px">${s2.subtitle_kr}</div>`:''}
+  </div>
+  <!-- 헤더 라벨 -->
+  <div style="display:grid;grid-template-columns:1fr 40px 1fr;margin-bottom:6px">
+  <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#888;padding:0 14px">☑ A Side</div>
+  <div></div>
+  <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:${catColor};padding:0 14px;text-align:right">B Side ☑</div>
+  </div>
+  <div>${checkRows}</div>
+  ${exprBlock}
   </div>`;
 
-    /* ── 기타 게임 (기본) ── */
-    } else {
-      const gameEmoji={'mafia game':'🎭','confession box':'📦','question spotlight':'🎤'};
-      const emoji=Object.entries(gameEmoji).find(([k])=>fmt.includes(k))?.[1]||'🎮';
-      const gameQs=qs.slice(0,3).map((q,i)=>`
-        <div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #EBEBEA">
-          <div style="color:${catColor};font-size:9pt;font-weight:800;flex-shrink:0;margin-top:1px">Q${i+1}</div>
-          <div style="font-size:10pt;color:#1a1a1a;line-height:1.45">${q}</div>
-        </div>`).join('');
-      page2body=`
-  <div class="body">
-    ${howToPlayBlock}
-    <div style="text-align:center;padding:18px 0 14px">
-      <div style="font-size:40pt;margin-bottom:8px">${emoji}</div>
-      <div style="font-size:22pt;font-weight:800;color:#111">${s2.title||s2.format||''}</div>
-      ${s2.subtitle_kr?`<div style="font-size:11pt;color:#888;margin-top:6px">${s2.subtitle_kr}</div>`:''}
-    </div>
-    ${qs.length?`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-      <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#888">💡 DISCUSSION</div>
-      <div style="flex:1;height:1px;background:#E0DDD8"></div>
-    </div>
-    <div style="margin-bottom:4px">${gameQs}</div>`:''}
-    ${exprBlock}
-  </div>`;
-    }
-
-  /* ════════════════════════════════
-     📊 RANKING LAYOUT
-  ════════════════════════════════ */
   } else if(isStoryChain){
       const rawRoles=roles||[];
       const hasWordBank=rawRoles.length>2;
@@ -2135,84 +1953,53 @@ body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#111;-webkit-p
   </div>`;
 
   /* ════════════════════════════════
-     ✏️ 자율 토픽 LAYOUT
+     🔵 DEFAULT LAYOUT
   ════════════════════════════════ */
-  } else if(fmt==='자율 토픽'){
-    const customNotes=s2.custom_notes||'';
-    const customImage=resolveImage(s2.custom_image||'');
-    const contentLines=(s2.scenario||'').split('\n').filter(l=>l.trim());
-    const contentHTML=contentLines.map(line=>`
-      <div style="padding:9px 14px;margin-bottom:6px;background:#FAFAF9;border-radius:6px;border-left:3px solid ${catColor};font-size:10.5pt;color:#1a1a1a;line-height:1.5">${line}</div>`).join('');
-
-    page2body=`
-  <div class="body" style="display:flex;flex-direction:column;align-items:center;justify-content:${customImage?'flex-start':'flex-start'}">
-    ${krFmt?`<div style="background:#FFFDF5;border-left:4px solid ${catColor};border-radius:6px;padding:10px 16px;margin-bottom:14px;width:100%">
-      <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#B48A00;margin-bottom:4px">💡 HOW TO PLAY</div>
-      <div style="font-size:10pt;color:#333;line-height:1.55">${krFmt}</div>
-    </div>`:''}
-    ${s2.title?`<div style="width:100%;border:2px solid ${catColor};border-radius:8px;padding:14px;text-align:center;margin-bottom:16px">
-      <div style="font-size:20pt;font-weight:800;color:${catColor};letter-spacing:-0.3px">${s2.title}</div>
-    </div>`:''}
-    ${customImage?`<div style="width:100%;text-align:center;flex:1;display:flex;align-items:center;justify-content:center;margin-bottom:${contentHTML||customNotes?'14px':'0'}">
-      <img src="${customImage}" style="width:100%;max-height:480px;object-fit:contain;border-radius:10px;display:block">
-    </div>`:''}
-    ${contentHTML?`<div style="width:100%">${contentHTML}</div>`:''}
-    ${customNotes?`<div style="margin-top:14px;width:100%;background:#F5F3EF;border-radius:8px;padding:12px 14px;border-left:3px solid #888">
-      <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:5px">📝 NOTES</div>
-      <div style="font-size:9.5pt;color:#555;line-height:1.6;white-space:pre-line">${customNotes}</div>
-    </div>`:''}
-  </div>`;
+  } else {
     const defQs=qs.slice(0,3).map((q,i)=>`
       <div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #EBEBEA">
-        <div style="color:${catColor};font-size:9pt;font-weight:800;flex-shrink:0;margin-top:1px">Q${i+1}</div>
+        <div style="color:${catColor};font-size:9pt;font-weight:800;flex-shrink:0">Q${i+1}</div>
         <div style="font-size:10pt;color:#1a1a1a;line-height:1.45">${q}</div>
       </div>`).join('');
-
     page2body=`
   <div class="body">
-    ${krFmt?`<div style="background:#FFFDF5;border-left:4px solid ${catColor};border-radius:6px;padding:10px 16px;margin-bottom:14px">
-      <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#B48A00;margin-bottom:4px">💡 HOW TO PLAY</div>
-      <div style="font-size:10pt;color:#333;line-height:1.55">${krFmt}</div>
-    </div>`:''}
+    ${howToPlayBlock}
     ${s2.scenario?`<div style="background:#fff;border:1px solid #E0DDD8;border-radius:8px;padding:12px 14px;margin-bottom:14px">
       <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:${catColor};margin-bottom:5px">📍 SITUATION</div>
       <div style="font-size:10.5pt;color:#1a1a1a;line-height:1.6">${s2.scenario}</div>
     </div>`:''}
-    ${roles.length?`<div style="display:flex;gap:10px;margin-bottom:14px">
-      ${roles.slice(0,2).map((r,i)=>`
-        <div style="flex:1;border:2px solid ${i===0?'#111':catColor};border-radius:8px;padding:12px;text-align:center">
-          <div style="font-size:12pt;font-weight:800;color:${i===0?'#111':catColor}">${r}</div>
-        </div>`).join('')}
-    </div>`:''}
-    ${qs.length?`<div style="margin-bottom:4px">${defQs}</div>`:''}
+    ${qs.length?`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#888">💡 DISCUSSION</div>
+      <div style="flex:1;height:1px;background:#E0DDD8"></div>
+    </div>
+    <div style="margin-bottom:4px">${defQs}</div>`:''}
     ${exprBlock}
   </div>`;
   }
 
+  /* ══════════════════════════════════════════
+     PAGE 2 조립
+  ══════════════════════════════════════════ */
   const page2=`<div class="page">${page2hdr}${page2body}${page2ftr}</div>`;
 
   /* ══════════════════════════════════════════
-     PAGE 3 — LEADER'S GUIDE (항상 포함)
+     PAGE 3 — LEADER'S GUIDE
   ══════════════════════════════════════════ */
   const s3=t.session3||{};
-  // 포맷별 기본 리더 가이드 적용
   const fmtKey=Object.keys(DEFAULT_LEADER_GUIDE).find(k=>fmt.includes(k.toLowerCase()));
   const defGuide=fmtKey?DEFAULT_LEADER_GUIDE[fmtKey]:{};
+  const leftTitle=(s3.left_title)||(defGuide.left_title)||'게임 진행 순서';
+  const tipsTitle=(s3.left_tips_title)||(defGuide.left_tips_title)||'💡 막힐 때 이렇게!';
   const leaderRules=((s3.left_rules&&s3.left_rules.length)?s3.left_rules:(defGuide.left_rules||[])).map((r,i)=>`
     <div style="display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid #E0DDD8">
       <div style="flex-shrink:0;width:24px;height:24px;border-radius:50%;background:${catColor};color:#fff;display:flex;align-items:center;justify-content:center;font-size:9pt;font-weight:800">${i+1}</div>
       <div style="font-size:10pt;color:#1a1a1a;line-height:1.55">${r}</div>
     </div>`).join('');
-
-  const tipsTitle=(s3.left_tips_title)||(defGuide.left_tips_title)||'💡 막힐 때 이렇게!';
   const leaderTips=((s3.left_tips&&s3.left_tips.length)?s3.left_tips:(defGuide.left_tips||[])).map(tip=>`
     <div style="display:flex;gap:8px;align-items:flex-start;padding:6px 0">
       <div style="color:${catColor};font-weight:800;flex-shrink:0;font-size:11pt;line-height:1">→</div>
       <div style="font-size:9.5pt;color:#333;line-height:1.5">${tip}</div>
     </div>`).join('');
-
-  const leftTitle=(s3.left_title)||(defGuide.left_title)||'게임 진행 순서';
-
   const rightItems=(s3.right_items||[]).map(item=>`
     <div style="padding:12px 0;border-bottom:1px solid #EBEBEA">
       <div style="display:inline-block;background:#ffff00;font-size:8pt;font-weight:800;padding:2px 8px;margin-bottom:6px;border-radius:3px;color:#111">${item.context||''}</div>
@@ -2220,14 +2007,11 @@ body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#111;-webkit-p
       <div style="font-size:9pt;color:#666;line-height:1.4">${item.kr||''}</div>
     </div>`).join('');
 
-  // Myth Busters 전용: 정답 섹션
   const mythAnswerBlock=isMythBusters&&roles.length>=3?`
-    <div style="margin-top:0">
+    <div>
       <div style="font-size:10pt;font-weight:800;color:#CC0014;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">✅ ANSWER KEY</div>
       ${roles.slice(0,5).map((stmt,i)=>{
-        // [MYTH] 또는 [FACT] 태그 파싱
-        const mythMatch=stmt.match(/\[MYTH\]/i);
-        const factMatch=stmt.match(/\[FACT\]/i);
+        const mythMatch=stmt.match(/\[MYTH\]/i),factMatch=stmt.match(/\[FACT\]/i);
         const answer=mythMatch?'MYTH':factMatch?'FACT':'?';
         const cleanStmt=stmt.replace(/\[(MYTH|FACT)\]/i,'').trim();
         const answerBg=answer==='MYTH'?'#CC0014':answer==='FACT'?catColor:'#888';
@@ -2235,13 +2019,11 @@ body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#111;-webkit-p
           <div style="display:flex;gap:10px;align-items:flex-start">
             <div style="flex-shrink:0;font-size:9pt;font-weight:800;color:#888;width:16px">${i+1}</div>
             <div style="flex:1;font-size:9.5pt;color:#1a1a1a;line-height:1.4;margin-right:10px">${cleanStmt}</div>
-            <div style="flex-shrink:0;padding:4px 12px;border-radius:5px;font-size:9pt;font-weight:800;background:${answerBg};color:#fff;white-space:nowrap">${answer}</div>
+            <div style="flex-shrink:0;padding:4px 12px;border-radius:5px;font-size:9pt;font-weight:800;background:${answerBg};color:#fff">${answer}</div>
           </div>
         </div>`;
       }).join('')}
-      <div style="margin-top:10px;background:#FFF8E7;border:1px solid #F0C040;border-radius:6px;padding:8px 12px;font-size:8.5pt;color:#9A7B00">
-        💡 멤버들이 다 고른 후 정답을 공개하세요!
-      </div>
+      <div style="margin-top:10px;background:#FFF8E7;border:1px solid #F0C040;border-radius:6px;padding:8px 12px;font-size:8.5pt;color:#9A7B00">💡 멤버들이 다 고른 후 정답을 공개하세요!</div>
     </div>`:null;
 
   const page3=`
@@ -2260,14 +2042,12 @@ body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#111;-webkit-p
     <span style="font-size:8.5pt;color:rgba(255,255,255,.8)">${s2.format||''} — ${t.main_title||''}</span>
   </div>
   <div style="display:flex;flex:1;overflow:hidden">
-    <!-- 왼쪽: 진행 순서 + 팁 -->
     <div style="flex:1;padding:22px;border-right:1px solid #E0DDD8">
       <div style="font-size:10pt;font-weight:800;color:#CC0014;text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">${leftTitle}</div>
       <div style="margin-bottom:24px">${leaderRules||'<div style="color:#aaa;font-size:10pt">정보 없음</div>'}</div>
       <div style="display:inline-block;background:#ffff00;font-size:9pt;font-weight:800;padding:4px 10px;margin-bottom:12px;border-radius:3px;color:#111">${tipsTitle}</div>
       <div>${leaderTips||'<div style="color:#aaa;font-size:10pt">정보 없음</div>'}</div>
     </div>
-    <!-- 오른쪽: Myth Busters면 정답, 아니면 대화 부스터 -->
     <div style="flex:1;padding:22px">
       ${mythAnswerBlock||`
       <div style="font-size:10pt;font-weight:800;color:#CC0014;text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">${s3.right_title||'대화 부스터 질문'}</div>
@@ -2282,215 +2062,8 @@ ${page1}${page2}${page3}
 <scr`+`ipt>window.onload=()=>window.print()</scr`+`ipt>
 </body></html>`;
 
-  const w=window.open('','_blank');if(w){w.document.write(html);w.document.close();}
-}
-
-
-function renderCal(){
-  const tops=getTopics();
-  const dim=new Date(year,month+1,0).getDate();
-  const fdow=new Date(year,month,1).getDay();
-  const now=new Date();
-  const isToday=d=>d===now.getDate()&&month===now.getMonth()&&year===now.getFullYear();
-  const pfx=`${year}-${String(month+1).padStart(2,'0')}`;
-  const done=Object.keys(tops).filter(k=>k.startsWith(pfx)).length;
-  const usedFmts=new Set(Object.values(tops).map(t=>t.session2?.format).filter(Boolean));
-  document.getElementById('m-name').textContent=MONTHS[month];
-  document.getElementById('m-year').textContent=year;
-  document.getElementById('s-done').textContent=done;
-  document.getElementById('s-total').textContent=dim;
-  document.getElementById('s-pct').textContent=Math.round(done/dim*100)+'%';
-  document.getElementById('s-fmts').textContent=usedFmts.size;
-  document.getElementById('dows').innerHTML=DOWS_L.map((d,i)=>{
-    const cls=i===0?'dow dow-sun':i===6?'dow dow-sat':'dow';
-    return `<div class="${cls}">${d}</div>`;
-  }).join('');
-  let cells='';
-  for(let i=0;i<fdow;i++)cells+=`<div class="day empty"></div>`;
-  for(let d=1;d<=dim;d++){
-    const k=topicKey(d),t=tops[k],has=!!t,isGen=genDay===d,isSel=selected===d,tod=isToday(d);
-    const dow=new Date(year,month,d).getDay();
-    const isSun=dow===0,isSat=dow===6;
-    const cls=['day',isSun?'sun':isSat?'sat':'',has?'has':'',tod?'today':'',isSel?'sel':'',isGen?'busy':''].filter(Boolean).join(' ');
-    const dc=t?(CAT_COLORS[t.category]||'#888'):'';
-    const fmtShort=has?(t.session2?.format||'').replace('Agree/Disagree Spectrum','Spectrum').replace('Would You Rather','W.Y.R').replace('Unpopular Opinion','Unpopular').replace('Survival Scenario','Survival').replace('Two Truths One Lie','2 Truths 1 Lie').replace('Deal or No Deal','Deal/No Deal').replace('This or That Blitz','This/That').replace('Confession Box','Confession').replace('Headline Writer','Headline').replace('Roast and Toast','Roast/Toast').replace('Minefield Talk Show','Minefield').replace('The Blind Director','Blind Dir.'):'';
-    cells+=`<div class="${cls}" data-d="${d}">`
-      +`<div class="dn">${d}</div>`
-      +(tod?`<div class="today-badge">TODAY</div>`:'')
-      +(has?`<div class="ddot" style="background:${dc}"></div>`:'')
-      +(has?`<div class="dtxt">${t.main_title||''}</div>`:'')
-      +(has?`<div class="dfmt">${fmtShort}</div>`:'')
-      +`</div>`;
-  }
-  const grid=document.getElementById('cal-grid');
-  grid.innerHTML=cells;
-  grid.querySelectorAll('.day[data-d]').forEach(el=>{
-    el.addEventListener('click',()=>{selected=parseInt(el.dataset.d);renderCal();renderRight()});
-  });
-  document.getElementById('gen-all-btn').disabled=loading;
-  document.getElementById('gen-all-btn').textContent=loading?'생성 중...':`✦  ${MONTHS[month]} 전체 생성`;
-}
-
-function renderRight(){
-  const panel=document.getElementById('right-p');
-  if(loading&&genDay===selected){
-    panel.innerHTML=`<div class="r-loading"><div class="spin"></div><div class="load-s" id="load-step">준비 중...</div><div style="font-size:10px;color:var(--muted);margin-top:4px">${MONTHS[month]} ${selected}일</div></div>`;
-    return;
-  }
-  if(!selected){
-    panel.innerHTML=`<div class="r-empty"><div class="r-empty-ico">📅</div><p>날짜를 클릭하면<br>토픽을 생성할 수 있어요</p></div>`;
-    return;
-  }
-  const k=topicKey(selected),t=getTopics()[k];
-  if(!t){
-    panel.innerHTML=`<div class="r-empty">
-      <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:12px">${MONTHS[month]} ${selected}일</div>
-      <p>아직 토픽이 없어요</p>
-      <button onclick="window._tbGen(${selected})" style="margin-top:10px;padding:10px 20px;background:var(--red);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">✦ 토픽 생성</button>
-    </div>`;
-    return;
-  }
-  const s1=t.session1||{},s2=t.session2||{},cc=CAT_COLORS[t.category]||'#888';
-  const krFmt = s2.how_to_play_kr || KR_FMT_GUIDE[s2.format] || '주제에 맞게 자유롭게 대화하세요!';
-  panel.innerHTML=`<div class="r-body">
-    <div class="date-row"><div class="date-big">${String(selected).padStart(2,'0')}</div><div style="display:flex;flex-direction:column;gap:3px"><div class="date-mo">${MONTHS[month]} ${year}</div><div class="cpill" style="background:${cc}">${t.category||''}</div></div><div class="fmtpill"><div class="fmtdot"></div>${s2.format||''}</div></div>
-    <div class="r-title" contenteditable="true" onblur="window._tbEdit(${selected},'main_title',this.innerText)">${t.main_title||''}</div>
-    <div class="r-angle" contenteditable="true" onblur="window._tbEdit(${selected},'korean_angle',this.innerText)">${t.korean_angle||''}</div>
-    <div class="sec"><div class="sec-l">1ST — Ice Breaking</div><div class="sec-line"></div></div>
-    ${(s1.icebreakers||[]).map((q,i)=>`<div class="sq"><span class="sq-q">Q${i+1}</span><span contenteditable="true" onblur="window._tbEdit(${selected},'s1.ib.${i}',this.innerText)">${q}</span></div>`).join('')}
-    <div class="sec" style="margin-top:10px"><div class="sec-l">Spark Words — ${s1.spark_title||''}</div><div class="sec-line"></div></div>
-    <div class="bingo" style="grid-template-columns:repeat(3,1fr);gap:4px">
-      ${(s1.spark_words||[]).map((w,i)=>{
-        const en = typeof w === 'object' ? w.en : w;
-        const kr = typeof w === 'object' ? w.kr : '';
-        return `
-        <div class="bc" style="font-size:10px; padding:8px 4px; border:1px solid ${kr?'var(--border-md)':'var(--border)'}; display:flex; flex-direction:column; gap:2px; height:50px; justify-content:center; background:${kr?'#fff':'var(--surf)'}">
-          <div contenteditable="true" onblur="window._tbEdit(${selected},'s1.sw.en.${i}',this.innerText)" style="font-weight:800; color:var(--text)">${en}</div>
-          ${kr ? `<div contenteditable="true" onblur="window._tbEdit(${selected},'s1.sw.kr.${i}',this.innerText)" style="font-size:8px; color:var(--muted); font-weight:400">${kr}</div>` : ''}
-        </div>`;
-      }).join('')}
-    </div>
-    
-    <div class="sec"><div class="sec-l">2ND — ${s2.format||''}</div><div class="sec-line"></div></div>
-    
-    <!-- 한국어 룰 설명 -->
-    <div style="background:#FFFDF5; border:1px solid #F1EACB; border-radius:8px; padding:10px; margin-bottom:12px;">
-      <div style="font-size:10.5px; font-weight:800; color:#B48A00; margin-bottom:3px; letter-spacing:0.5px">💡 HOW TO PLAY</div>
-      <div contenteditable="true" onblur="window._tbEdit(${selected},'s2.how_to_play_kr',this.innerText)" style="font-size:11px; color:#555; line-height:1.5; outline:none; min-height:16px">${t.session2?.how_to_play_kr || krFmt}</div>
-    </div>
-    
-    <div style="font-size:12px;font-weight:600;margin-bottom:4px">
-      <span contenteditable="true" onblur="window._tbEdit(${selected},'s2.title',this.innerText)" style="outline:none">${s2.title||''}</span>
-      <span contenteditable="true" onblur="window._tbEdit(${selected},'s2.subtitle_kr',this.innerText)" style="font-size:10px;color:var(--muted);font-weight:400;outline:none"> ${s2.subtitle_kr||''}</span>
-    </div>
-    <div class="scen-box" contenteditable="true" onblur="window._tbEdit(${selected},'s2.scen',this.innerText)">${t.session2?.scenario||''}</div>
-
-    ${s2.format&&s2.format.toLowerCase().includes('story chain')?`
-    <div class="sec" style="margin-top:8px"><div class="sec-l">📝 Word Bank</div><div class="sec-line"></div></div>
-    <div style="margin-top:6px;line-height:2.4">
-      ${(()=>{
-        const r=s2.roles||[];
-        if(r.length>2) return r.map(w=>`<span style="display:inline-block;background:#F5F3EF;border:1px solid #E0DDD8;border-radius:4px;padding:3px 8px;margin:2px;font-size:10px;font-weight:600;color:#111">${w}</span>`).join('');
-        return `<div style="background:#FFF8E7;border:1.5px dashed #F0C040;border-radius:6px;padding:10px 12px;font-size:10px;color:#9A7B00;font-weight:600;line-height:1.6">⚠️ 단어뱅크가 없어요. <span style="font-weight:400">"↺ 2페이지만" 버튼으로 재생성하면 단어 100개가 채워져요!</span></div>`;
-      })()}
-    </div>`:`
-    <div class="sec" style="margin-top:8px"><div class="sec-l">Discussion</div><div class="sec-line"></div></div>
-    ${(s2.questions||[]).map((q,i)=>`
-    <div class="sq"><span class="sq-q">Q${i+1}</span><span contenteditable="true" onblur="window._tbEdit(${selected},'s2.q.${i}',this.innerText)" style="outline:none">${q}</span></div>`).join('')}`}
-
-    <div style="margin-top:8px; padding:7px 10px; background:var(--surf); border-radius:7px; border:1px solid var(--border); font-size:11px; color:var(--text2); display:none">
-    
-    <!-- 어휘 섹션 아코디언 (접어두기) -->
-    <details style="background:#F8F9FA; border:1px solid #EAEAEA; border-radius:8px; padding:10px 12px; margin-bottom:10px; cursor:pointer">
-      <summary style="font-size:11px; font-weight:700; color:#333; list-style:none; display:flex; justify-content:space-between; align-items:center;">
-        <span>💬 Useful Expressions — Use These Today!</span>
-        <span style="font-size:9px; color:#888;">클릭해서 보기 ▼</span>
-      </summary>
-      <div style="margin-top:10px; padding-top:10px; border-top:1px dashed #DDD; display:flex; flex-direction:column; gap:8px;">
-        ${(s2.expressions||[]).map((e,i)=>{
-          const en = typeof e === 'object' ? e.en : e;
-          const kr = typeof e === 'object' ? e.kr : '';
-          return `
-          <div style="font-size:11px; line-height:1.45; color:#444;">
-            <div contenteditable="true" onblur="window._tbEdit(${selected},'s2.ex.en.${i}',this.innerText)" style="font-weight:700">• ${en}</div>
-            ${kr ? `<div contenteditable="true" onblur="window._tbEdit(${selected},'s2.ex.kr.${i}',this.innerText)" style="font-size:10px; color:#888; margin-left:10px">${kr}</div>` : ''}
-          </div>`;
-        }).join('')}
-      </div>
-    </details>
-    
-    </div><div class="r-actions">
-    <button class="btn-dl" onclick="window._tbPDF(${selected})">↓  A4 PDF 인쇄 / 다운로드</button>
-    
-    <div style="margin-top:12px; background:var(--surf); padding:10px; border-radius:10px; border:1px solid var(--border)">
-      <div style="font-size:9px; font-weight:800; color:var(--muted); text-transform:uppercase; margin-bottom:8px; letter-spacing:0.5px">⚡ 어휘 레벨 맞춤 교체 (AI)</div>
-      <div style="display:flex; gap:4px">
-        <button class="btn-s" onclick="lowerVocabLevel(${selected}, 'Beginner')" style="flex:1; background:#22c55e; color:#fff; border:none">🟢 초급</button>
-        <button class="btn-s" onclick="lowerVocabLevel(${selected}, 'Intermediate')" style="flex:1; background:#eab308; color:#fff; border:none">🟡 중급</button>
-        <button class="btn-s" onclick="lowerVocabLevel(${selected}, 'Advanced')" style="flex:1; background:#ef4444; color:#fff; border:none">🔴 고급</button>
-      </div>
-    </div>
-
-    <div class="btn-row" style="margin-top:10px">
-      <select id="regen-fmt" style="flex:1; padding:8px; border-radius:8px; border:1px solid #EAEAEA; font-family:inherit; font-size:11px; font-weight:700; outline:none; cursor:pointer; background:#F8F9FA; color:#333;" ${loading?'disabled':''}>
-        <option value="">🎲 랜덤 포맷</option>
-        <option value="__custom__">✏️ 자율 토픽</option>
-        ${getFormats().filter(f=>f.on).map(f=>`<option value="${f.name}">${f.name}</option>`).join('')}
-      </select>
-      <button class="btn-s" onclick="window._tbGenS2(${selected})" ${loading?'disabled':''} style="flex:1;background:#1a1a1a;color:#fff;border:none">↺ 2페이지만</button>
-      <button class="btn-s" onclick="window._tbGen(${selected})" ${loading?'disabled':''} style="flex:0.8">전체</button>
-      <button class="btn-s" onclick="window._tbDel(${selected})" style="flex:0.5;background:#fff;border:1px solid #EAEAEA;color:#888">✕</button>
-    </div></div>`;
-}
-
-function renderSettings(){
-  const fmts=getFormats(),srcs=getSources();
-  document.getElementById('fmt-cnt-badge').textContent=fmts.filter(f=>f.on).length+'/'+fmts.length;
-  document.getElementById('src-cnt-badge').textContent=srcs.filter(s=>s.on).length+'/'+srcs.length;
-  updateCrawlerBadge();
-  updateSrcStatus();
-  const _cInp2=document.getElementById('crawler-url-inp');
-  if(_cInp2&&getCrawlerUrl()&&!_cInp2.value) _cInp2.value=getCrawlerUrl();
-  const fmtList=document.getElementById('fmt-list');
-  fmtList.innerHTML=fmts.map(f=>`<div class="item-row"><div style="flex:1;min-width:0"><div class="item-label">${f.name}</div>${f.desc?`<div class="item-sub">${f.desc}</div>`:''}</div><button class="item-tog ${f.on?'on':''}" data-tog="${f.id}">${f.on?'●':'○'}</button><button class="item-del" data-df="${f.id}">✕</button></div>`).join('');
-  fmtList.querySelectorAll('[data-tog]').forEach(btn=>btn.onclick=()=>{const f=getFormats().map(f=>f.id===btn.dataset.tog?{...f,on:!f.on}:f);saveFormats(f);renderSettings()});
-  fmtList.querySelectorAll('[data-df]').forEach(btn=>btn.onclick=()=>{if(!confirm('삭제?'))return;saveFormats(getFormats().filter(f=>f.id!==btn.dataset.df));renderSettings()});
-  const srcList=document.getElementById('src-list');
-  srcList.innerHTML=srcs.map(s=>`<div class="item-row"><div style="flex:1;min-width:0"><div class="item-label">${s.name}</div><div class="item-sub">${s.angle}</div></div><button class="item-tog ${s.on?'on':''}" data-ts="${s.id}">${s.on?'●':'○'}</button><button class="item-del" data-ds="${s.id}">✕</button></div>`).join('');
-  srcList.querySelectorAll('[data-ts]').forEach(btn=>btn.onclick=()=>{const s=getSources().map(s=>s.id===btn.dataset.ts?{...s,on:!s.on}:s);saveSources(s);renderSettings()});
-  srcList.querySelectorAll('[data-ds]').forEach(btn=>btn.onclick=()=>{saveSources(getSources().filter(s=>s.id!==btn.dataset.ds));renderSettings()});
-  document.getElementById('api-key-inp').value=getApiKey()?'••••••••••••••••':'';
-}
-
-function migrateAllData(){
-  const tops = getTopics();
-  let count = 0;
-  for(let k in tops){
-    const t = tops[k];
-    let changed = false;
-    // Spark Words 변환
-    if(t.session1 && t.session1.spark_words){
-      t.session1.spark_words = t.session1.spark_words.map(w => {
-        if(typeof w === 'string') { changed = true; return {en: w, kr: ''}; }
-        return w;
-      });
-    }
-    // Expressions 변환
-    if(t.session2 && t.session2.expressions){
-      t.session2.expressions = t.session2.expressions.map(e => {
-        if(typeof e === 'string') { changed = true; return {en: e, kr: ''}; }
-        return e;
-      });
-    }
-    if(changed) count++;
-  }
-  if(count > 0){
-    saveTopics(tops);
-    renderCal(); renderRight();
-    showToast(`${count}개의 토픽 구조를 최적화했습니다!`);
-  } else {
-    showToast('이미 모든 토픽이 최적화된 상태입니다.');
-  }
+  const w=window.open('','_blank');
+  if(w){w.document.write(html);w.document.close();}
 }
 
 function updateNavKey(){
@@ -2506,138 +2079,9 @@ window._tbGen=d=>{
 window._tbGenS2=d=>{
   const s=document.getElementById('regen-fmt');
   const val=s&&s.value?s.value:undefined;
-  if(val==='__custom__'){
-    openCustomModal(d);
-  } else {
-    generateSession2(d, val||undefined);
-  }
+  generateSession2(d, val||undefined);
 };
 
-function openCustomModal(day){
-  const k=topicKey(day);
-  const t=getTopics()[k];
-  const s2=t?.session2||{};
-  const isCustom=s2.format==='자율 토픽';
-  const title=isCustom?(s2.title||''):'';
-  const howTo=isCustom?(s2.how_to_play_kr||''):'';
-  const scen=isCustom?(s2.scenario||''):'';
-  const notes=isCustom?(s2.custom_notes||''):'';
-  const imgData=isCustom?(s2.custom_image||''):'';
-  window._customImgData='';
-
-  // 별도 편집창 열기
-  const w=window.open('','_blank','width=700,height=860');
-  if(!w){showToast('팝업이 차단됐어요. 팝업 허용 후 다시 시도하세요.');return;}
-
-  const esc=v=>String(v||"").replace(/`/g,"'");
-  const escTitle=esc(title),escHowTo=esc(howTo),escScen=esc(scen),escNotes=esc(notes);
-
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
-<title>자율 토픽 편집</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',Arial,sans-serif;background:#f5f5f5;padding:24px}
-.card{background:#fff;border-radius:12px;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,.1)}
-h2{font-size:16px;font-weight:800;margin-bottom:20px;color:#111}
-label{display:block;font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px;margin-top:14px}
-input,textarea{width:100%;padding:9px 12px;border:1.5px solid #E0DDD8;border-radius:8px;font-size:13px;font-family:inherit;outline:none;resize:vertical}
-input:focus,textarea:focus{border-color:#CC0014}
-.img-preview{margin:8px 0;display:none}
-.img-preview img{max-width:100%;max-height:200px;border-radius:8px;border:1px solid #E0DDD8;object-fit:contain}
-.upload-label{display:block;padding:10px;border:1.5px dashed #E0DDD8;border-radius:8px;text-align:center;cursor:pointer;font-size:12px;color:#888;background:#fafaf9;margin-top:6px}
-.upload-label:hover{border-color:#CC0014;color:#CC0014}
-.btns{display:flex;gap:10px;margin-top:20px}
-.btn-save{flex:2;padding:12px;background:#CC0014;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer}
-.btn-cancel{flex:1;padding:12px;background:#fff;border:1.5px solid #E0DDD8;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#555}
-.btn-save:hover{background:#aa0010}
-</style>
-</head><body>
-<div class="card">
-  <h2>✏️ 자율 토픽 편집</h2>
-  <label>액티비티 제목</label>
-  <input id="e-title" type="text" value="${escTitle}" placeholder="예: 마피아 게임">
-  <label>HOW TO PLAY (한국어)</label>
-  <textarea id="e-howto" rows="2" placeholder="진행 방법을 입력하세요">${escHowTo}</textarea>
-  <label>내용 / 질문 / 게임 항목</label>
-  <textarea id="e-scen" rows="5" placeholder="게임 항목, 질문 목록 등 자유롭게">${escScen}</textarea>
-  <label>🖼 이미지 (파일 선택)</label>
-  <div class="img-preview" id="img-preview">
-    <img id="img-thumb" src="${imgData}" style="${imgData?'':'display:none'}">
-    <button onclick="removeImg()" style="margin-top:6px;padding:3px 8px;border:1px solid #ddd;border-radius:4px;font-size:11px;cursor:pointer;background:#fff">🗑 제거</button>
-  </div>
-  ${imgData?'<script>document.getElementById("img-preview").style.display="block";<\/script>':''}
-  <label class="upload-label" for="img-input">📁 이미지 파일 선택 (PNG/JPG/GIF)</label>
-  <input id="img-input" type="file" accept="image/*" style="display:none" onchange="pickImg(this)">
-  <label>추가 메모 (리더용)</label>
-  <textarea id="e-notes" rows="2" placeholder="리더 참고 사항">${escNotes}</textarea>
-  <div class="btns">
-    <button class="btn-cancel" onclick="window.close()">취소</button>
-    <button class="btn-save" onclick="doSave()">저장하기</button>
-  </div>
-</div>
-<script>
-let imgB64='${imgData}';
-function pickImg(input){
-  const file=input.files[0];if(!file)return;
-  const reader=new FileReader();
-  reader.onload=ev=>{
-    const im=new Image();
-    im.onload=()=>{
-      const MAX=1000,cv=document.createElement('canvas');
-      let w=im.width,h=im.height;
-      if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
-      if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}
-      cv.width=w;cv.height=h;
-      cv.getContext('2d').drawImage(im,0,0,w,h);
-      imgB64=cv.toDataURL('image/jpeg',0.85);
-      document.getElementById('img-thumb').src=imgB64;
-      document.getElementById('img-thumb').style.display='block';
-      document.getElementById('img-preview').style.display='block';
-    };
-    im.src=ev.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-function removeImg(){imgB64='';document.getElementById('img-preview').style.display='none';document.getElementById('img-input').value='';}
-function doSave(){
-  const data={
-    title:document.getElementById('e-title').value.trim(),
-    howTo:document.getElementById('e-howto').value.trim(),
-    scen:document.getElementById('e-scen').value.trim(),
-    notes:document.getElementById('e-notes').value.trim(),
-    img:imgB64
-  };
-  if(!data.title){alert('제목을 입력해주세요.');return;}
-  window.opener&&window.opener._saveCustomFromPopup&&window.opener._saveCustomFromPopup(${JSON.stringify(k)},data);
-  window.close();
-}
-<\/script>
-</body></html>`);
-  w.document.close();
-}
-
-
-// 팝업에서 자율 토픽 저장 수신
-window._saveCustomFromPopup=function(k,data){
-  const tops=getTopics();
-  if(!tops[k]){showToast('토픽이 없어요.');return;}
-  tops[k].session2={
-    format:'자율 토픽',
-    title:data.title,subtitle_kr:'',
-    how_to_play_kr:data.howTo,
-    scenario:data.scen,
-    custom_notes:data.notes,
-    custom_image:data.img,
-    roles:[],questions:[],expressions:[]
-  };
-  saveTopics(tops);
-  showToast('✓ 자율 토픽 저장 완료!');
-  renderRight();
-};
-
-function saveCustomTopic(day){
-  // legacy - openCustomModal이 팝업으로 대체됨
-}
 
 window._tbEdit=(d,path,val)=>{
   const tops=getTopics();const k=topicKey(d);if(!tops[k])return;
@@ -2666,6 +2110,150 @@ window._tbEdit=(d,path,val)=>{
 window._tbSetLv=l=>{saveLevel(l);renderRight();showToast(`난이도가 ${l}로 설정되었습니다.`)};
 window._tbDel=d=>{if(!confirm('삭제?'))return;const t=getTopics();delete t[topicKey(d)];saveTopics(t);renderCal();renderRight();showToast('삭제됨')};
 window._tbPDF=d=>downloadPDF(d);
+
+function renderCal(){
+  const tops=getTopics();
+  const dim=new Date(year,month+1,0).getDate();
+  const fdow=new Date(year,month,1).getDay();
+  const now=new Date();
+  const isToday=d=>d===now.getDate()&&month===now.getMonth()&&year===now.getFullYear();
+  const pfx=`${year}-${String(month+1).padStart(2,'0')}`;
+  const done=Object.keys(tops).filter(k=>k.startsWith(pfx)).length;
+  const usedFmts=new Set(Object.values(tops).map(t=>t.session2?.format).filter(Boolean));
+  document.getElementById('m-name').textContent=MONTHS[month];
+  document.getElementById('m-year').textContent=year;
+  document.getElementById('s-done').textContent=done;
+  document.getElementById('s-total').textContent=dim;
+  document.getElementById('s-pct').textContent=Math.round(done/dim*100)+'%';
+  document.getElementById('s-fmts').textContent=usedFmts.size;
+  const dowEl=document.getElementById('dows');
+  if(dowEl)dowEl.innerHTML=DOWS_L.map((d,i)=>{
+    const cls=i===0?'dow dow-sun':i===6?'dow dow-sat':'dow';
+    return `<div class="${cls}">${d}</div>`;
+  }).join('');
+  let cells='';
+  for(let i=0;i<fdow;i++)cells+=`<div class="day empty"></div>`;
+  for(let d=1;d<=dim;d++){
+    const k=topicKey(d),t=tops[k],has=!!t,isGen=genDay===d,isSel=selected===d,tod=isToday(d);
+    const dow=new Date(year,month,d).getDay();
+    const isSun=dow===0,isSat=dow===6;
+    const cls=['day',isSun?'sun':isSat?'sat':'',has?'has':'',tod?'today':'',isSel?'sel':'',isGen?'busy':''].filter(Boolean).join(' ');
+    const dc=t?(CAT_COLORS[t.category]||'#888'):'';
+    const fmtShort=has?(t.session2?.format||'')
+      .replace('Would You Rather','W.Y.R')
+      .replace('Survival Scenario','Survival')
+      .replace('Two Truths One Lie','2 Truths')
+      .replace('Taboo Game','Taboo')
+      .replace('Ranking Game','Ranking')
+      .replace('Advice Lab','Advice')
+      .replace('Myth Busters','Myths')
+      .replace('Story Chain','Story')
+      .replace('Heads Up','Heads Up')
+      .replace('Liar Game','Liar'):'';
+    cells+=`<div class="${cls}" data-d="${d}">`
+      +`<div class="dn">${d}</div>`
+      +(tod?`<div class="today-badge">TODAY</div>`:'')
+      +(has?`<div class="ddot" style="background:${dc}"></div>`:'')
+      +(has?`<div class="dtxt">${t.main_title||''}</div>`:'')
+      +(has?`<div class="dfmt">${fmtShort}</div>`:'')
+      +`</div>`;
+  }
+  const grid=document.getElementById('cal-grid');
+  if(grid){
+    grid.innerHTML=cells;
+    grid.querySelectorAll('.day[data-d]').forEach(el=>{
+      el.addEventListener('click',()=>{selected=parseInt(el.dataset.d);renderCal();renderRight();});
+    });
+  }
+  const genBtn=document.getElementById('gen-all-btn');
+  if(genBtn){genBtn.disabled=loading;genBtn.textContent=loading?'생성 중...':`✦  ${MONTHS[month]} 전체 생성`;}
+}
+
+function renderRight(){
+  const panel=document.getElementById('right-p');
+  if(!panel)return;
+  if(loading&&genDay===selected){
+    panel.innerHTML=`<div class="r-loading"><div class="spin"></div><div class="load-s" id="load-step">준비 중...</div><div style="font-size:10px;color:var(--muted);margin-top:4px">${MONTHS[month]} ${selected}일</div></div>`;
+    return;
+  }
+  if(!selected){
+    panel.innerHTML=`<div class="r-empty"><div class="r-empty-ico">📅</div><p>날짜를 클릭하면<br>토픽을 생성할 수 있어요</p></div>`;
+    return;
+  }
+  const k=topicKey(selected),t=getTopics()[k];
+  if(!t){
+    panel.innerHTML=`<div class="r-empty">
+      <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:12px">${MONTHS[month]} ${selected}일</div>
+      <p>아직 토픽이 없어요</p>
+      <button onclick="window._tbGen(${selected})" style="margin-top:10px;padding:10px 20px;background:var(--red);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">✦ 토픽 생성</button>
+    </div>`;
+    return;
+  }
+  const s1=t.session1||{},s2=t.session2||{},cc=CAT_COLORS[t.category]||'#888';
+  const krFmt=s2.how_to_play_kr||KR_FMT_GUIDE[s2.format]||'주제에 맞게 자유롭게 대화하세요!';
+  const isStoryFmt=(s2.format||'').toLowerCase().includes('story chain');
+  panel.innerHTML=`<div class="r-body">
+    <div class="date-row"><div class="date-big">${String(selected).padStart(2,'0')}</div><div style="display:flex;flex-direction:column;gap:3px"><div class="date-mo">${MONTHS[month]} ${year}</div><div class="cpill" style="background:${cc}">${t.category||''}</div></div><div class="fmtpill"><div class="fmtdot"></div>${s2.format||''}</div></div>
+    <div class="r-title" contenteditable="true" onblur="window._tbEdit(${selected},'main_title',this.innerText)">${t.main_title||''}</div>
+    <div class="r-angle" contenteditable="true" onblur="window._tbEdit(${selected},'korean_angle',this.innerText)">${t.korean_angle||''}</div>
+    <div class="sec"><div class="sec-l">1ST — Ice Breaking</div><div class="sec-line"></div></div>
+    ${(s1.icebreakers||[]).map((q,i)=>`<div class="sq"><span class="sq-q">Q${i+1}</span><span contenteditable="true" onblur="window._tbEdit(${selected},'s1.ib.${i}',this.innerText)">${q}</span></div>`).join('')}
+    <div class="sec" style="margin-top:10px"><div class="sec-l">Spark Words — ${s1.spark_title||''}</div><div class="sec-line"></div></div>
+    <div class="bingo" style="grid-template-columns:repeat(3,1fr);gap:4px">
+      ${(s1.spark_words||[]).map((w,i)=>{
+        const en=typeof w==='object'?w.en:w;
+        const kr=typeof w==='object'?w.kr:'';
+        return `<div class="bc" style="font-size:10px;padding:8px 4px;border:1px solid ${kr?'var(--border-md)':'var(--border)'};display:flex;flex-direction:column;gap:2px;height:50px;justify-content:center;background:${kr?'#fff':'var(--surf)'}">
+          <div contenteditable="true" onblur="window._tbEdit(${selected},'s1.sw.en.${i}',this.innerText)" style="font-weight:800;color:var(--text)">${en}</div>
+          ${kr?`<div contenteditable="true" onblur="window._tbEdit(${selected},'s1.sw.kr.${i}',this.innerText)" style="font-size:8px;color:var(--muted);font-weight:400">${kr}</div>`:''}
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="sec"><div class="sec-l">2ND — ${s2.format||''}</div><div class="sec-line"></div></div>
+    <div style="background:#FFFDF5;border:1px solid #F1EACB;border-radius:8px;padding:10px;margin-bottom:12px;">
+      <div style="font-size:10.5px;font-weight:800;color:#B48A00;margin-bottom:3px">💡 HOW TO PLAY</div>
+      <div style="font-size:11px;color:#555;line-height:1.5">${krFmt}</div>
+    </div>
+    <div style="font-size:12px;font-weight:600;margin-bottom:4px">${s2.title||''} <span style="font-size:10px;color:var(--muted);font-weight:400">${s2.subtitle_kr||''}</span></div>
+    <div class="scen-box" contenteditable="true" onblur="window._tbEdit(${selected},'s2.scen',this.innerText)">${s2.scenario||''}</div>
+    ${isStoryFmt?`
+    <div class="sec" style="margin-top:8px"><div class="sec-l">📝 Word Bank</div><div class="sec-line"></div></div>
+    <div style="margin-top:6px;line-height:2.4">
+      ${(()=>{const r=s2.roles||[];if(r.length>2)return r.map(w=>`<span style="display:inline-block;background:#F5F3EF;border:1px solid #E0DDD8;border-radius:4px;padding:3px 8px;margin:2px;font-size:10px;font-weight:600;color:#111">${w}</span>`).join('');return `<div style="background:#FFF8E7;border:1.5px dashed #F0C040;border-radius:6px;padding:10px 12px;font-size:10px;color:#9A7B00;font-weight:600;line-height:1.6">⚠️ 단어뱅크가 없어요. "↺ 2페이지만" 버튼으로 재생성하면 단어 100개가 채워져요!</div>`;})()}
+    </div>`:`
+    <div class="sec" style="margin-top:8px"><div class="sec-l">Discussion</div><div class="sec-line"></div></div>
+    ${(s2.questions||[]).map((q,i)=>`<div class="sq"><span class="sq-q">Q${i+1}</span><span contenteditable="true" onblur="window._tbEdit(${selected},'s2.q.${i}',this.innerText)">${q}</span></div>`).join('')}`}
+    <div class="sec" style="margin-top:8px"><div class="sec-l">Useful Expressions</div><div class="sec-line"></div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px">
+      ${(s2.expressions||[]).map((e,i)=>{
+        const en=typeof e==='object'?e.en:e;
+        const kr=typeof e==='object'?e.kr:'';
+        return `<div style="font-size:11px;line-height:1.45;color:#444">
+          <div contenteditable="true" onblur="window._tbEdit(${selected},'s2.ex.en.${i}',this.innerText)" style="font-weight:700">• ${en}</div>
+          ${kr?`<div contenteditable="true" onblur="window._tbEdit(${selected},'s2.ex.kr.${i}',this.innerText)" style="font-size:10px;color:#888;margin-left:10px">${kr}</div>`:''}
+        </div>`;
+      }).join('')}
+    </div>
+    </div><div class="r-actions">
+    <button class="btn-dl" onclick="window._tbPDF(${selected})">↓  A4 PDF 인쇄 / 다운로드</button>
+    <div style="margin-top:6px;background:#F5F3EF;border-radius:8px;padding:8px 10px">
+      <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">⚡ 어휘 레벨 맞춤 교체 (AI)</div>
+      <div style="display:flex;gap:6px">
+        <button onclick="window._tbSetLv('Beginner')" class="lv-btn" style="background:${t._level==='Beginner'?'#22c55e':'#fff'};color:${t._level==='Beginner'?'#fff':'#333'}">🟢 초급</button>
+        <button onclick="window._tbSetLv('Intermediate')" class="lv-btn" style="background:${t._level==='Intermediate'?'#f59e0b':'#fff'};color:${t._level==='Intermediate'?'#fff':'#333'}">🟡 중급</button>
+        <button onclick="window._tbSetLv('Advanced')" class="lv-btn" style="background:${t._level==='Advanced'?'#ef4444':'#fff'};color:${t._level==='Advanced'?'#fff':'#333'}">🔴 고급</button>
+      </div>
+    </div>
+    <div class="btn-row" style="margin-top:10px">
+      <select id="regen-fmt" style="flex:1;padding:8px;border-radius:8px;border:1px solid #EAEAEA;font-family:inherit;font-size:11px;font-weight:700;outline:none;cursor:pointer;background:#F8F9FA;color:#333;" ${loading?'disabled':''}>
+        <option value="">🎲 랜덤 포맷</option>
+        ${getFormats().filter(f=>f.on).map(f=>`<option value="${f.name}">${f.name}</option>`).join('')}
+      </select>
+      <button class="btn-s" onclick="window._tbGenS2(${selected})" ${loading?'disabled':''} style="flex:1;background:#1a1a1a;color:#fff;border:none">↺ 2페이지만</button>
+      <button class="btn-s" onclick="window._tbGen(${selected})" ${loading?'disabled':''} style="flex:0.8">전체</button>
+      <button class="btn-s" onclick="window._tbDel(${selected})" style="flex:0.5;background:#fff;border:1px solid #EAEAEA;color:#888">✕</button>
+    </div></div>`;
+}
 
 async function aiUpdateFormats(){
   const apiKey=getApiKey();
