@@ -37,38 +37,34 @@ let fbSyncEnabled = true; // Firebase 동기화 on/off
 <style>
 :root{
   /* ── 컬러 팔레트 ── */
-  --bg:#f0f2f7;
+  --bg:#f2f3f8;
   --bg2:#ffffff;
-  --bg3:#f5f7fb;
-  --bg4:#ebedf5;
-  --border:rgba(70,80,120,0.09);
-  --border2:rgba(70,80,120,0.16);
+  --bg3:#f7f8fc;
+  --bg4:#eceef5;
+  --border:rgba(99,102,140,0.1);
+  --border2:rgba(99,102,140,0.18);
 
-  --text:#1a1d2e;
-  --text2:#454862;
-  --text3:#8a8eaa;
+  --text:#0d0e1a;
+  --text2:#474960;
+  --text3:#8f92ad;
 
-  /* 더박스 — 메인 브랜드 (다크 네이비) */
-  --accent:#1a3a6b;
-  --accent2:#142d55;
-  --accent-light:#e8eef8;
-  --accent-hover:#142d55;
-  --accent-glow:rgba(26,58,107,0.15);
-
-  /* 브랜드 레드 (강조에만) */
-  --brand-red:#cc2222;
-  --brand-red-light:#fde9e9;
+  /* 더박스 레드 — 메인 브랜드 */
+  --accent:#E81B1B;
+  --accent2:#c71515;
+  --accent-light:#fde8e8;
+  --accent-hover:#c71515;
+  --accent-glow:rgba(232,27,27,0.18);
 
   /* 상태 컬러 */
   --teal:#0ea882;
   --teal-light:#e3f7f1;
-  --amber:#c97a00;
+  --amber:#d98200;
   --amber-light:#fff4d6;
-  --red:#d93030;
-  --red-light:#fff1f0;
+  --red:#e03535;
+  --red-light:#fff0f0;
   --green:#1a9e52;
   --green-light:#e6f8ee;
-  --pink:#b03080;
+  --pink:#c4368a;
   --pink-light:#fce8f4;
   --blue:#2563eb;
   --blue-light:#eff4ff;
@@ -79,10 +75,10 @@ let fbSyncEnabled = true; // Firebase 동기화 on/off
   --r3:20px;
 
   /* 쉐도우 */
-  --shadow-sm:0 1px 4px rgba(13,14,26,0.05);
-  --shadow:0 4px 16px rgba(13,14,26,0.07);
-  --shadow-lg:0 12px 40px rgba(13,14,26,0.10);
-  --shadow-accent:0 4px 20px rgba(26,58,107,0.18);
+  --shadow-sm:0 1px 4px rgba(13,14,26,0.06);
+  --shadow:0 4px 16px rgba(13,14,26,0.08);
+  --shadow-lg:0 12px 40px rgba(13,14,26,0.12);
+  --shadow-accent:0 4px 20px rgba(232,27,27,0.2);
 
   /* 폰트 */
   --font:'Noto Sans KR',sans-serif;
@@ -102,15 +98,13 @@ let fbSyncEnabled = true; // Firebase 동기화 on/off
     --text:#e8eaf6;
     --text2:#9ea3c0;
     --text3:#6068a0;
-    --accent:#4a7cc7;
-    --accent2:#3a6ab5;
-    --accent-light:rgba(74,124,199,0.15);
-    --accent-glow:rgba(74,124,199,0.25);
+    --accent-light:rgba(232,27,27,0.15);
+    --accent-glow:rgba(232,27,27,0.25);
     --teal-light:rgba(14,168,130,0.12);
     --red-light:rgba(224,53,53,0.12);
     --amber-light:rgba(217,130,0,0.12);
     --green-light:rgba(26,158,82,0.12);
-    --pink-light:rgba(176,48,128,0.12);
+    --pink-light:rgba(196,54,138,0.12);
     --blue-light:rgba(37,99,235,0.12);
     --shadow-sm:0 1px 4px rgba(0,0,0,0.3);
     --shadow:0 4px 16px rgba(0,0,0,0.4);
@@ -129,14 +123,12 @@ let fbSyncEnabled = true; // Firebase 동기화 on/off
   --text:#e8eaf6;
   --text2:#9ea3c0;
   --text3:#6068a0;
-  --accent-light:rgba(26,58,107,0.2);
-  --accent-glow:rgba(26,58,107,0.3);
+  --accent-light:rgba(232,27,27,0.15);
+  --accent-glow:rgba(232,27,27,0.25);
   --teal-light:rgba(14,168,130,0.12);
   --red-light:rgba(224,53,53,0.12);
   --amber-light:rgba(217,130,0,0.12);
   --green-light:rgba(26,158,82,0.12);
-  --pink-light:rgba(176,48,128,0.12);
-  --blue-light:rgba(37,99,235,0.12);
   --shadow-sm:0 1px 4px rgba(0,0,0,0.3);
   --shadow:0 4px 16px rgba(0,0,0,0.4);
   --shadow-lg:0 12px 40px rgba(0,0,0,0.5);
@@ -175,7 +167,7 @@ body{
 .sb-logo{
   padding:18px 16px 14px;
   border-bottom:1px solid var(--border);
-  background:linear-gradient(135deg,#1a3a6b,#0d2144);
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
   position:relative;
   overflow:hidden;
 }
@@ -206,15 +198,14 @@ body{
 .sb-item.on{
   background:var(--accent-light);color:var(--accent);font-weight:600;
   box-shadow:inset 3px 0 0 var(--accent);
-  border-radius:var(--r);
 }
 .sb-item svg{flex-shrink:0;opacity:.5;transition:opacity .15s}
 .sb-item:hover svg{opacity:.8}
 .sb-item.on svg{opacity:1}
 .ndot{
-  width:7px;height:7px;border-radius:50%;
-  background:var(--amber);margin-left:auto;
-  box-shadow:0 0 0 2px var(--amber-light);
+  width:6px;height:6px;border-radius:50%;
+  background:var(--red);margin-left:auto;
+  box-shadow:0 0 0 2px var(--red-light);
   animation:ndot-pulse 2s ease-in-out infinite;
 }
 @keyframes ndot-pulse{0%,100%{box-shadow:0 0 0 2px var(--red-light)}50%{box-shadow:0 0 0 4px var(--red-light)}}
@@ -222,7 +213,6 @@ body{
   margin-top:auto;padding:12px 16px;
   border-top:1px solid var(--border);
   font-size:10.5px;color:var(--text3);
-  background:var(--bg3);
 }
 
 /* ══ 상단바 ══ */
@@ -261,9 +251,9 @@ body{
   border:2px solid var(--accent);
   background:var(--accent);color:#fff;
   transition:transform .15s,box-shadow .15s;
-  box-shadow:0 2px 8px rgba(26,58,107,0.2);
+  box-shadow:var(--shadow-accent);
 }
-.avatar:hover{transform:scale(1.05);box-shadow:0 4px 16px rgba(26,58,107,0.35)}
+.avatar:hover{transform:scale(1.05);box-shadow:0 4px 16px rgba(232,27,27,0.35)}
 .content{flex:1;padding:24px 28px;overflow-y:auto;min-height:100vh}
 
 /* ══ 메트릭 카드 ══ */
@@ -291,7 +281,6 @@ body{
 .metric-val{font-size:28px;font-weight:800;letter-spacing:-1.5px;line-height:1;font-family:var(--font-display)}
 .metric-sub{font-size:11px;color:var(--text3);margin-top:5px}
 .metric-accent .metric-val{color:var(--accent)}
-.metric-accent::before{background:linear-gradient(90deg,#1a3a6b,#2a5298)}
 .metric-red .metric-val{color:var(--red)}
 .metric-teal .metric-val{color:var(--teal)}
 .metric-pink .metric-val{color:var(--pink)}
@@ -306,12 +295,11 @@ body{
 }
 .card:hover{box-shadow:var(--shadow)}
 .card-head{
-  padding:13px 20px;
+  padding:14px 20px;
   display:flex;align-items:center;justify-content:space-between;
   border-bottom:1px solid var(--border);
   background:var(--bg3);
 }
-.card-title{font-size:13px;font-weight:700;color:var(--text);font-family:var(--font-display);letter-spacing:-.1px}
 .card-title{font-size:13px;font-weight:700;color:var(--text);font-family:var(--font-display)}
 .card-body{padding:18px 20px}
 
@@ -330,7 +318,7 @@ body{
 .btn-primary{
   background:var(--accent);border-color:var(--accent);
   color:#fff;font-weight:600;
-  box-shadow:0 2px 8px rgba(26,58,107,0.2);
+  box-shadow:0 2px 8px rgba(232,27,27,0.25);
 }
 .btn-primary:hover{background:var(--accent-hover);border-color:var(--accent-hover);color:#fff;box-shadow:var(--shadow-accent)}
 .btn-sm{padding:4px 10px;font-size:11.5px}
@@ -342,20 +330,19 @@ body{
 /* ══ 배지 ══ */
 .badge{
   display:inline-flex;align-items:center;
-  font-size:11.5px;font-weight:600;
-  padding:3px 10px;border-radius:20px;
-  letter-spacing:.02em;white-space:nowrap;
-  border:1px solid transparent;
+  font-size:12px;font-weight:600;
+  padding:3px 10px;border-radius:6px;
+  letter-spacing:.01em;white-space:nowrap;
 }
-.b-green{background:var(--green-light);color:var(--green);border-color:rgba(26,158,82,0.2)}
-.b-red{background:var(--red-light);color:var(--red);border-color:rgba(217,48,48,0.2)}
-.b-amber{background:var(--amber-light);color:var(--amber);border-color:rgba(201,122,0,0.2)}
-.b-teal{background:var(--teal-light);color:var(--teal);border-color:rgba(14,168,130,0.2)}
-.b-gray{background:var(--bg4);color:var(--text2);border-color:var(--border2)}
-.b-accent{background:var(--accent-light);color:var(--accent);border-color:rgba(26,58,107,0.2)}
-.b-pink{background:var(--pink-light);color:var(--pink);border-color:rgba(176,48,128,0.2)}
-.b-blue{background:var(--blue-light);color:var(--blue);border-color:rgba(37,99,235,0.2)}
-.b-indigo{background:rgba(92,124,250,0.1);color:#5c7cfa;border-color:rgba(92,124,250,0.2)}
+.b-green{background:var(--green-light);color:var(--green)}
+.b-red{background:var(--red-light);color:var(--red)}
+.b-amber{background:var(--amber-light);color:var(--amber)}
+.b-teal{background:var(--teal-light);color:var(--teal)}
+.b-gray{background:var(--bg4);color:var(--text2)}
+.b-accent{background:var(--accent-light);color:var(--accent)}
+.b-pink{background:var(--pink-light);color:var(--pink)}
+.b-blue{background:var(--blue-light);color:var(--blue)}
+.b-indigo{background:rgba(92, 124, 250, 0.1);color:#5c7cfa}
 
 /* ══ 필터 행 ══ */
 .filter-row{
@@ -373,7 +360,7 @@ body{
   font-family:var(--font);outline:none;
   transition:border-color .15s,background .15s;
 }
-.search-box:focus{border-color:var(--accent);background:var(--bg2);box-shadow:0 0 0 2px var(--accent-glow)}
+.search-box:focus{border-color:var(--accent);background:var(--bg2)}
 .search-box::placeholder{color:var(--text3)}
 select.fsel{
   background:var(--bg3);border:1.5px solid var(--border);
@@ -428,7 +415,7 @@ select.fsel:focus{border-color:var(--accent);background:var(--bg2)}
 }
 .finput:focus{
   border-color:var(--accent);background:var(--bg2);
-  box-shadow:0 0 0 2px var(--accent-glow);
+  box-shadow:0 0 0 3px var(--accent-glow);
 }
 .finput::placeholder{color:var(--text3)}
 textarea.finput{resize:vertical;min-height:60px}
@@ -442,7 +429,7 @@ textarea.finput{resize:vertical;min-height:60px}
 .teacher-tab-bar::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
 .t-tab{display:flex;align-items:center;gap:7px;padding:10px 14px;font-size:12.5px;font-weight:500;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;transition:all .12s;flex-shrink:0}
 .t-tab:hover{color:var(--text);background:var(--bg3)}
-.t-tab.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+.t-tab.on{color:var(--text);border-bottom-color:var(--accent)}
 .t-tab-avatar{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0}
 .t-tab-count{font-size:10px;font-weight:700;padding:1px 5px;border-radius:99px}
 .teacher-header{background:var(--bg2);padding:12px 18px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border)}
@@ -482,7 +469,7 @@ textarea.finput{resize:vertical;min-height:60px}
 .sheet-table td:last-child{border-right:none}
 .sheet-table tbody tr:last-child td{border-bottom:none}
 .sheet-table tbody tr{transition:background .1s}
-.sheet-table tbody tr:hover td{background:var(--accent-light);transition:background .1s}
+.sheet-table tbody tr:hover td{background:var(--accent-light)}
 .row-warn td{background:rgba(217,130,0,0.04)!important}
 .row-warn td:first-child{border-left:3px solid var(--amber)}
 .row-danger td{background:rgba(224,53,53,0.04)!important}
@@ -494,7 +481,7 @@ textarea.finput{resize:vertical;min-height:60px}
   color:var(--text3);font-size:13.5px;
   background:var(--bg3);
 }
-.dchip{display:inline-flex;align-items:center;font-size:10px;font-weight:600;padding:2px 8px;border-radius:99px;border:1px solid transparent}
+.dchip{display:inline-flex;align-items:center;font-size:10px;font-weight:700;padding:2px 7px;border-radius:99px}
 
 /* ══ 상담 카드 ══ */
 .consult-card{
@@ -505,19 +492,18 @@ textarea.finput{resize:vertical;min-height:60px}
 .consult-card:hover{box-shadow:var(--shadow);transform:translateY(-1px)}
 .consult-head{padding:12px 15px;display:flex;align-items:center;gap:10px;cursor:pointer}
 .consult-head.open{border-bottom:1px solid var(--border)}
-.result-badge{display:inline-flex;font-size:10.5px;font-weight:600;padding:3px 10px;border-radius:99px;border:1px solid transparent}
-.r-registered{background:var(--green-light);color:#15803d;border-color:rgba(21,128,61,0.2)}
-.r-considering{background:var(--amber-light);color:#92400e;border-color:rgba(146,64,14,0.2)}
-.r-trial{background:var(--teal-light);color:#0e6856;border-color:rgba(14,168,130,0.2)}
-.r-rejected{background:var(--red-light);color:#991b1b;border-color:rgba(153,27,27,0.2)}
-.r-callback{background:var(--pink-light);color:#7c2d6a;border-color:rgba(124,45,106,0.2)}
-.r-noshow{background:var(--bg4);color:var(--text3);border-color:var(--border2)}
+.result-badge{display:inline-flex;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:99px}
+.r-registered{background:var(--green-light);color:var(--green)}
+.r-considering{background:var(--amber-light);color:var(--amber)}
+.r-trial{background:var(--teal-light);color:var(--teal)}
+.r-rejected{background:var(--red-light);color:var(--red)}
+.r-callback{background:var(--pink-light);color:var(--pink)}
+.r-noshow{background:var(--bg4);color:var(--text3)}
 .consult-memo{
   background:var(--bg3);border-radius:var(--r);
   padding:9px 12px;font-size:12.5px;color:var(--text2);
   line-height:1.7;margin-top:8px;
   border-left:3px solid var(--accent);
-  border-radius:0 var(--r) var(--r) 0;
 }
 .consult-next{
   background:rgba(255,193,7,0.1);border-radius:var(--r);
@@ -567,7 +553,6 @@ textarea.finput{resize:vertical;min-height:60px}
   display:flex;align-items:center;justify-content:center;
   font-size:10px;font-weight:700;
 }
-.cal-cell.today .cal-date{box-shadow:0 2px 8px rgba(26,58,107,0.3)}
 .cal-cell.sun .cal-date{color:var(--red)}.cal-cell.sat .cal-date{color:var(--blue)}
 .cal-pill{
   font-size:9.5px;font-weight:600;padding:1px 7px;
@@ -575,12 +560,12 @@ textarea.finput{resize:vertical;min-height:60px}
   display:block;white-space:nowrap;overflow:hidden;
   text-overflow:ellipsis;line-height:1.5;
 }
-.cal-note{font-size:9px;color:var(--amber);font-weight:700;margin-top:2px;display:block}
+.cal-note{font-size:9px;color:var(--red);font-weight:700;margin-top:2px;display:block}
 
 /* ══ 페이지 ══ */
 .page{display:none}
 .page.on{display:block;animation:page-in .2s ease-out}
-@keyframes page-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+@keyframes page-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 
 /* ══ 모바일 공통 ══ */
 @media(max-width:860px){
@@ -676,7 +661,6 @@ textarea.finput{resize:vertical;min-height:60px}
     font-family:var(--font);
   }
   .mobile-bottom-nav .mbn-item.on{color:var(--accent)}
-  .mobile-bottom-nav .mbn-item.on svg{color:var(--accent)}
   .mobile-bottom-nav .mbn-item svg{opacity:.6;transition:opacity .15s}
   .mobile-bottom-nav .mbn-item.on svg{opacity:1}
   .mobile-bottom-nav .mbn-item.mbn-add{
@@ -684,9 +668,9 @@ textarea.finput{resize:vertical;min-height:60px}
   }
   .mobile-bottom-nav .mbn-add-inner{
     width:44px;height:44px;border-radius:50%;
-    background:linear-gradient(135deg,#1a3a6b,#0d2144);
+    background:var(--accent);
     display:flex;align-items:center;justify-content:center;
-    box-shadow:0 4px 16px rgba(26,58,107,0.3);
+    box-shadow:var(--shadow-accent);
     margin-bottom:2px;
     transition:transform .15s,box-shadow .15s;
   }
@@ -754,7 +738,7 @@ textarea.finput{resize:vertical;min-height:60px}
   font-size:12.5px;color:var(--text2);
   font-family:var(--font);cursor:pointer;transition:all .15s;
 }
-.global-search-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-light);transform:none}
+.global-search-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-light)}
 .search-result-item{
   display:flex;align-items:center;gap:12px;
   padding:11px 17px;cursor:pointer;
@@ -762,7 +746,6 @@ textarea.finput{resize:vertical;min-height:60px}
 }
 .search-result-item:last-child{border-bottom:none}
 .search-result-item:hover,.search-result-item.focused{background:var(--accent-light)}
-.search-result-item.focused .sri-name{color:var(--accent)}
 .search-result-item.focused .sri-name{color:var(--accent)}
 .sri-avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
 .sri-name{font-size:14px;font-weight:600;color:var(--text)}
@@ -773,7 +756,7 @@ textarea.finput{resize:vertical;min-height:60px}
 /* ══ 로그인 ══ */
 .login-screen{
   position:fixed;inset:0;
-  background:linear-gradient(135deg,#0d1f3c 0%,#1a3a6b 50%,#0d2a4a 100%);
+  background:linear-gradient(135deg,#1a1040 0%,#2d1b69 50%,#1a3070 100%);
   display:flex;align-items:center;justify-content:center;z-index:999;
 }
 .login-screen::before{
@@ -791,11 +774,11 @@ textarea.finput{resize:vertical;min-height:60px}
 }
 @keyframes login-in{from{opacity:0;transform:translateY(24px) scale(0.95)}to{opacity:1;transform:translateY(0) scale(1)}}
 .login-logo{
-  font-size:22px;font-weight:800;color:#1a3a6b;
+  font-size:22px;font-weight:800;color:var(--accent);
   margin-bottom:4px;font-family:var(--font-display);
   letter-spacing:-.5px;
 }
-.login-sub{font-size:12px;color:var(--text2);margin-bottom:26px}
+.login-sub{font-size:12px;color:var(--text3);margin-bottom:26px}
 .login-manager-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
 .manager-btn{
   padding:12px 8px;border-radius:var(--r);
@@ -803,7 +786,7 @@ textarea.finput{resize:vertical;min-height:60px}
   cursor:pointer;transition:all .18s;text-align:center;
 }
 .manager-btn:hover{border-color:var(--accent);background:var(--accent-light);transform:translateY(-2px)}
-.manager-btn.selected{border-color:var(--accent);background:var(--accent-light);box-shadow:0 0 0 2px var(--accent-glow)}
+.manager-btn.selected{border-color:var(--accent);background:var(--accent-light);box-shadow:0 0 0 3px var(--accent-glow)}
 .manager-btn-name{font-size:12.5px;font-weight:700;color:var(--text)}
 .manager-btn-role{font-size:10px;color:var(--text3);margin-top:2px}
 .login-pw{
@@ -814,16 +797,16 @@ textarea.finput{resize:vertical;min-height:60px}
   text-align:left;letter-spacing:normal;
   transition:border-color .15s,box-shadow .15s;
 }
-.login-pw:focus{border-color:var(--accent);background:var(--bg2);box-shadow:0 0 0 2px var(--accent-glow)}
+.login-pw:focus{border-color:var(--accent);background:var(--bg2);box-shadow:0 0 0 3px var(--accent-glow)}
 .login-btn{
-  width:100%;background:linear-gradient(135deg,#1a3a6b,#0d2144);
+  width:100%;background:linear-gradient(135deg,var(--accent),var(--accent2));
   border:none;border-radius:var(--r);padding:12px;
   font-size:14px;font-weight:700;color:#fff;
   cursor:pointer;font-family:var(--font);
-  transition:all .2s;box-shadow:0 4px 20px rgba(26,58,107,0.25);
+  transition:all .2s;box-shadow:var(--shadow-accent);
   letter-spacing:.02em;
 }
-.login-btn:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(26,58,107,0.4)}
+.login-btn:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(232,27,27,0.4)}
 .login-btn:active{transform:translateY(0)}
 .login-err{font-size:11.5px;color:var(--red);margin-top:8px;min-height:18px;font-weight:500}
 .login-status{display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;color:var(--text3);margin-top:14px}
@@ -844,7 +827,7 @@ textarea.finput{resize:vertical;min-height:60px}
   display:flex;align-items:center;gap:6px;flex-shrink:0;
 }
 .dtt:hover{color:var(--text);background:var(--bg3)}
-.dtt.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:700;background:var(--accent-light)}
+.dtt.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:700}
 .dtt-count{font-size:10px;padding:1px 6px;border-radius:99px;font-weight:700}
 /* ══ 알림 배너 ══ */
 .alert-bar{
@@ -977,7 +960,7 @@ textarea.finput{resize:vertical;min-height:60px}
 <div class="login-screen" id="login-screen">
   <div class="login-box" style="width:420px">
     <div class="login-logo" style="margin-bottom:16px;text-align:center">
-      <img src="https://raw.githubusercontent.com/thebox-academy/thebox-academy.github.io/main/더박스로고.png" alt="The BOX" style="width:180px;display:block;margin:0 auto">
+      <img src="https://raw.githubusercontent.com/lccthebox/tools/main/manage/더박스로고.png" alt="The BOX" style="width:200px;display:block;margin:0 auto">
     </div>
 
     <!-- 로그인 패널 -->
@@ -1040,8 +1023,8 @@ textarea.finput{resize:vertical;min-height:60px}
 <div class="shell" id="main-shell" style="display:none">
 
   <aside class="sidebar">
-    <div class="sb-logo" style="background:#ffffff;padding:14px 16px;text-align:center;border-bottom:1px solid rgba(26,58,107,0.12)">
-      <img src="https://raw.githubusercontent.com/thebox-academy/thebox-academy.github.io/main/더박스로고.png" alt="The BOX" style="width:110px;display:block;margin:0 auto;filter:none;" onerror="this.onerror=null;this.style.display=\'block\'">
+    <div class="sb-logo" style="background:#111;padding:14px 16px;text-align:center">
+      <img src="https://raw.githubusercontent.com/lccthebox/tools/main/manage/더박스로고.png" alt="The BOX" style="width:120px;display:block;margin:0 auto">
       <div style="font-size:9px;color:rgba(255,255,255,0.5);margin-top:4px;letter-spacing:.05em">Academy Management</div>
     </div>
     <div class="sb-item" data-page="board">
@@ -2834,23 +2817,30 @@ function searchRowHTML(s){
   // 수업반 이름만 표시 (복수 지원)
   const classNames=classes.map(cl=>(classLabel(cl.classTime)+(cl.classTime2?(' + '+classLabel(cl.classTime2)):'')).trim()).join(' / ');
 
-  return`<tr style="background:${rowBg}" oncontextmenu="openCtxMenu(event,'${s.id}')" onclick="openModal('studentDetail','${s.id}')" onmouseenter="this.style.background='rgba(92,82,232,0.04)'" onmouseleave="this.style.background='${rowBg}'" style="cursor:pointer">
-    <td style="${tdStyle};font-weight:600;white-space:nowrap">${s.name}</td>
-    <td style="${tdStyle};font-family:var(--font-mono);font-size:12px;color:var(--text2);white-space:nowrap">${s.phone||'-'}</td>
-    <td style="${tdStyle}">
-      <span style="background:${tbg};color:${tc};padding:2px 7px;border-radius:99px;font-size:11px;font-weight:700;white-space:nowrap">${pri.teacher}</span>
+  const dlLabel = dl < 0 ? `만료 ${Math.abs(dl)}일` : dl <= 7 ? `D-${dl}` : '';
+  const dlColor = dl < 0 ? 'var(--red)' : dl <= 7 ? 'var(--amber)' : 'var(--text3)';
+  const payColor = payStatus==='완료'?'#166534':payStatus==='미납'?'#991b1b':'#92400e';
+  const payBg    = payStatus==='완료'?'#dcfce7':payStatus==='미납'?'#fee2e2':'#fef3c7';
+
+  return`<tr oncontextmenu="openCtxMenu(event,'${s.id}')" onclick="openModal('studentDetail','${s.id}')"
+    style="cursor:pointer;background:${rowBg};border-bottom:1px solid var(--border)"
+    onmouseenter="this.style.background='#f8f9ff'" onmouseleave="this.style.background='${rowBg}'">
+    <td style="padding:13px 16px;font-weight:700;font-size:14px;white-space:nowrap">${s.name}</td>
+    <td style="padding:13px 16px;font-size:13px;color:var(--text2)">${s.phone||'-'}</td>
+    <td style="padding:13px 16px">
+      <span style="font-size:13px;font-weight:600;color:${tc}">${pri.teacher}</span>
+      <div style="font-size:11px;color:var(--text3);margin-top:2px">${classNames}</div>
     </td>
-    <td style="${tdStyle};font-size:12px;color:var(--text2)">${classNames}</td>
-    <td style="${tdStyle};text-align:center;font-family:var(--font-mono);font-size:12px;white-space:nowrap">${fmtDate(pri.startDate)}</td>
-    <td style="${tdStyle};text-align:center;font-family:var(--font-mono);font-size:12px;white-space:nowrap">${fmtDate(end)}${dchip}</td>
-    <td style="${tdStyle};text-align:center">${sBadge(s.status)}</td>
-    <td style="${tdStyle};text-align:center">
-      <select onchange="updPaySearch('${s.id}',this.value)"
-        style="background:${payStatus==='완료'?'var(--green-bg)':payStatus==='미납'?'var(--red-bg)':'var(--amber-bg)'};
-               color:${payStatus==='완료'?'var(--green)':payStatus==='미납'?'var(--red)':'var(--amber)'};
-               border:none;border-radius:99px;padding:3px 8px;font-size:11px;font-weight:700;cursor:pointer;
-               font-family:'Noto Sans KR',sans-serif;outline:none">
-        <option value="완료" ${payStatus==='완료'?'selected':''}>완료</option>
+    <td style="padding:13px 16px;font-size:13px;color:var(--text2)">${fmtDate(pri.startDate)}</td>
+    <td style="padding:13px 16px">
+      <span style="font-size:13px;color:var(--text2)">${fmtDate(end)}</span>
+      ${dlLabel?`<span style="font-size:11px;font-weight:700;color:${dlColor};margin-left:5px">${dlLabel}</span>`:''}
+    </td>
+    <td style="padding:13px 16px">${sBadge(s.status)}</td>
+    <td style="padding:13px 16px">
+      <select onchange="updPaySearch('${s.id}',this.value)" onclick="event.stopPropagation()"
+        style="background:${payBg};color:${payColor};border:none;border-radius:5px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Noto Sans KR',sans-serif;outline:none">
+        <option value="완료" ${payStatus==='완료'?'selected':''}>납부완료</option>
         <option value="미납" ${payStatus==='미납'?'selected':''}>미납</option>
         <option value="대기" ${payStatus==='대기'?'selected':''}>대기</option>
       </select>
@@ -4671,14 +4661,13 @@ function renderClassSheet(){
   if(!studs.length){tbl.innerHTML=`<tr><td colspan="10" class="empty-state">수강생이 없습니다</td></tr>`;return;}
 
   tbl.innerHTML=`<thead><tr>
-    <th style="width:30px;text-align:center">번호</th>
+    <th style="width:28px;text-align:center;color:var(--text3)">#</th>
     <th>이름</th>
     <th>연락처</th>
     <th>시작일</th>
-    <th style="text-align:center">개월수</th>
     <th>마지막날</th>
-    <th style="text-align:center">납부</th>
-    <th style="text-align:center">상태</th>
+    <th>납부</th>
+    <th>상태</th>
     <th>비고</th>
   </tr></thead><tbody>`+studs.map((s,i)=>{
     const pri=getPrimary(s);
@@ -4706,28 +4695,30 @@ function renderClassSheet(){
     const lastNote=s.notes&&s.notes.length?s.notes[s.notes.length-1]:null;
     const noteDisplay=lastNote?'<span style="color:var(--text2)">'+lastNote.text+'</span><span style="color:var(--text3);font-size:10px;margin-left:4px">'+lastNote.by+'</span>':(s.memo?'<span style="color:var(--text3)">'+s.memo+'</span>':'<span style="color:var(--border2);font-size:11px">+ 메모</span>');
 
+    const dlTxt = dl<0?`만료 ${Math.abs(dl)}일 초과`:dl<=7?`D-${dl}`:'';
+    const dlColor2 = dl<0?'#991b1b':dl<=7?'#92400e':'';
+    const hasReview = getClasses(s).some(c=>(c.discounts||[]).some(d=>d.includes('리뷰')));
+    const reviewBtn = hasReview ? `<button onclick="toggleReviewCheck('${s.id}',event)" style="border:none;cursor:pointer;font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;margin-top:3px;display:block;${s.reviewChecked?'background:#dcfce7;color:#166534':'background:#fee2e2;color:#991b1b'}">${s.reviewChecked?'✅ 리뷰확인':'📝 미확인'}</button>` : '';
+
     return`<tr class="${rowCls}" oncontextmenu="openCtxMenu(event,'${s.id}')" onclick="openModal('studentDetail','${s.id}')" style="cursor:pointer">
-      <td style="text-align:center;color:var(--text3);font-size:11px">${i+1}</td>
-      <td style="font-weight:600">${s.name}${trialChip}${renewBadge}${holdChip}</td>
-      <td style="font-family:var(--font-mono);font-size:12px;color:var(--text2)">${s.phone||'-'}</td>
-      <td style="font-family:var(--font-mono);font-size:12px">${fmtDate(pri.startDate)}</td>
-      <td style="text-align:center;font-family:var(--font-mono);font-size:12px">${pri.months||1}</td>
-      <td style="font-family:var(--font-mono);font-size:12px">${fmtDate(end)}</td>
-      <td style="text-align:center">
-        ${pBadge(payStatus, s)}
-        ${(function(){
-          const hasReviewDisc = getClasses(s).some(c=>(c.discounts||[]).some(d=>d.includes('리뷰')));
-          if(!hasReviewDisc) return '';
-          const checked = s.reviewChecked;
-          return `<div style="margin-top:3px">
-            <button onclick="toggleReviewCheck('${s.id}',event)" style="border:none;cursor:pointer;font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px;${checked?'background:#dcfce7;color:#166534':'background:#fee2e2;color:#991b1b'}">
-              ${checked?'✅ 리뷰확인':'📝 리뷰미확인'}
-            </button>
-          </div>`;
-        })()}
+      <td style="text-align:center;color:var(--text3);font-size:12px;padding:12px 8px">${i+1}</td>
+      <td style="padding:12px 14px">
+        <div style="font-weight:700;font-size:14px">${s.name}</div>
+        ${renewBadge?`<span style="font-size:11px;color:var(--amber);font-weight:600">연장 필요</span>`:''}
+        ${holdChip?`<span style="font-size:11px;color:#7c3aed">홀딩중</span>`:''}
       </td>
-      <td style="text-align:center">${sBadge(s.status)}</td>
-      <td style="font-size:12px;cursor:pointer" onclick="event.stopPropagation();openQuickNote('${s.id}')">${noteDisplay}</td>
+      <td style="padding:12px 14px;font-size:13px;color:var(--text2)">${s.phone||'-'}</td>
+      <td style="padding:12px 14px;font-size:13px;color:var(--text2)">${fmtDate(pri.startDate)}</td>
+      <td style="padding:12px 14px">
+        <div style="font-size:13px;color:var(--text)">${fmtDate(end)}</div>
+        ${dlTxt?`<div style="font-size:11px;font-weight:700;color:${dlColor2}">${dlTxt}</div>`:''}
+      </td>
+      <td style="padding:12px 14px">
+        ${pBadge(payStatus, s)}
+        ${reviewBtn}
+      </td>
+      <td style="padding:12px 14px">${sBadge(s.status)}</td>
+      <td style="padding:12px 14px;font-size:13px;color:var(--text2);cursor:pointer" onclick="event.stopPropagation();openQuickNote('${s.id}')">${noteDisplay}</td>
     </tr>`;
   }).join('')+'</tbody>';
 }
@@ -5066,13 +5057,14 @@ function sBadge(s){
   return`<span style="font-size:12px;color:${color};font-weight:500">${txt}</span>`;
 }
 function pBadge(p, s){
-  const m={
-    '완료':'b-green',
-    '미납':'b-red',
-    '대기':'b-amber',
-    '선금':'b-amber',
-    '연장확정':'b-blue',
-    '결제예정':'b-indigo'
+  const cfg={
+    '완료':  ['#166534','#dcfce7'],
+    '납부완료':['#166534','#dcfce7'],
+    '미납':  ['#991b1b','#fee2e2'],
+    '대기':  ['#92400e','#fef3c7'],
+    '선금':  ['#92400e','#fef3c7'],
+    '연장확정':['#1e40af','#dbeafe'],
+    '결제예정':['#1e40af','#dbeafe'],
   };
   if(p==='선금' && s){
     const pri=getPrimary(s);
@@ -5080,7 +5072,8 @@ function pBadge(p, s){
     const remainStr=remain>0?`<br><span style="font-size:9px;color:var(--red);font-weight:700">잔금 ${remain.toLocaleString()}원</span>`:'';
     return `<span class="badge b-amber">선금</span>${remainStr}`;
   }
-  return `<span class="badge ${m[p]||'b-gray'}">${p}</span>`;
+  const [fg2,bg2] = cfg[p]||['#374151','#f3f4f6'];
+  return `<span style="display:inline-block;font-size:12px;font-weight:600;color:${fg2};background:${bg2};padding:3px 10px;border-radius:5px;white-space:nowrap">${p}</span>`;
 }
 
 // ══ 청강 ══
