@@ -2121,6 +2121,52 @@ ${page1}${page2}${page3}
   if(w){w.document.write(html);w.document.close();}
 }
 
+async function aiUpdateSources(){
+  const btn=document.getElementById('ai-src-btn');
+  if(!getApiKey()){showToast('API 키를 먼저 입력해주세요');return;}
+  if(btn){btn.disabled=true;btn.textContent='⏳ 생성 중...';}
+  try{
+    const existing=getSources().map(s=>s.angle).join('\n');
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':getApiKey(),'anthropic-version':'2023-06-01'},
+      body:JSON.stringify({
+        model:'claude-haiku-4-5-20251001',max_tokens:800,
+        messages:[{role:'user',content:`TheBox English Networking Club용 한국 20-30대 관심 소스를 5개 생성해줘.
+기존 소스 (중복 금지):
+${existing}
+
+규칙:
+- 한국 20-30대가 실제로 관심 갖는 트렌드/이슈
+- angle은 구체적이고 대화가 터질 만한 상황/질문 (50자 이내)
+- name은 카테고리명 (예: 직장 트렌드, 연애 트렌드, 소비 트렌드 등)
+
+JSON 배열만 반환:
+[{"name":"카테고리명","angle":"이슈각도"}]`}]
+      })
+    });
+    const data=await resp.json();
+    const text=data.content?.[0]?.text||'';
+    const match=text.match(/\[[\s\S]*\]/);
+    if(!match)throw new Error('파싱 실패');
+    const items=JSON.parse(match[0]);
+    const srcs=getSources();
+    items.forEach((item,i)=>{
+      if(item.name&&item.angle){
+        srcs.push({id:'ai'+Date.now()+i,name:item.name,angle:item.angle,on:true});
+      }
+    });
+    saveSources(srcs);
+    renderSettings();
+    showToast(`✓ ${items.length}개 소스 추가됨!`);
+  }catch(e){
+    console.error(e);
+    showToast('오류: '+e.message.slice(0,40));
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='🤖 AI로 소스 추가';}
+  }
+}
+
 function updateNavKey(){
   const k=getApiKey();
   document.getElementById('key-dot').className='key-dot'+(k?' on':'');
