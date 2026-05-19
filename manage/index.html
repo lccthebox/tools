@@ -4174,8 +4174,7 @@ function renderTeacherPage(){
           +(timeInfo?'<div style="font-size:11px;color:var(--text3);margin-bottom:6px">'+timeInfo+'</div>':'')
           +'<div class="class-card-footer">'
           +'<span class="class-card-count" style="background:'+countBg+';color:'+countColor+';font-size:13px;padding:4px 10px">'+cnt+'명</span>'
-          +(unpaidCnt2>0?'<span style="font-size:11px;color:var(--red);font-weight:700">미납 '+unpaidCnt2+'</span>':'')
-          +(exp>0&&unpaidCnt2===0?'<span class="class-card-warn" style="font-size:11px">⚠'+exp+'만료</span>':'')
+          +(unpaidCnt2>0?'<span style="font-size:11px;color:var(--red);font-weight:600">미납 '+unpaidCnt2+'</span>':'<span style="font-size:11px;color:var(--teal);font-weight:600">완료</span>')
           +'</div></div>';
       }).join('');
       return '<div class="class-grid-section">'
