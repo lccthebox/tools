@@ -6636,7 +6636,7 @@ function studentDetailForm(s){
       payMethods:cl.payMethods, discounts:cl.discounts, discountAmt:cl.discountAmt,
       label:'현재 수강중'
     })),
-    ...(s.payHistory||[]).map(h=>({...h,type: h.isTrialFee?'trialFee':'history', label: h.isTrialFee?'청강비':'이전 결제'}))
+    ...(s.payHistory||[]).map(h=>({...h,type: h.isTrialFee?'trialFee':h.isHoldUsage?'holdUsage':'history', label: h.isTrialFee?'청강비':h.isHoldUsage?'홀딩사용':'이전 결제'}))
   ].sort((a,b)=>(b.payDate||'').localeCompare(a.payDate||''));
 
   const trialFeeTotal=(s.payHistory||[]).filter(h=>h.isTrialFee).reduce((sum,h)=>sum+(h.amount||0),0);
@@ -6687,6 +6687,21 @@ function studentDetailForm(s){
             <span style="font-size:9px;background:#0369a1;color:#fff;padding:2px 7px;border-radius:99px">수강료 차감</span>
           </div>
         </div>
+      </div>`;
+      const isHoldUsage=p.type==='holdUsage';
+      if(isHoldUsage) return`<div style="border:1.5px solid #86efac;border-radius:var(--r2);padding:10px 14px;margin-bottom:8px;background:#f0fdf4">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:13px">🔓</span>
+            <span style="font-size:12px;font-weight:700;color:#166534">홀딩 사용</span>
+            <span style="font-size:11px;color:#166534">${p.memo||''}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:13px;font-weight:700;color:#166534">0원</span>
+            <span style="font-size:9px;background:#166534;color:#fff;padding:2px 7px;border-radius:99px">추가결제 없음</span>
+          </div>
+        </div>
+        <div style="font-size:11px;color:#166534;margin-top:6px">복귀일: ${fmtDate(p.date)} · 처리: ${p.by||'-'}</div>
       </div>`;
       return`<div style="border:1.5px solid ${isCurrent?'var(--accent)44':'var(--border)'};border-radius:var(--r2);padding:12px 14px;margin-bottom:8px;position:relative;${isCurrent?'background:var(--accent-light)11':''}">
         <div style="position:absolute;top:10px;right:10px;display:flex;align-items:center;gap:6px">
@@ -7602,15 +7617,35 @@ function resumeFromHold(stuId){
   const pri=getPrimary(s);
   const endDate=pri.endDate||'';
   const totalHoldMonths=(s.holdList||[]).reduce((sum,h)=>sum+(parseInt(h.months)||0),0);
-  if(!confirm(`${s.name} 님을 홀딩 해제하고 수업 복귀 처리하시겠습니까?\n\n홀딩 ${totalHoldMonths}개월 → 마지막날 ${endDate||'미설정'} 까지 수업 가능`))return;
+  const lastHold=(s.holdList||[]).slice(-1)[0]||{};
+  const holdStart=lastHold.start||'';
+  const holdEnd=lastHold.end||endDate||'';
+
+  if(!confirm(s.name+' 님을 홀딩 해제하고 수업 복귀 처리하시겠습니까?\n\n홀딩 '+totalHoldMonths+'개월 사용 → 마지막날 '+(endDate||'미설정')+' 까지 수업 가능\n\n결제 이력에 "홀딩 사용" 이력이 자동 추가됩니다.'))return;
+
   pushUndo('홀딩 복귀');
   s.status='재원';
   s.holdResumedAt=new Date().toISOString();
   s.holdResumedBy=currentManager?.name||'';
   s.modifiedBy=currentManager?.name||'';
   s.modifiedAt=new Date().toISOString();
+
+  // 홀딩 사용 이력 payHistory에 자동 추가
+  if(!s.payHistory) s.payHistory=[];
+  s.payHistory.unshift({
+    id: gid('ph'),
+    date: today(),
+    amount: 0,
+    pay: '완료',
+    payMethods: ['홀딩사용'],
+    memo: '홀딩 '+totalHoldMonths+'개월 사용'+(holdStart?' ('+holdStart+(holdEnd?' ~ '+holdEnd:'')+')'  :''),
+    isHoldUsage: true,
+    holdMonths: totalHoldMonths,
+    by: currentManager?.name||'',
+  });
+
   save('students');closeModal();renderAll();
-  showToast(`✅ ${s.name} 님 수업 복귀 완료 (마지막날: ${endDate||'-'})`);
+  showToast('✅ '+s.name+' 님 수업 복귀 완료 · 홀딩 '+totalHoldMonths+'개월 사용 이력 추가됨');
 }
 
 // ══ 빠른 메모 ══
@@ -14086,6 +14121,14 @@ function handleExcelImport(input){
         //        결제일(8),시작일(9),개월수(10),납부금액(11),납부상태(12),납부방법(13),
         //        할인항목(14),할인금액(15),강사2(16),수업반2_2(17)
         const dataRows = rows.slice(3).filter(r => r[0] && String(r[0]).trim() && String(r[0]).trim() !== '홍길동' && String(r[0]).trim() !== '김철수');
+
+        // 첫 행 디버그 - 상태창에 컬럼 구조 표시
+        if(dataRows.length > 0){
+          const first = dataRows[0];
+          statusEl.textContent = '파싱 중... 첫행: [0]='+first[0]+' [1]='+first[1]+' [2]='+first[2]+' [3]='+first[3]+' [4]='+first[4]+' [5]='+first[5]+' [6]='+first[6];
+          console.log('첫 데이터 행:', first.slice(0,10));
+          console.log('전체 헤더 행(2):', rows[2] ? rows[2].slice(0,10) : '없음');
+        }
 
         if(!dataRows.length){
           statusEl.style.borderLeftColor = 'var(--amber)';
