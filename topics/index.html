@@ -535,8 +535,13 @@ function saveTopics(t){
   clearTimeout(window._apTimer);
   window._apTimer=setTimeout(function(){if(typeof getGistToken==='function'&&getGistToken()&&getGistId())gistPush();},2000);
 }
-function getFormats(){try{return JSON.parse(localStorage.getItem('tb_fmts_v2')||'null')||DEFAULT_FORMATS}catch{return DEFAULT_FORMATS}}
-function saveFormats(f){localStorage.setItem('tb_fmts_v2',JSON.stringify(f))}
+function getFormats(){
+  // DEFAULT_FORMATS만 사용 — localStorage 이전 포맷 무시
+  return DEFAULT_FORMATS;
+}
+function saveFormats(f){
+  // 포맷은 코드에서 고정 관리 — localStorage 저장 안 함
+}
 function getSources(){try{return JSON.parse(localStorage.getItem('tb_srcs_v3')||'null')||DEFAULT_SOURCES}catch{return DEFAULT_SOURCES}}
 function saveSources(s){localStorage.setItem('tb_srcs_v3',JSON.stringify(s))}
 function getApiKey(){return localStorage.getItem('tb_api_key_v2')||''}
