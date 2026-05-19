@@ -14131,11 +14131,21 @@ function handleExcelImport(input){
         // 헤더 행(3행, 인덱스2)에서 컬럼 위치 동적으로 찾기
         const headerRow = rows[2] || [];
         function colIdx(keywords){
+          // 1단계: 완전 일치 (공백/*제거 후)
           for(var ki=0;ki<keywords.length;ki++){
-            var kw=keywords[ki];
+            var kw=keywords[ki].replace(/[\s*]/g,'').toLowerCase();
             for(var i=0;i<headerRow.length;i++){
               var h=String(headerRow[i]||'').replace(/[\s*]/g,'').toLowerCase();
-              if(h.includes(kw.toLowerCase())) return i;
+              if(h===kw) return i;
+            }
+          }
+          // 2단계: 포함 검색 (최소 2글자)
+          for(var ki=0;ki<keywords.length;ki++){
+            var kw=keywords[ki].replace(/[\s*]/g,'').toLowerCase();
+            if(kw.length<2) continue;
+            for(var i=0;i<headerRow.length;i++){
+              var h=String(headerRow[i]||'').replace(/[\s*]/g,'').toLowerCase();
+              if(h.includes(kw)) return i;
             }
           }
           return -1;
@@ -14145,7 +14155,7 @@ function handleExcelImport(input){
           phone:    colIdx(['연락처']),
           status:   colIdx(['수강상태','수강 상태']),
           memo:     colIdx(['비고']),
-          teacher:  colIdx(['강사*','강사']),
+          teacher:  colIdx(['강사']),
           classType:colIdx(['수업유형','수업유형*']),
           classTime:colIdx(['수업반1','수업반1*']),
           classTime2:colIdx(['수업반2']),
