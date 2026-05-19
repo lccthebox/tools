@@ -2667,6 +2667,11 @@ let S={students:[],trials:[],consults:[],board:[],calNotes:{},editId:null,modalM
 let curMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1); // 항상 현재 달
 let activeTeacher='제임스';
 let activeClass='';
+let sheetFilter='all'; // 'all'|'unpaid'|'paid'|'expiring'
+function setSheetFilter(f){
+  sheetFilter=(sheetFilter===f)?'all':f;
+  renderClassSheet();
+}
 
 // 샘플 데이터 없음 — 임포트 메뉴에서 데이터를 입력하세요
 const SS=[];
@@ -4067,21 +4072,21 @@ function renderTeacherPage(){
           </div>
         </div>
         <div class="teacher-header-stats" style="gap:6px">
-          <div class="thstat" style="background:var(--accent-light);border-radius:10px;padding:10px 18px;text-align:center">
+          <div class="thstat" style="background:var(--accent-light);border-radius:10px;padding:10px 18px;text-align:center;cursor:pointer" onclick="setSheetFilter('all')" title="전체 보기">
             <div class="thstat-val" style="font-size:28px;color:var(--accent)">${allActive.length}</div>
             <div class="thstat-label">재원</div>
           </div>
-          <div class="thstat" style="background:var(--green-light);border-radius:10px;padding:10px 18px;text-align:center">
+          <div class="thstat" style="background:var(--green-light);border-radius:10px;padding:10px 18px;text-align:center;cursor:pointer" onclick="setSheetFilter('paid')" title="납부완료만 보기">
             <div class="thstat-val" style="font-size:28px;color:var(--green)">${paid}</div>
-            <div class="thstat-label">납부완료</div>
+            <div class="thstat-label">납부완료 ↓</div>
           </div>
-          <div class="thstat" style="background:${unpaid>0?'var(--red-light)':'var(--bg3)'};border-radius:10px;padding:10px 18px;text-align:center">
+          <div class="thstat" style="background:${unpaid>0?'var(--red-light)':'var(--bg3)'};border-radius:10px;padding:10px 18px;text-align:center;cursor:pointer" onclick="setSheetFilter('unpaid')" title="미납만 보기">
             <div class="thstat-val" style="font-size:28px;color:${unpaid>0?'var(--red)':'var(--text3)'}">${unpaid}</div>
-            <div class="thstat-label">미납</div>
+            <div class="thstat-label">미납 ↓</div>
           </div>
-          <div class="thstat" style="background:${exp14>0?'var(--amber-light)':'var(--bg3)'};border-radius:10px;padding:10px 18px;text-align:center">
+          <div class="thstat" style="background:${exp14>0?'var(--amber-light)':'var(--bg3)'};border-radius:10px;padding:10px 18px;text-align:center;cursor:pointer" onclick="setSheetFilter('expiring')" title="만료임박만 보기">
             <div class="thstat-val" style="font-size:28px;color:${exp14>0?'var(--amber)':'var(--text3)'}">${exp14}</div>
-            <div class="thstat-label">만료임박</div>
+            <div class="thstat-label">만료임박 ↓</div>
           </div>
         </div>
       </div>
@@ -4651,10 +4656,20 @@ function renderClassSheet(){
     if(statusFilter==='재원') { if(!['재원','신규','연장','복귀'].includes(s.status))return false; }
     else if(statusFilter&&s.status!==statusFilter)return false;
     if(nameQ&&!s.name.includes(nameQ)&&!(s.phone||'').includes(nameQ))return false;
+    // sheetFilter
+    if(sheetFilter==='unpaid') return getPayStatus(s)==='미납';
+    if(sheetFilter==='paid') return getPayStatus(s)==='완료';
+    if(sheetFilter==='expiring'){ const dl=daysLeft(getLastDay(s)); return dl>=0&&dl<=14&&['재원','신규','연장','복귀'].includes(s.status); }
     return true;
   });
+  const filterLabel=sheetFilter==='unpaid'?' · 미납만':sheetFilter==='paid'?' · 납부완료만':sheetFilter==='expiring'?' · 만료임박만':'';
   const countEl=document.getElementById('sheet-count');
-  if(countEl)countEl.textContent=`${studs.length}명`;
+  if(countEl){
+    const resetBtn = filterLabel ? '<span style="font-size:11px;color:var(--accent);margin-left:6px;cursor:pointer" id="sheet-filter-reset">'+filterLabel+' ✕</span>' : '';
+    countEl.innerHTML = '<span>'+studs.length+'명</span>'+resetBtn;
+    const resetEl = document.getElementById('sheet-filter-reset');
+    if(resetEl) resetEl.onclick = function(){ setSheetFilter('all'); };
+  }
   const tbl=document.getElementById('class-sheet-table');
   if(!tbl)return;
   if(!studs.length){tbl.innerHTML=`<tr><td colspan="10" class="empty-state">수강생이 없습니다</td></tr>`;return;}
@@ -4697,7 +4712,7 @@ function renderClassSheet(){
     const dlTxt = dl<0?`만료 ${Math.abs(dl)}일 초과`:dl<=7?`D-${dl}`:'';
     const dlColor2 = dl<0?'#991b1b':dl<=7?'#92400e':'';
     const hasReview = getClasses(s).some(c=>(c.discounts||[]).some(d=>d.includes('리뷰')));
-    const reviewBtn = hasReview ? `<button onclick="toggleReviewCheck('${s.id}',event)" style="border:none;cursor:pointer;font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;margin-top:3px;display:block;${s.reviewChecked?'background:#dcfce7;color:#166534':'background:#fee2e2;color:#991b1b'}">${s.reviewChecked?'✅ 리뷰확인':'📝 미확인'}</button>` : '';
+    const reviewBtn = hasReview ? `<button onclick="toggleReviewCheck('${s.id}',event)" style="border:none;cursor:pointer;font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;${s.reviewChecked?'background:#dcfce7;color:#166534':'background:#fee2e2;color:#991b1b'}">${s.reviewChecked?'✅ 리뷰확인':'📝 미확인'}</button>` : '';
 
     return`<tr class="${rowCls}" oncontextmenu="openCtxMenu(event,'${s.id}')" onclick="openModal('studentDetail','${s.id}')" style="cursor:pointer">
       <td style="text-align:center;color:var(--text3);font-size:12px;padding:12px 8px">${i+1}</td>
@@ -4712,9 +4727,8 @@ function renderClassSheet(){
         <div style="font-size:13px;color:var(--text)">${fmtDate(end)}</div>
         ${dlTxt?`<div style="font-size:11px;font-weight:700;color:${dlColor2}">${dlTxt}</div>`:''}
       </td>
-      <td style="padding:12px 14px">
-        ${pBadge(payStatus, s)}
-        ${reviewBtn}
+      <td style="padding:12px 14px;white-space:nowrap">
+        ${pBadge(payStatus, s)}${reviewBtn?'<span style="margin-left:6px">'+reviewBtn+'</span>':''}
       </td>
       <td style="padding:12px 14px">${sBadge(s.status)}</td>
       <td style="padding:12px 14px;font-size:13px;color:var(--text2);cursor:pointer" onclick="event.stopPropagation();openQuickNote('${s.id}')">${noteDisplay}</td>
