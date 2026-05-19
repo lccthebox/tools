@@ -396,21 +396,78 @@ const DEFAULT_FORMATS=[
 
 /* ── Fallback 소스풀 (크롤러 미연결 시에만 사용) ── */
 const DEFAULT_SOURCES=[
-  {id:'f1',name:'직장인 커뮤니티',angle:'퇴근 후 상사 카톡 오면 — 바로 답장 vs 내일 아침에',on:true},
-  {id:'f2',name:'연애 트렌드',angle:'썸 탈 때 먼저 연락하는 사람 vs 기다리는 사람',on:true},
-  {id:'f3',name:'소비 트렌드',angle:'충동구매 후 바로 반품한 경험 — 어떤 거 샀어',on:true},
-  {id:'f4',name:'SNS 트렌드',angle:'인스타 스토리 올리기 두려운 순간 — 어떨 때',on:true},
-  {id:'f5',name:'직장인 커뮤니티',angle:'재택근무 할 때 가장 많이 하는 딴짓 뭐야',on:true},
-  {id:'f6',name:'관계 트렌드',angle:'친구한테 고민 상담했다가 후회한 경험 있어',on:true},
-  {id:'f7',name:'헬스 트렌드',angle:'헬스장 등록하고 실제로 간 횟수 고백 타임',on:true},
-  {id:'f8',name:'음식 트렌드',angle:'점심 메뉴 혼자 못 고르는 사람들 — 결정 장애 실화',on:true},
-  {id:'f9',name:'여행 트렌드',angle:'국내 여행 vs 해외 여행 — 같은 돈이면 어디 가',on:true},
-  {id:'f10',name:'유튜브 트렌드',angle:'숏폼만 보다가 긴 영상 보면 집중 안 돼 — 공감해',on:true},
-  {id:'f11',name:'쇼핑 트렌드',angle:'옷 사두고 한 번도 안 입은 것들 — 옷장 현실 고백',on:true},
-  {id:'f12',name:'수면 트렌드',angle:'유튜브 틀어놓고 자는 거 — 습관이야 vs 나쁜 거 알아',on:true},
-  {id:'f13',name:'인간관계',angle:'단톡방 나가고 싶은데 못 나가고 있는 거 있어',on:true},
-  {id:'f14',name:'돈 트렌드',angle:'용돈 기입장·가계부 써 vs 그냥 카드 긁어',on:true},
-  {id:'f15',name:'번아웃 트렌드',angle:'번아웃 왔을 때 나만의 회복법 뭐야',on:true},
+  // 직장·커리어
+  {id:'s01',name:'직장 트렌드',angle:'상사가 카톡으로 주말에 업무 지시 — 답장해야 해 말아야 해',on:true},
+  {id:'s02',name:'커리어 트렌드',angle:'이직 준비 중인데 현 직장 동료한테 말해도 될까',on:true},
+  {id:'s03',name:'직장 트렌드',angle:'재택근무 vs 출근 — 생산성이랑 삶의 질 어느 쪽이 더 나아',on:true},
+  {id:'s04',name:'커리어 트렌드',angle:'스펙보다 실력 — 요즘 취업 시장에서 진짜 중요한 게 뭔지',on:true},
+  {id:'s05',name:'직장 트렌드',angle:'회사 회식 참여 안 하면 눈치 보여 — 요즘도 그래',on:true},
+  // 연애·관계
+  {id:'s06',name:'연애 트렌드',angle:'연인한테 휴대폰 잠금 해제 요구 — 신뢰의 문제야 사생활의 문제야',on:true},
+  {id:'s07',name:'관계 트렌드',angle:'친한 친구한테도 돈 빌려주면 안 된다 — 동의해',on:true},
+  {id:'s08',name:'연애 트렌드',angle:'소개팅 앱으로 만난 커플 — 주변에서 어떻게 봐',on:true},
+  {id:'s09',name:'관계 트렌드',angle:'단톡방 나가고 싶은데 눈치 보여서 못 나가고 있는 거 있어',on:true},
+  {id:'s10',name:'연애 트렌드',angle:'연애할 때 SNS 서로 팔로우 필수야 선택이야',on:true},
+  // 돈·소비
+  {id:'s11',name:'소비 트렌드',angle:'명품백 하나 vs 해외여행 세 번 — 같은 돈이면 뭐 선택해',on:true},
+  {id:'s12',name:'돈 트렌드',angle:'더치페이 vs 한 명이 내고 다음에 교환 — 뭐가 더 편해',on:true},
+  {id:'s13',name:'소비 트렌드',angle:'구독 서비스 몇 개나 쓰고 있어 — 이번 달 정리한 것 있어',on:true},
+  {id:'s14',name:'돈 트렌드',angle:'부모님께 용돈 드리는 기준 — 얼마부터 드려야 할까',on:true},
+  {id:'s15',name:'소비 트렌드',angle:'중고 거래 플랫폼 써봤어 — 사기 당하거나 당황한 경험 있어',on:true},
+  // SNS·디지털
+  {id:'s16',name:'SNS 트렌드',angle:'인스타 스토리 올리기 두려운 순간 — 어떨 때 그래',on:true},
+  {id:'s17',name:'디지털 트렌드',angle:'AI가 내 일자리 뺏을 것 같아 — 실제로 느끼는 거야',on:true},
+  {id:'s18',name:'SNS 트렌드',angle:'유튜브 알고리즘이 나를 너무 잘 알아 — 소름 돋은 경험',on:true},
+  {id:'s19',name:'디지털 트렌드',angle:'챗GPT한테 진짜 고민 털어놓은 적 있어 — 어떤 느낌이었어',on:true},
+  {id:'s20',name:'SNS 트렌드',angle:'틱톡 숏폼만 보다보면 긴 영상 집중이 안 돼 — 공감해',on:true},
+  // 라이프스타일
+  {id:'s21',name:'라이프 트렌드',angle:'헬스장 등록하고 실제로 간 횟수 고백 타임',on:true},
+  {id:'s22',name:'음식 트렌드',angle:'혼밥 vs 같이 밥 — 요즘 혼밥이 더 편하다는 사람 늘었어',on:true},
+  {id:'s23',name:'수면 트렌드',angle:'유튜브 틀어놓고 자는 거 — 습관이야 vs 나쁜 거 알아',on:true},
+  {id:'s24',name:'여행 트렌드',angle:'해외여행 갔다가 문화 충격 받은 경험 — 뭐가 제일 달랐어',on:true},
+  {id:'s25',name:'음식 트렌드',angle:'요즘 편의점 음식 수준 — 집밥이랑 비교하면 솔직히 어때',on:true},
+  // 사회·이슈
+  {id:'s26',name:'사회 트렌드',angle:'결혼 안 해도 된다 — 요즘 세대는 진짜 그렇게 생각해',on:true},
+  {id:'s27',name:'사회 트렌드',angle:'층간소음 문제 — 참아야 해 vs 직접 말해야 해',on:true},
+  {id:'s28',name:'사회 트렌드',angle:'반려동물 키우는 사람이 늘어난 이유 — 외로움 때문이야',on:true},
+  {id:'s29',name:'교육 트렌드',angle:'학벌이 아직도 중요한 사회야 — 솔직한 생각은',on:true},
+  {id:'s30',name:'사회 트렌드',angle:'노키즈존 — 필요해 vs 차별이야',on:true},
+  // 건강·멘탈
+  {id:'s31',name:'멘탈 트렌드',angle:'번아웃 왔을 때 나만의 회복법 뭐야',on:true},
+  {id:'s32',name:'건강 트렌드',angle:'다이어트 N번째 도전 — 성공한 사람이랑 실패한 사람의 차이 뭐야',on:true},
+  {id:'s33',name:'멘탈 트렌드',angle:'심리 상담 받아본 적 있어 — 어떤 계기로 갔어',on:true},
+  {id:'s34',name:'건강 트렌드',angle:'카페인 없이는 하루를 못 버텨 — 공감해',on:true},
+  {id:'s35',name:'멘탈 트렌드',angle:'비교 습관 — SNS 보다가 나만 뒤처지는 것 같은 느낌 어때',on:true},
+  // 문화·엔터
+  {id:'s36',name:'엔터 트렌드',angle:'OTT 구독 너무 많아 — 요즘 진짜 보는 건 어떤 거야',on:true},
+  {id:'s37',name:'문화 트렌드',angle:'K-pop 해외 팬덤 — 한국 사람으로서 어떻게 느껴',on:true},
+  {id:'s38',name:'엔터 트렌드',angle:'AI가 만든 음악이나 그림 — 진짜 예술이라고 할 수 있을까',on:true},
+  {id:'s39',name:'문화 트렌드',angle:'독서 vs 유튜브 — 정보 얻는 방식이 바뀐 것 같아',on:true},
+  {id:'s40',name:'엔터 트렌드',angle:'게임 중독 vs 취미 — 어디서부터 문제가 돼',on:true},
+  // 세대·가족
+  {id:'s41',name:'세대 트렌드',angle:'MZ세대라는 말 — 맞는 것 같아 vs 너무 일반화야',on:true},
+  {id:'s42',name:'가족 트렌드',angle:'부모님 세대랑 가장 생각이 다른 게 뭐야',on:true},
+  {id:'s43',name:'세대 트렌드',angle:'요즘 애들이 너무 약하다는 말 — 동의해 vs 시대가 달라진 거야',on:true},
+  {id:'s44',name:'가족 트렌드',angle:'명절 때 가족 모임 — 기다려져 vs 솔직히 힘들어',on:true},
+  {id:'s45',name:'세대 트렌드',angle:'집 사는 게 목표인 세대 vs 경험에 투자하는 세대 — 나는 어느 쪽',on:true},
+  // 환경·미래
+  {id:'s46',name:'환경 트렌드',angle:'텀블러 들고 다니는 사람 늘었는데 — 진짜 환경 때문이야 트렌드야',on:true},
+  {id:'s47',name:'미래 트렌드',angle:'10년 후 내 모습 상상해봤어 — 어떤 게 제일 불확실해',on:true},
+  {id:'s48',name:'환경 트렌드',angle:'채식주의 vs 육식 — 환경 때문에 식단 바꿀 수 있어',on:true},
+  {id:'s49',name:'미래 트렌드',angle:'로봇이 요리·청소 다 해주는 시대 오면 인간은 뭐 할까',on:true},
+  {id:'s50',name:'환경 트렌드',angle:'중고 패션 리셀 문화 — 환경 친화적이야 vs 그냥 돈벌이야',on:true},
+  // 한국 특유 이슈
+  {id:'s51',name:'KOREA TREND',angle:'군대 다녀온 남자 vs 안 다녀온 남자 — 차이가 느껴져',on:true},
+  {id:'s52',name:'KOREA TREND',angle:'치킨 vs 피자 — 야식으로 진짜 뭐 시켜',on:true},
+  {id:'s53',name:'KOREA TREND',angle:'수능 끝나고 제일 하고 싶었던 것 vs 실제로 한 것',on:true},
+  {id:'s54',name:'KOREA TREND',angle:'한국 살기 좋은 나라야 — 솔직하게 어때',on:true},
+  {id:'s55',name:'KOREA TREND',angle:'카카오톡 이모티콘으로 감정 전달 — 과하다 vs 편하다',on:true},
+  // 직장인 일상
+  {id:'s56',name:'직장 트렌드',angle:'점심 시간 혼자 먹는 게 편해진 직장인들 — 나는 어느 쪽',on:true},
+  {id:'s57',name:'라이프 트렌드',angle:'주말 알차게 보내야 한다는 강박 — 느껴본 적 있어',on:true},
+  {id:'s58',name:'소비 트렌드',angle:'온라인 쇼핑 vs 직접 가서 사기 — 어떤 걸 더 선호해',on:true},
+  {id:'s59',name:'라이프 트렌드',angle:'30분 일찍 일어나는 것 vs 30분 더 자는 것 — 아침 루틴 어때',on:true},
+  {id:'s60',name:'직장 트렌드',angle:'월급날 기분 vs 카드값 나오는 날 기분 — 더 현실적인 감정',on:true},
 ];
 
 const FMT_GUIDE={
@@ -569,7 +626,18 @@ async function generateTopic(day, forceFmt){
   } else {
     const fresh=srcs.filter(s=>!recentSrcNames.has(s.name));
     const pool=fresh.length>=3?fresh:srcs;
-    picked=[...pool].sort(()=>Math.random()-.5).slice(0,3);
+    // 카테고리 다양성 보장 - 같은 카테고리 2개 이상 안 뽑기
+    const shuffled=[...pool].sort(()=>Math.random()-.5);
+    const usedCats=new Set();
+    picked=[];
+    for(const s of shuffled){
+      if(!usedCats.has(s.name)){
+        picked.push(s);
+        usedCats.add(s.name);
+      }
+      if(picked.length>=3)break;
+    }
+    if(picked.length<3) picked=[...shuffled].slice(0,3);
     srcBlock=picked.map(s=>`[${s.name}] "${s.angle}"`).join(' / ');
   }
   const fmtHint=FMT_GUIDE[fmt]||`roles: 역할 2개`;
