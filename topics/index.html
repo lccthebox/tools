@@ -1061,12 +1061,17 @@ Return ONLY raw JSON:
     const match=content.match(/\{[\s\S]*\}/);
     if(!match) throw new Error('응답에서 유효한 JSON을 찾을 수 없습니다.');
     const s2result=JSON.parse(match[0]);
+    // 포맷명 강제 고정 (AI가 임의로 바꾸는 것 방지)
+    s2result.format=fmt;
     const updated=getTopics();
     updated[k].session2=s2result;
-    // 리더가이드 right_items도 함께 재생성 (포맷에 맞게)
+    // 리더가이드 session3도 포맷에 맞게 초기화
     if(!updated[k].session3) updated[k].session3={};
+    // right_items만 업데이트 (left_rules는 DEFAULT_LEADER_GUIDE에서 자동으로 가져옴)
+    updated[k].session3.left_rules=[];
+    updated[k].session3.left_tips=[];
     updated[k].session3.right_items=[
-      {context:'대화가 막힐 때',en:`What's the most ${fmt.includes('Debate')||fmt.includes('Rather')?'controversial':'surprising'} part of this topic for you?`,kr:'이 주제에서 가장 놀라운 부분이 뭐야?'},
+      {context:'대화가 막힐 때',en:`What's the most surprising part of this topic for you?`,kr:'이 주제에서 가장 놀라운 부분이 뭐야?'},
       {context:'더 깊이 파고들 때',en:'Has anything like this ever happened to you or someone you know?',kr:'너나 아는 사람한테 이런 일 있었어?'},
       {context:'마무리할 때',en:'If you had to give one piece of advice about this, what would it be?',kr:'이 주제로 딱 한 가지 조언한다면 뭐야?'}
     ];
