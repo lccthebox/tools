@@ -1349,18 +1349,23 @@ textarea.finput{resize:vertical;min-height:60px}
 
             <!-- 패널 A -->
             <div style="background:var(--bg2);display:flex;flex-direction:column;min-width:0;border-right:2px solid var(--border)">
-              <div style="padding:8px 12px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap">
-                <span id="sheet-active-label" style="font-size:12px;font-weight:700;color:var(--accent);padding:2px 8px;background:var(--accent-light);border-radius:var(--r);border:1px solid var(--accent)">← 카드 선택</span>
-                <span id="sheet-count" style="font-size:11px;color:var(--text3)"></span>
-                <div style="margin-left:auto;display:flex;gap:5px;align-items:center">
-                  <select class="fsel" id="t-status-filter" onchange="renderClassSheet();renderClassSheetB()" style="font-size:12px">
+              <div style="padding:8px 10px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap">
+                <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0">
+                  <span style="font-size:11px;font-weight:700;color:var(--accent);white-space:nowrap">A반</span>
+                  <select id="panel-a-select" onchange="setPanelA(this.value)" style="flex:1;min-width:0;font-size:12px;font-weight:600;color:var(--accent);background:var(--accent-light);border:1.5px solid var(--accent);border-radius:var(--r);padding:4px 8px;cursor:pointer">
+                    <option value="">수업반 선택</option>
+                  </select>
+                  <span id="sheet-count" style="font-size:11px;color:var(--text3);white-space:nowrap"></span>
+                </div>
+                <div style="display:flex;gap:4px;align-items:center;flex-shrink:0">
+                  <select class="fsel" id="t-status-filter" onchange="renderClassSheet();renderClassSheetB()" style="font-size:11px">
                     <option value="재원">재원중</option>
                     <option value="">전체</option>
                     <option value="미연장">미연장</option>
                     <option value="홀딩">홀딩</option>
                   </select>
-                  <input class="search-box" id="t-name-search" placeholder="🔍" oninput="renderClassSheet()" style="width:80px;font-size:12px">
-                  <button class="btn btn-primary btn-sm" onclick="openModal('add')" style="font-size:11px;padding:3px 8px">+ 추가</button>
+                  <input class="search-box" id="t-name-search" placeholder="🔍" oninput="renderClassSheet()" style="width:70px;font-size:12px">
+                  <button class="btn btn-primary btn-sm" onclick="openModal('add')" style="font-size:11px;padding:3px 7px">+추가</button>
                 </div>
               </div>
               <div style="overflow-x:auto;flex:1">
@@ -1370,10 +1375,15 @@ textarea.finput{resize:vertical;min-height:60px}
 
             <!-- 패널 B -->
             <div style="background:var(--bg2);display:flex;flex-direction:column;min-width:0">
-              <div style="padding:8px 12px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;flex-shrink:0">
-                <span id="sheet-active-label-b" style="font-size:12px;font-weight:700;color:#1a78c2;padding:2px 8px;background:#dbeafe;border-radius:var(--r);border:1px solid #93c5fd">← 카드 선택</span>
-                <span id="sheet-count-b" style="font-size:11px;color:var(--text3)"></span>
-                <input class="search-box" id="t-name-search-b" placeholder="🔍" oninput="renderClassSheetB()" style="width:80px;font-size:12px;margin-left:auto">
+              <div style="padding:8px 10px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px;flex-shrink:0">
+                <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0">
+                  <span style="font-size:11px;font-weight:700;color:#1a78c2;white-space:nowrap">B반</span>
+                  <select id="panel-b-select" onchange="setPanelB(this.value)" style="flex:1;min-width:0;font-size:12px;font-weight:600;color:#1a78c2;background:#dbeafe;border:1.5px solid #93c5fd;border-radius:var(--r);padding:4px 8px;cursor:pointer">
+                    <option value="">수업반 선택</option>
+                  </select>
+                  <span id="sheet-count-b" style="font-size:11px;color:var(--text3);white-space:nowrap"></span>
+                </div>
+                <input class="search-box" id="t-name-search-b" placeholder="🔍" oninput="renderClassSheetB()" style="width:70px;font-size:12px;flex-shrink:0">
               </div>
               <div style="overflow-x:auto;flex:1">
                 <table class="sheet-table" id="class-sheet-table-b"></table>
@@ -2746,7 +2756,8 @@ function setDayTab(tab){
 }
 function matchesDayTab2(ct, tab){
   if(!tab||tab==='all') return true;
-  if(tab==='mw') return classMatchesDay(ct,'월수')||classMatchesDay(ct,'월목');
+  if(tab==='mw') return classMatchesDay(ct,'월수');
+  if(tab==='mt') return classMatchesDay(ct,'월목');
   if(tab==='tt') return classMatchesDay(ct,'화목');
   if(tab==='wk') return classMatchesDay(ct,'토일');
   return true;
@@ -3089,6 +3100,7 @@ function openCtxMenu(e,id,type='student'){
     menu.innerHTML=`
       <div class="ctx-item" onclick="openModal('studyMemberDetail','${id}');closeCtxMenu()">📋 상세정보 · 편집</div>
       <div class="ctx-item" onclick="openStudyPayModal('${id}');closeCtxMenu()">💳 수납 관리</div>
+      <div class="ctx-item" onclick="openCreditAdjustModal('${id}');closeCtxMenu()">🔢 크레딧 조정</div>
       <div class="ctx-item" onclick="studyRenewMember('${id}');closeCtxMenu()">🔄 스터디 연장</div>
       <div class="ctx-item" onclick="openStudyHoldModal('${id}');closeCtxMenu()">🔒 일일 홀딩 등록</div>
       <div class="ctx-item" onclick="moveStudyMemberQuick('${id}');closeCtxMenu()">🚀 그룹 이동</div>
@@ -4123,6 +4135,35 @@ function setActiveTeacher(t){
   window._dayViewTab=null;
   renderTeacherPage();
 }
+
+function setPanelA(ct){
+  activeClass=ct||'';
+  document.querySelectorAll('.class-card').forEach(function(c){
+    try{ var cct=decodeURIComponent(escape(atob(c.dataset.classtime))); c.classList.toggle('on',cct===activeClass); c.classList.toggle('on-b',cct===activeClassB&&cct!==activeClass); }catch(e){}
+  });
+  renderClassSheet();
+}
+function setPanelB(ct){
+  activeClassB=ct||'';
+  document.querySelectorAll('.class-card').forEach(function(c){
+    try{ var cct=decodeURIComponent(escape(atob(c.dataset.classtime))); c.classList.toggle('on',cct===activeClass); c.classList.toggle('on-b',cct===activeClassB&&cct!==activeClass); }catch(e){}
+  });
+  renderClassSheetB();
+}
+function fillPanelDropdowns(classTimes){
+  var selA=document.getElementById('panel-a-select');
+  var selB=document.getElementById('panel-b-select');
+  if(!selA||!selB) return;
+  function makeOpts(sel, activeVal){
+    sel.innerHTML='<option value="">수업반 선택</option>'+classTimes.map(function(ct){
+      var short=ct.split('(')[0].trim();
+      var time=(ct.match(/\(([^)]+)\)/)||[])[1]||'';
+      return '<option value="'+ct+'"'+(ct===activeVal?' selected':'')+'>'+short+(time?' ('+time+')':'')+'</option>';
+    }).join('');
+  }
+  makeOpts(selA, activeClass);
+  makeOpts(selB, activeClassB);
+}
 function setActiveClass(ct){
   activeClass = ct;
   // 카드 선택 표시
@@ -4285,10 +4326,13 @@ function renderTeacherPage(){
     const hasMT = allClassTimes.some(function(ct){ return classMatchesDay(ct,'월목'); });
     const hasWK = allClassTimes.some(function(ct){ return classMatchesDay(ct,'토일'); });
     const tabs = [];
-    if(hasMW||hasMT) tabs.push({id:'mw', label:'월수'});
+    // 월수/월목을 각각 구분하여 탭 추가
+    if(hasMW) tabs.push({id:'mw', label:'월수'});
+    if(hasMT) tabs.push({id:'mt', label:'월목'});
     if(hasTT) tabs.push({id:'tt', label:'화목'});
     if(hasWK) tabs.push({id:'wk', label:'토일'});
-    if(tabs.length<=1) tabs.unshift({id:'all', label:'전체'});
+    if(tabs.length===0 || tabs.length>=4) tabs.unshift({id:'all', label:'전체'});
+    else if(tabs.length<=1) tabs.unshift({id:'all', label:'전체'});
 
     // 현재 탭이 없으면 첫번째로
     if(!window._dayViewTab || !tabs.find(function(t){return t.id===window._dayViewTab;})){
@@ -4379,12 +4423,18 @@ function renderTeacherPage(){
             c.classList.toggle('on-b', cct===activeClassB&&cct!==activeClass);
           }catch(e){}
         });
+        // 드롭다운 동기화
+        var sa=document.getElementById('panel-a-select');
+        var sb=document.getElementById('panel-b-select');
+        if(sa) sa.value=activeClass||'';
+        if(sb) sb.value=activeClassB||'';
         renderClassSheet();
         renderClassSheetB();
       } catch(err) {}
     };
   }
   renderTeacherViewRoot();
+  fillPanelDropdowns(allClassTimes);
   renderClassSheet();
   renderCalendar();
   renderEmbeddedCalc();
@@ -7089,8 +7139,17 @@ function studentDetailForm(s){
           <div style="height:100%;width:${progress}%;background:${progress>=90?'var(--red)':progress>=70?'var(--amber)':c2};border-radius:99px;transition:width .3s"></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
-          <div><div style="font-size:10px;color:var(--text3);font-weight:600;margin-bottom:3px">시작일</div><div style="font-size:12px;color:var(--text);font-weight:500">${fmtDate(cl.startDate)}</div></div>
-          <div><div style="font-size:10px;color:var(--text3);font-weight:600;margin-bottom:3px">종료일</div><div style="font-size:12px;color:var(--text);font-weight:500">${fmtDate(endDate)}</div></div>
+          <div>
+            <div style="font-size:10px;color:var(--text3);font-weight:600;margin-bottom:3px">시작일</div>
+            ${!isTeacher()?`<input type="date" id="sd-start-${i}" value="${cl.startDate||''}"
+              onchange="sdUpdateEndDate('${s.id}',${i},this.value)"
+              style="font-size:12px;color:var(--text);font-weight:500;border:1px solid var(--border2);border-radius:5px;padding:3px 7px;background:var(--bg3);width:100%;cursor:pointer">`:
+              `<div style="font-size:12px;color:var(--text);font-weight:500">${fmtDate(cl.startDate)}</div>`}
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text3);font-weight:600;margin-bottom:3px">종료일</div>
+            <div id="sd-end-${i}" style="font-size:13px;color:var(--text);font-weight:600">${fmtDate(endDate)}</div>
+          </div>
           <div><div style="font-size:10px;color:var(--text3);font-weight:600;margin-bottom:3px">기간</div><div style="font-size:12px;color:var(--text);font-weight:500">${cl.months||1}개월</div></div>
         </div>
         ${cl.discounts?.length||cl.discountAmt?`<div style="margin-top:10px;font-size:11px;color:var(--amber);background:var(--amber-light);padding:5px 10px;border-radius:var(--r)">🏷️ 할인: ${[...(cl.discounts||[]),cl.discountAmt?'특별 -'+cl.discountAmt.toLocaleString():null].filter(Boolean).join(', ')}</div>`:''}
@@ -7240,6 +7299,27 @@ function studentDetailForm(s){
   return tabs + infoTab + classTab + payTab + memoTab;
 }
 
+function sdUpdateEndDate(stuId, clIdx, newStartDate){
+  const s=S.students.find(x=>x.id===stuId);
+  if(!s)return;
+  const classes=getClasses(s);
+  const cl=classes[clIdx];
+  if(!cl)return;
+  const months=cl.months||1;
+  const newEnd=addMonths(newStartDate,months);
+  // 화면 즉시 업데이트
+  const endEl=document.getElementById('sd-end-'+clIdx);
+  if(endEl) endEl.textContent=fmtDate(newEnd);
+  // 시작일 input 색상 피드백
+  const startEl=document.getElementById('sd-start-'+clIdx);
+  if(startEl){ startEl.style.borderColor='var(--teal)'; setTimeout(function(){ startEl.style.borderColor='var(--border2)'; },1500); }
+  // 데이터 저장
+  cl.startDate=newStartDate;
+  cl.endDate=newEnd;
+  if(clIdx===0) s.startDate=newStartDate;
+  save('students');
+  showToast('✅ 시작일 '+fmtDate(newStartDate)+' · 종료일 '+fmtDate(newEnd)+' 자동 업데이트');
+}
 function sdSwitch(tab){
   document.querySelectorAll('.sd-content').forEach(el=>el.style.display='none');
   document.getElementById('sd-content-'+tab).style.display='block';
@@ -11438,7 +11518,116 @@ function batchDeductCredits(){
   });
   
   save('study');renderStudy();
-  alert(`✅ 출석 차감 처리 완료!\n\n- 정상 차감: ${count}명\n- 일일홀딩 제외 대상: ${holdCount}명\n- 튜터/원어민: ${tutorCount}명`);
+  // 크레딧 0이 된 멤버 체크
+  const zeroMembers = [];
+  (S.study.groups||[]).forEach(function(g){
+    (g.members||[]).forEach(function(m){
+      if(!m.isTutor && (m.credits||0)<=0 && m.status==='재원'){
+        zeroMembers.push({m:m, g:g});
+      }
+    });
+  });
+  if(zeroMembers.length>0){
+    setTimeout(function(){
+      openCreditZeroModal(zeroMembers);
+    }, 300);
+  } else {
+    alert('✅ 출석 차감 처리 완료!\n\n- 정상 차감: '+count+'명\n- 일일홀딩 제외 대상: '+holdCount+'명\n- 튜터/원어민: '+tutorCount+'명');
+  }
+}
+
+// ── 크레딧 0 → 연장/미연장 선택 모달 ──
+function openCreditZeroModal(zeroMembers){
+  const overlay=document.getElementById('modal-overlay');
+  document.getElementById('modal-title').textContent='⚠️ 크레딧 소진 멤버 처리';
+  let html='<div style="font-size:13px;color:var(--text2);margin-bottom:16px">크레딧이 <b>0</b>이 된 멤버입니다. 처리 방향을 선택해주세요.</div><div style="display:grid;gap:10px">';
+  zeroMembers.forEach(function(item,i){
+    const m=item.m,g=item.g;
+    html+='<div style="background:var(--bg3);border-radius:var(--r);padding:12px 14px;border:1px solid var(--border)" id="cz-row-'+i+'">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
+      +'<div><span style="font-size:14px;font-weight:700">'+m.name+'</span>'
+      +'<span style="font-size:11px;color:var(--text3);margin-left:8px">'+(g.leaderName||'')+'</span></div>'
+      +'<span style="font-size:12px;font-weight:700;color:var(--red)">0회</span></div>'
+      +'<div style="display:flex;gap:8px">'
+      +'<button data-idx="'+i+'" data-action="renew" onclick="handleCreditZero(this)" style="flex:1;padding:8px;border:1.5px solid var(--teal);background:var(--teal-light);color:var(--teal);border-radius:var(--r);font-size:12px;font-weight:700;cursor:pointer">✅ 연장</button>'
+      +'<button data-idx="'+i+'" data-action="unrenew" onclick="handleCreditZero(this)" style="flex:1;padding:8px;border:1.5px solid var(--amber);background:var(--amber-light);color:var(--amber);border-radius:var(--r);font-size:12px;font-weight:700;cursor:pointer">⏸ 미연장</button>'
+      +'<button data-idx="'+i+'" data-action="skip" onclick="handleCreditZero(this)" style="padding:8px 12px;border:1.5px solid var(--border2);background:var(--bg2);color:var(--text3);border-radius:var(--r);font-size:12px;cursor:pointer">나중에</button>'
+      +'</div></div>';
+  });
+  html+='</div>';
+  document.getElementById('modal-form').innerHTML=html;
+  window._creditZeroMembers=zeroMembers;
+  const footer=overlay.querySelector('.modal-footer');
+  if(footer)footer.innerHTML='<button style="background:var(--bg3);border:1px solid var(--border2);border-radius:7px;padding:7px 16px;font-size:13px;cursor:pointer" onclick="closeModal()">닫기</button>';
+  overlay.classList.add('show');
+}
+function handleCreditZero(btn){
+  const idx=parseInt(btn.dataset.idx);
+  const action=btn.dataset.action;
+  const item=(window._creditZeroMembers||[])[idx];
+  if(!item)return;
+  const {m,g}=item;
+  if(action==='renew'){ m.status='재원'; showToast('✅ '+m.name+' 연장 예정'); }
+  else if(action==='unrenew'){ m.status='미연장'; showToast('⏸ '+m.name+' 미연장 처리'); }
+  save('study');renderStudy();
+  const row=document.getElementById('cz-row-'+idx);
+  if(row){
+    row.style.opacity='0.5';
+    row.querySelectorAll('button').forEach(function(b){b.disabled=true;});
+    if(action!=='skip'){
+      const done=document.createElement('div');
+      done.style.cssText='font-size:12px;font-weight:700;color:var(--teal);margin-top:6px';
+      done.textContent=action==='renew'?'✅ 연장 처리됨':'⏸ 미연장 처리됨';
+      row.appendChild(done);
+    }
+  }
+}
+// ── 수동 크레딧 조정 ──
+function openCreditAdjustModal(memberId){
+  const hit=findStudyMember(memberId);if(!hit)return;
+  const {m,g}=hit;
+  const cr=m.credits||0;
+  const cc=cr<=0?'var(--red)':cr<=5?'var(--amber)':'var(--teal)';
+  const overlay=document.getElementById('modal-overlay');
+  document.getElementById('modal-title').textContent='💳 '+m.name+' — 크레딧 조정';
+  document.getElementById('modal-form').innerHTML=
+    '<div style="background:var(--bg3);border-radius:var(--r2);padding:14px;margin-bottom:16px;text-align:center">'
+    +'<div style="font-size:11px;color:var(--text3);margin-bottom:4px">현재 크레딧</div>'
+    +'<div style="font-size:32px;font-weight:800;color:'+cc+'">'+cr+'회</div>'
+    +'</div>'
+    +'<div class="fgroup"><label class="flabel">조정 유형</label>'
+    +'<select class="finput" id="f-credit-type">'
+    +'<option value="add">➕ 크레딧 추가 (연장 등록)</option>'
+    +'<option value="sub">➖ 크레딧 차감 (수동 출석)</option>'
+    +'<option value="set">🔧 크레딧 직접 설정</option>'
+    +'</select></div>'
+    +'<div class="fgroup"><label class="flabel">크레딧 수</label>'
+    +'<input class="finput" id="f-credit-amount" type="number" min="1" max="200" value="8"></div>'
+    +'<div class="fgroup"><label class="flabel">사유 (선택)</label>'
+    +'<input class="finput" id="f-credit-reason" placeholder="예: 2개월 연장, 보강 등"></div>';
+  const footer=overlay.querySelector('.modal-footer');
+  if(footer)footer.innerHTML=
+    '<button style="background:transparent;border:1px solid var(--border2);border-radius:7px;padding:7px 16px;font-size:13px;cursor:pointer" onclick="closeModal()">취소</button>'
+    +'<button style="background:var(--accent);border:none;border-radius:7px;padding:7px 18px;font-size:13px;font-weight:700;color:#fff;cursor:pointer" onclick="saveCreditAdjust(\''+memberId+'\')">저장</button>';
+  overlay.classList.add('show');
+}
+function saveCreditAdjust(memberId){
+  const hit=findStudyMember(memberId);if(!hit)return;
+  const {m,g}=hit;
+  const type=document.getElementById('f-credit-type')?.value;
+  const amt=parseInt(document.getElementById('f-credit-amount')?.value)||0;
+  const reason=document.getElementById('f-credit-reason')?.value||'';
+  if(!amt)return;
+  const before=m.credits||0;
+  if(type==='add') m.credits=before+amt;
+  else if(type==='sub') m.credits=Math.max(0,before-amt);
+  else m.credits=amt;
+  if(!m.history)m.history=[];
+  m.history.push({date:new Date().toISOString().slice(0,16).replace('T',' '),msg:(type==='add'?'+':type==='sub'?'-':'=')+amt+'회 수동조정'+(reason?' ('+reason+')':''),by:currentManager?.name||'관리자'});
+  if(!S.study.creditLog)S.study.creditLog=[];
+  S.study.creditLog.push({id:gid('cl'),at:new Date().toISOString(),memberId:m.id,memberName:m.name,groupId:g.id,groupName:g.name||g.leaderName,dayGroup:g.dayGroup,amount:type==='add'?amt:type==='sub'?-amt:amt-before,reason,by:currentManager?.name||'관리자'});
+  save('study');closeModal();renderStudy();
+  showToast('✅ '+m.name+' 크레딧 '+before+'→'+m.credits+'회 조정 완료');
 }
 
 function openStudyHoldModal(id){
@@ -12227,7 +12416,16 @@ function deductCreditsByDay(day){
   if(!S.study.creditLog) S.study.creditLog=[];
   S.study.creditLog.push(...logs);
   save('study');renderStudy();
-  showToast(`✅ ${day}요일 ${count}명 크레딧 차감 완료`);
+  // 크레딧 0된 멤버 체크
+  const zeroM2 = [];
+  (S.study.groups||[]).forEach(function(g){
+    (g.members||[]).forEach(function(m){
+      if(!m.isTutor&&(m.credits||0)<=0&&m.status==='재원') zeroM2.push({m:m,g:g});
+    });
+  });
+  save('study');renderStudy();
+  if(zeroM2.length>0){ setTimeout(function(){ openCreditZeroModal(zeroM2); },300); }
+  else showToast('✅ '+day+'요일 '+count+'명 크레딧 차감 완료');
 }
 
 // ═══ 대기/복귀/개별크레딧 CRUD ═══
