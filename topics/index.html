@@ -2895,20 +2895,27 @@ function renderCal(){
     const catBadges=Object.entries(catCount).sort((a,b)=>b[1]-a[1])
       .map(([cat,cnt])=>{
         const cc=CAT_COLORS[cat]||'#888';
-        return `<span style="display:inline-flex;align-items:center;gap:4px;background:#fff;border:1px solid #E0DDD8;border-radius:20px;padding:3px 8px;font-size:10px;font-weight:600;color:#333">
-          <span style="width:7px;height:7px;border-radius:50%;background:${cc};flex-shrink:0"></span>${cat} <b>${cnt}</b>
-        </span>`;
+        return `<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid #F0EDE8">
+          <div style="width:8px;height:8px;border-radius:50%;background:${cc};flex-shrink:0"></div>
+          <div style="font-size:11px;color:#333;flex:1">${cat}</div>
+          <div style="font-size:11px;font-weight:700;color:#111">${cnt}</div>
+        </div>`;
       }).join('');
     const fmtBadges=Object.entries(fmtCount).sort((a,b)=>b[1]-a[1])
-      .map(([fmt,cnt])=>`<span style="display:inline-flex;align-items:center;gap:3px;background:#fff;border:1px solid #E0DDD8;border-radius:20px;padding:3px 8px;font-size:10px;font-weight:600;color:#333">${fmt} <b>${cnt}</b></span>`).join('');
+      .map(([fmt,cnt])=>`<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid #F0EDE8">
+        <div style="font-size:11px;color:#333;flex:1">${fmt}</div>
+        <div style="font-size:11px;font-weight:700;color:#111">${cnt}</div>
+      </div>`).join('');
     breakdown.innerHTML=`
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px">
-        <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:7px">카테고리</div>
-        <div style="display:flex;flex-wrap:wrap;gap:4px">${catBadges}</div>
-      </div>
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px">
-        <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:7px">포맷</div>
-        <div style="display:flex;flex-wrap:wrap;gap:4px">${fmtBadges}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px">
+          <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:6px">카테고리</div>
+          ${catBadges}
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px">
+          <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:6px">포맷</div>
+          ${fmtBadges}
+        </div>
       </div>`;
   } else if(breakdown){
     breakdown.innerHTML='';
@@ -3049,18 +3056,22 @@ function renderRight(){
         <button onclick="window._tbSetLv('Advanced')" class="lv-btn" style="background:${t._level==='Advanced'?'#ef4444':'#fff'};color:${t._level==='Advanced'?'#fff':'#333'}">🔴 고급</button>
       </div>
     </div>
-    <div class="btn-row" style="margin-top:10px">
-      <select id="regen-cat" style="flex:1;padding:8px;border-radius:8px;border:1px solid #EAEAEA;font-family:inherit;font-size:11px;font-weight:700;outline:none;cursor:pointer;background:#F8F9FA;color:#333;" ${loading?'disabled':''}>
-        <option value="">🎨 랜덤 카테고리</option>
-        ${Object.keys(CAT_COLORS).map(c=>`<option value="${c}">${c}</option>`).join('')}
-      </select>
-      <select id="regen-fmt" style="flex:1;padding:8px;border-radius:8px;border:1px solid #EAEAEA;font-family:inherit;font-size:11px;font-weight:700;outline:none;cursor:pointer;background:#F8F9FA;color:#333;" ${loading?'disabled':''}>
-        <option value="">🎲 랜덤 포맷</option>
-        ${getFormats().filter(f=>f.on).map(f=>`<option value="${f.name}">${f.name}</option>`).join('')}
-      </select>
-      <button class="btn-s" onclick="window._tbGenS2(${selected})" ${loading?'disabled':''} style="flex:1;background:#1a1a1a;color:#fff;border:none">↺ 2페이지만</button>
-      <button class="btn-s" onclick="window._tbGen(${selected})" ${loading?'disabled':''} style="flex:0.8">전체</button>
-      <button class="btn-s" onclick="window._tbDel(${selected})" style="flex:0.5;background:#fff;border:1px solid #EAEAEA;color:#888">✕</button>
+    <div style="margin-top:10px;display:flex;flex-direction:column;gap:6px">
+      <div style="display:flex;gap:6px">
+        <select id="regen-cat" style="flex:1;padding:8px;border-radius:8px;border:1px solid #EAEAEA;font-family:inherit;font-size:11px;font-weight:700;outline:none;cursor:pointer;background:#F8F9FA;color:#333;min-width:0" ${loading?'disabled':''}>
+          <option value="">🎨 랜덤 카테고리</option>
+          ${Object.keys(CAT_COLORS).map(c=>`<option value="${c}">${c}</option>`).join('')}
+        </select>
+        <select id="regen-fmt" style="flex:1;padding:8px;border-radius:8px;border:1px solid #EAEAEA;font-family:inherit;font-size:11px;font-weight:700;outline:none;cursor:pointer;background:#F8F9FA;color:#333;min-width:0" ${loading?'disabled':''}>
+          <option value="">🎲 랜덤 포맷</option>
+          ${getFormats().filter(f=>f.on).map(f=>`<option value="${f.name}">${f.name}</option>`).join('')}
+        </select>
+      </div>
+      <div class="btn-row">
+        <button class="btn-s" onclick="window._tbGenS2(${selected})" ${loading?'disabled':''} style="flex:2;background:#1a1a1a;color:#fff;border:none">↺ 2페이지만</button>
+        <button class="btn-s" onclick="window._tbGen(${selected})" ${loading?'disabled':''} style="flex:1.5">전체 재생성</button>
+        <button class="btn-s" onclick="window._tbDel(${selected})" style="flex:0.6;background:#fff;border:1px solid #EAEAEA;color:#888">✕</button>
+      </div>
     </div></div>`;
 }
 
