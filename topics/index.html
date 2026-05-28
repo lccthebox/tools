@@ -244,6 +244,9 @@ nav{height:52px;background:var(--black);display:flex;align-items:center;padding:
   <button class="key-btn" onclick="downloadMonthlyZip()" title="이달 토픽 PDF 일괄 다운로드 (ZIP)" style="margin-right:4px;background:#1a1a1a;color:#fff;border:none" id="zip-btn">
     <span>📦 PDF 일괄저장</span>
   </button>
+  <button class="key-btn" onclick="openShareViewer()" title="이달 토픽 공유 링크 생성" style="margin-right:4px;background:#2563eb;color:#fff;border:none" id="share-btn">
+    <span>🔗 공유 링크</span>
+  </button>
   <button class="key-btn" onclick="printMonthlySchedule()" title="월별 토픽 스케줄 B4 인쇄" style="margin-right:4px;background:#CC0014;color:#fff;border:none">
     <span>🗓 월별 인쇄</span>
   </button>
@@ -1421,6 +1424,200 @@ window.onload=()=>{
 </body></html>`;
 }
 
+function openShareViewer(){
+  const gistId=getGistId();
+  const tops=getTopics();
+  const pfx=`${year}-${String(month+1).padStart(2,'0')}`;
+  const monthTops=Object.fromEntries(Object.entries(tops).filter(([k])=>k.startsWith(pfx)));
+  const count=Object.keys(monthTops).length;
+
+  if(!count){showToast('이달 생성된 토픽이 없어요');return;}
+
+  // 모달 생성
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML=`
+    <div style="background:#fff;border-radius:14px;width:480px;max-width:95vw;padding:28px;font-family:inherit;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+      <div style="font-size:15px;font-weight:800;color:#111;margin-bottom:6px">🔗 월별 토픽 공유</div>
+      <div style="font-size:12px;color:#888;margin-bottom:20px">${MONTHS[month]} ${year} — ${count}개 토픽</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <button onclick="shareViaGist()" style="padding:13px;background:#238636;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;text-align:left">
+          📎 Gist로 공유 링크 생성 <span style="font-size:10px;opacity:.8;display:block;margin-top:2px">Gist에 뷰어 파일 업로드 → 링크 복사 (Gist 연결 필요)</span>
+        </button>
+        <button onclick="shareViaDownload()" style="padding:13px;background:#1a1a1a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;text-align:left">
+          💾 뷰어 HTML 다운로드 <span style="font-size:10px;opacity:.8;display:block;margin-top:2px">파일을 직접 공유 — 드라이브/카카오 등으로 전송</span>
+        </button>
+      </div>
+      <button onclick="this.closest('[style]').remove()" style="margin-top:16px;width:100%;padding:10px;border:1px solid #E0DDD8;border-radius:8px;background:#fff;font-size:12px;cursor:pointer;font-family:inherit;color:#888">닫기</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
+
+  window.shareViaGist=async()=>{
+    const token=getGistToken(), id=getGistId();
+    if(!token||!id){showToast('Gist 토큰과 ID를 먼저 설정해주세요');return;}
+    
+    // 접속 코드 입력
+    const code=prompt('스터디원 접속 코드를 설정해주세요\n(숫자/영문 조합 권장, 빈칸이면 코드 없음)');
+    if(code===null) return; // 취소
+    
+    overlay.remove();
+    showToast('Gist에 업로드 중...');
+    const html=buildShareHTML(monthTops, code.trim());
+    try{
+      const res=await fetch(`https://api.github.com/gists/${id}`,{
+        method:'PATCH',
+        headers:{'Authorization':`token ${token}`,'Content-Type':'application/json'},
+        body:JSON.stringify({
+          public:true,
+          files:{[`thebox-${pfx}-viewer.html`]:{content:html}}
+        })
+      });
+      const data=await res.json();
+      const fileUrl=data.files?.[`thebox-${pfx}-viewer.html`]?.raw_url;
+      if(fileUrl){
+        const previewUrl=`https://htmlpreview.github.io/?${fileUrl}`;
+        await navigator.clipboard.writeText(previewUrl).catch(()=>{});
+        const msg=code.trim()?`✓ 완료! 접속코드: "${code.trim()}"\n링크가 복사됐어요.`:'✓ 완료! 링크가 복사됐어요.';
+        showToast(msg);
+        setTimeout(()=>{
+          const info=code.trim()?`접속 코드: ${code.trim()}\n\n`:'';
+          prompt(`${info}공유 링크 (복사하세요):`,previewUrl);
+        },500);
+      }
+    }catch(e){showToast('오류: '+e.message.slice(0,50));}
+  };
+
+  window.shareViaDownload=()=>{
+    const code=prompt('스터디원 접속 코드를 설정해주세요\n(빈칸이면 코드 없음)');
+    if(code===null) return;
+    overlay.remove();
+    const html=buildShareHTML(monthTops, code.trim());
+    const blob=new Blob([html],{type:'text/html'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url; a.download=`TheBox_${pfx}_토픽뷰어.html`;
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),3000);
+    showToast(code.trim()?`✓ 다운로드 완료! 접속코드: "${code.trim()}"`:'✓ 다운로드 완료!');
+  };
+}
+
+function buildShareHTML(topics, accessCode=''){
+  const CAT_C=CAT_COLORS;
+  const days=Object.keys(topics).sort();
+  const cards=days.map(k=>{
+    const t=topics[k];
+    const s1=t.session1||{}, s2=t.session2||{};
+    const cc=CAT_C[t.category]||'#CC0014';
+    const sparks=(s1.spark_words||[]).slice(0,9).map(w=>{
+      const en=typeof w==='object'?w.en:w, kr=typeof w==='object'?w.kr:'';
+      return `<div class="bingo-cell"><div class="bingo-en">${en}</div>${kr?`<div class="bingo-kr">${kr}</div>`:''}</div>`;
+    }).join('');
+    const iqs=(s1.icebreakers||[]).map((q,i)=>`<div class="iq"><span class="iq-n">${i+1}</span><span>${q}</span></div>`).join('');
+    const qs=(s2.questions||[]).map((q,i)=>`<div class="dq"><span class="dq-n">Q${i+1}</span><span>${q}</span></div>`).join('');
+    const exprs=(s2.expressions||[]).map(e=>{
+      const en=typeof e==='object'?e.en:e, kr=typeof e==='object'?e.kr:'';
+      return `<div class="expr"><div class="expr-en">${en}</div><div class="expr-kr">${kr}</div></div>`;
+    }).join('');
+    return `<div class="card">
+      <div class="card-hdr" style="background:${cc}">
+        <div class="card-date">${k}</div>
+        <div class="card-cat">${t.category||''}</div>
+        <div class="card-fmt">${s2.format||''}</div>
+      </div>
+      <div class="card-body">
+        <div class="card-title">${t.main_title||''}</div>
+        ${t.korean_angle?`<div class="card-angle">${t.korean_angle}</div>`:''}
+        <div class="sec-title">🔥 ICE BREAKER</div>
+        ${iqs}
+        <div class="sec-title">🎯 KEYWORD BINGO</div>
+        <div class="bingo-grid">${sparks}</div>
+        <div class="sec-title">2ND — ${s2.format||''}</div>
+        ${s2.how_to_play_kr?`<div class="howto">${s2.how_to_play_kr}</div>`:''}
+        ${s2.scenario?`<div class="scenario">${s2.scenario}</div>`:''}
+        ${qs?`<div class="dqs">${qs}</div>`:''}
+        ${exprs?`<div class="sec-title">💬 EXPRESSIONS</div><div class="exprs">${exprs}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+
+  return `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TheBox — ${days[0]?.slice(0,7)||''} 토픽</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#F5F3EF;color:#111;padding:20px}
+/* 잠금 화면 */
+#lock-screen{position:fixed;inset:0;background:#111;display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:20px}
+#lock-screen h2{color:#fff;font-size:22px;font-weight:800}#lock-screen h2 span{color:#CC0014}
+#lock-screen p{color:#888;font-size:13px}
+#lock-inp{padding:12px 16px;border-radius:8px;border:2px solid #333;background:#1a1a1a;color:#fff;font-size:16px;width:240px;text-align:center;outline:none;letter-spacing:2px}
+#lock-inp:focus{border-color:#CC0014}
+#lock-btn{padding:12px 28px;background:#CC0014;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;width:240px}
+#lock-btn:hover{background:#aa0010}
+#lock-err{color:#ff6b6b;font-size:12px;min-height:16px}
+/* 컨텐츠 */
+#content{display:${accessCode?'none':'block'}}
+.header{text-align:center;padding:24px 0 32px;color:#111}
+.header h1{font-size:28px;font-weight:800;letter-spacing:-1px}.header h1 span{color:#CC0014}
+.header p{color:#888;font-size:13px;margin-top:6px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:20px;max-width:1200px;margin:0 auto}
+.card{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+.card-hdr{padding:12px 16px;display:flex;align-items:center;gap:8px;color:#fff}
+.card-date{font-size:11px;opacity:.8}.card-cat{font-size:11px;font-weight:700;background:rgba(255,255,255,.2);padding:2px 8px;border-radius:4px}
+.card-fmt{margin-left:auto;font-size:10px;opacity:.8}
+.card-body{padding:16px}
+.card-title{font-size:16px;font-weight:800;line-height:1.35;margin-bottom:6px}
+.card-angle{font-size:11px;color:#888;margin-bottom:14px;line-height:1.5;padding:8px 10px;background:#F5F3EF;border-radius:6px}
+.sec-title{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#aaa;margin:14px 0 8px}
+.iq{display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:1px solid #F0EDE8}
+.iq-n{width:20px;height:20px;border-radius:50%;background:#111;color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.iq span:last-child{font-size:12px;line-height:1.5;color:#333}
+.bingo-grid{display:grid;grid-template-columns:repeat(3,1fr);border:2px solid #111;border-radius:8px;overflow:hidden}
+.bingo-cell{padding:10px 6px;text-align:center;border-right:1.5px solid #111;border-bottom:1.5px solid #111;min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.bingo-cell:nth-child(3n){border-right:none}.bingo-cell:nth-child(n+7){border-bottom:none}
+.bingo-en{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.3px}
+.bingo-kr{font-size:9px;color:#888;margin-top:2px}
+.howto{font-size:11px;color:#555;background:#FFFDF5;border-left:3px solid #F0C040;padding:8px 10px;border-radius:0 6px 6px 0;margin-bottom:8px;line-height:1.55}
+.scenario{font-size:12px;color:#111;background:#F5F3EF;padding:10px 12px;border-radius:8px;margin-bottom:8px;line-height:1.5}
+.dqs{display:flex;flex-direction:column;gap:4px}
+.dq{display:flex;gap:8px;font-size:12px;color:#333;padding:6px 0;border-bottom:1px solid #F0EDE8;line-height:1.45}
+.dq-n{color:#CC0014;font-weight:800;flex-shrink:0}
+.exprs{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.expr{font-size:11px}.expr-en{font-weight:700}.expr-kr{color:#888;font-size:10px}
+.footer{text-align:center;padding:32px 0 16px;color:#bbb;font-size:11px}
+@media(max-width:600px){.grid{grid-template-columns:1fr}.exprs{grid-template-columns:1fr}}
+</style></head><body>
+${accessCode?`
+<div id="lock-screen">
+  <h2>THE<span>BOX</span></h2>
+  <p>스터디원 전용 페이지입니다</p>
+  <input id="lock-inp" type="password" placeholder="접속 코드 입력" onkeydown="if(event.key==='Enter')checkCode()">
+  <div id="lock-err"></div>
+  <button id="lock-btn" onclick="checkCode()">입장하기</button>
+</div>
+<script>
+function checkCode(){
+  const v=document.getElementById('lock-inp').value.trim();
+  if(v==='${accessCode}'){
+    document.getElementById('lock-screen').remove();
+    document.getElementById('content').style.display='block';
+  } else {
+    document.getElementById('lock-err').textContent='코드가 틀렸어요. 다시 입력해주세요.';
+    document.getElementById('lock-inp').value='';
+    document.getElementById('lock-inp').focus();
+  }
+}
+document.getElementById('lock-inp').focus();
+</scr`+'ipt>':''}
+<div id="content">
+<div class="header"><h1>THE<span>BOX</span></h1><p>${days[0]?.slice(0,7)||''} 월별 토픽 · ${days.length}개</p></div>
+<div class="grid">${cards}</div>
+<div class="footer">© TheBox English Networking | theboxis.com</div>
+</div>
+</body></html>`;
+}
+
 function printMonthlySchedule(){
   const tops=getTopics();
   const dim=new Date(year,month+1,0).getDate();
@@ -2211,7 +2408,23 @@ body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#111;-webkit-p
 
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${css}</style></head><body>
 ${page1}${page2}${page3}
-<scr`+`ipt>window.onload=()=>window.print()</scr`+`ipt>
+<scr`+`ipt>
+window.onload=()=>{
+  // 인쇄 버튼 표시
+  document.getElementById('tb-print-bar').style.display='flex';
+}
+</scr`+`ipt>
+<style>
+#tb-print-bar{display:none;position:fixed;bottom:0;left:0;right:0;background:#111;padding:14px 24px;align-items:center;justify-content:space-between;gap:12px;z-index:999;box-shadow:0 -4px 20px rgba(0,0,0,.3)}
+#tb-print-bar span{color:#aaa;font-size:12px;font-family:sans-serif}
+#tb-print-btn{background:#CC0014;color:#fff;border:none;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:sans-serif;letter-spacing:.3px}
+#tb-print-btn:hover{background:#aa0010}
+@media print{#tb-print-bar{display:none!important}}
+</style>
+<div id="tb-print-bar">
+  <span>📄 TheBox 토픽 카드 — 인쇄 미리보기</span>
+  <button id="tb-print-btn" onclick="window.print()">🖨️ 인쇄하기</button>
+</div>
 </body></html>`;
 
   const w=window.open('','_blank');
