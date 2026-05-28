@@ -349,6 +349,15 @@ nav{height:52px;background:var(--black);display:flex;align-items:center;padding:
       💡 다른 컴퓨터에서는 같은 토큰 + Gist ID 입력 후 "불러오기"를 누르세요.</p>
     </div>
     <div class="set-sec">
+      <h3>🗂 Google Drive 공유</h3>
+      <p class="set-desc">토픽 뷰어를 Google Drive에 업로드해서 핸드폰으로 바로 열 수 있는 링크를 만들어요.</p>
+      <div class="add-row">
+        <input class="add-inp wide" id="gdrive-token-inp" type="password" placeholder="Google Access Token">
+        <button class="add-btn" onclick="saveGDriveToken()">저장</button>
+      </div>
+      <p class="tip">💡 토큰 발급: <a href="https://developers.google.com/oauthplayground" target="_blank" style="color:var(--black);font-weight:600">OAuth Playground</a> → Drive API v3 scope 선택 → Authorize → Exchange → Access token 복사 (1시간 유효)</p>
+    </div>
+    <div class="set-sec">
       <h3>Anthropic API 키</h3>
       <p class="set-desc">Claude API 키를 입력하면 토픽 자동 생성이 활성화돼요. 키는 이 브라우저에만 저장됩니다.</p>
       <div class="add-row">
@@ -1603,6 +1612,44 @@ window.doMoveDate=function(fromDay,toDay){
   showToast(`✓ ${fromDay}일 → ${toDay}일로 이동 완료!`);
 };
 
+function saveGDriveToken(){ 
+  const v=document.getElementById('gdrive-token-inp')?.value.trim();
+  if(v){localStorage.setItem('tb_gdrive_token',v);showToast('✓ Google Drive 토큰 저장됨');}
+}
+function getGDriveToken(){ return localStorage.getItem('tb_gdrive_token')||''; }
+
+async function uploadToDrive(html, filename){
+  const token=getGDriveToken();
+  if(!token) throw new Error('Google Drive 토큰이 없어요. 설정에서 입력해주세요.');
+
+  // 1. 파일 업로드
+  const meta={name:filename,mimeType:'text/html'};
+  const form=new FormData();
+  form.append('metadata',new Blob([JSON.stringify(meta)],{type:'application/json'}));
+  form.append('file',new Blob([html],{type:'text/html'}));
+
+  const res=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{
+    method:'POST',
+    headers:{'Authorization':'Bearer '+token},
+    body:form
+  });
+  if(!res.ok){
+    const err=await res.json();
+    if(res.status===401) throw new Error('토큰이 만료됐어요. 설정에서 새 토큰을 입력해주세요.');
+    throw new Error(err.error?.message||'업로드 실패');
+  }
+  const file=await res.json();
+
+  // 2. 공개 권한 설정 (anyone with link)
+  await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}/permissions`,{
+    method:'POST',
+    headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+    body:JSON.stringify({role:'reader',type:'anyone'})
+  });
+
+  return `https://drive.google.com/file/d/${file.id}/view`;
+}
+
 function openShareViewer(){
   const gistId=getGistId();
   const tops=getTopics();
@@ -1619,15 +1666,44 @@ function openShareViewer(){
     <div style="background:#fff;border-radius:14px;width:480px;max-width:95vw;padding:28px;font-family:inherit;box-shadow:0 20px 60px rgba(0,0,0,.3)">
       <div style="font-size:15px;font-weight:800;color:#111;margin-bottom:6px">🔗 월별 토픽 공유</div>
       <div style="font-size:12px;color:#888;margin-bottom:20px">${MONTHS[month]} ${year} — ${count}개 토픽</div>
-      <button onclick="shareViaDownload()" style="padding:13px;background:#1a1a1a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;width:100%">
-        💾 이달 토픽 뷰어 HTML 다운로드
-        <span style="font-size:10px;opacity:.8;display:block;margin-top:3px">파일을 카카오·드라이브로 전송 → 스터디원이 열면 카드뷰 확인 가능</span>
-      </button>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <button onclick="shareViaDrive()" style="padding:13px;background:#1967D2;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;width:100%;text-align:left">
+          📱 Google Drive로 공유 링크 생성
+          <span style="font-size:10px;opacity:.8;display:block;margin-top:3px">핸드폰에서 바로 열 수 있는 링크 자동 생성 (설정에서 토큰 필요)</span>
+        </button>
+        <button onclick="shareViaDownload()" style="padding:13px;background:#1a1a1a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;width:100%;text-align:left">
+          💾 HTML 파일 다운로드
+          <span style="font-size:10px;opacity:.8;display:block;margin-top:3px">파일을 직접 저장 · 공유</span>
+        </button>
+      </div>
       <button onclick="this.closest('[style]').remove()" style="margin-top:16px;width:100%;padding:10px;border:1px solid #E0DDD8;border-radius:8px;background:#fff;font-size:12px;cursor:pointer;font-family:inherit;color:#888">닫기</button>
     </div>`;
   document.body.appendChild(overlay);
   overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
 
+
+  window.shareViaDrive=async()=>{
+    const code=prompt('스터디원 접속 코드 설정\n(빈칸이면 코드 없음)');
+    if(code===null)return;
+    overlay.remove();
+    const html=buildShareHTML(monthTops,code.trim());
+    const filename=`TheBox_${pfx}_토픽뷰어.html`;
+    const btn=document.getElementById('share-btn');
+    if(btn){btn.querySelector('span').textContent='⏳ 업로드 중...';}
+    try{
+      const url=await uploadToDrive(html,filename);
+      await navigator.clipboard.writeText(url).catch(()=>{});
+      showToast('✓ Drive 업로드 완료! 링크 복사됨');
+      setTimeout(()=>prompt(
+        code.trim()?`접속 코드: ${code.trim()}\n\n공유 링크 (복사하세요):`:'공유 링크 (복사하세요):',
+        url
+      ),300);
+    }catch(e){
+      showToast('오류: '+e.message);
+    }finally{
+      if(btn){btn.querySelector('span').textContent='🔗 공유 링크';}
+    }
+  };
 
   window.shareViaGist=async()=>{
     const token=getGistToken(), id=getGistId();
