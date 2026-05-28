@@ -817,13 +817,31 @@ ${fmt.toLowerCase().includes('heads up') ? `
 
 ${fmt.toLowerCase().includes('myth') ? `
 🔍 MYTH BUSTERS FORMAT
-- scenario = 1 sentence introducing the theme.
-- how_to_play_kr = "각 문장을 읽고 MYTH(거짓)인지 FACT(사실)인지 골라봐요. 다 고르면 팀이랑 비교하고 왜 그렇게 생각했는지 얘기해봐요!"
-- roles = exactly 5 statements. Each statement MUST include the answer at the end in brackets.
-  Format: "Statement text. [MYTH]" or "Statement text. [FACT]"
-  Make statements plausible — should NOT be obvious which is correct.
-  Example: ["Expensive wine always tastes better than cheap wine. [MYTH]", "Reading before bed helps you sleep better. [FACT]", "Humans use only 10% of their brain. [MYTH]"]
-- questions = 3 "What if" questions exploring the theme further
+The goal: make people go "WHAT?! Really?!" or "No way, that can't be true!"
+Statements must be SURPRISING — counterintuitive facts, shocking stats, common misconceptions.
+NOT boring moral statements. NOT obvious true/false. NOT "Famous people forget their friends."
+
+GOOD statements (the kind that make people gasp or argue):
+- Real surprising statistics: "Koreans check their phone on average 150 times a day. [FACT]"
+- Counterintuitive science: "Drinking coffee can actually help you sleep better if timed right. [FACT]"  
+- Shocking social facts: "People who swear more are statistically more honest. [FACT]"
+- Common misconceptions: "You lose most body heat through your head. [MYTH]"
+- Money/behavior surprises: "Rich people tip less than middle-class people on average. [FACT]"
+- Relationship surprises: "Couples who argue more often stay together longer. [FACT]"
+- Korean-specific surprising facts work great too
+
+BAD statements (NEVER do these):
+- Moral opinions: "Real friends always support you." → boring, not MYTH/FACT-able
+- Obvious: "Famous people can be lonely." → everyone knows this
+- Vague: "Success changes people." → not verifiable
+
+- scenario = 1 punchy sentence teasing the theme (make it feel like a quiz show!)
+- how_to_play_kr = "각 문장, MYTH(거짓)인지 FACT(사실)인지 골라봐요! 다 고르면 공개 — 놀라운 정답이 기다려요 👀"
+- roles = exactly 5 SHOCKING/SURPRISING statements with [MYTH] or [FACT] tags.
+  Mix: ~3 FACT (surprising but true) and ~2 MYTH (sounds true but isn't)
+  Every statement should make at least some people say "wait, really??"
+- questions = 3 follow-up questions that connect the surprising facts to personal experience.
+  Example: "Have you ever believed something for years and then found out it was wrong?"
 ` : ''}
 
 ${fmt.toLowerCase().includes('debate') || fmt.toLowerCase().includes('unpopular') ? `
@@ -1062,7 +1080,11 @@ ${fmt.toLowerCase().includes('ranking') ? 'RANKING: roles=6 specific short items
 ${fmt.toLowerCase().includes('advice lab') ? 'ADVICE LAB: roles=["The Angel","The Judge","The Joker"]. questions=3 broad What if follow-up questions.' : ''}
 ${(fmt.toLowerCase().includes('this or that')||fmt.toLowerCase().includes('balance game')) ? 'BALANCE GAME: scenario="". roles=8 extreme A vs B choices. questions=[]' : ''}
 ${fmt.toLowerCase().includes('survival') ? 'SURVIVAL: roles=2 descriptive team names showing each strategy. questions=3 broad What if twist questions.' : ''}
-${fmt.toLowerCase().includes('myth') ? 'MYTH BUSTERS: roles=5 statements with [MYTH] or [FACT] tags. questions=3 broad What if questions.' : ''}
+${fmt.toLowerCase().includes('myth') ? `MYTH BUSTERS: roles=exactly 5 SHOCKING/SURPRISING statements with [MYTH]/[FACT] tags.
+  Each must make people say "wait, really??" — counterintuitive stats, surprising science, common misconceptions.
+  Mix ~3 FACT (surprisingly true) and ~2 MYTH (sounds true but isn't).
+  NEVER: boring moral statements, obvious answers, vague opinions.
+  questions=3 follow-up questions connecting to personal experience.` : ''}
 ${(fmt.toLowerCase().includes('minefield')||fmt.toLowerCase().includes('taboo')) ? 'TABOO: scenario="". roles=6 forbidden single words. questions=[]' : ''}
 
 === NO VOTE ===
