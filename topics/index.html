@@ -2881,7 +2881,7 @@ function renderCal(){
   document.getElementById('s-pct').textContent=Math.round(done/dim*100)+'%';
   document.getElementById('s-fmts').textContent=usedFmts.size;
 
-  // 카테고리별 / 포맷별 분포
+  // 카테고리/포맷 간단 카운트
   const breakdown=document.getElementById('stat-breakdown');
   if(breakdown&&done>0){
     const catCount={}, fmtCount={};
@@ -2892,36 +2892,23 @@ function renderCal(){
       catCount[cat]=(catCount[cat]||0)+1;
       fmtCount[fmt]=(fmtCount[fmt]||0)+1;
     });
-    const catBar=Object.entries(catCount).sort((a,b)=>b[1]-a[1]).map(([cat,cnt])=>{
-      const cc=CAT_COLORS[cat]||'#888';
-      const pct=Math.round(cnt/done*100);
-      return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
-        <div style="width:8px;height:8px;border-radius:50%;background:${cc};flex-shrink:0"></div>
-        <div style="font-size:10px;color:var(--text);min-width:80px">${cat}</div>
-        <div style="flex:1;height:6px;background:#F0EDE8;border-radius:3px;overflow:hidden">
-          <div style="width:${pct}%;height:100%;background:${cc};border-radius:3px;transition:width .3s"></div>
-        </div>
-        <div style="font-size:10px;font-weight:700;color:var(--muted);min-width:28px;text-align:right">${cnt}개</div>
-      </div>`;
-    }).join('');
-    const fmtBar=Object.entries(fmtCount).sort((a,b)=>b[1]-a[1]).map(([fmt,cnt])=>{
-      const pct=Math.round(cnt/done*100);
-      return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
-        <div style="font-size:10px;color:var(--text);min-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${fmt}</div>
-        <div style="flex:1;height:6px;background:#F0EDE8;border-radius:3px;overflow:hidden">
-          <div style="width:${pct}%;height:100%;background:#111;border-radius:3px;transition:width .3s"></div>
-        </div>
-        <div style="font-size:10px;font-weight:700;color:var(--muted);min-width:28px;text-align:right">${cnt}개</div>
-      </div>`;
-    }).join('');
+    const catBadges=Object.entries(catCount).sort((a,b)=>b[1]-a[1])
+      .map(([cat,cnt])=>{
+        const cc=CAT_COLORS[cat]||'#888';
+        return `<span style="display:inline-flex;align-items:center;gap:4px;background:#fff;border:1px solid #E0DDD8;border-radius:20px;padding:3px 8px;font-size:10px;font-weight:600;color:#333">
+          <span style="width:7px;height:7px;border-radius:50%;background:${cc};flex-shrink:0"></span>${cat} <b>${cnt}</b>
+        </span>`;
+      }).join('');
+    const fmtBadges=Object.entries(fmtCount).sort((a,b)=>b[1]-a[1])
+      .map(([fmt,cnt])=>`<span style="display:inline-flex;align-items:center;gap:3px;background:#fff;border:1px solid #E0DDD8;border-radius:20px;padding:3px 8px;font-size:10px;font-weight:600;color:#333">${fmt} <b>${cnt}</b></span>`).join('');
     breakdown.innerHTML=`
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px">
-        <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px">📊 카테고리 분포</div>
-        ${catBar}
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px">
+        <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:7px">카테고리</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">${catBadges}</div>
       </div>
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px">
-        <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px">🎮 포맷 분포</div>
-        ${fmtBar}
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px">
+        <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:7px">포맷</div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px">${fmtBadges}</div>
       </div>`;
   } else if(breakdown){
     breakdown.innerHTML='';
