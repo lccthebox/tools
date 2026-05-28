@@ -1424,6 +1424,93 @@ window.onload=()=>{
 </body></html>`;
 }
 
+function openCardModal(k, t){
+  const s1=t.session1||{}, s2=t.session2||{};
+  const cc=CAT_COLORS[t.category]||'#CC0014';
+  const krFmt=s2.how_to_play_kr||KR_FMT_GUIDE[s2.format]||'';
+
+  const sparks=(s1.spark_words||[]).slice(0,9).map((w,i)=>{
+    const en=typeof w==='object'?w.en:w, kr=typeof w==='object'?w.kr:'';
+    const col=i%3, row=Math.floor(i/3);
+    const bdrR=col<2?'border-right:2px solid #111;':'';
+    const bdrB=row<2?'border-bottom:2px solid #111;':'';
+    return `<div style="${bdrR}${bdrB}height:60px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;box-sizing:border-box">
+      <div style="font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.3px">${en}</div>
+      ${kr?`<div style="font-size:9px;color:#888;margin-top:2px">${kr}</div>`:''}
+    </div>`;
+  }).join('');
+
+  const iqs=(s1.icebreakers||[]).map((q,i)=>`
+    <div style="display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #F0EDE8">
+      <div style="width:20px;height:20px;border-radius:50%;background:${i===0?cc:'#111'};color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${i+1}</div>
+      <div style="font-size:12px;line-height:1.5;color:#333">${q}</div>
+    </div>`).join('');
+
+  const isStory=(s2.format||'').toLowerCase().includes('story chain');
+  const roles=s2.roles||[];
+  const qs=(s2.questions||[]).map((q,i)=>`
+    <div style="display:flex;gap:8px;padding:7px 0;border-bottom:1px solid #F0EDE8">
+      <span style="color:${cc};font-weight:800;font-size:10px;flex-shrink:0">Q${i+1}</span>
+      <span style="font-size:12px;color:#333;line-height:1.45">${q}</span>
+    </div>`).join('');
+
+  const exprs=(s2.expressions||[]).map(e=>{
+    const en=typeof e==='object'?e.en:e, kr=typeof e==='object'?e.kr:'';
+    return `<div style="font-size:11px"><div style="font-weight:700">• ${en}</div>${kr?`<div style="font-size:10px;color:#888">${kr}</div>`:''}</div>`;
+  }).join('');
+
+  const overlay=document.createElement('div');
+  overlay.id='card-modal-overlay';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;overflow-y:auto;padding:16px;box-sizing:border-box';
+  overlay.innerHTML=`
+    <div style="background:#fff;border-radius:14px;max-width:500px;margin:0 auto;overflow:hidden;font-family:inherit">
+      <!-- 헤더 -->
+      <div style="background:#111;padding:12px 16px;display:flex;align-items:center;justify-content:space-between">
+        <div style="font-size:15px;font-weight:800;letter-spacing:1px;color:#fff">THE<span style="color:#ff4444">BOX</span></div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="background:${cc};color:#fff;font-size:9px;font-weight:700;padding:3px 8px;border-radius:4px">${t.category||''}</div>
+          <button onclick="document.getElementById('card-modal-overlay').remove()" style="background:none;border:none;color:#888;font-size:20px;cursor:pointer;line-height:1;padding:0 4px">✕</button>
+        </div>
+      </div>
+      <!-- Session 1 -->
+      <div style="background:#F5F3EF;padding:10px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #E0DDD8">
+        <span style="font-size:10px;font-weight:800;letter-spacing:2px;color:#111">SESSION 1</span>
+        <span style="font-size:10px;color:#888">Ice Breaking</span>
+        <span style="margin-left:auto;font-size:11px;font-weight:700;color:#111">${t.main_title||''}</span>
+      </div>
+      <div style="padding:14px 16px">
+        ${t.korean_angle?`<div style="background:${cc}18;border-left:3px solid ${cc};border-radius:4px;padding:8px 12px;margin-bottom:12px;font-size:11px;color:#333;line-height:1.5">${t.korean_angle}</div>`:''}
+        <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#aaa;margin-bottom:8px">🔥 ICEBREAKER</div>
+        ${iqs}
+        <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#aaa;margin:12px 0 8px">🎯 KEYWORD BINGO</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);border:2.5px solid #111;border-radius:8px;overflow:hidden">
+          ${sparks}
+        </div>
+      </div>
+      <!-- Session 2 -->
+      <div style="background:#F5F3EF;padding:10px 16px;display:flex;align-items:center;gap:10px;border-top:1px solid #E0DDD8;border-bottom:1px solid #E0DDD8">
+        <span style="font-size:10px;font-weight:800;letter-spacing:2px;color:#111">SESSION 2</span>
+        <span style="font-size:10px;color:#888">${s2.format||''}</span>
+      </div>
+      <div style="padding:14px 16px">
+        ${krFmt?`<div style="background:#FFFDF5;border-left:3px solid #F0C040;padding:8px 12px;border-radius:4px;margin-bottom:10px;font-size:11px;color:#555;line-height:1.55"><b>💡 HOW TO PLAY</b><br>${krFmt}</div>`:''}
+        ${s2.scenario?`<div style="background:#F5F3EF;padding:10px 12px;border-radius:8px;margin-bottom:10px;font-size:12px;color:#111;line-height:1.5">${s2.scenario}</div>`:''}
+        ${isStory&&roles.length>2?`<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#aaa;margin-bottom:8px">📝 WORD BANK</div>
+        <div style="line-height:2.2">${roles.map(w=>`<span style="display:inline-block;background:#F5F3EF;border:1px solid #E0DDD8;border-radius:4px;padding:2px 7px;margin:2px;font-size:10px;font-weight:600">${w}</span>`).join('')}</div>`:
+        qs?`<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#aaa;margin-bottom:4px">DISCUSSION</div>${qs}`:''}
+        ${exprs?`<div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#aaa;margin:12px 0 8px">💬 EXPRESSIONS</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${exprs}</div>`:''}
+      </div>
+      <div style="padding:12px 16px;border-top:1px solid #E0DDD8;display:flex;gap:8px">
+        <button onclick="downloadPDF(${parseInt(k.split('-')[2])})" style="flex:1;padding:10px;background:${cc};color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">↓ PDF 인쇄</button>
+        <button onclick="document.getElementById('card-modal-overlay').remove()" style="flex:1;padding:10px;background:#F5F3EF;color:#111;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">닫기</button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
+}
+
 function openShareViewer(){
   const gistId=getGistId();
   const tops=getTopics();
@@ -1440,37 +1527,15 @@ function openShareViewer(){
     <div style="background:#fff;border-radius:14px;width:480px;max-width:95vw;padding:28px;font-family:inherit;box-shadow:0 20px 60px rgba(0,0,0,.3)">
       <div style="font-size:15px;font-weight:800;color:#111;margin-bottom:6px">🔗 월별 토픽 공유</div>
       <div style="font-size:12px;color:#888;margin-bottom:20px">${MONTHS[month]} ${year} — ${count}개 토픽</div>
-      <div style="display:flex;flex-direction:column;gap:10px">
-        <button onclick="shareViaNetlify()" style="padding:13px;background:#00AD9F;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;text-align:left">
-          🌐 Netlify로 공유 링크 생성 <span style="font-size:10px;opacity:.8;display:block;margin-top:2px">파일 다운로드 → netlify.com/drop 에 드래그 → URL 완성 (무료·30초)</span>
-        </button>
-        <button onclick="shareViaDownload()" style="padding:13px;background:#1a1a1a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;text-align:left">
-          💾 뷰어 HTML 다운로드 <span style="font-size:10px;opacity:.8;display:block;margin-top:2px">카카오/드라이브로 파일 직접 전송</span>
-        </button>
-      </div>
-      <div style="background:#F5F3EF;border-radius:8px;padding:10px 12px;font-size:11px;color:#888;margin-top:4px;line-height:1.6">
-        💡 <b>Netlify 사용법</b>: ① 아래 버튼으로 파일 다운로드 → ② <a href="https://app.netlify.com/drop" target="_blank" style="color:#00AD9F">app.netlify.com/drop</a> 접속 → ③ 파일 드래그앤드롭 → ④ URL 복사해서 공유
-      </div>
+      <button onclick="shareViaDownload()" style="padding:13px;background:#1a1a1a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;width:100%">
+        💾 이달 토픽 뷰어 HTML 다운로드
+        <span style="font-size:10px;opacity:.8;display:block;margin-top:3px">파일을 카카오·드라이브로 전송 → 스터디원이 열면 카드뷰 확인 가능</span>
+      </button>
       <button onclick="this.closest('[style]').remove()" style="margin-top:16px;width:100%;padding:10px;border:1px solid #E0DDD8;border-radius:8px;background:#fff;font-size:12px;cursor:pointer;font-family:inherit;color:#888">닫기</button>
     </div>`;
   document.body.appendChild(overlay);
   overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
 
-  window.shareViaNetlify=()=>{
-    const code=prompt('스터디원 접속 코드를 설정해주세요\n(빈칸이면 코드 없음)');
-    if(code===null) return;
-    const html=buildShareHTML(monthTops, code.trim());
-    const blob=new Blob([html],{type:'text/html'});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');
-    a.href=url; a.download=`thebox-${pfx}-viewer.html`;
-    a.click();
-    setTimeout(()=>URL.revokeObjectURL(url),3000);
-    setTimeout(()=>{
-      window.open('https://app.netlify.com/drop','_blank');
-    },500);
-    showToast(code.trim()?`✓ 다운로드 완료! 접속코드: "${code.trim()}" — Netlify에 파일 드래그하세요`:'✓ 다운로드 완료! Netlify에 파일 드래그하세요');
-  };
 
   window.shareViaGist=async()=>{
     const token=getGistToken(), id=getGistId();
@@ -2592,7 +2657,20 @@ function renderCal(){
   if(grid){
     grid.innerHTML=cells;
     grid.querySelectorAll('.day[data-d]').forEach(el=>{
-      el.addEventListener('click',()=>{selected=parseInt(el.dataset.d);renderCal();renderRight();});
+      el.addEventListener('click',()=>{
+        const d=parseInt(el.dataset.d);
+        selected=d;
+        renderCal();
+        // 모바일에서는 카드뷰 모달, 데스크톱은 오른쪽 패널
+        if(window.innerWidth<=768){
+          const k=topicKey(d);
+          const t=getTopics()[k];
+          if(t) openCardModal(k,t);
+          else renderRight();
+        } else {
+          renderRight();
+        }
+      });
     });
   }
   const genBtn=document.getElementById('gen-all-btn');
