@@ -1626,15 +1626,32 @@ function buildShareHTML(topics, accessCode=''){
     return {k,t,s1,s2,cc,sparks};
   });
 
-  const listCards=cardData.map(({k,t,s2,cc})=>`
-    <div class="list-card" onclick="openDetail('${k}')" style="border-left:4px solid ${cc}">
-      <div class="lc-top">
-        <span class="lc-date">${k}</span>
-        <span class="lc-fmt" style="background:${cc}">${s2.format||''}</span>
+  const DAYS_KR=['일','월','화','수','목','금','토'];
+  const listCards=cardData.map(({k,t,s2,cc})=>{
+    const dt=new Date(k);
+    const dayKr=DAYS_KR[dt.getDay()];
+    const dayNum=dt.getDate();
+    const monthNum=dt.getMonth()+1;
+    return `<div class="list-card" onclick="openDetail('${k}')" style="border-left:none;padding:0;overflow:hidden">
+      <div style="display:flex;align-items:stretch">
+        <!-- 날짜 블록 -->
+        <div style="background:${cc};color:#fff;min-width:68px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px 8px;flex-shrink:0">
+          <div style="font-size:10px;font-weight:700;opacity:.85">${monthNum}월</div>
+          <div style="font-size:32px;font-weight:800;line-height:1">${dayNum}</div>
+          <div style="font-size:13px;font-weight:800;margin-top:2px">${dayKr}요일</div>
+        </div>
+        <!-- 내용 -->
+        <div style="padding:12px 14px;flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
+            <span class="lc-fmt" style="background:${cc}">${s2.format||''}</span>
+          </div>
+          <div class="lc-title">${t.main_title||''}</div>
+          ${t.korean_angle?`<div class="lc-angle">${t.korean_angle}</div>`:''}
+        </div>
+        <div style="display:flex;align-items:center;padding-right:12px;color:#ccc;font-size:18px">›</div>
       </div>
-      <div class="lc-title">${t.main_title||''}</div>
-      ${t.korean_angle?`<div class="lc-angle">${t.korean_angle}</div>`:''}
-    </div>`).join('');
+    </div>`;
+  }).join('');
 
   const detailModals=cardData.map(({k,t,s1,s2,cc,sparks})=>{
     const krFmt=s2.how_to_play_kr||'';
@@ -1706,8 +1723,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .app-logo{font-size:18px;font-weight:800;letter-spacing:1px;color:#fff}.app-logo span{color:#ff4444}
 .app-meta{font-size:11px;color:#888}
 .list{padding:12px;display:flex;flex-direction:column;gap:10px;max-width:600px;margin:0 auto}
-.list-card{background:#fff;border-radius:12px;padding:14px 16px;cursor:pointer;box-shadow:0 1px 6px rgba(0,0,0,.08);transition:transform .15s,box-shadow .15s;active:scale(.98)}
-.list-card:active{transform:scale(.97)}
+.list-card{background:#fff;border-radius:12px;cursor:pointer;box-shadow:0 1px 6px rgba(0,0,0,.08);transition:transform .15s;overflow:hidden}
+.list-card:active{transform:scale(.98)}
 .lc-top{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 .lc-date{font-size:11px;color:#aaa}
 .lc-fmt{font-size:10px;font-weight:700;color:#fff;padding:2px 8px;border-radius:4px;margin-left:auto}
@@ -2060,6 +2077,7 @@ body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#111;-webkit-p
   ════════════════════════════════ */
   const isMythBusters=fmt.toLowerCase().includes('myth');
   const isDebate=(fmt.toLowerCase().includes('debate')||fmt.toLowerCase().includes('rather')||fmt.toLowerCase().includes('spectrum')||fmt.toLowerCase().includes('unpopular'))&&!isMythBusters;
+  const isSurvival=fmt.toLowerCase().includes('survival');
 
   /* ════════════════════════════════
      🧑‍⚕️ ADVICE LAB
@@ -2389,6 +2407,56 @@ body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#111;-webkit-p
       <div style="flex:1;height:1px;background:#E0DDD8"></div>
     </div>
     <div style="margin-bottom:4px">${whatIfs}</div>`:''}
+    ${exprBlock}
+  </div>`;
+
+  /* ════════════════════════════════
+     🆘 SURVIVAL SCENARIO LAYOUT
+  ════════════════════════════════ */
+  } else if(isSurvival){
+    const teamA=roles[0]||'Strategy A', teamB=roles[1]||'Strategy B';
+    const survQs=qs.slice(0,3).map((q,i)=>`
+      <div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #EBEBEA">
+        <div style="background:${catColor};color:#fff;font-size:8pt;font-weight:800;padding:2px 7px;border-radius:4px;flex-shrink:0;white-space:nowrap;margin-top:2px">Q${i+1}</div>
+        <div style="font-size:10pt;color:#1a1a1a;line-height:1.45">${q}</div>
+      </div>`).join('');
+
+    page2body=`
+  <div class="body">
+    ${howToPlayBlock}
+    ${s2.scenario?`<div style="background:#fff;border:1px solid #E0DDD8;border-radius:8px;padding:12px 14px;margin-bottom:14px">
+      <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:${catColor};margin-bottom:5px">🆘 SITUATION</div>
+      <div style="font-size:10.5pt;color:#1a1a1a;line-height:1.6;font-weight:500">${s2.scenario}</div>
+    </div>`:''}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+      <div style="border:2px solid #111;border-radius:10px;overflow:hidden">
+        <div style="background:#111;padding:12px;text-align:center">
+          <div style="font-size:11pt;font-weight:800;color:#fff;line-height:1.3">${teamA}</div>
+          <div style="font-size:8pt;color:#888;margin-top:3px">Members: ___________</div>
+        </div>
+        <div style="padding:12px;background:#fafaf9;min-height:70px">
+          <div style="font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#aaa;margin-bottom:8px">Our plan →</div>
+          <div style="border-bottom:1px dashed #ddd;height:18px;margin-bottom:7px"></div>
+          <div style="border-bottom:1px dashed #ddd;height:18px"></div>
+        </div>
+      </div>
+      <div style="border:2px solid ${catColor};border-radius:10px;overflow:hidden">
+        <div style="background:${catColor};padding:12px;text-align:center">
+          <div style="font-size:11pt;font-weight:800;color:#fff;line-height:1.3">${teamB}</div>
+          <div style="font-size:8pt;color:rgba(255,255,255,.7);margin-top:3px">Members: ___________</div>
+        </div>
+        <div style="padding:12px;background:#fafaf9;min-height:70px">
+          <div style="font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#aaa;margin-bottom:8px">Our plan →</div>
+          <div style="border-bottom:1px dashed #ddd;height:18px;margin-bottom:7px"></div>
+          <div style="border-bottom:1px dashed #ddd;height:18px"></div>
+        </div>
+      </div>
+    </div>
+    ${qs.length?`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#888">💬 DISCUSSION</div>
+      <div style="flex:1;height:1px;background:#E0DDD8"></div>
+    </div>
+    <div style="margin-bottom:4px">${survQs}</div>`:''}
     ${exprBlock}
   </div>`;
 
