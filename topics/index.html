@@ -1727,9 +1727,8 @@ function openShareViewer(){
       });
       const data=await res.json();
       const fileName=`thebox-${pfx}-viewer.html`;
-      const gistRawUrl=`https://gist.githubusercontent.com/lccthebox/${id}/raw/${fileName}`;
-      // raw URL을 직접 사용 (htmlpreview 불필요)
-      const previewUrl=gistRawUrl;
+      // gist.githack.com = Gist HTML을 제대로 렌더링해줌 (핸드폰에서도 OK)
+      const previewUrl=`https://gist.githack.com/lccthebox/${id}/raw/${fileName}`;
         await navigator.clipboard.writeText(previewUrl).catch(()=>{});
         const msg=code.trim()?`✓ 완료! 접속코드: "${code.trim()}"\n링크가 복사됐어요.`:'✓ 완료! 링크가 복사됐어요.';
         showToast(msg);
