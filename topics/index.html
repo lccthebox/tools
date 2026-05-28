@@ -702,7 +702,14 @@ If it sounds like a classroom exercise → REJECT. If it sounds like something t
 1. Be answerable with "I think..." or "I would..." — no research needed
 2. Make at least half the room go "OMG I've felt that" 
 3. Open up to values, personality, life philosophy — not just facts
-4. Have NO wrong answer — both sides are defensible
+4. Have NO wrong answer — personal experience and feelings are the answer
+
+❌ AVOID CONFRONTATION FORMAT:
+- NO "Team A vs Team B" style opposition (except Survival Scenario)
+- NO "Who is right?" framing
+- NO debate-style "argue your side"
+- Instead: "What would YOU do?" / "How did YOU feel?" / "What's YOUR take?"
+- The goal is SHARING, not winning
 
 === SCENARIO RULES — MAKE IT SPICY ===
 - Scenarios must be SPECIFIC and slightly uncomfortable — the kind of situation everyone has an opinion on.
@@ -830,10 +837,11 @@ ${fmt.toLowerCase().includes('debate') || fmt.toLowerCase().includes('unpopular'
 
 ${fmt.toLowerCase().includes('rather') ? `
 🤔 WOULD YOU RATHER
-- scenario = 1 sentence. The dilemma.
-- how_to_play_kr = "둘 중 하나만 골라요. 이유를 한마디씩 말해봐요!"
-- roles = the 2 choices (short, clear)
-- questions = 3 "What if" twist questions. Under 12 words each.
+- scenario = 1 sentence. A personal dilemma — not a debate prompt.
+- how_to_play_kr = "둘 중 하나 골라봐요. 이유를 한마디씩 나눠봐요! 정답 없어요 😊"
+- roles = the 2 choices (short, clear) — NOT team names, just options
+- questions = 3 personal reflection questions (NOT debate/argue). 
+  Example: "Which choice would your younger self have made?" "When did you have to choose like this?"
 ` : ''}
 
 ${fmt.toLowerCase().includes('ranking') ? `
@@ -903,12 +911,10 @@ ${(fmt.toLowerCase().includes('this or that')||fmt.toLowerCase().includes('balan
 
 ${fmt.toLowerCase().includes('survival') ? `
 🆘 SURVIVAL SCENARIO
-- scenario = 1 fun crisis sentence.
-- how_to_play_kr = "[팀A 입장]팀과 [팀B 입장]팀으로 나눠요. 각자 입장에서 생존 전략을 말해봐요!"
-- roles = 2 team names that CLEARLY show each team's perspective/strategy.
-  NOT generic "Team A / Team B" — use descriptive names like "The Minimalists" / "The Preppers"
-  So members immediately know what their team stands for.
-- questions = 3 "What if" twist questions adding surprise variables to the situation.
+- scenario = 1 fun crisis sentence — make it absurd and relatable, not scary.
+- how_to_play_kr = "각자 생존 전략을 말해봐요! 팀을 나눠도 되고, 개인 의견도 환영해요 😄"
+- roles = 2 strategy names (NOT "Team A/B") — descriptive like "The Minimalists" / "The Preppers"
+- questions = 3 "What if" twist questions that add funny/surprising variables — keep it light!
 ` : ''}
 
 === NO VOTE ===
@@ -1286,7 +1292,7 @@ img{-webkit-print-color-adjust:exact;print-color-adjust:exact;max-width:100%!imp
     const col=i%3, row=Math.floor(i/3);
     const borderRight=col<2?`border-right:1.5px solid #111;`:'';
     const borderBottom=row<2?`border-bottom:1.5px solid #111;`:'';
-    return `<div style="${borderRight}${borderBottom}padding:14px 8px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:72px;background:#fff">
+    return `<div style="${borderRight}${borderBottom}text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;aspect-ratio:1/1;background:#fff;box-sizing:border-box;padding:8px">
       <div style="font-size:12pt;font-weight:800;text-transform:uppercase;color:#111;letter-spacing:.5px;line-height:1.2">${en}</div>
       ${kr?`<div style="font-size:7.5pt;color:#888;margin-top:3px;font-weight:500">${kr}</div>`:''}
     </div>`;
@@ -1558,7 +1564,7 @@ body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#111;-webkit-p
     const col=i%3, row=Math.floor(i/3);
     const borderRight=col<2?`border-right:1.5px solid #111;`:'';
     const borderBottom=row<2?`border-bottom:1.5px solid #111;`:'';
-    return `<div style="${borderRight}${borderBottom}padding:14px 8px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:72px;background:#fff">
+    return `<div style="${borderRight}${borderBottom}text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;aspect-ratio:1/1;background:#fff;box-sizing:border-box;padding:8px">
       <div style="font-size:12pt;font-weight:800;text-transform:uppercase;color:#111;letter-spacing:.5px;line-height:1.2">${en}</div>
       ${kr?`<div style="font-size:7.5pt;color:#888;margin-top:3px;font-weight:500">${kr}</div>`:''}
     </div>`;
@@ -2374,7 +2380,10 @@ function renderRight(){
       ${(s1.spark_words||[]).slice(0,9).map((w,i)=>{
         const en=typeof w==='object'?w.en:w;
         const kr=typeof w==='object'?w.kr:'';
-        return `<div style="border:1px solid #E0DDD8;padding:10px 4px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:58px;background:#fff;cursor:pointer;position:relative" onclick="this.style.background=this.style.background==='#111'?'#fff':'#111';this.querySelectorAll('div').forEach(d=>d.style.color=this.style.background==='#111'?'#fff':d.dataset.orig)">
+        const col=i%3,row=Math.floor(i/3);
+        const bdrR=col<2?'border-right:2px solid #111;':'';
+        const bdrB=row<2?'border-bottom:2px solid #111;':'';
+        return `<div style="${bdrR}${bdrB}text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;aspect-ratio:1/1;background:#fff;cursor:pointer;box-sizing:border-box" onclick="this.style.background=this.style.background==='#111'?'#fff':'#111';this.querySelectorAll('div').forEach(d=>d.style.color=this.style.background==='#111'?'#fff':d.dataset.orig)">
           <div data-orig="var(--text)" style="font-weight:800;font-size:10px;color:var(--text);text-transform:uppercase;letter-spacing:.3px;contenteditable:true" contenteditable="true" onblur="window._tbEdit(${selected},'s1.sw.en.${i}',this.innerText)">${en}</div>
           ${kr?`<div data-orig="var(--muted)" style="font-size:7.5px;color:var(--muted);margin-top:2px" contenteditable="true" onblur="window._tbEdit(${selected},'s1.sw.kr.${i}',this.innerText)">${kr}</div>`:''}
         </div>`;
