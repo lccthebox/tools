@@ -1540,6 +1540,69 @@ function openCardModal(k, t){
   overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
 }
 
+function openMoveDateModal(fromDay){
+  const dim=new Date(year,month+1,0).getDate();
+  const tops=getTopics();
+  const fromKey=topicKey(fromDay);
+  if(!tops[fromKey]){showToast('토픽이 없어요');return;}
+
+  const overlay=document.createElement('div');
+  overlay.id='move-date-overlay';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9000;display:flex;align-items:center;justify-content:center';
+
+  // 날짜 그리드 생성
+  const dim1stDow=new Date(year,month,1).getDay();
+  let cells='';
+  for(let i=0;i<dim1stDow;i++) cells+=`<div></div>`;
+  for(let d=1;d<=dim;d++){
+    const k=topicKey(d);
+    const hasOther=tops[k]&&d!==fromDay;
+    const isFrom=d===fromDay;
+    const dow=new Date(year,month,d).getDay();
+    const isSun=dow===0,isSat=dow===6;
+    const color=isFrom?'background:#CC0014;color:#fff;font-weight:800':
+      hasOther?'background:#F0EDE8;color:#aaa;cursor:not-allowed':
+      'background:#fff;color:#111;cursor:pointer;hover:background:#F5F3EF';
+    cells+=`<div onclick="${isFrom||hasOther?'':`doMoveDate(${fromDay},${d})`}" style="padding:8px 4px;text-align:center;border-radius:6px;font-size:13px;font-weight:600;${isFrom?'background:#CC0014;color:#fff;':hasOther?'background:#F0EDE8;color:#ccc;cursor:not-allowed;':'cursor:pointer;color:'+(isSun?'#CC0014':isSat?'#3B82F6':'#111')+';'}" ${!isFrom&&!hasOther?`onmouseover="this.style.background='#F5F3EF'" onmouseout="this.style.background=''"`:''}>
+      ${d}${isFrom?'<div style="font-size:7px;margin-top:1px">현재</div>':''}${hasOther?'<div style="font-size:7px;color:#ccc;margin-top:1px">있음</div>':''}
+    </div>`;
+  }
+
+  overlay.innerHTML=`
+    <div style="background:#fff;border-radius:14px;width:340px;max-width:95vw;padding:24px;font-family:inherit;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div style="font-size:14px;font-weight:800;color:#111">📅 날짜 이동</div>
+        <button onclick="document.getElementById('move-date-overlay').remove()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#888">✕</button>
+      </div>
+      <div style="font-size:11px;color:#888;margin-bottom:14px"><b style="color:#CC0014">${fromDay}일</b> 토픽을 이동할 날짜를 선택하세요. 회색 날짜는 이미 토픽이 있어요.</div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:8px">
+        ${['일','월','화','수','목','금','토'].map((d,i)=>`<div style="text-align:center;font-size:10px;font-weight:700;color:${i===0?'#CC0014':i===6?'#3B82F6':'#888'};padding:4px 0">${d}</div>`).join('')}
+        ${cells}
+      </div>
+      <div style="font-size:10px;color:#aaa;text-align:center">빈 날짜만 선택 가능해요</div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
+}
+
+window.doMoveDate=function(fromDay,toDay){
+  const tops=getTopics();
+  const fromKey=topicKey(fromDay);
+  const toKey=topicKey(toDay);
+  if(!tops[fromKey]){showToast('원본 토픽이 없어요');return;}
+  if(tops[toKey]){showToast(`${toDay}일에 이미 토픽이 있어요`);return;}
+
+  tops[toKey]=JSON.parse(JSON.stringify(tops[fromKey]));
+  delete tops[fromKey];
+  saveTopics(tops);
+
+  selected=toDay;
+  document.getElementById('move-date-overlay')?.remove();
+  renderCal();renderRight();
+  showToast(`✓ ${fromDay}일 → ${toDay}일로 이동 완료!`);
+};
+
 function openShareViewer(){
   const gistId=getGistId();
   const tops=getTopics();
@@ -2990,6 +3053,7 @@ function renderRight(){
     </div>
     </div><div class="r-actions">
     <button class="btn-dl" onclick="window._tbPDF(${selected})">↓  A4 PDF 인쇄 / 다운로드</button>
+    <button onclick="openMoveDateModal(${selected})" style="width:100%;padding:10px;background:var(--surf);color:var(--text);border:1px solid var(--border);border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">📅 날짜 이동</button>
     <div style="margin-top:6px;background:#F5F3EF;border-radius:8px;padding:8px 10px">
       <div style="font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">⚡ 어휘 레벨 맞춤 교체 (AI)</div>
       <div style="display:flex;gap:6px">
