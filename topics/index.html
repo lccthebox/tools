@@ -2167,33 +2167,7 @@ body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#111;-webkit-p
     ${exprBlock}
   </div>`;
 
-    /* ── Taboo Game ── */
-    } else if(isMinefield){
-      const tabooWords=roles.slice(0,6);
-      const tabooQs=qs.slice(0,7).map((q,i)=>`
-        <div style="display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid #EBEBEA">
-          <div style="background:${catColor};color:#fff;font-size:8pt;font-weight:800;padding:2px 8px;border-radius:4px;flex-shrink:0;white-space:nowrap">Q${i+1}</div>
-          <div style="font-size:10.5pt;color:#1a1a1a;line-height:1.45">${q}</div>
-        </div>`).join('');
-      const wordCards=tabooWords.map(w=>`
-        <div style="border:2px solid #111;border-radius:8px;padding:12px 8px;text-align:center;display:flex;align-items:center;justify-content:center;min-height:54px">
-          <div style="font-size:12pt;font-weight:800;color:#111;text-transform:uppercase;letter-spacing:.5px">${w}</div>
-        </div>`).join('');
-      page2body=`
-  <div class="body">
-    ${howToPlayBlock}
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-      <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#888">🚫 TABOO WORDS — 이 단어를 말하면 아웃!</div>
-      <div style="flex:1;height:1px;background:#E0DDD8"></div>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px">${wordCards}</div>
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-      <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#888">💬 CONVERSATION STARTERS</div>
-      <div style="flex:1;height:1px;background:#E0DDD8"></div>
-    </div>
-    <div style="margin-bottom:12px">${tabooQs}</div>
-    ${exprBlock}
-  </div>`;
+
 
     /* ── Heads Up ── */
     } else if(isHeadsUp){
@@ -2229,7 +2203,6 @@ body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#111;-webkit-p
     } // end isMinefield (inner)
 
   } else if(isThisOrThat){
-  const choices=roles.slice(0,10);
   const checkRows=choices.map((c,i)=>{
   // "A 👈 vs 👉 B" 또는 "A or B" 형식 파싱
   let sideA, sideB;
@@ -2273,6 +2246,34 @@ body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#111;-webkit-p
   <div>${checkRows}</div>
   ${exprBlock}
   </div>`;
+
+  } else if(isMinefield){
+    const tabooWords=roles.slice(0,6);
+    const tabooQs=qs.slice(0,7).map((q,i)=>`
+      <div style="display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid #EBEBEA">
+        <div style="background:${catColor};color:#fff;font-size:8pt;font-weight:800;padding:2px 8px;border-radius:4px;flex-shrink:0;white-space:nowrap">Q${i+1}</div>
+        <div style="font-size:10.5pt;color:#1a1a1a;line-height:1.45">${q}</div>
+      </div>`).join('');
+    const wordCards=tabooWords.map(w=>`
+      <div style="border:2px solid #111;border-radius:8px;padding:12px 8px;text-align:center;display:flex;align-items:center;justify-content:center;min-height:54px">
+        <div style="font-size:12pt;font-weight:800;color:#111;text-transform:uppercase;letter-spacing:.5px">${w}</div>
+      </div>`).join('');
+    page2body=`
+  <div class="body">
+  ${howToPlayBlock}
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+    <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#888">🚫 TABOO WORDS — 이 단어를 말하면 아웃!</div>
+    <div style="flex:1;height:1px;background:#E0DDD8"></div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px">${wordCards}</div>
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+    <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#888">💬 CONVERSATION STARTERS</div>
+    <div style="flex:1;height:1px;background:#E0DDD8"></div>
+  </div>
+  <div style="margin-bottom:12px">${tabooQs}</div>
+  ${exprBlock}
+  </div>`;
+
 
   } else if(isStoryChain){
       const rawRoles=roles||[];
