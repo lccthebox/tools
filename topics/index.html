@@ -741,11 +741,12 @@ HOW TO PLAY must be written as a leader script — something the host reads OUT 
 
 === SESSION 1 — ICE BREAKING RULES (VERY IMPORTANT) ===
 
-Spark Words (6 words):
+Spark Words (9 words — exactly 9, for a 3x3 bingo board):
 → Common, everyday English words that Korean 20-30s would recognize without a dictionary.
 → Prefer simple nouns, verbs, or adjectives over slang or idioms.
 → Goal: get ANYONE talking, even with just one word or a gesture.
 → DO NOT force personal episodes or experiences. Just react naturally.
+→ MUST generate EXACTLY 9 words — no more, no less (fills a 3x3 bingo board).
 
 Icebreakers (3 questions):
 → ALL questions MUST be written in ENGLISH. No Korean.
@@ -927,7 +928,8 @@ Return ONLY raw JSON (no markdown fences):
     "spark_title":"short title",
     "spark_words":[
       {"en":"Word1","kr":"Meaning1"},{"en":"Word2","kr":"Meaning2"},{"en":"Word3","kr":"Meaning3"},
-      {"en":"Word4","kr":"Meaning4"},{"en":"Word5","kr":"Meaning5"},{"en":"Word6","kr":"Meaning6"}
+      {"en":"Word4","kr":"Meaning4"},{"en":"Word5","kr":"Meaning5"},{"en":"Word6","kr":"Meaning6"},
+      {"en":"Word7","kr":"Meaning7"},{"en":"Word8","kr":"Meaning8"},{"en":"Word9","kr":"Meaning9"}
     ],
     "icebreakers":["Q1 in English — easy preference","Q2 in English — easy preference","Q3 in English — light fun"]
   },
@@ -1242,7 +1244,7 @@ function buildTopicHTML(k, t){
   const roles=s2.roles||[];
   const qs=s2.questions||[];
   const exprs=s2.expressions||[];
-  const sparks=(s1.spark_words||[]).slice(0,6);
+  const sparks=(s1.spark_words||[]).slice(0,9);
   const krFmt=s2.how_to_play_kr||KR_FMT_GUIDE[s2.format]||'';
 
   // downloadPDF에서 CSS/page1/page2 재사용
@@ -1277,16 +1279,19 @@ img{-webkit-print-color-adjust:exact;print-color-adjust:exact;max-width:100%!imp
 .ftr-pg{font-size:10pt;font-weight:700;color:#444}
 `;
 
-  // page1 스파크워드 / 아이스브레이커
-  const sparkHTML=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">`+sparks.map((w,i)=>{
+  // page1 빙고판 (3x3)
+  const sparkHTML=`
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);border:2.5px solid #111;border-radius:10px;overflow:hidden;margin-bottom:4px">`+sparks.map((w,i)=>{
     const en=typeof w==='object'?w.en:w, kr=typeof w==='object'?w.kr:'';
-    const bgs=['#111','#fff','#F5F3EF','#fff','#F5F3EF','#111'];
-    const clrs=['#fff',catColor,'#111',catColor,'#111','#fff'];
-    return `<div style="border:2px solid ${catColor};background:${bgs[i]};color:${clrs[i]};border-radius:8px;padding:10px 6px;text-align:center;min-height:68px;display:flex;flex-direction:column;align-items:center;justify-content:center">
-      <div style="font-size:11pt;font-weight:800;text-transform:uppercase">${en}</div>
-      ${kr?`<div style="font-size:8pt;opacity:.7">${kr}</div>`:''}
+    const col=i%3, row=Math.floor(i/3);
+    const borderRight=col<2?`border-right:1.5px solid #111;`:'';
+    const borderBottom=row<2?`border-bottom:1.5px solid #111;`:'';
+    return `<div style="${borderRight}${borderBottom}padding:14px 8px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:72px;background:#fff">
+      <div style="font-size:12pt;font-weight:800;text-transform:uppercase;color:#111;letter-spacing:.5px;line-height:1.2">${en}</div>
+      ${kr?`<div style="font-size:7.5pt;color:#888;margin-top:3px;font-weight:500">${kr}</div>`:''}
     </div>`;
-  }).join('')+`</div>`;
+  }).join('')+`</div>
+  <div style="font-size:7pt;color:#999;text-align:right;margin-bottom:8px">✓ 체크하며 빙고!</div>`;
 
   const ibHTML=(s1.icebreakers||[]).slice(0,3).map((q,i)=>`
     <div style="display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid #EBEBEA">
@@ -1310,12 +1315,13 @@ img{-webkit-print-color-adjust:exact;print-color-adjust:exact;max-width:100%!imp
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
       <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#888">🔥 ICEBREAKER QUESTIONS</div>
       <div style="flex:1;height:1px;background:#E0DDD8"></div></div>
-    <div style="margin-bottom:18px">${ibHTML}</div>
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-      <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#888">💬 SPARK WORDS</div>
+    <div style="margin-bottom:16px">${ibHTML}</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#888">🎯 KEYWORD BINGO</div>
+      <div style="font-size:7.5pt;color:#aaa;font-weight:500">${s1.spark_title||''}</div>
       <div style="flex:1;height:1px;background:#E0DDD8"></div></div>
-    <div style="background:#F7F6F3;border-radius:8px;padding:10px 14px;margin-bottom:12px;border-left:3px solid ${catColor}">
-      <div style="font-size:9.5pt;color:#333">뭐든 자유롭게 얘기해봐요! 이 단어 보고 뭐가 제일 먼저 떠올라요? 정답은 없어요 😊</div></div>
+    <div style="background:#F7F6F3;border-radius:6px;padding:8px 12px;margin-bottom:10px;border-left:3px solid ${catColor}">
+      <div style="font-size:8.5pt;color:#444">단어를 보고 자유롭게 얘기해봐요! 대화한 단어마다 체크 — 빙고를 완성해봐요 😊</div></div>
     ${sparkHTML}
   </div>
   <div class="ftr"><div class="ftr-brand">THE<b>BOX</b> ENGLISH NETWORKING</div><div class="ftr-pg">1 / 2</div></div>
@@ -1508,7 +1514,7 @@ function downloadPDF(day){
   const roles=s2.roles||[];
   const qs=s2.questions||[];
   const exprs=s2.expressions||[];
-  const sparks=(s1.spark_words||[]).slice(0,6);
+  const sparks=(s1.spark_words||[]).slice(0,9);
   const icebreakers=(s1.icebreakers||[]);
   const krFmt=s2.how_to_play_kr||KR_FMT_GUIDE[s2.format]||'';
 
@@ -1545,17 +1551,19 @@ body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#111;-webkit-p
   /* ══════════════════════════════════════════
      PAGE 1 — SESSION 1 (공통)
   ══════════════════════════════════════════ */
-  const sparkHTML=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">`+sparks.map((w,i)=>{
+  const sparkHTML=`
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);border:2.5px solid #111;border-radius:10px;overflow:hidden;margin-bottom:4px">`+sparks.map((w,i)=>{
     const en=typeof w==='object'?w.en:w;
     const kr=typeof w==='object'?w.kr:'';
-    const bgs=['#111','#fff','#F5F3EF','#fff','#F5F3EF','#111'];
-    const clrs=['#fff',catColor,'#111',catColor,'#111','#fff'];
-    const bds=[catColor,catColor,catColor,catColor,catColor,catColor];
-    return `<div style="border:2px solid ${bds[i]};background:${bgs[i]};color:${clrs[i]};border-radius:8px;padding:10px 6px;text-align:center;min-height:68px;display:flex;flex-direction:column;align-items:center;justify-content:center">
-      <div style="font-size:11pt;font-weight:800;letter-spacing:.5px;text-transform:uppercase;margin-bottom:3px">${en}</div>
-      ${kr?`<div style="font-size:8pt;opacity:.7;font-weight:400">${kr}</div>`:''}
+    const col=i%3, row=Math.floor(i/3);
+    const borderRight=col<2?`border-right:1.5px solid #111;`:'';
+    const borderBottom=row<2?`border-bottom:1.5px solid #111;`:'';
+    return `<div style="${borderRight}${borderBottom}padding:14px 8px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:72px;background:#fff">
+      <div style="font-size:12pt;font-weight:800;text-transform:uppercase;color:#111;letter-spacing:.5px;line-height:1.2">${en}</div>
+      ${kr?`<div style="font-size:7.5pt;color:#888;margin-top:3px;font-weight:500">${kr}</div>`:''}
     </div>`;
-  }).join('')+`</div>`;
+  }).join('')+`</div>
+  <div style="font-size:7pt;color:#999;text-align:right;margin-bottom:8px">✓ 체크하며 빙고!</div>`;
 
   const ibHTML=icebreakers.slice(0,3).map((q,i)=>`
     <div style="display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid #EBEBEA">
@@ -1584,13 +1592,13 @@ body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#111;-webkit-p
       <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#888">🔥 ICEBREAKER QUESTIONS</div>
       <div style="flex:1;height:1px;background:#E0DDD8"></div>
     </div>
-    <div style="margin-bottom:18px">${ibHTML}</div>
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-      <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#888">💬 SPARK WORDS</div>
+    <div style="margin-bottom:16px">${ibHTML}</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <div style="font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#888">🎯 KEYWORD BINGO</div>
       <div style="flex:1;height:1px;background:#E0DDD8"></div>
     </div>
-    <div style="background:#F7F6F3;border-radius:8px;padding:10px 14px;margin-bottom:12px;border-left:3px solid ${catColor}">
-      <div style="font-size:9.5pt;color:#333">뭐든 자유롭게 얘기해봐요! 이 단어 보고 뭐가 제일 먼저 떠올라요? 정답은 없어요 😊</div>
+    <div style="background:#F7F6F3;border-radius:6px;padding:8px 12px;margin-bottom:10px;border-left:3px solid ${catColor}">
+      <div style="font-size:8.5pt;color:#444">단어를 보고 자유롭게 얘기해봐요! 대화한 단어마다 체크 — 빙고를 완성해봐요 😊</div>
     </div>
     ${sparkHTML}
   </div>
@@ -2360,14 +2368,15 @@ function renderRight(){
     <div class="r-angle" contenteditable="true" onblur="window._tbEdit(${selected},'korean_angle',this.innerText)">${t.korean_angle||''}</div>
     <div class="sec"><div class="sec-l">1ST — Ice Breaking</div><div class="sec-line"></div></div>
     ${(s1.icebreakers||[]).map((q,i)=>`<div class="sq"><span class="sq-q">Q${i+1}</span><span contenteditable="true" onblur="window._tbEdit(${selected},'s1.ib.${i}',this.innerText)">${q}</span></div>`).join('')}
-    <div class="sec" style="margin-top:10px"><div class="sec-l">Spark Words — ${s1.spark_title||''}</div><div class="sec-line"></div></div>
-    <div class="bingo" style="grid-template-columns:repeat(3,1fr);gap:4px">
-      ${(s1.spark_words||[]).map((w,i)=>{
+    <div class="sec" style="margin-top:10px"><div class="sec-l">🎯 KEYWORD BINGO — ${s1.spark_title||''}</div><div class="sec-line"></div></div>
+    <div style="font-size:10px;color:#888;margin-bottom:6px">단어를 보고 자유롭게 얘기해봐요! 빙고를 완성해봐요 😊</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;border:2px solid #111;border-radius:8px;overflow:hidden;margin-bottom:10px">
+      ${(s1.spark_words||[]).slice(0,9).map((w,i)=>{
         const en=typeof w==='object'?w.en:w;
         const kr=typeof w==='object'?w.kr:'';
-        return `<div class="bc" style="font-size:10px;padding:8px 4px;border:1px solid ${kr?'var(--border-md)':'var(--border)'};display:flex;flex-direction:column;gap:2px;height:50px;justify-content:center;background:${kr?'#fff':'var(--surf)'}">
-          <div contenteditable="true" onblur="window._tbEdit(${selected},'s1.sw.en.${i}',this.innerText)" style="font-weight:800;color:var(--text)">${en}</div>
-          ${kr?`<div contenteditable="true" onblur="window._tbEdit(${selected},'s1.sw.kr.${i}',this.innerText)" style="font-size:8px;color:var(--muted);font-weight:400">${kr}</div>`:''}
+        return `<div style="border:1px solid #E0DDD8;padding:10px 4px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:58px;background:#fff;cursor:pointer;position:relative" onclick="this.style.background=this.style.background==='#111'?'#fff':'#111';this.querySelectorAll('div').forEach(d=>d.style.color=this.style.background==='#111'?'#fff':d.dataset.orig)">
+          <div data-orig="var(--text)" style="font-weight:800;font-size:10px;color:var(--text);text-transform:uppercase;letter-spacing:.3px;contenteditable:true" contenteditable="true" onblur="window._tbEdit(${selected},'s1.sw.en.${i}',this.innerText)">${en}</div>
+          ${kr?`<div data-orig="var(--muted)" style="font-size:7.5px;color:var(--muted);margin-top:2px" contenteditable="true" onblur="window._tbEdit(${selected},'s1.sw.kr.${i}',this.innerText)">${kr}</div>`:''}
         </div>`;
       }).join('')}
     </div>
