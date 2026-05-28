@@ -2803,7 +2803,7 @@ function renderRight(){
         const col=i%3,row=Math.floor(i/3);
         const bdrR=col<2?'border-right:2px solid #111;':'';
         const bdrB=row<2?'border-bottom:2px solid #111;':'';
-        return `<div style="${bdrR}${bdrB}text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;height:70px;background:#fff;cursor:pointer;box-sizing:border-box" onclick="this.style.background=this.style.background==='#111'?'#fff':'#111';this.querySelectorAll('div').forEach(d=>d.style.color=this.style.background==='#111'?'#fff':d.dataset.orig)">
+        return `<div style="${bdrR}${bdrB}text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;height:70px;background:#fff;box-sizing:border-box">
           <div data-orig="var(--text)" style="font-weight:800;font-size:10px;color:var(--text);text-transform:uppercase;letter-spacing:.3px;contenteditable:true" contenteditable="true" onblur="window._tbEdit(${selected},'s1.sw.en.${i}',this.innerText)">${en}</div>
           ${kr?`<div data-orig="var(--muted)" style="font-size:7.5px;color:var(--muted);margin-top:2px" contenteditable="true" onblur="window._tbEdit(${selected},'s1.sw.kr.${i}',this.innerText)">${kr}</div>`:''}
         </div>`;
