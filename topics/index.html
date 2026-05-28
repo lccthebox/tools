@@ -1667,9 +1667,9 @@ function openShareViewer(){
       <div style="font-size:15px;font-weight:800;color:#111;margin-bottom:6px">🔗 월별 토픽 공유</div>
       <div style="font-size:12px;color:#888;margin-bottom:20px">${MONTHS[month]} ${year} — ${count}개 토픽</div>
       <div style="display:flex;flex-direction:column;gap:10px">
-        <button onclick="shareViaDrive()" style="padding:13px;background:#1967D2;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;width:100%;text-align:left">
-          📱 Google Drive로 공유 링크 생성
-          <span style="font-size:10px;opacity:.8;display:block;margin-top:3px">핸드폰에서 바로 열 수 있는 링크 자동 생성 (설정에서 토큰 필요)</span>
+        <button onclick="shareViaGist()" style="padding:13px;background:#238636;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;width:100%;text-align:left">
+          📱 공유 링크 생성 (핸드폰에서 바로 열림)
+          <span style="font-size:10px;opacity:.8;display:block;margin-top:3px">Gist에 업로드 → 링크 복사 → 단톡방 공유</span>
         </button>
         <button onclick="shareViaDownload()" style="padding:13px;background:#1a1a1a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;width:100%;text-align:left">
           💾 HTML 파일 다운로드
