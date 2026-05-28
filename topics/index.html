@@ -384,14 +384,12 @@ const DEFAULT_FORMATS=[
   {id:'f27',name:'Taboo Game',           desc:'Taboo 금지어 게임',         on:true},
   {id:'f9', name:'Two Truths One Lie',  desc:'팀전 라이어 게임',          on:true},
   {id:'f29',name:'Heads Up',            desc:'포스트잇 키워드 맞추기',    on:true},
-  {id:'f10',name:'Story Chain',         desc:'단어 끼워넣기 팀 게임',     on:true},
-  {id:'f2', name:'Debate',              desc:'A vs B 팀 토론',            on:true},
   {id:'f7', name:'Would You Rather',    desc:'양자택일 딜레마',           on:true},
   {id:'f19',name:'Myth Busters',        desc:'MYTH vs FACT 판별',         on:true},
   {id:'f1', name:'Advice Lab',          desc:'Angel / Judge / Joker',     on:true},
   {id:'f3', name:'Ranking Game',        desc:'선택지 순위 매기기',        on:true},
   {id:'f5', name:'Survival Scenario',   desc:'가상 상황 생존',            on:true},
-  {id:'f30',name:'Balance Game',         desc:'극단 밸런스 체크리스트',     on:true},
+  {id:'f30',name:'Balance Game',        desc:'극단 밸런스 체크리스트',    on:true},
 ];
 
 /* ── Fallback 소스풀 (크롤러 미연결 시에만 사용) ── */
@@ -684,6 +682,28 @@ Members come WITHOUT any preparation. They are Korean 20-30s who just showed up.
 Every topic must pass this test: "Would Korean 20-30s actually laugh, react, or argue about this in real life?"
 If it sounds like a classroom exercise → REJECT. If it sounds like something that'd blow up a group chat → PERFECT.
 
+=== TOPIC DESIGN — CRITICAL UPGRADE ===
+❌ AVOID narrow, fact-based topics:
+- "Should companies ban TikTok at work?" (too specific → dies in 2 minutes)
+- "Is overtime pay fair?" (requires personal experience → exclusionary)
+- "What are the pros and cons of remote work?" (textbook → boring)
+
+✅ AIM for broad, value-based, emotionally charged topics:
+- Take the source angle and ZOOM OUT to the universal human tension behind it
+- Ask: "What deeper conflict, fear, or desire does this reveal?"
+- Frame as a situation where EVERYONE has an opinion, even without special knowledge
+
+✅ ENTRY POINT — make it immediate and visceral:
+- Start with a moment, not a concept: "Your friend gets promoted using your idea."
+- Use "you" directly: "You find out your salary is lower than your coworker's."
+- Trigger emotion first, then open the discussion
+
+✅ TOPIC MUST:
+1. Be answerable with "I think..." or "I would..." — no research needed
+2. Make at least half the room go "OMG I've felt that" 
+3. Open up to values, personality, life philosophy — not just facts
+4. Have NO wrong answer — both sides are defensible
+
 === SCENARIO RULES — MAKE IT SPICY ===
 - Scenarios must be SPECIFIC and slightly uncomfortable — the kind of situation everyone has an opinion on.
 - LANGUAGE: Use the simplest possible English. Short sentences. Common words only. No idioms, no complex grammar.
@@ -695,6 +715,16 @@ If it sounds like a classroom exercise → REJECT. If it sounds like something t
 - BAD: Any word that needs to be looked up in a dictionary.
 - MAX 2 sentences. First sentence = the situation. Second sentence = the question or twist.
 - The situation should make people go "OMG that happened to me" or "I would lose it."
+
+=== DISCUSSION QUESTIONS — MUST BE BROAD & EMOTIONAL ===
+Questions must NOT be fact-checks or narrow follow-ups.
+They must zoom out and invite personal values, feelings, or life philosophy:
+- ✅ "Would you rather know a painful truth or a comfortable lie?"
+- ✅ "Is it ever okay to put yourself first, even if it hurts someone else?"
+- ✅ "When did you last change your mind about something important?"
+- ❌ "What are the company's policies on this?"
+- ❌ "Have you experienced this specific situation?"
+Each question must be answerable by ANYONE, even someone who knows nothing about the topic.
 
 === LEADER SCRIPT FORMAT ===
 HOW TO PLAY must be written as a leader script — something the host reads OUT LOUD to start the activity.
@@ -997,21 +1027,35 @@ Format: ${fmt}
 === BEGINNER LEVEL ONLY ===
 All English must be A2-B1. Short sentences. Simple words only. No idioms, no slang.
 
+=== TOPIC PHILOSOPHY ===
+- Take the topic and zoom OUT to the universal human tension behind it
+- The scenario must be answerable by ANYONE — no special knowledge needed
+- Frame around emotions, values, personality — not facts or expertise
+- Questions must open up to "I think..." or "I would..." — not "The correct answer is..."
+- Every question must be answerable even if you know nothing about the topic
+
 === SITUATION — MAX 1 SENTENCE ===
-One sentence. Simple. Core setup only.
-Pure game formats (Liar Game, Mafia, Minefield, Heads Up, Blind Director, Confession Box, Question Spotlight, Two Truths) → scenario = ""
+One sentence. Simple. Core setup only. Under 15 words.
+Use "you" directly to make it immediate: "You find out your coworker earns more than you."
+Pure game formats (Heads Up, Liar Game, Two Truths, Taboo Game) → scenario = ""
+
+=== DISCUSSION QUESTIONS — BROAD & EMOTIONAL ===
+Must zoom out beyond the specific topic. Invite values, feelings, life philosophy.
+✅ GOOD: "Is it ever okay to lie to protect someone?"
+✅ GOOD: "Would you rather know a painful truth or a comfortable lie?"
+❌ BAD: "What do you think about this company's decision?"
+❌ BAD: "Have you experienced this specific situation?"
 
 === FORMAT-SPECIFIC RULES ===
-${['liar game','mafia game','minefield talk show','the blind director','heads up','confession box','question spotlight'].some(g=>fmt.toLowerCase().includes(g)) ? 'GAME: scenario="". roles=player role names. questions=3 short IN-GAME sentences players say to each other during play.' : ''}
+${['liar game','mafia game','heads up','confession box','question spotlight'].some(g=>fmt.toLowerCase().includes(g)) ? 'GAME: scenario="". roles=player role names. questions=3 short IN-GAME sentences players say to each other during play.' : ''}
 ${fmt.toLowerCase().includes('two truths one lie') ? 'TWO TRUTHS: scenario="". questions=3 short questions guessers ask the speaker. Under 8 words each.' : ''}
-${fmt.toLowerCase().includes('debate') || fmt.toLowerCase().includes('unpopular') || fmt.toLowerCase().includes('myth') ? 'DEBATE: roles=2 team names. questions=3 What if questions under 12 words.' : ''}
-${fmt.toLowerCase().includes('rather') ? 'WOULD YOU RATHER: roles=the 2 choices. questions=3 What if twist questions.' : ''}
-${fmt.toLowerCase().includes('ranking') ? 'RANKING: roles=6 specific short items to rank (real situations, under 6 words each). questions=3 light comparison questions (NOT What If).' : ''}
-${fmt.toLowerCase().includes('advice lab') ? 'ADVICE LAB: roles=["The Angel","The Judge","The Joker"]. questions=3 What if follow-up questions.' : ''}
-${fmt.toLowerCase().includes('story chain') ? '⚠️ STORY CHAIN: scenario=1 opening sentence. how_to_play_kr="팀 A와 B로 나눠서, 주어진 단어들을 최대한 많이 사용해서 이 상황에 대한 이야기를 만들어보세요." roles=EXACTLY 100 individual English words (each item = 1 word, NO team names, NO phrases). questions=[].' : ''}
-${fmt.toLowerCase().includes('price check') ? 'PRICE CHECK: roles=5 real items with ₩ prices. questions=["Who was closest?","Which surprised you most?","Would you buy this?"]' : ''}
-${(fmt.toLowerCase().includes('this or that')||fmt.toLowerCase().includes('balance game')) ? 'BALANCE GAME: scenario="". roles=8 rapid A/B choices under 6 words each. questions=[]' : ''}
-${fmt.toLowerCase().includes('survival') ? 'SURVIVAL: roles=["Team A","Team B"]. questions=3 What if twist questions.' : ''}
+${fmt.toLowerCase().includes('rather') ? 'WOULD YOU RATHER: roles=the 2 choices. questions=3 broad What if twist questions about values/personality.' : ''}
+${fmt.toLowerCase().includes('ranking') ? 'RANKING: roles=6 specific short items to rank (real situations, under 6 words each). questions=3 light comparison questions.' : ''}
+${fmt.toLowerCase().includes('advice lab') ? 'ADVICE LAB: roles=["The Angel","The Judge","The Joker"]. questions=3 broad What if follow-up questions.' : ''}
+${(fmt.toLowerCase().includes('this or that')||fmt.toLowerCase().includes('balance game')) ? 'BALANCE GAME: scenario="". roles=8 extreme A vs B choices. questions=[]' : ''}
+${fmt.toLowerCase().includes('survival') ? 'SURVIVAL: roles=2 descriptive team names showing each strategy. questions=3 broad What if twist questions.' : ''}
+${fmt.toLowerCase().includes('myth') ? 'MYTH BUSTERS: roles=5 statements with [MYTH] or [FACT] tags. questions=3 broad What if questions.' : ''}
+${(fmt.toLowerCase().includes('minefield')||fmt.toLowerCase().includes('taboo')) ? 'TABOO: scenario="". roles=6 forbidden single words. questions=[]' : ''}
 
 === NO VOTE ===
 Do not include a vote field.
