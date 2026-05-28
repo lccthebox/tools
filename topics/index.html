@@ -280,6 +280,8 @@ nav{height:52px;background:var(--black);display:flex;align-items:center;padding:
         <div class="stat-c"><div class="stat-l">달성률</div><div class="stat-v" id="s-pct">0%</div></div>
         <div class="stat-c"><div class="stat-l">포맷 종류</div><div class="stat-v" id="s-fmts">0</div></div>
       </div>
+      <!-- 카테고리/포맷 분포 -->
+      <div id="stat-breakdown" style="margin-top:12px;display:flex;flex-direction:column;gap:8px"></div>
     </div>
     <div class="right-p" id="right-p"><button class="sheet-close" onclick="mobClose()" aria-label="닫기">✕</button></div>
   </div>
@@ -585,7 +587,7 @@ function showToast(msg){
 
 function topicKey(d){return`${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`}
 
-async function generateTopic(day, forceFmt){
+async function generateTopic(day, forceFmt, forceCat){
   const apiKey=getApiKey();
   if(!apiKey){
     document.getElementById('modal').style.display='flex';
@@ -639,7 +641,7 @@ async function generateTopic(day, forceFmt){
     }
   }
   const avoid7=[...new Set(recentCats.slice(0,7))];
-  const avoidCatStr=avoid7.length?`\n⛔ 최근 7일 카테고리 피하기: ${avoid7.join(', ')}`:'';
+  const avoidCatStr=forceCat?`\n✅ 반드시 이 카테고리 사용: ${forceCat}`:(avoid7.length?`\n⛔ 최근 7일 카테고리 피하기: ${avoid7.join(', ')}`:'');
   const avoidTitleStr=recentTitles.length
     ?`\n⛔ 이미 사용한 토픽 (유사한 것도 금지):\n${recentTitles.slice(0,15).map((t,i)=>`  ${i+1}. ${t}`).join('\n')}`:'';
   const avoidS=avoidCatStr+avoidTitleStr;
@@ -2762,7 +2764,8 @@ function updateNavKey(){
 
 window._tbGen=d=>{
   const s=document.getElementById('regen-fmt');
-  generateTopic(d, s && s.value ? s.value : undefined);
+  const c=document.getElementById('regen-cat');
+  generateTopic(d, s&&s.value?s.value:undefined, c&&c.value?c.value:undefined);
 };
 window._tbGenS2=d=>{
   const s=document.getElementById('regen-fmt');
@@ -2814,6 +2817,52 @@ function renderCal(){
   document.getElementById('s-total').textContent=dim;
   document.getElementById('s-pct').textContent=Math.round(done/dim*100)+'%';
   document.getElementById('s-fmts').textContent=usedFmts.size;
+
+  // 카테고리별 / 포맷별 분포
+  const breakdown=document.getElementById('stat-breakdown');
+  if(breakdown&&done>0){
+    const catCount={}, fmtCount={};
+    Object.keys(tops).filter(k=>k.startsWith(pfx)).forEach(k=>{
+      const t=tops[k];
+      const cat=t.category||'기타';
+      const fmt=t.session2?.format||'기타';
+      catCount[cat]=(catCount[cat]||0)+1;
+      fmtCount[fmt]=(fmtCount[fmt]||0)+1;
+    });
+    const catBar=Object.entries(catCount).sort((a,b)=>b[1]-a[1]).map(([cat,cnt])=>{
+      const cc=CAT_COLORS[cat]||'#888';
+      const pct=Math.round(cnt/done*100);
+      return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+        <div style="width:8px;height:8px;border-radius:50%;background:${cc};flex-shrink:0"></div>
+        <div style="font-size:10px;color:var(--text);min-width:80px">${cat}</div>
+        <div style="flex:1;height:6px;background:#F0EDE8;border-radius:3px;overflow:hidden">
+          <div style="width:${pct}%;height:100%;background:${cc};border-radius:3px;transition:width .3s"></div>
+        </div>
+        <div style="font-size:10px;font-weight:700;color:var(--muted);min-width:28px;text-align:right">${cnt}개</div>
+      </div>`;
+    }).join('');
+    const fmtBar=Object.entries(fmtCount).sort((a,b)=>b[1]-a[1]).map(([fmt,cnt])=>{
+      const pct=Math.round(cnt/done*100);
+      return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+        <div style="font-size:10px;color:var(--text);min-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${fmt}</div>
+        <div style="flex:1;height:6px;background:#F0EDE8;border-radius:3px;overflow:hidden">
+          <div style="width:${pct}%;height:100%;background:#111;border-radius:3px;transition:width .3s"></div>
+        </div>
+        <div style="font-size:10px;font-weight:700;color:var(--muted);min-width:28px;text-align:right">${cnt}개</div>
+      </div>`;
+    }).join('');
+    breakdown.innerHTML=`
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px">
+        <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px">📊 카테고리 분포</div>
+        ${catBar}
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px">
+        <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px">🎮 포맷 분포</div>
+        ${fmtBar}
+      </div>`;
+  } else if(breakdown){
+    breakdown.innerHTML='';
+  }
   const dowEl=document.getElementById('dows');
   if(dowEl)dowEl.innerHTML=DOWS_L.map((d,i)=>{
     const cls=i===0?'dow dow-sun':i===6?'dow dow-sat':'dow';
@@ -2950,6 +2999,10 @@ function renderRight(){
       </div>
     </div>
     <div class="btn-row" style="margin-top:10px">
+      <select id="regen-cat" style="flex:1;padding:8px;border-radius:8px;border:1px solid #EAEAEA;font-family:inherit;font-size:11px;font-weight:700;outline:none;cursor:pointer;background:#F8F9FA;color:#333;" ${loading?'disabled':''}>
+        <option value="">🎨 랜덤 카테고리</option>
+        ${Object.keys(CAT_COLORS).map(c=>`<option value="${c}">${c}</option>`).join('')}
+      </select>
       <select id="regen-fmt" style="flex:1;padding:8px;border-radius:8px;border:1px solid #EAEAEA;font-family:inherit;font-size:11px;font-weight:700;outline:none;cursor:pointer;background:#F8F9FA;color:#333;" ${loading?'disabled':''}>
         <option value="">🎲 랜덤 포맷</option>
         ${getFormats().filter(f=>f.on).map(f=>`<option value="${f.name}">${f.name}</option>`).join('')}
