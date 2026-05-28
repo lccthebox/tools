@@ -2203,6 +2203,7 @@ body{font-family:'DM Sans',Arial,sans-serif;background:#fff;color:#111;-webkit-p
     } // end isMinefield (inner)
 
   } else if(isThisOrThat){
+  const choices=roles.slice(0,10);
   const checkRows=choices.map((c,i)=>{
   // "A 👈 vs 👉 B" 또는 "A or B" 형식 파싱
   let sideA, sideB;
