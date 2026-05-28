@@ -1682,26 +1682,69 @@ function openShareViewer(){
   overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
 
 
-  window.shareViaDrive=async()=>{
+  window.shareViaPages=async()=>{
+    const token=getGistToken();
+    if(!token){showToast('Gist 토큰이 없어요. 설정에서 입력해주세요.');return;}
     const code=prompt('스터디원 접속 코드 설정\n(빈칸이면 코드 없음)');
     if(code===null)return;
     overlay.remove();
     const html=buildShareHTML(monthTops,code.trim());
-    const filename=`TheBox_${pfx}_토픽뷰어.html`;
+    const filename=`${pfx}.html`;
+    const repo='thebox-viewer';
+    const owner='lccthebox';
     const btn=document.getElementById('share-btn');
-    if(btn){btn.querySelector('span').textContent='⏳ 업로드 중...';}
+    if(btn)btn.querySelector('span').textContent='⏳ 업로드 중...';
     try{
-      const url=await uploadToDrive(html,filename);
-      await navigator.clipboard.writeText(url).catch(()=>{});
-      showToast('✓ Drive 업로드 완료! 링크 복사됨');
+      // 1. 레포 존재 확인, 없으면 생성
+      let repoRes=await fetch(`https://api.github.com/repos/${owner}/${repo}`,{
+        headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json'}
+      });
+      if(repoRes.status===404){
+        const createRes=await fetch('https://api.github.com/user/repos',{
+          method:'POST',
+          headers:{'Authorization':'token '+token,'Content-Type':'application/json'},
+          body:JSON.stringify({name:repo,description:'TheBox Topic Viewer',auto_init:true,private:false})
+        });
+        if(!createRes.ok) throw new Error('레포 생성 실패');
+        await new Promise(r=>setTimeout(r,2000)); // 레포 초기화 대기
+      }
+
+      // 2. 기존 파일 SHA 확인 (업데이트 시 필요)
+      let sha=null;
+      const fileRes=await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${filename}`,{
+        headers:{'Authorization':'token '+token}
+      });
+      if(fileRes.ok){const fd=await fileRes.json();sha=fd.sha;}
+
+      // 3. 파일 업로드
+      const body={message:`Update ${filename}`,content:btoa(unescape(encodeURIComponent(html)))};
+      if(sha)body.sha=sha;
+      const uploadRes=await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${filename}`,{
+        method:'PUT',
+        headers:{'Authorization':'token '+token,'Content-Type':'application/json'},
+        body:JSON.stringify(body)
+      });
+      if(!uploadRes.ok) throw new Error('파일 업로드 실패');
+
+      // 4. GitHub Pages 활성화 (이미 돼있으면 무시)
+      await fetch(`https://api.github.com/repos/${owner}/${repo}/pages`,{
+        method:'POST',
+        headers:{'Authorization':'token '+token,'Content-Type':'application/json','Accept':'application/vnd.github.v3+json'},
+        body:JSON.stringify({source:{branch:'main',path:'/'}})
+      });
+
+      // 5. Pages URL 생성
+      const pageUrl=`https://${owner}.github.io/${repo}/${filename}`;
+      await navigator.clipboard.writeText(pageUrl).catch(()=>{});
+      showToast('✓ 업로드 완료! 링크 복사됨 (Pages 반영까지 1~2분)');
       setTimeout(()=>prompt(
-        code.trim()?`접속 코드: ${code.trim()}\n\n공유 링크 (복사하세요):`:'공유 링크 (복사하세요):',
-        url
+        code.trim()?`접속 코드: ${code.trim()}\n\n공유 링크:`:'공유 링크:',
+        pageUrl
       ),300);
     }catch(e){
       showToast('오류: '+e.message);
     }finally{
-      if(btn){btn.querySelector('span').textContent='🔗 공유 링크';}
+      if(btn)btn.querySelector('span').textContent='🔗 공유 링크';
     }
   };
 
