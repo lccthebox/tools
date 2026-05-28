@@ -504,6 +504,29 @@ const DEFAULT_LEADER_GUIDE={"Liar Game": {"left_title": "게임 진행 순서", 
 
 let year,month,selected=null,loading=false,genDay=null;
 
+// ── Undo / Redo ─────────────────────────────
+const _history=[];let _histIdx=-1;
+function _histPush(state){
+  _history.splice(_histIdx+1);
+  _history.push(JSON.stringify(state));
+  if(_history.length>30)_history.shift();
+  _histIdx=_history.length-1;
+}
+function undoTopics(){
+  if(_histIdx<=0){showToast('더 이상 되돌릴 수 없어요');return;}
+  _histIdx--;
+  const t=JSON.parse(_history[_histIdx]);
+  localStorage.setItem('tb_topics_v5',JSON.stringify(t));
+  renderCal();renderRight();showToast('↩ 실행 취소');
+}
+function redoTopics(){
+  if(_histIdx>=_history.length-1){showToast('더 이상 앞으로 갈 수 없어요');return;}
+  _histIdx++;
+  const t=JSON.parse(_history[_histIdx]);
+  localStorage.setItem('tb_topics_v5',JSON.stringify(t));
+  renderCal();renderRight();showToast('↪ 다시 실행');
+}
+
 function getTopics(){
   try{
     const t=JSON.parse(localStorage.getItem('tb_topics_v5')||'{}');
@@ -519,6 +542,7 @@ function getTopics(){
   }catch{return{}}
 }
 function saveTopics(t){
+  _histPush(t); // 히스토리 저장
   // 이미지 base64를 분리 저장 (localStorage 용량 초과 방지)
   const slim=JSON.parse(JSON.stringify(t));
   for(const k in slim){
@@ -1588,117 +1612,181 @@ function openShareViewer(){
 }
 
 function buildShareHTML(topics, accessCode=''){
-  const CAT_C=CAT_COLORS;
   const days=Object.keys(topics).sort();
-  const cards=days.map(k=>{
+  const CAT_C={"Money":"#e67e22","Work":"#2980b9","Love":"#e74c3c","Food":"#27ae60","Travel":"#8e44ad","Health":"#16a085","AI":"#2c3e50","SNS":"#d35400","Lifestyle":"#c0392b","Korea Trend":"#CC0014","Friendship":"#1abc9c","Community":"#7f8c8d"};
+  
+  const cardData=days.map(k=>{
     const t=topics[k];
     const s1=t.session1||{}, s2=t.session2||{};
     const cc=CAT_C[t.category]||'#CC0014';
-    const sparks=(s1.spark_words||[]).slice(0,9).map(w=>{
+    const sparks=(s1.spark_words||[]).slice(0,9);
+    return {k,t,s1,s2,cc,sparks};
+  });
+
+  const listCards=cardData.map(({k,t,s2,cc})=>`
+    <div class="list-card" onclick="openDetail('${k}')" style="border-left:4px solid ${cc}">
+      <div class="lc-top">
+        <span class="lc-date">${k}</span>
+        <span class="lc-fmt" style="background:${cc}">${s2.format||''}</span>
+      </div>
+      <div class="lc-title">${t.main_title||''}</div>
+      ${t.korean_angle?`<div class="lc-angle">${t.korean_angle}</div>`:''}
+    </div>`).join('');
+
+  const detailModals=cardData.map(({k,t,s1,s2,cc,sparks})=>{
+    const krFmt=s2.how_to_play_kr||'';
+    const iqs=(s1.icebreakers||[]).map((q,i)=>`
+      <div class="iq"><div class="iq-n" style="background:${i===0?cc:'#111'}">${i+1}</div><div class="iq-t">${q}</div></div>`).join('');
+    const bingoGrid=sparks.map((w,i)=>{
       const en=typeof w==='object'?w.en:w, kr=typeof w==='object'?w.kr:'';
-      return `<div class="bingo-cell"><div class="bingo-en">${en}</div>${kr?`<div class="bingo-kr">${kr}</div>`:''}</div>`;
+      const col=i%3,row=Math.floor(i/3);
+      return `<div class="bc" style="${col<2?'border-right:2px solid #111;':''}${row<2?'border-bottom:2px solid #111;':''}"><div class="bc-en">${en}</div>${kr?`<div class="bc-kr">${kr}</div>`:''}</div>`;
     }).join('');
-    const iqs=(s1.icebreakers||[]).map((q,i)=>`<div class="iq"><span class="iq-n">${i+1}</span><span>${q}</span></div>`).join('');
-    const qs=(s2.questions||[]).map((q,i)=>`<div class="dq"><span class="dq-n">Q${i+1}</span><span>${q}</span></div>`).join('');
+    const roles=s2.roles||[];
+    const isStory=(s2.format||'').toLowerCase().includes('story chain');
+    const qs=(s2.questions||[]).map((q,i)=>`
+      <div class="dq"><span class="dq-n" style="color:${cc}">Q${i+1}</span><span>${q}</span></div>`).join('');
     const exprs=(s2.expressions||[]).map(e=>{
       const en=typeof e==='object'?e.en:e, kr=typeof e==='object'?e.kr:'';
-      return `<div class="expr"><div class="expr-en">${en}</div><div class="expr-kr">${kr}</div></div>`;
+      return `<div class="expr"><div class="expr-en">• ${en}</div>${kr?`<div class="expr-kr">${kr}</div>`:''}</div>`;
     }).join('');
-    return `<div class="card">
-      <div class="card-hdr" style="background:${cc}">
-        <div class="card-date">${k}</div>
-        <div class="card-cat">${t.category||''}</div>
-        <div class="card-fmt">${s2.format||''}</div>
-      </div>
-      <div class="card-body">
-        <div class="card-title">${t.main_title||''}</div>
-        ${t.korean_angle?`<div class="card-angle">${t.korean_angle}</div>`:''}
-        <div class="sec-title">🔥 ICE BREAKER</div>
-        ${iqs}
-        <div class="sec-title">🎯 KEYWORD BINGO</div>
-        <div class="bingo-grid">${sparks}</div>
-        <div class="sec-title">2ND — ${s2.format||''}</div>
-        ${s2.how_to_play_kr?`<div class="howto">${s2.how_to_play_kr}</div>`:''}
-        ${s2.scenario?`<div class="scenario">${s2.scenario}</div>`:''}
-        ${qs?`<div class="dqs">${qs}</div>`:''}
-        ${exprs?`<div class="sec-title">💬 EXPRESSIONS</div><div class="exprs">${exprs}</div>`:''}
+    return `<div id="detail-${k}" class="detail-modal">
+      <div class="detail-inner">
+        <div class="d-hdr" style="background:#111">
+          <div class="d-logo">THE<span>BOX</span></div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="d-cat" style="background:${cc}">${t.category||''}</div>
+            <button class="d-close" onclick="closeDetail()">✕</button>
+          </div>
+        </div>
+        <div class="d-sbar">
+          <span class="d-snum">SESSION 1</span><span class="d-ssub">Ice Breaking</span>
+          <span class="d-stitle">${t.main_title||''}</span>
+        </div>
+        <div class="d-body">
+          ${t.korean_angle?`<div class="d-angle" style="background:${cc}18;border-left:3px solid ${cc}">${t.korean_angle}</div>`:''}
+          <div class="sec-t">🔥 ICEBREAKER</div>${iqs}
+          <div class="sec-t">🎯 KEYWORD BINGO</div>
+          <div class="bingo-wrap">${bingoGrid}</div>
+        </div>
+        <div class="d-sbar">
+          <span class="d-snum">SESSION 2</span><span class="d-ssub">${s2.format||''}</span>
+        </div>
+        <div class="d-body">
+          ${krFmt?`<div class="d-howto"><b>💡 HOW TO PLAY</b><br>${krFmt}</div>`:''}
+          ${s2.scenario?`<div class="d-scene">${s2.scenario}</div>`:''}
+          ${isStory&&roles.length>2?`<div class="sec-t">📝 WORD BANK</div><div class="wb">${roles.map(w=>`<span class="wb-w">${w}</span>`).join('')}</div>`:
+          qs?`<div class="sec-t">DISCUSSION</div>${qs}`:''}
+          ${exprs?`<div class="sec-t">💬 EXPRESSIONS</div><div class="exprs">${exprs}</div>`:''}
+        </div>
       </div>
     </div>`;
   }).join('');
 
-  return `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  return `<!DOCTYPE html><html lang="ko"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>TheBox — ${days[0]?.slice(0,7)||''} 토픽</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#F5F3EF;color:#111;padding:20px}
-/* 잠금 화면 */
-#lock-screen{position:fixed;inset:0;background:#111;display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:20px}
-#lock-screen h2{color:#fff;font-size:22px;font-weight:800}#lock-screen h2 span{color:#CC0014}
-#lock-screen p{color:#888;font-size:13px}
-#lock-inp{padding:12px 16px;border-radius:8px;border:2px solid #333;background:#1a1a1a;color:#fff;font-size:16px;width:240px;text-align:center;outline:none;letter-spacing:2px}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#F5F3EF;color:#111;min-height:100vh}
+/* 잠금 */
+#lock{position:fixed;inset:0;background:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:9999;padding:24px}
+#lock h2{color:#fff;font-size:24px;font-weight:800}#lock h2 span{color:#CC0014}
+#lock p{color:#888;font-size:13px;text-align:center}
+#lock-inp{padding:14px 18px;border-radius:10px;border:2px solid #333;background:#1a1a1a;color:#fff;font-size:18px;width:min(260px,90vw);text-align:center;outline:none;letter-spacing:3px}
 #lock-inp:focus{border-color:#CC0014}
-#lock-btn{padding:12px 28px;background:#CC0014;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;width:240px}
-#lock-btn:hover{background:#aa0010}
-#lock-err{color:#ff6b6b;font-size:12px;min-height:16px}
-/* 컨텐츠 */
+#lock-btn{padding:14px;background:#CC0014;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;width:min(260px,90vw)}
+#lock-err{color:#ff6b6b;font-size:12px;min-height:16px;text-align:center}
+/* 메인 */
 #content{display:${accessCode?'none':'block'}}
-.header{text-align:center;padding:24px 0 32px;color:#111}
-.header h1{font-size:28px;font-weight:800;letter-spacing:-1px}.header h1 span{color:#CC0014}
-.header p{color:#888;font-size:13px;margin-top:6px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:20px;max-width:1200px;margin:0 auto}
-.card{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08)}
-.card-hdr{padding:12px 16px;display:flex;align-items:center;gap:8px;color:#fff}
-.card-date{font-size:11px;opacity:.8}.card-cat{font-size:11px;font-weight:700;background:rgba(255,255,255,.2);padding:2px 8px;border-radius:4px}
-.card-fmt{margin-left:auto;font-size:10px;opacity:.8}
-.card-body{padding:16px}
-.card-title{font-size:16px;font-weight:800;line-height:1.35;margin-bottom:6px}
-.card-angle{font-size:11px;color:#888;margin-bottom:14px;line-height:1.5;padding:8px 10px;background:#F5F3EF;border-radius:6px}
-.sec-title{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#aaa;margin:14px 0 8px}
-.iq{display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-bottom:1px solid #F0EDE8}
-.iq-n{width:20px;height:20px;border-radius:50%;background:#111;color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.iq span:last-child{font-size:12px;line-height:1.5;color:#333}
-.bingo-grid{display:grid;grid-template-columns:repeat(3,1fr);border:2px solid #111;border-radius:8px;overflow:hidden}
-.bingo-cell{padding:10px 6px;text-align:center;border-right:1.5px solid #111;border-bottom:1.5px solid #111;min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.bingo-cell:nth-child(3n){border-right:none}.bingo-cell:nth-child(n+7){border-bottom:none}
-.bingo-en{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.3px}
-.bingo-kr{font-size:9px;color:#888;margin-top:2px}
-.howto{font-size:11px;color:#555;background:#FFFDF5;border-left:3px solid #F0C040;padding:8px 10px;border-radius:0 6px 6px 0;margin-bottom:8px;line-height:1.55}
-.scenario{font-size:12px;color:#111;background:#F5F3EF;padding:10px 12px;border-radius:8px;margin-bottom:8px;line-height:1.5}
-.dqs{display:flex;flex-direction:column;gap:4px}
-.dq{display:flex;gap:8px;font-size:12px;color:#333;padding:6px 0;border-bottom:1px solid #F0EDE8;line-height:1.45}
-.dq-n{color:#CC0014;font-weight:800;flex-shrink:0}
-.exprs{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.expr{font-size:11px}.expr-en{font-weight:700}.expr-kr{color:#888;font-size:10px}
-.footer{text-align:center;padding:32px 0 16px;color:#bbb;font-size:11px}
-@media(max-width:600px){.grid{grid-template-columns:1fr}.exprs{grid-template-columns:1fr}}
+.app-hdr{background:#111;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.app-logo{font-size:18px;font-weight:800;letter-spacing:1px;color:#fff}.app-logo span{color:#ff4444}
+.app-meta{font-size:11px;color:#888}
+.list{padding:12px;display:flex;flex-direction:column;gap:10px;max-width:600px;margin:0 auto}
+.list-card{background:#fff;border-radius:12px;padding:14px 16px;cursor:pointer;box-shadow:0 1px 6px rgba(0,0,0,.08);transition:transform .15s,box-shadow .15s;active:scale(.98)}
+.list-card:active{transform:scale(.97)}
+.lc-top{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.lc-date{font-size:11px;color:#aaa}
+.lc-fmt{font-size:10px;font-weight:700;color:#fff;padding:2px 8px;border-radius:4px;margin-left:auto}
+.lc-title{font-size:15px;font-weight:800;line-height:1.35;margin-bottom:4px}
+.lc-angle{font-size:11px;color:#888;line-height:1.5}
+/* 상세 모달 */
+.detail-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;overflow-y:auto}
+.detail-modal.open{display:block}
+.detail-inner{background:#fff;min-height:100%;max-width:600px;margin:0 auto}
+.d-hdr{padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:5}
+.d-logo{font-size:16px;font-weight:800;letter-spacing:1px;color:#fff}.d-logo span{color:#ff4444}
+.d-cat{font-size:10px;font-weight:700;color:#fff;padding:3px 8px;border-radius:4px}
+.d-close{background:none;border:none;color:#aaa;font-size:22px;cursor:pointer;line-height:1;padding:0 2px}
+.d-sbar{background:#F5F3EF;padding:10px 16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-top:1px solid #E0DDD8;border-bottom:1px solid #E0DDD8}
+.d-snum{font-size:10px;font-weight:800;letter-spacing:2px;color:#111}
+.d-ssub{font-size:10px;color:#888}
+.d-stitle{font-size:11px;font-weight:700;color:#111;margin-left:auto;max-width:55%;text-align:right}
+.d-body{padding:14px 16px}
+.d-angle{font-size:11px;color:#444;padding:8px 12px;border-radius:4px;margin-bottom:12px;line-height:1.55}
+.sec-t{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#aaa;margin:12px 0 8px}
+.iq{display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #F0EDE8}
+.iq-n{width:22px;height:22px;border-radius:50%;color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.iq-t{font-size:13px;line-height:1.5;color:#333}
+.bingo-wrap{display:grid;grid-template-columns:repeat(3,1fr);border:2.5px solid #111;border-radius:10px;overflow:hidden}
+.bc{height:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px 4px;box-sizing:border-box}
+.bc-en{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;text-align:center;line-height:1.2}
+.bc-kr{font-size:9px;color:#888;margin-top:2px;text-align:center}
+.d-howto{font-size:12px;color:#555;background:#FFFDF5;border-left:3px solid #F0C040;padding:10px 12px;border-radius:4px;margin-bottom:10px;line-height:1.6}
+.d-scene{font-size:13px;color:#111;background:#F5F3EF;padding:12px 14px;border-radius:10px;margin-bottom:10px;line-height:1.55}
+.dq{display:flex;gap:8px;padding:8px 0;border-bottom:1px solid #F0EDE8;align-items:flex-start}
+.dq-n{font-weight:800;font-size:10px;flex-shrink:0;margin-top:2px}
+.dq span:last-child{font-size:13px;color:#333;line-height:1.45}
+.wb{line-height:2.4;padding:4px 0}
+.wb-w{display:inline-block;background:#F5F3EF;border:1px solid #E0DDD8;border-radius:4px;padding:2px 8px;margin:2px;font-size:11px;font-weight:600}
+.exprs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.expr-en{font-size:12px;font-weight:700}
+.expr-kr{font-size:10px;color:#888}
+.footer{text-align:center;padding:24px 0 40px;color:#ccc;font-size:11px}
 </style></head><body>
 ${accessCode?`
-<div id="lock-screen">
+<div id="lock">
   <h2>THE<span>BOX</span></h2>
   <p>스터디원 전용 페이지입니다</p>
-  <input id="lock-inp" type="password" placeholder="접속 코드 입력" onkeydown="if(event.key==='Enter')checkCode()">
+  <input id="lock-inp" type="password" placeholder="접속 코드" onkeydown="if(event.key==='Enter')chk()">
   <div id="lock-err"></div>
-  <button id="lock-btn" onclick="checkCode()">입장하기</button>
+  <button id="lock-btn" onclick="chk()">입장하기</button>
 </div>
 <script>
-function checkCode(){
-  const v=document.getElementById('lock-inp').value.trim();
-  if(v==='${accessCode}'){
-    document.getElementById('lock-screen').remove();
+function chk(){
+  if(document.getElementById('lock-inp').value.trim()==='${accessCode}'){
+    document.getElementById('lock').remove();
     document.getElementById('content').style.display='block';
   } else {
-    document.getElementById('lock-err').textContent='코드가 틀렸어요. 다시 입력해주세요.';
+    document.getElementById('lock-err').textContent='코드가 틀렸어요.';
     document.getElementById('lock-inp').value='';
     document.getElementById('lock-inp').focus();
   }
 }
 document.getElementById('lock-inp').focus();
-</scr`+'ipt>':''}
+<\/script>`:''}
 <div id="content">
-<div class="header"><h1>THE<span>BOX</span></h1><p>${days[0]?.slice(0,7)||''} 월별 토픽 · ${days.length}개</p></div>
-<div class="grid">${cards}</div>
-<div class="footer">© TheBox English Networking | theboxis.com</div>
+  <div class="app-hdr">
+    <div class="app-logo">THE<span>BOX</span></div>
+    <div class="app-meta">${days[0]?.slice(0,7)||''} · ${days.length}개 토픽</div>
+  </div>
+  <div class="list">${listCards}</div>
+  <div class="footer">© TheBox English Networking</div>
+  ${detailModals}
 </div>
+<script>
+function openDetail(k){
+  document.getElementById('detail-'+k).classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeDetail(){
+  document.querySelectorAll('.detail-modal.open').forEach(m=>m.classList.remove('open'));
+  document.body.style.overflow='';
+}
+document.querySelectorAll('.detail-modal').forEach(m=>{
+  m.addEventListener('click',e=>{if(e.target===m)closeDetail();});
+});
+<\/script>
 </body></html>`;
 }
 
@@ -2900,6 +2988,10 @@ async function autoSyncOnLoad(){
   }
 }
 
+document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&e.key==='z'){e.preventDefault();undoTopics();}
+  if((e.ctrlKey||e.metaKey)&&(e.shiftKey&&e.key==='z'||e.key==='y')){e.preventDefault();redoTopics();}
+});
 document.addEventListener('DOMContentLoaded',()=>{
 
   const now=new Date();year=now.getFullYear();month=now.getMonth();
