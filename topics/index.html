@@ -1441,17 +1441,36 @@ function openShareViewer(){
       <div style="font-size:15px;font-weight:800;color:#111;margin-bottom:6px">🔗 월별 토픽 공유</div>
       <div style="font-size:12px;color:#888;margin-bottom:20px">${MONTHS[month]} ${year} — ${count}개 토픽</div>
       <div style="display:flex;flex-direction:column;gap:10px">
-        <button onclick="shareViaGist()" style="padding:13px;background:#238636;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;text-align:left">
-          📎 Gist로 공유 링크 생성 <span style="font-size:10px;opacity:.8;display:block;margin-top:2px">Gist에 뷰어 파일 업로드 → 링크 복사 (Gist 연결 필요)</span>
+        <button onclick="shareViaNetlify()" style="padding:13px;background:#00AD9F;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;text-align:left">
+          🌐 Netlify로 공유 링크 생성 <span style="font-size:10px;opacity:.8;display:block;margin-top:2px">파일 다운로드 → netlify.com/drop 에 드래그 → URL 완성 (무료·30초)</span>
         </button>
         <button onclick="shareViaDownload()" style="padding:13px;background:#1a1a1a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;text-align:left">
-          💾 뷰어 HTML 다운로드 <span style="font-size:10px;opacity:.8;display:block;margin-top:2px">파일을 직접 공유 — 드라이브/카카오 등으로 전송</span>
+          💾 뷰어 HTML 다운로드 <span style="font-size:10px;opacity:.8;display:block;margin-top:2px">카카오/드라이브로 파일 직접 전송</span>
         </button>
+      </div>
+      <div style="background:#F5F3EF;border-radius:8px;padding:10px 12px;font-size:11px;color:#888;margin-top:4px;line-height:1.6">
+        💡 <b>Netlify 사용법</b>: ① 아래 버튼으로 파일 다운로드 → ② <a href="https://app.netlify.com/drop" target="_blank" style="color:#00AD9F">app.netlify.com/drop</a> 접속 → ③ 파일 드래그앤드롭 → ④ URL 복사해서 공유
       </div>
       <button onclick="this.closest('[style]').remove()" style="margin-top:16px;width:100%;padding:10px;border:1px solid #E0DDD8;border-radius:8px;background:#fff;font-size:12px;cursor:pointer;font-family:inherit;color:#888">닫기</button>
     </div>`;
   document.body.appendChild(overlay);
   overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
+
+  window.shareViaNetlify=()=>{
+    const code=prompt('스터디원 접속 코드를 설정해주세요\n(빈칸이면 코드 없음)');
+    if(code===null) return;
+    const html=buildShareHTML(monthTops, code.trim());
+    const blob=new Blob([html],{type:'text/html'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url; a.download=`thebox-${pfx}-viewer.html`;
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),3000);
+    setTimeout(()=>{
+      window.open('https://app.netlify.com/drop','_blank');
+    },500);
+    showToast(code.trim()?`✓ 다운로드 완료! 접속코드: "${code.trim()}" — Netlify에 파일 드래그하세요`:'✓ 다운로드 완료! Netlify에 파일 드래그하세요');
+  };
 
   window.shareViaGist=async()=>{
     const token=getGistToken(), id=getGistId();
@@ -1476,7 +1495,8 @@ function openShareViewer(){
       const data=await res.json();
       const fileName=`thebox-${pfx}-viewer.html`;
       const gistRawUrl=`https://gist.githubusercontent.com/lccthebox/${id}/raw/${fileName}`;
-      const previewUrl=`https://htmlpreview.github.io/?${gistRawUrl}`;
+      // raw URL을 직접 사용 (htmlpreview 불필요)
+      const previewUrl=gistRawUrl;
         await navigator.clipboard.writeText(previewUrl).catch(()=>{});
         const msg=code.trim()?`✓ 완료! 접속코드: "${code.trim()}"\n링크가 복사됐어요.`:'✓ 완료! 링크가 복사됐어요.';
         showToast(msg);
