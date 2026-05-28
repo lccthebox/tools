@@ -1474,9 +1474,9 @@ function openShareViewer(){
         })
       });
       const data=await res.json();
-      const fileUrl=data.files?.[`thebox-${pfx}-viewer.html`]?.raw_url;
-      if(fileUrl){
-        const previewUrl=`https://htmlpreview.github.io/?${fileUrl}`;
+      const fileName=`thebox-${pfx}-viewer.html`;
+      const gistRawUrl=`https://gist.githubusercontent.com/lccthebox/${id}/raw/${fileName}`;
+      const previewUrl=`https://htmlpreview.github.io/?${gistRawUrl}`;
         await navigator.clipboard.writeText(previewUrl).catch(()=>{});
         const msg=code.trim()?`✓ 완료! 접속코드: "${code.trim()}"\n링크가 복사됐어요.`:'✓ 완료! 링크가 복사됐어요.';
         showToast(msg);
@@ -1484,7 +1484,6 @@ function openShareViewer(){
           const info=code.trim()?`접속 코드: ${code.trim()}\n\n`:'';
           prompt(`${info}공유 링크 (복사하세요):`,previewUrl);
         },500);
-      }
     }catch(e){showToast('오류: '+e.message.slice(0,50));}
   };
 
