@@ -13735,7 +13735,10 @@ function renderStudyKorean(){
       <tbody>${korList.map(t=>{
         const groupNames = (t.groups||[]).map(gid=>{
           const g=(S.study.groups||[]).find(x=>x.id===gid);
-          return g?`<span style="font-size:10px;padding:2px 7px;border-radius:99px;background:var(--accent-light);color:var(--accent);font-weight:700">${g.leaderName}</span>`:'';
+          if(!g) return '';
+          const selectedDays = t.groupDays?.[gid] || [];
+          const daysStr = selectedDays.length ? ` (${selectedDays.join(',')})` : '';
+          return `<span style="font-size:10px;padding:2px 7px;border-radius:99px;background:var(--accent-light);color:var(--accent);font-weight:700">${g.leaderName}${daysStr}</span>`;
         }).filter(Boolean).join(' ');
         const quals = (t.qualifications||[]).map(q=>`<span style="font-size:9px;background:var(--bg2);padding:1px 4px;border-radius:3px;margin-right:2px;border:1px solid var(--border)">${q}</span>`).join('');
         return `
@@ -13848,7 +13851,7 @@ function addStudyKorean(editId){
   const existing = editId ? (S.study.koreanStaff||[]).find(t=>t.id===editId) : null;
   const allGroups = (S.study.groups||[]);
 
-  const QUAL_OPTIONS = ['국어강사', '국어국문', '사범 및 교육대학 졸업', '교원자격증 보유', '티칭경험 보유', '더박스 내부테스트 완료'];
+  const QUAL_OPTIONS = ['국어교사(초중고등교사)', '국어강사', '국어국문', '사범 및 교육대학 졸업', '교원자격증 보유', '티칭경험 보유', '더박스 내부테스트 완료'];
   const existingQuals = existing?.qualifications || [];
   const otherQual = existingQuals.find(q => !QUAL_OPTIONS.includes(q)) || '';
   const standardQuals = existingQuals.filter(q => QUAL_OPTIONS.includes(q));
@@ -13889,48 +13892,58 @@ function addStudyKorean(editId){
         `).join('')}
         <button type="button" class="btn btn-sm" onclick="toggleAllKsGroups()" style="font-size:10px;padding:3px 8px;margin-left:auto;background:var(--bg3);border:1px solid var(--border2)">전체선택/해제</button>
       </div>
-      <div id="ks-group-container" style="display:flex;flex-wrap:wrap;gap:6px;padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);max-height:140px;overflow-y:auto">
-        ${allGroups.length ? allGroups.map(g=>`
-          <label class="ks-group-label" data-day="${g.dayGroup}" style="display:flex;align-items:center;gap:5px;cursor:pointer;padding:5px 10px;border-radius:99px;border:1px solid var(--border);background:${(existing?.groups||[]).includes(g.id)?'var(--accent)':'var(--bg2)'};color:${(existing?.groups||[]).includes(g.id)?'#fff':'var(--text2)'};font-size:11px;font-weight:600;transition:all .1s">
-            <input type="checkbox" name="ks-group" value="${g.id}" ${(existing?.groups||[]).includes(g.id)?'checked':''} style="display:none">
-            ${g.leaderName} <span style="font-size:9px;opacity:0.6;font-weight:400">(${STUDY_DAY_LABELS[g.dayGroup]||''})</span>
-          </label>`).join('') : '<span style="font-size:12px;color:var(--text3)">등록된 그룹이 없습니다</span>'}
+      <div id="ks-group-container" style="display:flex;flex-direction:column;gap:4px;padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);max-height:180px;overflow-y:auto">
+        ${allGroups.length ? allGroups.map(g=>{
+          const isChecked = (existing?.groups||[]).includes(g.id);
+          const days = STUDY_DAY_MAP[g.dayGroup] || [g.dayGroup];
+          const selectedDays = existing?.groupDays?.[g.id] || [];
+          return `
+          <div class="ks-group-item" data-day="${g.dayGroup}" style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:6px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);box-sizing:border-box">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;font-weight:600;color:var(--text);margin-bottom:0">
+              <input type="checkbox" name="ks-group" value="${g.id}" ${isChecked?'checked':''} onchange="toggleKsGroupDays(this)" style="cursor:pointer">
+              ${g.leaderName} <span style="font-size:10px;color:var(--text3);font-weight:400">(${STUDY_DAY_LABELS[g.dayGroup]||g.dayGroup||''})</span>
+            </label>
+            <div class="ks-group-days-wrap" id="ks-days-wrap-${g.id}" style="display:${isChecked?'flex':'none'};gap:8px;align-items:center">
+              ${days.map(d => `
+                <label style="display:flex;align-items:center;gap:3px;cursor:pointer;font-size:11px;font-weight:600;color:var(--text2);margin-bottom:0">
+                  <input type="checkbox" name="ks-group-day-${g.id}" value="${d}" ${selectedDays.includes(d)?'checked':''} style="cursor:pointer"> ${d}
+                </label>
+              `).join('')}
+            </div>
+          </div>`;
+        }).join('') : '<span style="font-size:12px;color:var(--text3)">등록된 그룹이 없습니다</span>'}
       </div>
     </div>
     <div class="fgroup full"><label class="flabel">비고 (특이사항)</label>
       <input class="finput" id="ks-note" value="${existing?.note||''}" placeholder="담당 요일 등 기타 정보"></div>
   `;
 
-  // 내부 유틸 함수 정의 (전역 오염 방지 위해 window에 일시 등록하거나 익명 처리)
+  window.toggleKsGroupDays = function(cb){
+    const wrap = document.getElementById('ks-days-wrap-'+cb.value);
+    if(wrap) wrap.style.display = cb.checked ? 'flex' : 'none';
+  };
+
   window.filterKsGroups = function(filter){
     document.querySelectorAll('#ks-group-filter-tabs .btn').forEach(b => b.classList.toggle('btn-primary', b.dataset.filter === filter));
-    document.querySelectorAll('.ks-group-label').forEach(lbl => {
+    document.querySelectorAll('.ks-group-item').forEach(lbl => {
       const day = lbl.dataset.day || '';
-      const visible = filter === 'all' || day.startsWith(filter);
+      let checkDay = filter;
+      if (filter === 'monwed') checkDay = '월';
+      if (filter === 'tuethu') checkDay = '화';
+      if (filter === 'satsun') checkDay = '주말';
+      const visible = filter === 'all' || isStudyDayMatch(day, checkDay);
       lbl.style.display = visible ? 'flex' : 'none';
     });
   };
 
   window.toggleAllKsGroups = function(){
-    const activeFilter = document.querySelector('#ks-group-filter-tabs .btn-primary')?.dataset.filter || 'all';
-    const visibleCheckboxes = [...document.querySelectorAll('.ks-group-label')].filter(lbl => lbl.style.display !== 'none').map(lbl => lbl.querySelector('input'));
+    const visibleCheckboxes = [...document.querySelectorAll('.ks-group-item')].filter(lbl => lbl.style.display !== 'none').map(lbl => lbl.querySelector('input[name="ks-group"]'));
     const allChecked = visibleCheckboxes.every(cb => cb.checked);
     visibleCheckboxes.forEach(cb => {
       cb.checked = !allChecked;
-      const lbl = cb.closest('label');
-      lbl.style.background = cb.checked ? 'var(--accent)' : 'var(--bg2)';
-      lbl.style.color = cb.checked ? '#fff' : 'var(--text2)';
+      toggleKsGroupDays(cb);
     });
   };
-
-  // 체크박스 토글 스타일
-  document.getElementById('modal-form').querySelectorAll('input[name="ks-group"]').forEach(function(cb){
-    cb.addEventListener('change', function(){
-      var lbl = this.closest('label');
-      lbl.style.background = this.checked ? 'var(--accent)' : 'var(--bg2)';
-      lbl.style.color = this.checked ? '#fff' : 'var(--text2)';
-    });
-  });
 
   const footer = document.querySelector('#modal-overlay .modal-footer');
   if(footer) footer.innerHTML = `
@@ -13950,6 +13963,11 @@ function saveKoreanStaff(editId){
   const note = document.getElementById('ks-note')?.value.trim()||'';
   const tutees = document.getElementById('ks-tutees')?.value.trim()||'';
   const groups = [...document.querySelectorAll('input[name="ks-group"]:checked')].map(x=>x.value);
+  const groupDays = {};
+  groups.forEach(gid => {
+    const checkedDays = [...document.querySelectorAll(`input[name="ks-group-day-${gid}"]:checked`)].map(x=>x.value);
+    groupDays[gid] = checkedDays;
+  });
   
   const qualifications = [...document.querySelectorAll('input[name="ks-qual"]:checked')].map(x=>x.value);
   const otherQual = document.getElementById('ks-qual-other')?.value.trim();
@@ -13959,9 +13977,9 @@ function saveKoreanStaff(editId){
   if(!S.study.koreanStaff) S.study.koreanStaff=[];
   if(editId){
     const t = S.study.koreanStaff.find(x=>x.id===editId);
-    if(t) Object.assign(t, {name,phone,startDate,note,groups,tutees,qualifications});
+    if(t) Object.assign(t, {name,phone,startDate,note,groups,groupDays,tutees,qualifications});
   } else {
-    S.study.koreanStaff.push({id:gid('ks'),name,phone,startDate,note,groups,tutees,qualifications});
+    S.study.koreanStaff.push({id:gid('ks'),name,phone,startDate,note,groups,groupDays,tutees,qualifications});
   }
   save('study'); renderStudy(); closeModal();
   showToast(name+' 선생님 정보가 저장되었습니다.');
