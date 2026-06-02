@@ -5109,28 +5109,28 @@ function renderSpreadsheetView(){
                 let rowBg='var(--bg2)';
 
                 const hasReview=getClasses(s).some(c=>(c.discounts||[]).some(d=>d.includes('리뷰')));
-                const reviewBtn=hasReview?\`
+                const reviewBtn=hasReview?`
                   <span style="margin-left:6px;display:inline-block">
                     <button onclick="event.stopPropagation();toggleReviewCheck('${s.id}',event)" style="border:none;cursor:pointer;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;${s.reviewChecked?'background:#dcfce7;color:#15803d':'background:#fee2e2;color:#b91c1c'}">
                       ${s.reviewChecked?'✅ 리뷰확인':'📝 미확인'}
                     </button>
                   </span>
-                \`: '';
+                `: '';
 
                 // A/B joint class badge
                 const sClasses = getClasses(s).flatMap(c => [c.classTime, c.classType === 'w4' ? c.classTime2 : null].filter(Boolean));
                 const inCol0 = cols[0].some(t => sClasses.includes(t)) || (s.classTime && cols[0].includes(s.classTime));
                 const inCol1 = cols[1] && (cols[1].some(t => sClasses.includes(t)) || (s.classType === 'w4' && s.classTime2 && cols[1].includes(s.classTime2)));
                 const isInBoth = inCol0 && inCol1;
-                const jointBadge = isInBoth ? \`<span style="background:var(--accent-light);color:var(--accent);font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;margin-left:6px;white-space:nowrap">A/B 동시</span>\` : '';
+                const jointBadge = isInBoth ? `<span style="background:var(--accent-light);color:var(--accent);font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;margin-left:6px;white-space:nowrap">A/B 동시</span>` : '';
 
                 const lastNote=s.notes&&s.notes.length?s.notes[s.notes.length-1]:null;
-                const noteDisplay=lastNote?\`
+                const noteDisplay=lastNote?`
                   <span style="color:var(--text)">${lastNote.text}</span>
                   <span style="color:var(--text3);font-size:10px;margin-left:4px">${lastNote.by}</span>
-                \`: (s.memo?\`<span style="color:var(--text2)">${s.memo}</span>\`:\`<span style="color:var(--text3);font-size:11px">+ 메모 추가</span>\`);
+                `: (s.memo?`<span style="color:var(--text2)">${s.memo}</span>`:`<span style="color:var(--text3);font-size:11px">+ 메모 추가</span>`);
 
-                return \`
+                return `
                   <tr oncontextmenu="openCtxMenu(event,'${s.id}')" onclick="openModal('studentDetail','${s.id}')" style="cursor:pointer;background:${rowBg};transition:background 0.15s">
                     <td style="text-align:center;font-size:12px;padding:8px;border:1px solid var(--border2);color:var(--text3)">${idx+1}</td>
                     <td style="padding:8px 12px;border:1px solid var(--border2)">
@@ -5149,19 +5149,19 @@ function renderSpreadsheetView(){
                       </span>
                     </td>
                     <td style="padding:8px 12px;border:1px solid var(--border2);text-align:center">
-                      ${(s.status==='재원'||s.status==='연장') ? \`
+                      ${(s.status==='재원'||s.status==='연장') ? `
                         <span style="font-size:12px;color:var(--text3)">${s.status}</span>
-                      \` : \`
+                      ` : `
                         <span style="font-size:12px;font-weight:700;background:${statusBg};color:${statusColor};padding:3px 8px;border-radius:12px;display:inline-block">
                           ${s.status}
                         </span>
-                      \`}
+                      `}
                     </td>
                     <td style="padding:8px 12px;border:1px solid var(--border2);font-size:13px;color:var(--text2);max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" onclick="event.stopPropagation();openQuickNote('${s.id}')">
                       ${noteDisplay}
                     </td>
                   </tr>
-                \`;
+                `;
               }).join('')}
             </tbody>
           </table>
