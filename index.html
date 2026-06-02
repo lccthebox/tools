@@ -8325,6 +8325,8 @@ function backupData(){
     teacherPrices:S.teacherPrices|| {},
     study:        S.study        || {},
     sharedEvents: S.sharedEvents || [],
+    teacherInfo:  S.teacherInfo  || {},
+    dailyNotes:   S.dailyNotes   || [],
     backedUpAt:   new Date().toISOString(),
     version:      'thebox2_v2',
     // 요약 통계
@@ -8360,7 +8362,23 @@ function restoreData(){
         if(!d.students)throw new Error('올바른 백업 파일이 아닙니다');
         S.students=d.students||[];S.trials=d.trials||[];S.consults=d.consults||[];
         S.calNotes=d.calNotes||{};S.board=d.board||[];S.teacherPrices=d.teacherPrices||{};
-        save('students');renderAll();
+        S.study=d.study||{};
+        S.teacherInfo=d.teacherInfo||{};
+        S.sharedEvents=d.sharedEvents||[];
+        S.dailyNotes=d.dailyNotes||[];
+
+        // 병합도 해줘서 메모리와 화면에 즉시 반영되도록 함
+        Object.keys(S.teacherInfo).forEach(function(name){
+          if(TEACHER_INFO[name]){
+            TEACHER_INFO[name] = Object.assign({}, TEACHER_INFO[name], S.teacherInfo[name]);
+          } else {
+            TEACHER_INFO[name] = S.teacherInfo[name];
+          }
+          if(!TEACHERS.includes(name)) TEACHERS.push(name);
+        });
+
+        save(); // 인자를 넘기지 않아 전체 키가 저장/동기화되도록 함
+        renderAll();
         showToast(`✅ 복구 완료! 수강생 ${S.students.length}명 / 상담 ${S.consults.length}건`);
       }catch(err){alert('복구 실패: '+err.message);}
     };
@@ -13301,14 +13319,14 @@ function renderStaffTable(type){
   // 헤더 업데이트
   if(thead){
     if(isKorean){
-      thead.innerHTML = `<tr><th style="width:50px;text-align:center;">상태</th><th>이름</th><th>연락처</th><th>담당 그룹</th><th>담당 튜티</th><th>비고</th><th style="text-align:center">관리</th></tr>`;
+      thead.innerHTML = `<tr><th style="width:50px;text-align:center;">상태</th><th>이름</th><th>참여 요일</th><th>연락처</th><th>담당 그룹</th><th>담당 튜티</th><th>비고</th><th style="text-align:center">관리</th></tr>`;
     } else {
       thead.innerHTML = `<tr><th style="width:50px;text-align:center;">상태</th><th>이름</th><th>국적</th><th>참여 요일</th><th>연락처</th><th>레벨/교재</th><th>비고</th><th style="text-align:center">관리</th></tr>`;
     }
   }
 
   if(!data.length){
-    tbody.innerHTML=`<tr><td colspan="${isKorean?7:8}" class="empty-state">등록된 ${isKorean?'한국어 선생님':'원어민 친구'}이 없습니다</td></tr>`;
+    tbody.innerHTML=`<tr><td colspan="8" class="empty-state">등록된 ${isKorean?'한국어 선생님':'원어민 친구'}이 없습니다</td></tr>`;
     return;
   }
 
@@ -13319,13 +13337,21 @@ function renderStaffTable(type){
       <span class="tbl-slider"></span>
     </label>`;
 
+    const groupNames = isKorean ? (t.groups||[]).map(gid=>{
+      const g=(S.study.groups||[]).find(x=>x.id===gid);
+      if(!g) return '';
+      const selectedDays = t.groupDays?.[gid] || [];
+      const daysStr = selectedDays.length ? ` (${selectedDays.join(',')})` : '';
+      return `<span style="font-size:10px;padding:2px 7px;border-radius:99px;background:var(--accent-light);color:var(--accent);font-weight:700;margin-right:4px;display:inline-block;">${g.leaderName}${daysStr}</span>`;
+    }).filter(Boolean).join(' ') || '-' : '';
+
     return `<tr onclick="${isKorean ? `addStudyKorean('${t.id}')` : `openStaffEditModal('${type}','${t.id}')`}" style="cursor:pointer; ${isInactive?'opacity:0.5;background:var(--bg2)':''}" onmouseover="this.style.background='var(--accent-light)'" onmouseout="this.style.background='${isInactive?'var(--bg2)':''}'">
       <td style="text-align:center;">${toggleHtml}</td>
       <td style="font-weight:600;white-space:nowrap;">${t.name}</td>
-      ${isKorean ? '' : `<td style="white-space:nowrap;"><span class="badge b-gray">${t.country||'미정'}</span></td><td style="font-size:11px;font-weight:600;white-space:nowrap;">${t.days||'-'}</td>`}
+      ${isKorean ? `<td style="font-size:11px;font-weight:600;white-space:nowrap;">${t.days||'-'}</td>` : `<td style="white-space:nowrap;"><span class="badge b-gray">${t.country||'미정'}</span></td><td style="font-size:11px;font-weight:600;white-space:nowrap;">${t.days||'-'}</td>`}
       <td style="font-family:var(--font-mono);font-size:11px;white-space:nowrap;">${t.phone||'-'}</td>
       ${isKorean ? `
-        <td style="font-size:11px;color:var(--accent);font-weight:600;min-width:60px;">${(t.groups||[]).map(gid => (S.study.groups||[]).find(g=>g.id===gid)?.leaderName||'').filter(x=>x).join(', ')||'-'}</td>
+        <td style="font-size:11px;min-width:60px;">${groupNames}</td>
         <td style="font-size:11px;color:var(--teal);font-weight:600;white-space:nowrap;">${t.tutees||'-'}</td>
       ` : `
         <td style="font-size:11px;min-width:80px;">
@@ -13389,6 +13415,7 @@ function openStaffModal(type, existingId){
         
       <div class="fgroup full-width"><label class="flabel">현재 챕터 / 진도</label>
         <input class="finput" id="staff-level" value="${existing?.level||''}" placeholder="예: Chapter 3"></div>
+      `:''}
         
       <div class="fgroup full-width"><label class="flabel">참여 요일 및 시간대</label>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
@@ -13398,7 +13425,6 @@ function openStaffModal(type, existingId){
           ${['월','화','수','목','금','토','일'].map(d=>`<label class="day-chip"><input type="checkbox" class="days-chk" value="${d}" ${(existing?.days||'').includes(d)?'checked':''}><span>${d}</span></label>`).join('')}
         </div>
       </div>
-      `:''}
       
       <div class="fgroup"><label class="flabel">${isKorean?'근무시작일':'참여시작일'}</label>
         <input class="finput" id="staff-start" type="date" value="${existing?.startDate||today()}"></div>
@@ -13439,7 +13465,7 @@ function saveStaffModal(){
     startDate: document.getElementById('staff-start')?.value||today(),
     note: document.getElementById('staff-note')?.value.trim()||'',
     country: document.getElementById('staff-country')?.value.trim()||'',
-    days: type === 'korean' ? '' : checkedDays,
+    days: checkedDays,
     level: document.getElementById('staff-level')?.value.trim()||'',
     textbook: document.getElementById('staff-textbook')?.value.trim()||'',
     status: document.getElementById('staff-status')?.checked ? 'active' : 'inactive',
@@ -13731,7 +13757,7 @@ function renderStudyKorean(){
     </div>
     <div style="overflow-x:auto">
     <table class="sheet-table" style="font-size:12px">
-      <thead><tr><th>이름</th><th>연락처</th><th>업무시작일</th><th>담당 그룹</th><th>담당 튜티</th><th>보유 자격</th><th>비고</th><th style="text-align:center">관리</th></tr></thead>
+      <thead><tr><th>이름</th><th>참여 요일</th><th>연락처</th><th>업무시작일</th><th>담당 그룹</th><th>담당 튜티</th><th>보유 자격</th><th>비고</th><th style="text-align:center">관리</th></tr></thead>
       <tbody>${korList.map(t=>{
         const groupNames = (t.groups||[]).map(gid=>{
           const g=(S.study.groups||[]).find(x=>x.id===gid);
@@ -13744,6 +13770,7 @@ function renderStudyKorean(){
         return `
         <tr onmouseover="this.style.background='var(--accent-light)'" onmouseout="this.style.background=''" onclick="addStudyKorean('${t.id}')" style="cursor:pointer">
           <td style="font-weight:700">${t.name}</td>
+          <td style="font-size:11px;font-weight:600;white-space:nowrap;">${t.days||'-'}</td>
           <td style="font-family:var(--font-mono);font-size:11px">${t.phone||'-'}</td>
           <td style="font-family:var(--font-mono);font-size:11px">${t.startDate||'-'}</td>
           <td style="font-size:11px">${groupNames||'<span style="color:var(--text3)">미배정</span>'}</td>
@@ -13755,7 +13782,7 @@ function renderStudyKorean(){
             <button class="btn btn-sm btn-danger" onclick="delStudyStaff('korean','${t.id}')">삭제</button>
           </td>
         </tr>`;}).join('')}
-      ${!korList.length?'<tr><td colspan="8" class="empty-state">등록된 한국어 선생님이 없습니다</td></tr>':''}
+      ${!korList.length?'<tr><td colspan="9" class="empty-state">등록된 한국어 선생님이 없습니다</td></tr>':''}
       </tbody>
     </table></div>`;
   container.innerHTML = html;
@@ -13851,7 +13878,7 @@ function addStudyKorean(editId){
   const existing = editId ? (S.study.koreanStaff||[]).find(t=>t.id===editId) : null;
   const allGroups = (S.study.groups||[]);
 
-  const QUAL_OPTIONS = ['국어교사(초중고등교사)', '국어강사', '국어국문', '사범 및 교육대학 졸업', '교원자격증 보유', '티칭경험 보유', '더박스 내부테스트 완료'];
+  const QUAL_OPTIONS = ['초/중/고 국어교사', '국어강사', '국어국문', '사범 및 교육대학 졸업', '교원자격증 보유', '티칭경험 보유', '더박스 내부테스트 완료'];
   const existingQuals = existing?.qualifications || [];
   const otherQual = existingQuals.find(q => !QUAL_OPTIONS.includes(q)) || '';
   const standardQuals = existingQuals.filter(q => QUAL_OPTIONS.includes(q));
@@ -13884,6 +13911,22 @@ function addStudyKorean(editId){
 
     <div class="fgroup"><label class="flabel">업무 시작일</label>
       <input class="finput" id="ks-start" type="date" value="${existing?.startDate||today()}"></div>
+
+    <style>
+      .day-chip { display:inline-block; cursor:pointer; }
+      .day-chip input { display:none; }
+      .day-chip span { display:inline-block; padding:5px 12px; font-size:12px; font-weight:600; color:var(--text3); border:1px solid var(--border); border-radius:14px; transition:0.2s; background:var(--bg); user-select:none; }
+      .day-chip input:checked + span { background:var(--accent); color:#fff; border-color:var(--accent); box-shadow:0 2px 6px rgba(96,88,232,0.25); }
+      .day-chip:hover span { border-color:var(--accent); }
+    </style>
+    <div class="fgroup full"><label class="flabel">참여 요일 및 시간대</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+        ${['오전','오후','저녁'].map(d=>`<label class="day-chip"><input type="checkbox" class="days-chk" value="${d}" ${(existing?.days||'').includes(d)?'checked':''}><span>${d}</span></label>`).join('')}
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        ${['월','화','수','목','금','토','일'].map(d=>`<label class="day-chip"><input type="checkbox" class="days-chk" value="${d}" ${(existing?.days||'').includes(d)?'checked':''}><span>${d}</span></label>`).join('')}
+      </div>
+    </div>
 
     <div class="fgroup full"><label class="flabel">참여 중인 반 (담당 그룹)</label>
       <div id="ks-group-filter-tabs" style="display:flex;gap:4px;margin-bottom:8px">
@@ -13973,13 +14016,15 @@ function saveKoreanStaff(editId){
   const otherQual = document.getElementById('ks-qual-other')?.value.trim();
   if(otherQual) qualifications.push(otherQual);
 
+  const days = Array.from(document.querySelectorAll('.days-chk:checked')).map(el=>el.value).join(', ');
+
   ensureS();
   if(!S.study.koreanStaff) S.study.koreanStaff=[];
   if(editId){
     const t = S.study.koreanStaff.find(x=>x.id===editId);
-    if(t) Object.assign(t, {name,phone,startDate,note,groups,groupDays,tutees,qualifications});
+    if(t) Object.assign(t, {name,phone,startDate,note,groups,groupDays,tutees,qualifications,days});
   } else {
-    S.study.koreanStaff.push({id:gid('ks'),name,phone,startDate,note,groups,groupDays,tutees,qualifications});
+    S.study.koreanStaff.push({id:gid('ks'),name,phone,startDate,note,groups,groupDays,tutees,qualifications,days});
   }
   save('study'); renderStudy(); closeModal();
   showToast(name+' 선생님 정보가 저장되었습니다.');
