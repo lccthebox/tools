@@ -241,7 +241,7 @@ nav{height:52px;background:var(--black);display:flex;align-items:center;padding:
     <button class="nav-tab active" data-view="calendar">달력</button>
     <button class="nav-tab" data-view="settings">설정</button>
   </div>
-  <button class="key-btn" onclick="downloadMonthlyZip()" title="이달 토픽 PDF 일괄 다운로드 (ZIP)" style="margin-right:4px;background:#1a1a1a;color:#fff;border:none" id="zip-btn">
+  <button class="key-btn" onclick="downloadMonthlyZip()" title="이달 토픽 전체 PDF 저장" style="margin-right:4px;background:#1a1a1a;color:#fff;border:none" id="zip-btn">
     <span>📦 PDF 일괄저장</span>
   </button>
   <button class="key-btn" onclick="openShareViewer()" title="이달 토픽 공유 링크 생성" style="margin-right:4px;background:#2563eb;color:#fff;border:none" id="share-btn">
@@ -1265,44 +1265,53 @@ async function downloadMonthlyZip(){
   btn.disabled=true;
   btn.querySelector('span').textContent='⏳ 준비 중...';
 
-  // JSZip 동적 로드
-  if(!window.JSZip){
-    await new Promise((res,rej)=>{
-      const s=document.createElement('script');
-      s.src='https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
-      s.onload=res; s.onerror=rej;
-      document.head.appendChild(s);
-    });
-  }
-
-  // html2pdf / print-to-pdf는 브라우저 제한 있으므로
-  // 각 토픽을 인쇄용 HTML 파일로 ZIP에 담기
-  const zip=new JSZip();
-  const folder=zip.folder(`TheBox_${pfx}`);
-
-  let count=0;
-  for(const k of days){
+  // 모든 토픽을 한 HTML에 합쳐서 인쇄 → PDF 저장
+  const allPages=days.map(k=>{
     const t=tops[k];
-    if(!t)continue;
-    const html=buildTopicHTML(k,t);
-    const safeTitle=(t.main_title||'topic').replace(/[\\/:*?"<>|]/g,'').slice(0,40);
-    const filename=`[${k}] ${safeTitle}.html`;
-    folder.file(filename, html);
-    count++;
-    btn.querySelector('span').textContent=`⏳ ${count}/${days.length} 처리 중...`;
-  }
+    if(!t) return '';
+    return buildTopicHTML(k,t);
+  }).filter(Boolean);
 
-  const blob=await zip.generateAsync({type:'blob'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;
-  a.download=`TheBox_${year}년_${MONTHS[month]}_토픽.zip`;
-  a.click();
-  setTimeout(()=>URL.revokeObjectURL(url),3000);
+  // buildTopicHTML이 완전한 HTML 문서를 반환하므로 body 내용만 추출
+  const pageContents=allPages.map(html=>{
+    const bodyMatch=html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+    return bodyMatch?bodyMatch[1]:'';
+  }).join('<div style="page-break-after:always"></div>');
+
+  // CSS 추출 (첫 번째 토픽에서)
+  const cssMatch=allPages[0]?.match(/<style>([\s\S]*?)<\/style>/i);
+  const css=cssMatch?cssMatch[1]:'';
+
+  const combinedHTML=`<!DOCTYPE html><html><head><meta charset="UTF-8">
+<style>
+${css}
+@media print{
+  @page{size:A4;margin:10mm}
+  body{margin:0}
+  .no-print{display:none!important}
+}
+@media screen{
+  body{background:#f0ede8;padding:20px}
+  .page{background:#fff;margin:0 auto 20px;padding:15mm;max-width:210mm;box-shadow:0 2px 12px rgba(0,0,0,.15)}
+}
+</style>
+</head><body>
+${pageContents}
+<div class="no-print" style="position:fixed;bottom:0;left:0;right:0;background:#111;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;z-index:999">
+  <span style="color:#aaa;font-size:12px;font-family:sans-serif">TheBox ${pfx} — ${days.length}개 토픽</span>
+  <button onclick="window.print()" style="background:#CC0014;color:#fff;border:none;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;font-family:sans-serif">🖨️ PDF로 저장</button>
+</div>
+</body></html>`;
+
+  const w=window.open('','_blank');
+  if(w){
+    w.document.write(combinedHTML);
+    w.document.close();
+  }
 
   btn.disabled=false;
   btn.querySelector('span').textContent='📦 PDF 일괄저장';
-  showToast(`✓ ${count}개 파일 ZIP 다운로드 완료!`);
+  showToast(`✓ ${days.length}개 토픽 PDF 창 열림!`);
 }
 
 // 토픽 1-2페이지 HTML 생성 (리더가이드 제외)
