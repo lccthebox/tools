@@ -1162,9 +1162,9 @@ function toggleMemberNew(id) { setMemberNewDay(id, 1); } // 하위 호환
 const PRESETS = {
   '월': {
     '오전': [
-      { name: 'SINA반',        natives: ['SINA'] },
-      { name: 'MINGI반',      natives: ['MINGI'] },
-      { name: 'JEFF반',        natives: ['JEFF'] },
+      { name: 'JONGHA반', natives: ['JONGHA'] },
+      { name: 'MINGI반',  natives: ['MINGI'] },
+      { name: 'JEFF반',   natives: ['JEFF'] },
     ],
     '오후': [
       { name: 'YUMIN반', natives: ['YUMIN'] },
@@ -1176,9 +1176,9 @@ const PRESETS = {
   },
   '수': {
     '오전': [
-      { name: 'SINA반',        natives: ['SINA'] },
-      { name: 'MINGI반',      natives: ['MINGI'] },
-      { name: 'JEFF반',        natives: ['JEFF'] },
+      { name: 'JONGHA반', natives: ['JONGHA'] },
+      { name: 'MINGI반',  natives: ['MINGI'] },
+      { name: 'JEFF반',   natives: ['JEFF'] },
     ],
     '오후': [
       { name: 'YUMIN반', natives: ['YUMIN'] },
@@ -1196,7 +1196,7 @@ const PRESETS = {
     ],
     '오후': [
       { name: 'BEN반',    natives: ['BEN'] },
-      { name: 'SINA반',   natives: ['SINA'] },
+      { name: 'HANNAH반', natives: ['HANNAH'] },
       { name: 'LINA반',   natives: ['LINA'] },
       { name: 'JARROD반', natives: ['JARROD'] },
       { name: 'NOAH반',   natives: ['NOAH'] },
@@ -1210,7 +1210,7 @@ const PRESETS = {
     ],
     '오후': [
       { name: 'BEN반',    natives: ['BEN'] },
-      { name: 'SINA반',   natives: ['SINA'] },
+      { name: 'HANNAH반', natives: ['HANNAH'] },
       { name: 'LINA반',   natives: ['LINA'] },
       { name: 'JARROD반', natives: ['JARROD'] },
       { name: 'NOAH반',   natives: ['NOAH'] },
@@ -1414,6 +1414,15 @@ function addOneGroup() {
 }
 function removeGroup(gid) {
   groups = groups.filter(g=>g.id!==gid);
+  renderAll();
+}
+
+function moveGroup(gid, dir) {
+  const idx = groups.findIndex(g => g.id === gid);
+  if (idx < 0) return;
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= groups.length) return;
+  [groups[idx], groups[newIdx]] = [groups[newIdx], groups[idx]];
   renderAll();
 }
 
