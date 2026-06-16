@@ -212,6 +212,8 @@ body {
   cursor: pointer;
 }
 .kmember.is-teacher { background: #F5EEFF; border-color: #C090E0; color: #6020A0; }
+.kmember.k-new     { box-shadow: 0 0 0 1.5px #A02800; }
+.kmember.k-return  { box-shadow: 0 0 0 1.5px #22A06B; }
 .kmember-del { background: none; border: none; cursor: pointer; color: #B0B8D0; font-size: 11px; line-height: 1; padding: 0; }
 .kmember-del:hover { color: #E00; }
 .kadd-type { display: flex; gap: 3px; }
@@ -1299,7 +1301,7 @@ function importFromHolding() {
       hCls.korMembers.forEach(m => {
         const name = typeof m==='string' ? m : m.name;
         if (!existingNames.has(name)) {
-          g.koreans.push({ id:uid(), name, isTeacher:false, isNew: m.isNew||false, newDay: m.newDay||0 });
+          g.koreans.push({ id:uid(), name, isTeacher:false, isNew: m.isNew||false, isReturn: m.isReturn||false, newDay: m.newDay||0 });
           existingNames.add(name); imported++;
         }
       });
@@ -1308,7 +1310,7 @@ function importFromHolding() {
       hCls.korTeachers.forEach(m => {
         const name = typeof m==='string' ? m : m.name;
         if (!existingNames.has(name)) {
-          g.koreans.push({ id:uid(), name, isTeacher:true, isNew: m.isNew||false, newDay: m.newDay||0 });
+          g.koreans.push({ id:uid(), name, isTeacher:true, isNew: m.isNew||false, isReturn: m.isReturn||false, newDay: m.newDay||0 });
           existingNames.add(name); imported++;
         }
       });
@@ -1352,7 +1354,7 @@ function mergeFromHolding() {
     const addKor = (m, isTeacher) => {
       const name = typeof m==='string' ? m : m.name;
       if (!allExistingNames.has(name)) {
-        g.koreans.push({ id:uid(), name, isTeacher, isNew: m.isNew||false, newDay: m.newDay||0 });
+        g.koreans.push({ id:uid(), name, isTeacher, isNew: m.isNew||false, isReturn: m.isReturn||false, newDay: m.newDay||0 });
         allExistingNames.add(name);
         imported++;
       }
@@ -1453,7 +1455,7 @@ function autoAssignTables() {
 // koreans: [{ id, name, isTeacher }]
 function addKorean(g, name, isTeacher) {
   name = name.trim(); if (!name) return false;
-  g.koreans.push({ id: uid(), name, isTeacher: !!isTeacher, isNew: false, newDay: 0 });
+  g.koreans.push({ id: uid(), name, isTeacher: !!isTeacher, isNew: false, isReturn: false, newDay: 0 });
   return true;
 }
 function removeKorean(gid, kid) {
@@ -1772,9 +1774,9 @@ function renderGroups() {
     const kList = document.createElement('div'); kList.className='korean-members';
     g.koreans.forEach(k => {
       const tag = document.createElement('span');
-      tag.className = 'kmember'+(k.isTeacher?' is-teacher':'')+(k.isNew?' k-new':'');
+      tag.className = 'kmember'+(k.isTeacher?' is-teacher':'')+(k.isNew?' k-new':'')+(k.isReturn?' k-return':'');
       tag.style.cursor = 'pointer';
-      tag.title = '우클릭 → NEW 일차 설정';
+      tag.title = '우클릭 → NEW / 복귀 설정 | 클릭 → 다른 반으로 이동';
 
       // 쌤 뱃지
       if (k.isTeacher) {
@@ -1784,7 +1786,7 @@ function renderGroups() {
       }
       // 이름
       const kname = document.createElement('span'); kname.textContent = k.name; tag.appendChild(kname);
-      // NEW 뱃지 — newDay 반영
+      // NEW 뱃지
       if (k.isNew) {
         const nb = document.createElement('span');
         const day = k.newDay||1;
@@ -1792,6 +1794,13 @@ function renderGroups() {
         nb.style.cssText=`font-size:9px;font-weight:900;background:${dayColors[day]||'#A02800'};color:#fff;padding:1px 4px;border-radius:3px;margin-left:4px;`;
         nb.textContent='NEW '+(k.newDay>0?k.newDay+'일':'');
         tag.appendChild(nb);
+      }
+      // 복귀 뱃지
+      if (k.isReturn) {
+        const rb = document.createElement('span');
+        rb.style.cssText='font-size:9px;font-weight:900;background:#22A06B;color:#fff;padding:1px 4px;border-radius:3px;margin-left:4px;';
+        rb.textContent='복귀';
+        tag.appendChild(rb);
       }
 
       // 우클릭 → NEW 일차 선택 + 다른 반으로 이동
@@ -1815,11 +1824,13 @@ function renderGroups() {
         showCtxMenu(e, [
           ...moveItems,
           ...(moveItems.length ? ['sep'] : []),
-          { label:'✦ NEW 1일차', action:()=>{ k.newDay=k.newDay===1?0:1; k.isNew=k.newDay>0; renderAll(); }, checked: k.newDay===1 },
-          { label:'✦ NEW 2일차', action:()=>{ k.newDay=k.newDay===2?0:2; k.isNew=k.newDay>0; renderAll(); }, checked: k.newDay===2 },
-          { label:'✦ NEW 3일차', action:()=>{ k.newDay=k.newDay===3?0:3; k.isNew=k.newDay>0; renderAll(); }, checked: k.newDay===3 },
-          { label:'✦ NEW 4일차', action:()=>{ k.newDay=k.newDay===4?0:4; k.isNew=k.newDay>0; renderAll(); }, checked: k.newDay===4 },
-          { label:'✦ NEW 해제',  action:()=>{ k.newDay=0; k.isNew=false; renderAll(); }, checked: !k.isNew },
+          { label:'✦ NEW 1일차', action:()=>{ k.newDay=k.newDay===1?0:1; k.isNew=k.newDay>0; k.isReturn=false; renderAll(); }, checked: k.newDay===1 },
+          { label:'✦ NEW 2일차', action:()=>{ k.newDay=k.newDay===2?0:2; k.isNew=k.newDay>0; k.isReturn=false; renderAll(); }, checked: k.newDay===2 },
+          { label:'✦ NEW 3일차', action:()=>{ k.newDay=k.newDay===3?0:3; k.isNew=k.newDay>0; k.isReturn=false; renderAll(); }, checked: k.newDay===3 },
+          { label:'✦ NEW 4일차', action:()=>{ k.newDay=k.newDay===4?0:4; k.isNew=k.newDay>0; k.isReturn=false; renderAll(); }, checked: k.newDay===4 },
+          { label:'✦ NEW 해제',  action:()=>{ k.newDay=0; k.isNew=false; renderAll(); }, checked: !k.isNew && !k.isReturn },
+          'sep',
+          { label: k.isReturn ? '↩ 복귀 해제' : '↩ 복귀 표시', action:()=>{ k.isReturn=!k.isReturn; if(k.isReturn){ k.isNew=false; k.newDay=0; } renderAll(); } },
           'sep',
           { label:'✕ 이 반에서 삭제', danger:true, action:()=>{ removeKorean(g.id, k.id); } },
         ]);
@@ -3312,7 +3323,10 @@ function loadState() {
     // 기존 저장 데이터에 newDay 없을 경우 0으로 보정
     members.forEach(m => { if (m.newDay === undefined) m.newDay = m.isNew ? 1 : 0; });
     groups.forEach(g => {
-      (g.koreans||[]).forEach(k => { if (k.newDay === undefined) k.newDay = k.isNew ? 1 : 0; });
+      (g.koreans||[]).forEach(k => {
+        if (k.newDay === undefined) k.newDay = k.isNew ? 1 : 0;
+        if (k.isReturn === undefined) k.isReturn = false;
+      });
     });
     return true;
   } catch(e) { return false; }
