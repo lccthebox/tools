@@ -2,7 +2,10 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="THE BOX 매뉴얼">
 <title>THE BOX · 매니저 매뉴얼</title>
 <style>
 /* ============================================================
@@ -93,7 +96,7 @@ main{padding-bottom:120px}
 .item .qt{flex:1;font-size:16.5px;font-weight:600;letter-spacing:-.01em;color:var(--ink)}
 .item .tag{font-family:var(--mono);font-size:11px;color:var(--ink-4);background:var(--hover);
   border:1px solid var(--line);border-radius:6px;padding:2px 8px;white-space:nowrap;flex-shrink:0}
-@media(max-width:480px){.item .tag{display:none}}
+@media(max-width:480px){.item .q{flex-wrap:wrap}}
 
 .item .a{display:none;padding:2px 8px 22px 34px}
 .item.open .a{display:block;animation:fade .18s ease}
@@ -121,6 +124,68 @@ main{padding-bottom:120px}
 footer{max-width:760px;margin:0 auto;padding:24px;border-top:1px solid var(--line);
   display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;color:var(--ink-4);font-size:12px}
 footer span{font-family:var(--mono)}
+
+/* ============================================================
+   MOBILE — 손가락 터치 / iOS 확대 방지 / 좁은 화면 여백
+   ============================================================ */
+@media(max-width:560px){
+  body{font-size:15.5px}
+  .wrap{padding:0 16px}
+
+  /* 상단 여백 줄이고 검색창 빠르게 도달 */
+  .top{padding:28px 0 14px}
+  .top .ey{font-size:11px}
+  .top h1{font-size:22px;margin:8px 0 16px}
+
+  /* 검색창: iOS는 input 16px 미만이면 자동 확대됨 → 16px 유지 */
+  .searchbox{padding:10px 0;
+    /* 노치 영역 회피 */
+    padding-top:max(10px,env(safe-area-inset-top))}
+  .search input{font-size:16px;padding:15px 46px 15px 46px;border-radius:12px}
+  .search .ico{left:15px;font-size:18px}
+  .search .clr{width:30px;height:30px}  /* 터치 타깃 키움 */
+
+  .meta{margin-top:9px}
+  .meta .foldall{padding:7px 14px;font-size:13px}  /* 버튼 터치 영역 */
+
+  /* 그룹 헤더: 터치하기 좋게 키움 */
+  .glabel{padding:15px 6px;font-size:12px}
+  .glabel .gchev{font-size:13px}
+
+  /* 항목: 줄 간격·터치 영역 확대, 태그는 아래로 */
+  .item .q{padding:16px 4px;gap:11px;flex-wrap:wrap}
+  .item .qt{font-size:16px;flex:1 1 auto;min-width:0}
+  .item .tag{display:inline-block;order:3;flex-basis:100%;margin-left:24px;
+    width:fit-content;font-size:10.5px}
+  .item .chev{font-size:14px}
+
+  /* 펼친 내용 */
+  .item .a{padding:2px 4px 20px 26px}
+  .a ol li,.a ul li{font-size:15px;padding-top:6px;padding-bottom:6px}  /* 줄 간격 ↑ 가독성 */
+  .a .note{font-size:13.5px;padding:11px 13px}
+
+  footer{padding:20px 16px;padding-bottom:max(20px,env(safe-area-inset-bottom));font-size:11px}
+
+  /* 게이트 입력도 16px 유지 */
+  #gate input{font-size:16px}
+  #gate h1{font-size:21px}
+}
+
+/* 아주 좁은 화면 (소형 폰) */
+@media(max-width:360px){
+  .wrap{padding:0 12px}
+  .top h1{font-size:20px}
+  .glabel .gname{letter-spacing:.03em}
+}
+
+/* 터치 기기: hover 잔상 제거 (모바일에서 hover 배경이 눌린 채 남는 문제) */
+@media(hover:none){
+  .glabel:hover{background:transparent;color:var(--ink-3)}
+  .item .q:hover{background:transparent}
+  .meta .foldall:hover{border-color:var(--line-2);color:var(--ink-3);background:#fff}
+  .glabel:active{background:var(--hover)}
+  .item .q:active{background:var(--hover)}
+}
 </style>
 </head>
 <body>
@@ -437,6 +502,17 @@ const DATA = [
       "선금 환불 가능"
     ],
     notes:[]
+  },
+  {
+    group:"환불",
+    when:"환불계산",
+    title:"환불 계산 방법 (계산기 사용)",
+    tags:["환불","계산","계산기","도구","구간","비율"],
+    steps:[
+      "환불 계산은 더박스 도구 모음의 환불 계산기를 따른다",
+      "<a href='https://lccthebox.github.io/thebox-message-generator/' target='_blank'>환불 계산기 열기</a>"
+    ],
+    notes:["환불 구간(표 기준): 소진/총회차 <strong>1/3 이하 → 결제금액 × 2/3</strong> 환불 · <strong>1/3 초과~1/2 이하 → × 1/2</strong> 환불 · <strong>1/2 초과 → 0원</strong>. (B안: 1개월 초과 결제는 첫 1개월 금액 제외 후 추가 구간에 위 비율 적용. 일반 8회=1개월 / 제임스·크리스 16회=1개월)"]
   },
 
   /* ===== 청강 (아카데미) ===== */
