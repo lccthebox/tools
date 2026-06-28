@@ -2099,14 +2099,24 @@ function checkAndAutoReset() {
 
 let holdingData = {};
 const shouldReset = checkAndAutoReset();
-H_SLOTS.forEach(s => {
-  const preset = PRESETS[s.pday]?.[s.ptime] || [];
-  holdingData[s.key] = preset.map(p => ({
-    id: hUid(), className: p.name,
-    members: [], korMembers: [], korTeachers: [],
-    attend: 0, tutor: 0, memo: ''
-  }));
-});
+
+function initHoldingData() {
+  H_SLOTS.forEach(s => {
+    const preset = PRESETS[s.pday]?.[s.ptime] || [];
+    // 기존 데이터 보존 (반 이름이 같으면 유지, 새로 추가된 반만 생성)
+    const existing = holdingData[s.key] || [];
+    const existingMap = new Map(existing.map(c => [c.className, c]));
+    holdingData[s.key] = preset.map(p => {
+      return existingMap.get(p.name) || {
+        id: hUid(), className: p.name,
+        members: [], korMembers: [], korTeachers: [],
+        attend: 0, tutor: 0, memo: ''
+      };
+    });
+  });
+}
+
+initHoldingData();
 
 let hActiveSlot = '월오전';
 
@@ -3057,8 +3067,14 @@ async function savePresets() {
   ['수'].forEach(d => { peData[d] = JSON.parse(JSON.stringify(peData['월'] || {})); });
   ['목'].forEach(d => { peData[d] = JSON.parse(JSON.stringify(peData['화'] || {})); });
 
-  // PRESETS 업데이트
+  // PRESETS 즉시 업데이트
   Object.assign(PRESETS, peData);
+
+  // holdingData 재초기화 (기존 입력 데이터 보존)
+  initHoldingData();
+  renderHDayTabs();
+  renderHClasses();
+  updatePresetPreview();
 
   showToast('💾 저장 중…');
   try {
@@ -3066,7 +3082,7 @@ async function savePresets() {
       method: 'POST',
       body: JSON.stringify({ action: 'savePresets', presets: peData }),
     });
-    showToast('✅ 반 설정이 저장되었습니다.');
+    showToast('✅ 반 설정이 저장되었습니다. 홀딩·반편성에 즉시 반영됩니다.');
   } catch(e) {
     showToast('❌ 저장 실패. 네트워크를 확인해주세요.');
   }
@@ -3584,10 +3600,20 @@ function loadState() {
       const res = await fetch(GS_URL + '?action=getPresets');
       const json = await res.json();
       if (json.ok && json.presets) {
+        // PRESETS 업데이트
         Object.assign(PRESETS, json.presets);
-        // 수,목 동기화
         PRESETS['수'] = JSON.parse(JSON.stringify(PRESETS['월'] || {}));
         PRESETS['목'] = JSON.parse(JSON.stringify(PRESETS['화'] || {}));
+
+        // holdingData 재초기화 (기존 입력 데이터 보존)
+        initHoldingData();
+
+        // 홀딩 탭 UI 갱신
+        renderHDayTabs();
+        renderHClasses();
+
+        // 반 편성 미리보기 갱신
+        updatePresetPreview();
       }
     } catch(e) { /* 실패 시 기본값 유지 */ }
   })();
