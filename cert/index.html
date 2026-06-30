@@ -704,6 +704,13 @@ function delRow(rowIndex,btn){
 }
 function issue(rowIndex,btn){
   const row=window.__rows&&window.__rows[rowIndex];
+
+  // 발급일 입력 (기본값: 오늘) — YYYY. MM. DD
+  const t=new Date();
+  const todayStr=`${t.getFullYear()}. ${('0'+(t.getMonth()+1)).slice(-2)}. ${('0'+t.getDate()).slice(-2)}`;
+  const issueDate=prompt("발급일을 입력하세요 (변경이 필요할 때만 수정)\n형식: YYYY. MM. DD", todayStr);
+  if(issueDate===null){return;}
+
   let invoiceAmount="", invoiceDue="";
   const hasInvoice=row&&String(row.docKeys||'').split(',').includes('invoice');
   if(hasInvoice){
@@ -713,7 +720,7 @@ function issue(rowIndex,btn){
     if(invoiceAmount===null){return;}
   }
   btn.disabled=true;const old=btn.textContent;btn.innerHTML='<span class="spin"></span>처리중';
-  post({action:"issue",pw:ADMIN_PW,rowIndex,invoiceAmount,invoiceDue}).then(r=>{
+  post({action:"issue",pw:ADMIN_PW,rowIndex,invoiceAmount,invoiceDue,issueDate}).then(r=>{
     if(r.ok){btn.textContent='완료';loadList();}
     else{alert(r.error||'발급에 실패했습니다.');btn.disabled=false;btn.textContent=old;}
   }).catch(()=>{alert('네트워크 오류가 발생했습니다.');btn.disabled=false;btn.textContent=old;});
