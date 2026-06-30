@@ -3,105 +3,173 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>THE BOX 서류 발급</title>
+<title>THE BOX · 서류 발급</title>
 <style>
   :root{
-    --ink:#1a1d29; --paper:#fbfaf7; --line:#e3e0d8;
-    --accent:#c8472e; --accent-soft:#f3e3df;
-    --muted:#7a7668; --good:#2f7d54; --good-soft:#e3f1e9;
-    --warn:#b8862a; --warn-soft:#f6edda;
-    --shadow:0 1px 2px rgba(26,29,41,.04),0 8px 24px rgba(26,29,41,.06);
+    --ink:#1c1f2a; --ink-soft:#5a5d68; --muted:#9a9aa3;
+    --paper:#f6f5f2; --card:#ffffff; --line:#eceae4; --line-strong:#ddd9d0;
+    --accent:#c8472e; --accent-deep:#a8381f; --accent-tint:#fbeeea;
+    --good:#1f7a4d; --good-tint:#e6f3ec;
+    --warn:#9a6a16; --warn-tint:#f7efdc;
+    --field:#fafaf8;
+    --shadow-sm:0 1px 2px rgba(28,31,42,.05);
+    --shadow:0 2px 6px rgba(28,31,42,.05),0 12px 32px rgba(28,31,42,.07);
+    --r:14px;
   }
   *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
   body{
-    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
-    background:var(--paper); color:var(--ink); line-height:1.55;
-    -webkit-font-smoothing:antialiased;
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Malgun Gothic",sans-serif;
+    background:var(--paper);color:var(--ink);line-height:1.6;
+    -webkit-font-smoothing:antialiased;letter-spacing:-.01em;
   }
-  .wrap{max-width:720px;margin:0 auto;padding:0 18px 80px}
-  header.top{
-    padding:28px 0 22px; border-bottom:1px solid var(--line);
-    margin-bottom:26px; display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;
-  }
-  .brand{font-size:22px;font-weight:800;letter-spacing:-.02em}
-  .brand b{color:var(--accent)}
-  .brand-sub{font-size:13px;color:var(--muted)}
-  .tabs{display:flex;gap:6px;margin-bottom:24px;background:#f1efe9;padding:5px;border-radius:12px}
+  .wrap{max-width:660px;margin:0 auto;padding:0 18px 90px}
+
+  header.top{padding:30px 2px 0}
+  .logo{font-size:21px;font-weight:800;letter-spacing:.5px}
+  .logo b{color:var(--accent)}
+  .logo .div{color:var(--line-strong);margin:0 9px;font-weight:400}
+  .logo .sub{font-size:13px;font-weight:500;color:var(--muted);letter-spacing:0}
+  .lede{font-size:13.5px;color:var(--ink-soft);margin-top:7px}
+
+  .tabs{display:flex;gap:4px;margin:22px 0 20px;background:#ecebe6;padding:4px;border-radius:11px}
   .tabs button{
-    flex:1;border:0;background:transparent;padding:10px;border-radius:8px;
-    font-size:14px;font-weight:600;color:var(--muted);cursor:pointer;font-family:inherit;
+    flex:1;border:0;background:transparent;padding:9px;border-radius:8px;
+    font-size:13.5px;font-weight:600;color:var(--ink-soft);cursor:pointer;font-family:inherit;transition:.15s;
   }
-  .tabs button.on{background:#fff;color:var(--ink);box-shadow:var(--shadow)}
+  .tabs button.on{background:var(--card);color:var(--ink);box-shadow:var(--shadow-sm)}
+
   .card{
-    background:#fff;border:1px solid var(--line);border-radius:16px;
-    padding:24px;box-shadow:var(--shadow);margin-bottom:18px;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+    padding:26px 24px;box-shadow:var(--shadow);margin-bottom:16px;
   }
-  h2{font-size:17px;font-weight:700;margin-bottom:4px}
-  .hint{font-size:13px;color:var(--muted);margin-bottom:18px}
-  label{display:block;font-size:13px;font-weight:600;margin:14px 0 6px}
-  label .req{color:var(--accent)}
+  .card h2{font-size:16px;font-weight:700;letter-spacing:-.02em}
+  .card .desc{font-size:13px;color:var(--ink-soft);margin-top:5px;margin-bottom:4px}
+
+  .sec-label{
+    font-size:11.5px;font-weight:700;color:var(--muted);letter-spacing:.06em;
+    text-transform:uppercase;margin:22px 0 2px;
+  }
+  .sec-label:first-of-type{margin-top:18px}
+
+  label{display:block;font-size:12.5px;font-weight:600;color:var(--ink-soft);margin:14px 0 6px}
+  label .req{color:var(--accent);margin-left:1px}
+  .opt{font-weight:500;color:var(--muted)}
+
   input,select,textarea{
-    width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:10px;
-    font-size:15px;font-family:inherit;background:#fcfcfb;color:var(--ink);
+    width:100%;padding:11px 13px;border:1px solid var(--line-strong);border-radius:10px;
+    font-size:15px;font-family:inherit;background:var(--field);color:var(--ink);
+    transition:.12s;-webkit-appearance:none;appearance:none;
   }
-  input:focus,select:focus,textarea:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
-  textarea{resize:vertical;min-height:72px}
+  select{
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' stroke='%239a9aa3' stroke-width='1.6' fill='none' stroke-linecap='round'/></svg>");
+    background-repeat:no-repeat;background-position:right 13px center;padding-right:34px;cursor:pointer;
+  }
+  input:focus,select:focus,textarea:focus{
+    outline:none;border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px var(--accent-tint);
+  }
+  input::placeholder,textarea::placeholder{color:#b8b6ba}
+  textarea{resize:vertical;min-height:74px;line-height:1.55}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
   @media(max-width:520px){.grid2{grid-template-columns:1fr}}
-  .doc-pick{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+
+  .doc-pick{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:8px}
   @media(max-width:520px){.doc-pick{grid-template-columns:1fr}}
   .doc-pick label{
-    margin:0;display:flex;align-items:center;gap:9px;padding:13px;
-    border:1px solid var(--line);border-radius:11px;cursor:pointer;font-weight:500;
-    transition:.12s;
+    margin:0;display:flex;align-items:center;gap:10px;padding:13px 14px;
+    border:1.5px solid var(--line-strong);border-radius:11px;cursor:pointer;
+    font-size:14px;font-weight:600;color:var(--ink);background:var(--card);transition:.13s;
   }
-  .doc-pick label:hover{border-color:var(--accent)}
-  .doc-pick input{width:auto}
-  .doc-pick label.sel{border-color:var(--accent);background:var(--accent-soft)}
-  .fields{display:none;border-top:1px dashed var(--line);margin-top:18px;padding-top:8px}
-  .fields.show{display:block}
+  .doc-pick label:hover{border-color:var(--muted)}
+  .doc-pick input{width:auto;accent-color:var(--accent)}
+  .doc-pick label.sel{border-color:var(--accent);background:var(--accent-tint);color:var(--accent-deep)}
+
+  .xblock{border-top:1px solid var(--line);margin-top:18px;padding-top:4px}
+  .xblock .xhead{font-size:12.5px;font-weight:700;color:var(--accent-deep);margin:14px 0 2px}
+
+  .daywrap{margin-top:8px}
+  .daygrid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:8px}
+  .daygrid .dh{font-size:10.5px;color:var(--muted);text-align:center;font-weight:700;padding:2px 0}
+  .daygrid button{
+    border:1px solid var(--line-strong);background:var(--card);border-radius:8px;
+    padding:0;height:34px;font-size:13px;font-family:inherit;cursor:pointer;color:var(--ink);transition:.1s;
+  }
+  .daygrid button.blank{border:0;background:transparent;cursor:default}
+  .daygrid button.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+  .daycount{font-size:12.5px;color:var(--ink-soft);margin-top:10px}
+  .daycount b{color:var(--accent-deep)}
+
+  .notice{
+    background:var(--warn-tint);border-radius:10px;padding:12px 14px;margin:16px 0 4px;
+    font-size:12px;color:#7a5a13;line-height:1.7;
+  }
+  .sign-preview{
+    min-height:30px;margin-top:8px;font-size:24px;color:var(--ink);
+    font-family:"Apple SD Gothic Neo","Nanum Pen Script",cursive;font-style:italic;
+    letter-spacing:1px;
+  }
+
   .btn{
     width:100%;border:0;background:var(--ink);color:#fff;padding:14px;
     border-radius:11px;font-size:15px;font-weight:700;cursor:pointer;
-    font-family:inherit;margin-top:22px;transition:.12s;
+    font-family:inherit;margin-top:24px;transition:.14s;letter-spacing:.01em;
   }
-  .btn:hover{background:#000}
-  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn:hover{background:#000;transform:translateY(-1px)}
+  .btn:active{transform:translateY(0)}
+  .btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
   .btn.accent{background:var(--accent)}
-  .btn.accent:hover{background:#a93a23}
-  .msg{padding:13px 15px;border-radius:10px;font-size:14px;margin-top:16px;display:none}
-  .msg.ok{display:block;background:var(--good-soft);color:var(--good)}
-  .msg.err{display:block;background:var(--accent-soft);color:var(--accent)}
-  /* admin */
-  .row{
-    display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
-    padding:16px;border:1px solid var(--line);border-radius:12px;margin-bottom:10px;background:#fff;
+  .btn.accent:hover{background:var(--accent-deep)}
+
+  .msg{padding:12px 15px;border-radius:10px;font-size:13.5px;margin-top:16px;display:none;font-weight:500}
+  .msg.ok{display:block;background:var(--good-tint);color:var(--good)}
+  .msg.err{display:block;background:var(--accent-tint);color:var(--accent-deep)}
+
+  .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+  .toolbar h2{margin:0}
+  .filterbar{display:flex;gap:8px;margin-bottom:14px}
+  .filterbar input{flex:1}
+  .filterbar select{width:auto;min-width:118px}
+  .ghost-btn{
+    border:1px solid var(--line-strong);background:var(--card);border-radius:9px;
+    padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--ink-soft);
   }
-  .row .meta{font-size:13px;color:var(--muted);margin-top:3px}
-  .row .name{font-weight:700;font-size:15px}
-  .pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;vertical-align:middle;margin-left:7px}
-  .pill.wait{background:var(--warn-soft);color:var(--warn)}
-  .pill.done{background:var(--good-soft);color:var(--good)}
+  .ghost-btn:hover{border-color:var(--muted);color:var(--ink)}
+  .row{
+    display:flex;justify-content:space-between;align-items:flex-start;gap:14px;
+    padding:17px 18px;border:1px solid var(--line);border-radius:12px;margin-bottom:10px;
+    background:var(--card);box-shadow:var(--shadow-sm);
+  }
+  .row .name{font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px}
+  .row .meta{font-size:12.5px;color:var(--ink-soft);margin-top:4px}
+  .row .meta.dim{color:var(--muted);font-size:12px}
+  .pill{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px;letter-spacing:.02em}
+  .pill.wait{background:var(--warn-tint);color:var(--warn)}
+  .pill.done{background:var(--good-tint);color:var(--good)}
   .row .acts{display:flex;flex-direction:column;gap:6px;flex-shrink:0}
   .row .acts button{
-    border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 12px;
-    font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;
+    border:1px solid var(--line-strong);background:var(--card);border-radius:9px;padding:8px 14px;
+    font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;color:var(--ink);
   }
   .row .acts button.go{background:var(--accent);color:#fff;border-color:var(--accent)}
-  .row .acts button:disabled{opacity:.5}
-  .empty{text-align:center;color:var(--muted);padding:40px 0;font-size:14px}
-  .lock{max-width:360px;margin:60px auto;text-align:center}
-  .lock h2{margin-bottom:14px}
-  .spin{display:inline-block;width:14px;height:14px;border:2px solid #fff5;border-top-color:#fff;border-radius:50%;animation:s .7s linear infinite;vertical-align:-2px;margin-right:6px}
+  .row .acts button.go:hover{background:var(--accent-deep)}
+  .row .acts button.del{color:var(--muted)}
+  .row .acts button.del:hover{color:var(--accent-deep);border-color:var(--accent)}
+  .row .acts button:disabled{opacity:.5;cursor:not-allowed}
+  .empty{text-align:center;color:var(--muted);padding:44px 0;font-size:14px}
+  .lock{max-width:340px;margin:50px auto;text-align:center}
+  .lock h2{margin-bottom:6px}
+  .lock .desc{margin-bottom:16px}
+
+  .spin{display:inline-block;width:14px;height:14px;border:2px solid #ffffff66;border-top-color:#fff;border-radius:50%;animation:s .7s linear infinite;vertical-align:-2px;margin-right:7px}
   @keyframes s{to{transform:rotate(360deg)}}
-  .foot{text-align:center;font-size:12px;color:var(--muted);margin-top:30px;line-height:1.7}
+  .foot{text-align:center;font-size:11.5px;color:var(--muted);margin-top:26px;line-height:1.8}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header class="top">
-    <div class="brand">THE <b>BOX</b> · 서류 발급</div>
-    <div class="brand-sub">주식회사 더박스 · 대구 동성로</div>
+    <div class="logo">THE <b>BOX</b><span class="div">·</span><span class="sub">서류 발급</span></div>
+    <div class="lede">필요한 서류를 신청하면 확인 후 이메일로 보내드립니다.</div>
   </header>
 
   <div class="tabs">
@@ -109,14 +177,15 @@
     <button id="tab-adm" onclick="show('adm')">관리자</button>
   </div>
 
-  <!-- ================= 학생 신청 ================= -->
+  <!-- ============ 학생 신청 ============ -->
   <section id="view-req">
     <div class="card">
-      <h2>서류 신청하기</h2>
-      <p class="hint">필요한 서류를 선택하고 정보를 입력하면 관리자 확인 후 이메일로 보내드립니다.</p>
+      <h2>서류 신청</h2>
+      <p class="desc">아래 정보를 입력하고 받을 서류를 선택해 주세요.</p>
 
+      <div class="sec-label">신청자 정보</div>
       <label>이름 <span class="req">*</span></label>
-      <input id="r_name" placeholder="홍길동">
+      <input id="r_name" placeholder="홍길동" autocomplete="name">
 
       <div class="grid2">
         <div>
@@ -125,32 +194,35 @@
         </div>
         <div>
           <label>연락처 <span class="req">*</span></label>
-          <input id="r_phone" placeholder="010-0000-0000" inputmode="tel">
+          <input id="r_phone" placeholder="010-0000-0000" inputmode="tel" autocomplete="tel">
         </div>
       </div>
 
       <label>이메일 <span class="req">*</span></label>
-      <input id="r_email" placeholder="name@email.com" inputmode="email">
+      <input id="r_email" placeholder="name@email.com" inputmode="email" autocomplete="email">
 
-      <div class="grid2">
-        <div>
-          <label>강좌명 <span class="req">*</span></label>
-          <input id="r_course" placeholder="예) 비즈니스 영어회화">
-        </div>
-        <div>
-          <label>수강기간 <span class="req">*</span></label>
-          <input id="r_period" placeholder="예) 2026.03.01 ~ 2026.06.30">
-        </div>
+      <div class="sec-label">수강 정보</div>
+      <label>강좌명 <span class="req">*</span></label>
+      <select id="r_course" onchange="onCourse()"></select>
+      <div id="course-etc-wrap" style="display:none">
+        <label>강좌명 직접 입력 <span class="req">*</span></label>
+        <input id="r_course_etc" placeholder="강좌명을 입력해 주세요">
       </div>
 
-      <label>받을 서류 <span class="req">*</span> <span style="font-weight:400;color:var(--muted)">(복수 선택 가능)</span></label>
+      <label>수강기간 <span class="req">*</span></label>
+      <div class="grid2">
+        <div><input id="r_period_from" type="date" aria-label="수강 시작일"></div>
+        <div><input id="r_period_to" type="date" aria-label="수강 종료일"></div>
+      </div>
+
+      <div class="sec-label">받을 서류</div>
+      <p class="desc" style="margin-top:0">복수 선택할 수 있습니다.</p>
       <div class="doc-pick" id="docpick"></div>
 
-      <!-- 동적 추가 필드 -->
       <div id="extra"></div>
 
-      <label style="margin-top:18px">요청 메모 <span style="font-weight:400;color:var(--muted)">(선택)</span></label>
-      <textarea id="r_memo" placeholder="원하시는 발급(수령) 날짜나 기타 요청사항이 있으면 적어주세요. 예) 6월 30일까지 필요, 제출처: ○○회사"></textarea>
+      <label style="margin-top:20px">요청 메모 <span class="opt">(선택)</span></label>
+      <textarea id="r_memo" placeholder="원하시는 발급(수령) 날짜나 기타 요청사항이 있으면 적어주세요. 예) 6월 30일까지 필요, 제출처 ○○회사"></textarea>
 
       <button class="btn accent" id="r_submit" onclick="submitReq()">신청서 보내기</button>
       <div class="msg" id="r_msg"></div>
@@ -161,68 +233,89 @@
     </div>
   </section>
 
-  <!-- ================= 관리자 ================= -->
+  <!-- ============ 관리자 ============ -->
   <section id="view-adm" style="display:none">
     <div id="adm-lock" class="card lock">
       <h2>관리자 인증</h2>
-      <input id="a_pw" type="password" placeholder="관리자 비밀번호" onkeydown="if(event.key==='Enter')unlock()">
+      <p class="desc">관리자 비밀번호를 입력해 주세요.</p>
+      <input id="a_pw" type="password" placeholder="비밀번호" onkeydown="if(event.key==='Enter')unlock()">
       <button class="btn" onclick="unlock()">들어가기</button>
       <div class="msg" id="a_msg"></div>
     </div>
 
     <div id="adm-panel" style="display:none">
       <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <h2 style="margin:0">신청 목록</h2>
-          <button onclick="loadList()" style="border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 13px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">새로고침</button>
+        <div class="toolbar">
+          <h2>신청 목록</h2>
+          <button class="ghost-btn" onclick="loadList()">새로고침</button>
         </div>
+        <div class="filterbar">
+          <input id="adm_search" placeholder="이름·강좌·이메일 검색" oninput="applyFilter()">
+          <select id="adm_sort" onchange="applyFilter()">
+            <option value="new">최신순</option>
+            <option value="old">오래된순</option>
+            <option value="name">이름순</option>
+            <option value="wait">대기 먼저</option>
+            <option value="done">발급완료 먼저</option>
+          </select>
+        </div>
+        <div id="list"></div>
       </div>
-      <div id="list"></div>
     </div>
   </section>
 </div>
 
 <script>
-/* ====== 설정: 배포 후 본인 값으로 교체 ====== */
+/* ====== 설정 ====== */
 const GAS_URL = "https://script.google.com/macros/s/AKfycbzxy0o31Qx1No1CS5vheZZeaR0-YKJvXI9UNWO-HeW3CEUoiN0EltZPqPeCdUWbQjAI/exec";
-/* ============================================ */
 
-/* 공통 입력(이름·생년월일·강좌명·수강기간)은 상단에서 받고,
-   여기 extra 는 서류별 고유 항목만. */
+/* 강좌(강사) 목록: 원어민 회화스터디 맨 위, 가나다순, 기타 맨 아래 */
+const COURSES = [
+  "원어민 회화스터디",
+  "다이애나 바로영어","라일리 Right 영어","설린 도전영어","제인 제일영어",
+  "제임스 진짜영어","주디 주디영어","짜이뤼 중국어","코트니 Go-to 영어",
+  "크리스 미디어영어","티나 트렌디영어",
+  "기타"
+];
+
+/* 서류별 학생 입력 항목 (공통: 이름·생년월일·강좌명·수강기간) */
 const DOCS = {
-  enroll:   {label:"수강확인서",  extra:[]},
-  attend:   {label:"출석확인서",  extra:[["출석 / 전체일수","attend"]]},
-  hold:     {label:"수업 홀딩신청서",extra:[["홀딩 시작일","hold_from","date"],["홀딩 종료일","hold_to","date"],["사유","reason"]]},
-  invoice:  {label:"수강료 청구서",extra:[["청구기간","period"],["청구금액(원)","amount"]]},
-  cert:     {label:"수료증",      extra:[]},
-  receipt:  {label:"영수증",      extra:[["결제금액(원)","amount"],["결제일","pay_date","date"],["결제수단","method"]]},
-  bizreg:   {label:"사업자등록증", extra:[]},
+  enroll:  {label:"수강확인서",   extra:[]},
+  attend:  {label:"출석확인서",   extra:[], special:"attend"},
+  hold:    {label:"수업 홀딩신청서", extra:[], special:"hold"},
+  invoice: {label:"수강료 청구서", extra:[]},
+  cert:    {label:"수료증",       extra:[]},
+  receipt: {label:"영수증",       extra:[["결제금액(원)","amount"],["결제일","pay_date","date"],["결제수단","method"]]},
+  bizreg:  {label:"사업자등록증",  extra:[]},
 };
 
-/* 신청 화면 - 서류 체크박스 */
-const pick = document.getElementById('docpick');
+const csel=document.getElementById('r_course');
+csel.innerHTML='<option value="" disabled selected>강좌를 선택하세요</option>'+
+  COURSES.map(c=>`<option value="${c}">${c}</option>`).join('');
+function onCourse(){
+  document.getElementById('course-etc-wrap').style.display=(csel.value==="기타")?'block':'none';
+}
+
+const pick=document.getElementById('docpick');
 Object.entries(DOCS).forEach(([k,v])=>{
   const l=document.createElement('label');
   l.innerHTML=`<input type="checkbox" value="${k}" onchange="toggleDoc(this)"> ${v.label}`;
   pick.appendChild(l);
 });
+function toggleDoc(cb){cb.closest('label').classList.toggle('sel',cb.checked);renderExtra();}
 
-function toggleDoc(cb){
-  cb.closest('label').classList.toggle('sel', cb.checked);
-  renderExtra();
-}
-
-/* 선택된 서류별 추가 입력칸 */
 function renderExtra(){
   const sel=[...document.querySelectorAll('#docpick input:checked')].map(c=>c.value);
   const box=document.getElementById('extra');
   box.innerHTML='';
   sel.forEach(k=>{
     const d=DOCS[k];
+    if(d.special==="attend"){box.appendChild(buildAttend());return;}
+    if(d.special==="hold"){box.appendChild(buildHold());return;}
     if(!d.extra.length)return;
     const grp=document.createElement('div');
-    grp.className='fields show';
-    grp.innerHTML=`<div style="font-size:13px;font-weight:700;color:var(--accent);margin:6px 0 2px">${d.label} 정보</div>`;
+    grp.className='xblock';
+    grp.innerHTML=`<div class="xhead">${d.label} 정보</div>`;
     d.extra.forEach(([lab,name,type])=>{
       const id=`x_${k}_${name}`;
       grp.innerHTML+=`<label>${lab}</label><input id="${id}" type="${type||'text'}">`;
@@ -231,64 +324,233 @@ function renderExtra(){
   });
 }
 
+/* 출석확인서: 월 + 출석일 달력 다중선택 */
+let attendSel=new Set();
+function buildAttend(){
+  attendSel=new Set();
+  const grp=document.createElement('div');
+  grp.className='xblock';
+  const now=new Date();
+  let opts='';
+  for(let i=0;i<6;i++){
+    const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+    const v=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    opts+=`<option value="${v}">${d.getFullYear()}년 ${d.getMonth()+1}월</option>`;
+  }
+  grp.innerHTML=`<div class="xhead">출석확인서 정보</div>
+    <label>출석한 월 <span class="req">*</span></label>
+    <select id="att_month" onchange="renderDays()">${opts}</select>
+    <div class="daywrap">
+      <label>출석한 날짜 선택 <span class="req">*</span> <span class="opt">(여러 날 선택)</span></label>
+      <div class="daygrid" id="daygrid"></div>
+      <div class="daycount" id="daycount"></div>
+    </div>`;
+  setTimeout(renderDays,0);
+  return grp;
+}
+function renderDays(){
+  const mv=document.getElementById('att_month').value;
+  if(!mv)return;
+  attendSel=new Set();
+  const [y,m]=mv.split('-').map(Number);
+  const first=new Date(y,m-1,1).getDay();
+  const days=new Date(y,m,0).getDate();
+  const grid=document.getElementById('daygrid');
+  const wd=['일','월','화','수','목','금','토'];
+  let html=wd.map(d=>`<div class="dh">${d}</div>`).join('');
+  for(let i=0;i<first;i++)html+=`<button class="blank" disabled></button>`;
+  for(let d=1;d<=days;d++)html+=`<button type="button" data-d="${d}" onclick="toggleDay(this,${d})">${d}</button>`;
+  grid.innerHTML=html;
+  updateCount();
+}
+function toggleDay(btn,d){
+  if(attendSel.has(d)){attendSel.delete(d);btn.classList.remove('on');}
+  else{attendSel.add(d);btn.classList.add('on');}
+  updateCount();
+}
+function updateCount(){
+  document.getElementById('daycount').innerHTML=`출석 <b>${attendSel.size}</b>일 선택됨`;
+}
+
+/* 홀딩신청서: 시작일·종료일(최대 3개월) + 안내문구 + 서명(이름 타이핑) */
+function buildHold(){
+  const grp=document.createElement('div');
+  grp.className='xblock';
+  grp.innerHTML=`<div class="xhead">수업 홀딩신청서 정보</div>
+    <div class="grid2">
+      <div><label>홀딩 시작일 <span class="req">*</span></label>
+        <input id="x_hold_hold_from" type="date" onchange="checkHold()"></div>
+      <div><label>홀딩 종료일 <span class="req">*</span></label>
+        <input id="x_hold_hold_to" type="date" onchange="checkHold()"></div>
+    </div>
+    <div class="msg err" id="hold_warn" style="margin-top:6px"></div>
+    <label>사유</label>
+    <input id="x_hold_reason" placeholder="예) 해외 출장, 건강 사유 등">
+    <div class="notice">
+      ※ 홀딩은 담당 선생님께 통지 후 승인이 된 부분만 처리가 가능합니다.<br>
+      ※ 최대 개월 수는 3개월이며, 3개월 이후의 잔여 수강일수는 자동 소멸됩니다.
+    </div>
+    <label>신청인 서명 <span class="req">*</span> <span class="opt">(이름을 입력하면 서명으로 표시됩니다)</span></label>
+    <input id="x_hold_sign" placeholder="홍길동" oninput="previewSign()">
+    <div class="sign-preview" id="hold_sign_preview"></div>`;
+  return grp;
+}
+function checkHold(){
+  const f=document.getElementById('x_hold_hold_from').value;
+  const t=document.getElementById('x_hold_hold_to').value;
+  const w=document.getElementById('hold_warn');
+  w.style.display='none';
+  if(!f||!t)return;
+  if(t<f){w.textContent='종료일이 시작일보다 빠릅니다.';w.style.display='block';return;}
+  // 3개월 초과 검사
+  const fd=new Date(f), limit=new Date(f);
+  limit.setMonth(limit.getMonth()+3);
+  if(new Date(t)>limit){
+    w.textContent='최대 홀딩 기간은 3개월입니다.';
+    w.style.display='block';
+  }
+}
+function previewSign(){
+  const v=document.getElementById('x_hold_sign').value.trim();
+  document.getElementById('hold_sign_preview').textContent=v?v+' (서명)':'';
+}
+function holdExceeds(){
+  const f=document.getElementById('x_hold_hold_from'),t=document.getElementById('x_hold_hold_to');
+  if(!f||!t||!f.value||!t.value)return false;
+  const limit=new Date(f.value);limit.setMonth(limit.getMonth()+3);
+  return new Date(t.value)>limit || t.value<f.value;
+}
+
+/* YYYY-MM-DD -> YYYY. MM. DD */
+function fmtDate(s){
+  if(!s)return'';
+  const p=String(s).split('-');
+  if(p.length!==3)return s;
+  return `${p[0]}. ${p[1]}. ${p[2]}`;
+}
+
 function submitReq(){
-  const name=val('r_name'), birth=val('r_birth'), phone=val('r_phone'),
-        email=val('r_email'), course=val('r_course'), period=val('r_period');
+  const name=val('r_name'),birth=val('r_birth'),phone=val('r_phone'),email=val('r_email');
+  const pFrom=val('r_period_from'),pTo=val('r_period_to');
+  let course=csel.value;
+  if(course==="기타")course=val('r_course_etc');
   const sel=[...document.querySelectorAll('#docpick input:checked')].map(c=>c.value);
   const msg=document.getElementById('r_msg');
-  if(!name||!birth||!phone||!email){return flash(msg,'err','이름·생년월일·연락처·이메일을 모두 입력해 주세요.');}
-  if(!course||!period){return flash(msg,'err','강좌명과 수강기간을 입력해 주세요.');}
-  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){return flash(msg,'err','이메일 형식을 확인해 주세요.');}
-  if(!sel.length){return flash(msg,'err','받을 서류를 한 개 이상 선택해 주세요.');}
+
+  if(!name||!birth||!phone||!email)return flash(msg,'err','이름·생년월일·연락처·이메일을 모두 입력해 주세요.');
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))return flash(msg,'err','이메일 형식을 확인해 주세요.');
+  if(!csel.value)return flash(msg,'err','강좌명을 선택해 주세요.');
+  if(csel.value==="기타"&&!course)return flash(msg,'err','강좌명을 직접 입력해 주세요.');
+  if(!pFrom||!pTo)return flash(msg,'err','수강기간(시작일·종료일)을 선택해 주세요.');
+  if(pFrom>pTo)return flash(msg,'err','수강 종료일이 시작일보다 빠릅니다.');
+  if(!sel.length)return flash(msg,'err','받을 서류를 한 개 이상 선택해 주세요.');
+
+  const period=`${fmtDate(pFrom)} ~ ${fmtDate(pTo)}`;
 
   const details={};
+  let attendBad=false, holdBad=false;
   sel.forEach(k=>{
+    if(DOCS[k].special==="attend"){
+      const mv=document.getElementById('att_month').value;
+      const dl=[...attendSel].sort((a,b)=>a-b);
+      if(!dl.length){attendBad=true;return;}
+      details['attend.month']=mv;
+      details['attend.days']=dl.join(',');
+      details['attend.count']=dl.length;
+      return;
+    }
+    if(k==="hold"){
+      const hf=val('x_hold_hold_from'),ht=val('x_hold_hold_to'),
+            rs=val('x_hold_reason'),sg=val('x_hold_sign');
+      if(!hf||!ht||!sg){holdBad=true;return;}
+      if(holdExceeds()){holdBad='exceed';return;}
+      details['hold.hold_from']=fmtDate(hf);
+      details['hold.hold_to']=fmtDate(ht);
+      details['hold.reason']=rs;
+      details['hold.sign']=sg;
+      return;
+    }
     DOCS[k].extra.forEach(([lab,nm])=>{
       const el=document.getElementById(`x_${k}_${nm}`);
-      if(el&&el.value) details[`${k}.${nm}`]=el.value;
+      if(el&&el.value){
+        const v=(el.type==='date')?fmtDate(el.value):el.value;
+        details[`${k}.${nm}`]=v;
+      }
     });
   });
+  if(attendBad)return flash(msg,'err','출석한 날짜를 선택해 주세요.');
+  if(holdBad==='exceed')return flash(msg,'err','최대 홀딩 기간은 3개월입니다.');
+  if(holdBad)return flash(msg,'err','홀딩 시작일·종료일·신청인 서명을 입력해 주세요.');
 
-  const payload={action:"request",name,birth,phone,email,course,period,
+  const payload={action:"request",name,birth:fmtDate(birth),phone,email,course,period,
     docs:sel.map(k=>DOCS[k].label).join(", "),
     docKeys:sel.join(","),
     details:JSON.stringify(details),
     memo:val('r_memo')};
 
   const btn=document.getElementById('r_submit');
-  btn.disabled=true; btn.innerHTML='<span class="spin"></span>보내는 중…';
+  btn.disabled=true;btn.innerHTML='<span class="spin"></span>보내는 중…';
   post(payload).then(r=>{
-    if(r.ok){
-      flash(msg,'ok','신청이 접수되었습니다. 확인 후 이메일로 보내드릴게요.');
-      document.getElementById('view-req').querySelectorAll('input,textarea').forEach(e=>{if(e.type==='checkbox')e.checked=false;else e.value=''});
-      document.querySelectorAll('#docpick label').forEach(l=>l.classList.remove('sel'));
-      document.getElementById('extra').innerHTML='';
-    }else flash(msg,'err',r.error||'전송에 실패했습니다.');
-  }).catch(()=>flash(msg,'err','네트워크 오류가 발생했습니다.'))
+    if(r.ok){flash(msg,'ok','신청이 접수되었습니다. 확인 후 이메일로 보내드릴게요.');resetForm();}
+    else flash(msg,'err',r.error||'전송에 실패했습니다.');
+  }).catch(()=>flash(msg,'err','네트워크 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'))
     .finally(()=>{btn.disabled=false;btn.textContent='신청서 보내기';});
+}
+function resetForm(){
+  ['r_name','r_birth','r_phone','r_email','r_period_from','r_period_to','r_course_etc','r_memo']
+    .forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  csel.selectedIndex=0;
+  document.getElementById('course-etc-wrap').style.display='none';
+  document.querySelectorAll('#docpick input').forEach(c=>c.checked=false);
+  document.querySelectorAll('#docpick label').forEach(l=>l.classList.remove('sel'));
+  document.getElementById('extra').innerHTML='';
 }
 
 /* ====== 관리자 ====== */
 let ADMIN_PW='';
 function unlock(){
-  const pw=val('a_pw'); const msg=document.getElementById('a_msg');
+  const pw=val('a_pw'),msg=document.getElementById('a_msg');
   if(!pw)return flash(msg,'err','비밀번호를 입력하세요.');
   ADMIN_PW=pw;
   post({action:"list",pw}).then(r=>{
-    if(r.ok){document.getElementById('adm-lock').style.display='none';
+    if(r.ok){
+      document.getElementById('adm-lock').style.display='none';
       document.getElementById('adm-panel').style.display='block';
-      renderList(r.rows);}
-    else flash(msg,'err',r.error||'인증 실패');
-  }).catch(()=>flash(msg,'err','네트워크 오류'));
+      renderList(r.rows);
+    }else flash(msg,'err',r.error||'인증에 실패했습니다.');
+  }).catch(()=>flash(msg,'err','네트워크 오류가 발생했습니다.'));
 }
-function loadList(){
-  post({action:"list",pw:ADMIN_PW}).then(r=>{if(r.ok)renderList(r.rows);});
-}
+function loadList(){post({action:"list",pw:ADMIN_PW}).then(r=>{if(r.ok)renderList(r.rows);});}
+let ALL_ROWS=[];
 function renderList(rows){
+  ALL_ROWS=rows||[];
+  window.__rows={};
+  ALL_ROWS.forEach(r=>{window.__rows[r.rowIndex]=r;});
+  applyFilter();
+}
+function applyFilter(){
   const box=document.getElementById('list');
-  if(!rows||!rows.length){box.innerHTML='<div class="card empty">아직 신청 내역이 없습니다.</div>';return;}
+  const q=(document.getElementById('adm_search')?.value||'').trim().toLowerCase();
+  const sort=document.getElementById('adm_sort')?.value||'new';
+  let rows=ALL_ROWS.slice();
+
+  if(q){
+    rows=rows.filter(r=>
+      [r.name,r.course,r.email,r.phone,r.docs].join(' ').toLowerCase().includes(q));
+  }
+  const ix=r=>Number(r.rowIndex)||0;
+  if(sort==='new')rows.sort((a,b)=>ix(b)-ix(a));
+  else if(sort==='old')rows.sort((a,b)=>ix(a)-ix(b));
+  else if(sort==='name')rows.sort((a,b)=>String(a.name).localeCompare(String(b.name),'ko'));
+  else if(sort==='wait')rows.sort((a,b)=>(a.status==='발급완료')-(b.status==='발급완료')||ix(b)-ix(a));
+  else if(sort==='done')rows.sort((a,b)=>(b.status==='발급완료')-(a.status==='발급완료')||ix(b)-ix(a));
+
+  if(!rows.length){
+    box.innerHTML=`<div class="empty">${q?'검색 결과가 없습니다.':'아직 신청 내역이 없습니다.'}</div>`;
+    return;
+  }
   box.innerHTML='';
-  rows.slice().reverse().forEach(row=>{
+  rows.forEach(row=>{
     const done=row.status==='발급완료';
     const el=document.createElement('div');
     el.className='row';
@@ -297,22 +559,40 @@ function renderList(rows){
         <div class="name">${esc(row.name)}
           <span class="pill ${done?'done':'wait'}">${done?'발급완료':'대기'}</span></div>
         <div class="meta">${esc(row.docs)}</div>
-        <div class="meta">${esc(row.course||'')}${row.period?' · '+esc(row.period):''}</div>
-        <div class="meta">${esc(row.email)} · ${esc(row.phone)}</div>
-        <div class="meta">${esc(row.timestamp||'')}${row.memo?' · 메모: '+esc(row.memo):''}</div>
+        <div class="meta dim">${esc(row.course||'')}${row.period?' · '+esc(row.period):''}</div>
+        <div class="meta dim">${esc(row.email)} · ${esc(row.phone)} · ${esc(row.timestamp||'')}</div>
+        ${row.memo?`<div class="meta dim">메모: ${esc(row.memo)}</div>`:''}
       </div>
       <div class="acts">
-        <button class="go" ${done?'':''} onclick='issue(${JSON.stringify(row.rowIndex)},this)'>${done?'재발급':'발급·전송'}</button>
+        <button class="go" onclick='issue(${JSON.stringify(row.rowIndex)},this)'>${done?'재발급':'발급·전송'}</button>
+        <button class="del" onclick='delRow(${JSON.stringify(row.rowIndex)},this)'>삭제</button>
       </div>`;
     box.appendChild(el);
   });
 }
+function delRow(rowIndex,btn){
+  if(!confirm('이 신청 내역을 삭제할까요? 되돌릴 수 없습니다.'))return;
+  btn.disabled=true;btn.innerHTML='<span class="spin"></span>';
+  post({action:"delete",pw:ADMIN_PW,rowIndex}).then(r=>{
+    if(r.ok){loadList();}
+    else{alert(r.error||'삭제에 실패했습니다.');btn.disabled=false;btn.textContent='삭제';}
+  }).catch(()=>{alert('네트워크 오류가 발생했습니다.');btn.disabled=false;btn.textContent='삭제';});
+}
 function issue(rowIndex,btn){
-  btn.disabled=true; const old=btn.textContent; btn.innerHTML='<span class="spin"></span>처리중';
-  post({action:"issue",pw:ADMIN_PW,rowIndex}).then(r=>{
-    if(r.ok){btn.textContent='완료'; loadList();}
-    else{alert(r.error||'발급 실패');btn.disabled=false;btn.textContent=old;}
-  }).catch(()=>{alert('네트워크 오류');btn.disabled=false;btn.textContent=old;});
+  const row=window.__rows&&window.__rows[rowIndex];
+  let invoiceAmount="", invoicePeriod="";
+  const hasInvoice=row&&String(row.docKeys||'').split(',').includes('invoice');
+  if(hasInvoice){
+    invoicePeriod=prompt("수강료 청구서 — 청구기간을 입력하세요\n예) 2026. 07. 01 ~ 2026. 09. 30", row.period||"");
+    if(invoicePeriod===null){return;}
+    invoiceAmount=prompt("수강료 청구서 — 청구금액을 입력하세요 (숫자만, 원)","");
+    if(invoiceAmount===null){return;}
+  }
+  btn.disabled=true;const old=btn.textContent;btn.innerHTML='<span class="spin"></span>처리중';
+  post({action:"issue",pw:ADMIN_PW,rowIndex,invoiceAmount,invoicePeriod}).then(r=>{
+    if(r.ok){btn.textContent='완료';loadList();}
+    else{alert(r.error||'발급에 실패했습니다.');btn.disabled=false;btn.textContent=old;}
+  }).catch(()=>{alert('네트워크 오류가 발생했습니다.');btn.disabled=false;btn.textContent=old;});
 }
 
 /* ====== 공통 ====== */
@@ -325,9 +605,14 @@ function show(v){
 function val(id){return document.getElementById(id).value.trim();}
 function esc(s){return String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function flash(el,cls,txt){el.className='msg '+cls;el.textContent=txt;}
+
+/* CORS-safe POST: text/plain 으로 보내 사전요청(preflight) 회피 */
 function post(data){
-  return fetch(GAS_URL,{method:'POST',body:JSON.stringify(data)})
-    .then(r=>r.json());
+  return fetch(GAS_URL,{
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body:JSON.stringify(data)
+  }).then(r=>r.json());
 }
 </script>
 </body>
