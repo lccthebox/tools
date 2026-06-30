@@ -3,7 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>THE BOX · 서류 발급</title>
+<title>THE BOX · 제출서류 신청하기</title>
+
+<!-- ====== 링크 미리보기(카톡·메신저) 썸네일 설정 ====== -->
+<!-- ▼▼ cert.png 주소 (확인: 브라우저에서 아래 주소가 이미지로 열려야 함) ▼▼ -->
+<meta property="og:image" content="https://lccthebox.github.io/tools/cert/cert.png">
+<meta name="twitter:image" content="https://lccthebox.github.io/tools/cert/cert.png">
+<!-- ▲▲ 이미지가 안 뜨면 이 두 줄의 주소만 교체 ▲▲ -->
+<meta property="og:title" content="THE BOX · 제출서류 신청하기">
+<meta property="og:description" content="수강확인서 · 출석확인서 · 홀딩신청서 · 청구서 · 수료증 · 영수증 · 사업자등록증">
+<meta property="og:type" content="website">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="THE BOX · 제출서류 신청하기">
+<meta name="twitter:description" content="수강확인서 · 출석확인서 · 홀딩신청서 · 청구서 · 수료증 · 영수증 · 사업자등록증">
 <style>
   :root{
     --ink:#1c1f2a; --ink-soft:#5a5d68; --muted:#9a9aa3;
@@ -81,8 +95,16 @@
     font-size:14px;font-weight:600;color:var(--ink);background:var(--card);transition:.13s;
   }
   .doc-pick label:hover{border-color:var(--muted)}
-  .doc-pick input{width:auto;accent-color:var(--accent)}
+  .doc-pick input{position:absolute;opacity:0;width:0;height:0}
+  .doc-pick label .box{
+    flex-shrink:0;width:22px;height:22px;border-radius:7px;
+    border:2px solid var(--line-strong);background:#fff;
+    display:flex;align-items:center;justify-content:center;transition:.13s;
+  }
+  .doc-pick label .box svg{width:13px;height:13px;opacity:0;transform:scale(.6);transition:.13s}
   .doc-pick label.sel{border-color:var(--accent);background:var(--accent-tint);color:var(--accent-deep)}
+  .doc-pick label.sel .box{background:var(--accent);border-color:var(--accent)}
+  .doc-pick label.sel .box svg{opacity:1;transform:scale(1)}
 
   .xblock{border-top:1px solid var(--line);margin-top:18px;padding-top:4px}
   .xblock .xhead{font-size:12.5px;font-weight:700;color:var(--accent-deep);margin:14px 0 2px}
@@ -103,11 +125,17 @@
     background:var(--warn-tint);border-radius:10px;padding:12px 14px;margin:16px 0 4px;
     font-size:12px;color:#7a5a13;line-height:1.7;
   }
-  .sign-preview{
-    min-height:30px;margin-top:8px;font-size:24px;color:var(--ink);
-    font-family:"Apple SD Gothic Neo","Nanum Pen Script",cursive;font-style:italic;
-    letter-spacing:1px;
+  .sign-pad-wrap{position:relative;margin-top:8px}
+  .sign-pad{
+    width:100%;height:150px;border:1.5px dashed var(--line-strong);border-radius:11px;
+    background:#fff;touch-action:none;cursor:crosshair;display:block;
   }
+  .sign-clear{
+    position:absolute;top:8px;right:8px;border:1px solid var(--line-strong);
+    background:#fff;border-radius:8px;padding:5px 11px;font-size:12px;font-weight:600;
+    cursor:pointer;font-family:inherit;color:var(--ink-soft);
+  }
+  .sign-clear:hover{border-color:var(--accent);color:var(--accent-deep)}
 
   .btn{
     width:100%;border:0;background:var(--ink);color:#fff;padding:14px;
@@ -155,6 +183,21 @@
   .row .acts button.del{color:var(--muted)}
   .row .acts button.del:hover{color:var(--accent-deep);border-color:var(--accent)}
   .row .acts button:disabled{opacity:.5;cursor:not-allowed}
+  .detail-toggle{
+    margin-top:9px;border:0;background:transparent;color:var(--accent-deep);
+    font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;padding:0;
+  }
+  .detail-box{
+    margin-top:10px;padding:12px 14px;background:#faf9f6;border:1px solid var(--line);
+    border-radius:10px;
+  }
+  .dt-head{font-size:11.5px;font-weight:700;color:var(--accent-deep);margin:9px 0 4px}
+  .dt-head:first-child{margin-top:0}
+  .dt-row{display:flex;gap:10px;font-size:12.5px;padding:3px 0;align-items:flex-start}
+  .dt-row span{color:var(--muted);min-width:74px;flex-shrink:0}
+  .dt-row b{color:var(--ink);font-weight:600;word-break:break-all}
+  .dt-row.dim{color:var(--muted)}
+  .dt-sign{max-width:160px;max-height:60px;border:1px solid var(--line);border-radius:6px;background:#fff}
   .empty{text-align:center;color:var(--muted);padding:44px 0;font-size:14px}
   .lock{max-width:340px;margin:50px auto;text-align:center}
   .lock h2{margin-bottom:6px}
@@ -299,7 +342,9 @@ function onCourse(){
 const pick=document.getElementById('docpick');
 Object.entries(DOCS).forEach(([k,v])=>{
   const l=document.createElement('label');
-  l.innerHTML=`<input type="checkbox" value="${k}" onchange="toggleDoc(this)"> ${v.label}`;
+  l.innerHTML=`<input type="checkbox" value="${k}" onchange="toggleDoc(this)">`+
+    `<span class="box"><svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5l3.5 3.5L13 4.5" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`+
+    `<span>${v.label}</span>`;
   pick.appendChild(l);
 });
 function toggleDoc(cb){cb.closest('label').classList.toggle('sel',cb.checked);renderExtra();}
@@ -344,7 +389,9 @@ function buildAttend(){
       <label>출석한 날짜 선택 <span class="req">*</span> <span class="opt">(여러 날 선택)</span></label>
       <div class="daygrid" id="daygrid"></div>
       <div class="daycount" id="daycount"></div>
-    </div>`;
+    </div>
+    <label>총 수업 횟수 <span class="req">*</span> <span class="opt">(출석률 계산용)</span></label>
+    <input id="att_total" type="number" min="1" placeholder="예) 12" oninput="updateCount()">`;
   setTimeout(renderDays,0);
   return grp;
 }
@@ -369,7 +416,11 @@ function toggleDay(btn,d){
   updateCount();
 }
 function updateCount(){
-  document.getElementById('daycount').innerHTML=`출석 <b>${attendSel.size}</b>일 선택됨`;
+  const total=Number(document.getElementById('att_total')?.value||0);
+  const cnt=attendSel.size;
+  let rate='';
+  if(total>0)rate=` · 출석률 <b>${Math.round(cnt/total*100)}%</b>`;
+  document.getElementById('daycount').innerHTML=`출석 <b>${cnt}</b>일 선택됨${rate}`;
 }
 
 /* 홀딩신청서: 시작일·종료일(최대 3개월) + 안내문구 + 서명(이름 타이핑) */
@@ -390,10 +441,48 @@ function buildHold(){
       ※ 홀딩은 담당 선생님께 통지 후 승인이 된 부분만 처리가 가능합니다.<br>
       ※ 최대 개월 수는 3개월이며, 3개월 이후의 잔여 수강일수는 자동 소멸됩니다.
     </div>
-    <label>신청인 서명 <span class="req">*</span> <span class="opt">(이름을 입력하면 서명으로 표시됩니다)</span></label>
-    <input id="x_hold_sign" placeholder="홍길동" oninput="previewSign()">
-    <div class="sign-preview" id="hold_sign_preview"></div>`;
+    <label>신청인 서명 <span class="req">*</span> <span class="opt">(아래 칸에 손가락이나 마우스로 서명해 주세요)</span></label>
+    <div class="sign-pad-wrap">
+      <canvas id="hold_sign_pad" class="sign-pad"></canvas>
+      <button type="button" class="sign-clear" onclick="clearSign()">지우기</button>
+    </div>`;
+  setTimeout(initSignPad,0);
   return grp;
+}
+
+/* 서명패드 */
+let signCtx=null, signDrawing=false, signHasInk=false;
+function initSignPad(){
+  const cv=document.getElementById('hold_sign_pad');
+  if(!cv)return;
+  const ratio=window.devicePixelRatio||1;
+  const w=cv.offsetWidth, h=cv.offsetHeight;
+  cv.width=w*ratio; cv.height=h*ratio;
+  signCtx=cv.getContext('2d');
+  signCtx.scale(ratio,ratio);
+  signCtx.lineWidth=2.2; signCtx.lineCap='round'; signCtx.lineJoin='round';
+  signCtx.strokeStyle='#1c1f2a';
+  signHasInk=false;
+  const pos=(e)=>{
+    const r=cv.getBoundingClientRect();
+    const t=e.touches?e.touches[0]:e;
+    return {x:t.clientX-r.left, y:t.clientY-r.top};
+  };
+  const start=(e)=>{e.preventDefault();signDrawing=true;const p=pos(e);signCtx.beginPath();signCtx.moveTo(p.x,p.y);};
+  const move=(e)=>{if(!signDrawing)return;e.preventDefault();const p=pos(e);signCtx.lineTo(p.x,p.y);signCtx.stroke();signHasInk=true;};
+  const end=()=>{signDrawing=false;};
+  cv.onmousedown=start; cv.onmousemove=move; window.addEventListener('mouseup',end);
+  cv.ontouchstart=start; cv.ontouchmove=move; cv.ontouchend=end;
+}
+function clearSign(){
+  if(!signCtx)return;
+  const cv=document.getElementById('hold_sign_pad');
+  signCtx.clearRect(0,0,cv.width,cv.height);
+  signHasInk=false;
+}
+function getSignData(){
+  if(!signHasInk)return '';
+  return document.getElementById('hold_sign_pad').toDataURL('image/png');
 }
 function checkHold(){
   const f=document.getElementById('x_hold_hold_from').value;
@@ -409,10 +498,6 @@ function checkHold(){
     w.textContent='최대 홀딩 기간은 3개월입니다.';
     w.style.display='block';
   }
-}
-function previewSign(){
-  const v=document.getElementById('x_hold_sign').value.trim();
-  document.getElementById('hold_sign_preview').textContent=v?v+' (서명)':'';
 }
 function holdExceeds(){
   const f=document.getElementById('x_hold_hold_from'),t=document.getElementById('x_hold_hold_to');
@@ -452,16 +537,19 @@ function submitReq(){
   sel.forEach(k=>{
     if(DOCS[k].special==="attend"){
       const mv=document.getElementById('att_month').value;
+      const total=Number(document.getElementById('att_total').value||0);
       const dl=[...attendSel].sort((a,b)=>a-b);
-      if(!dl.length){attendBad=true;return;}
+      if(!dl.length||!total){attendBad=true;return;}
       details['attend.month']=mv;
       details['attend.days']=dl.join(',');
       details['attend.count']=dl.length;
+      details['attend.total']=total;
+      details['attend.rate']=Math.round(dl.length/total*100);
       return;
     }
     if(k==="hold"){
       const hf=val('x_hold_hold_from'),ht=val('x_hold_hold_to'),
-            rs=val('x_hold_reason'),sg=val('x_hold_sign');
+            rs=val('x_hold_reason'),sg=getSignData();
       if(!hf||!ht||!sg){holdBad=true;return;}
       if(holdExceeds()){holdBad='exceed';return;}
       details['hold.hold_from']=fmtDate(hf);
@@ -478,7 +566,7 @@ function submitReq(){
       }
     });
   });
-  if(attendBad)return flash(msg,'err','출석한 날짜를 선택해 주세요.');
+  if(attendBad)return flash(msg,'err','출석한 날짜와 총 수업 횟수를 입력해 주세요.');
   if(holdBad==='exceed')return flash(msg,'err','최대 홀딩 기간은 3개월입니다.');
   if(holdBad)return flash(msg,'err','홀딩 시작일·종료일·신청인 서명을 입력해 주세요.');
 
@@ -555,13 +643,14 @@ function applyFilter(){
     const el=document.createElement('div');
     el.className='row';
     el.innerHTML=`
-      <div>
+      <div style="flex:1;min-width:0">
         <div class="name">${esc(row.name)}
           <span class="pill ${done?'done':'wait'}">${done?'발급완료':'대기'}</span></div>
         <div class="meta">${esc(row.docs)}</div>
         <div class="meta dim">${esc(row.course||'')}${row.period?' · '+esc(row.period):''}</div>
         <div class="meta dim">${esc(row.email)} · ${esc(row.phone)} · ${esc(row.timestamp||'')}</div>
-        ${row.memo?`<div class="meta dim">메모: ${esc(row.memo)}</div>`:''}
+        <button class="detail-toggle" onclick='toggleDetail(${JSON.stringify(row.rowIndex)},this)'>자세히 보기 ▾</button>
+        <div class="detail-box" id="detail_${row.rowIndex}" style="display:none">${renderDetail(row)}</div>
       </div>
       <div class="acts">
         <button class="go" onclick='issue(${JSON.stringify(row.rowIndex)},this)'>${done?'재발급':'발급·전송'}</button>
@@ -569,6 +658,41 @@ function applyFilter(){
       </div>`;
     box.appendChild(el);
   });
+}
+function toggleDetail(rowIndex,btn){
+  const d=document.getElementById('detail_'+rowIndex);
+  const open=d.style.display==='none';
+  d.style.display=open?'block':'none';
+  btn.textContent=open?'접기 ▴':'자세히 보기 ▾';
+}
+const DOC_LABELS={enroll:'수강확인서',attend:'출석확인서',hold:'수업 홀딩신청서',
+  invoice:'수강료 청구서',cert:'수료증',receipt:'영수증',bizreg:'사업자등록증'};
+const FIELD_LABELS={
+  'attend.month':'출석 월','attend.days':'출석한 날짜','attend.count':'출석일수',
+  'attend.total':'총 수업횟수','attend.rate':'출석률',
+  'hold.hold_from':'홀딩 시작','hold.hold_to':'홀딩 종료','hold.reason':'사유','hold.sign':'서명',
+  'receipt.amount':'결제금액','receipt.pay_date':'결제일','receipt.method':'결제수단'
+};
+function renderDetail(row){
+  let det={};
+  try{det=JSON.parse(row.details||'{}');}catch(e){}
+  const keys=String(row.docKeys||'').split(',').filter(Boolean);
+  let html='';
+  html+=`<div class="dt-row"><span>생년월일</span><b>${esc(row.birth||'-')}</b></div>`;
+  html+=`<div class="dt-row"><span>메모</span><b>${esc(row.memo||'-')}</b></div>`;
+  keys.forEach(k=>{
+    html+=`<div class="dt-head">${DOC_LABELS[k]||k}</div>`;
+    const fields=Object.keys(det).filter(f=>f.startsWith(k+'.'));
+    if(!fields.length){html+=`<div class="dt-row dim">추가 입력 없음</div>`;return;}
+    fields.forEach(f=>{
+      let v=det[f];
+      if(f==='hold.sign'){html+=`<div class="dt-row"><span>서명</span><img src="${v}" class="dt-sign"></div>`;return;}
+      if(f==='attend.days')v=String(v).split(',').map(d=>d+'일').join(', ');
+      if(f==='attend.rate')v=v+'%';
+      html+=`<div class="dt-row"><span>${FIELD_LABELS[f]||f.split('.')[1]}</span><b>${esc(v)}</b></div>`;
+    });
+  });
+  return html;
 }
 function delRow(rowIndex,btn){
   if(!confirm('이 신청 내역을 삭제할까요? 되돌릴 수 없습니다.'))return;
@@ -580,16 +704,16 @@ function delRow(rowIndex,btn){
 }
 function issue(rowIndex,btn){
   const row=window.__rows&&window.__rows[rowIndex];
-  let invoiceAmount="", invoicePeriod="";
+  let invoiceAmount="", invoiceDue="";
   const hasInvoice=row&&String(row.docKeys||'').split(',').includes('invoice');
   if(hasInvoice){
-    invoicePeriod=prompt("수강료 청구서 — 청구기간을 입력하세요\n예) 2026. 07. 01 ~ 2026. 09. 30", row.period||"");
-    if(invoicePeriod===null){return;}
+    invoiceDue=prompt("수강료 청구서 — 납부기한을 입력하세요\n예) 2026. 07. 10","");
+    if(invoiceDue===null){return;}
     invoiceAmount=prompt("수강료 청구서 — 청구금액을 입력하세요 (숫자만, 원)","");
     if(invoiceAmount===null){return;}
   }
   btn.disabled=true;const old=btn.textContent;btn.innerHTML='<span class="spin"></span>처리중';
-  post({action:"issue",pw:ADMIN_PW,rowIndex,invoiceAmount,invoicePeriod}).then(r=>{
+  post({action:"issue",pw:ADMIN_PW,rowIndex,invoiceAmount,invoiceDue}).then(r=>{
     if(r.ok){btn.textContent='완료';loadList();}
     else{alert(r.error||'발급에 실패했습니다.');btn.disabled=false;btn.textContent=old;}
   }).catch(()=>{alert('네트워크 오류가 발생했습니다.');btn.disabled=false;btn.textContent=old;});
