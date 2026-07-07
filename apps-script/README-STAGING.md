@@ -13,7 +13,8 @@ For v2 testing, create a separate Apps Script project bound to a copied staging 
 
 1. Copy the operating Google Spreadsheet to a staging spreadsheet.
 2. Create a new Apps Script project bound to the copied staging spreadsheet.
-3. Copy `Code.js` and `appsscript.json` from this folder into that staging Apps Script project.
+3. Copy `Code.js` from this folder into that staging Apps Script project.
+   Keep the staging project's existing `appsscript.json` unless a separate manifest change is intentionally reviewed.
 4. Deploy the staging project as a Web App.
 5. Copy the staging Web App `/exec` URL.
 6. Open the holdings tool on localhost from the repository holdings folder, for example:
