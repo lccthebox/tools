@@ -36,6 +36,18 @@ body {
 .retry-btn { padding: 5px 10px; border-radius: 999px; border: 1px solid #F0B898; background: #FFF5F0; color: #B04020; font-size: 11px; font-weight: 800; cursor: pointer; font-family: inherit; white-space: nowrap; }
 .retry-btn:hover { background: #FFECE5; }
 .retry-btn[hidden] { display: none !important; }
+.staging-sheet-banner { max-width: 1440px; margin: 8px auto 0; padding: 10px 14px; border: 1px solid #EAD18A; border-radius: 8px; background: #FFF9E8; color: #4A3600; display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12px; line-height: 1.45; }
+.staging-sheet-banner[hidden] { display: none !important; }
+.staging-sheet-main { display: flex; flex-direction: column; gap: 2px; min-width: 180px; }
+.staging-sheet-main strong { font-size: 12px; font-weight: 900; color: #111; }
+.staging-sheet-actions { display: flex; align-items: center; gap: 6px; flex: 1; justify-content: flex-end; min-width: 0; }
+.staging-sheet-input { width: min(440px, 100%); border: 1px solid #E5E5E5; border-radius: 7px; padding: 7px 10px; font: inherit; font-size: 12px; background: #fff; color: #111; }
+.staging-sheet-input:focus { outline: 2px solid #111; outline-offset: 1px; }
+@media (max-width: 760px) {
+  .staging-sheet-banner { margin: 8px 12px 0; flex-direction: column; align-items: stretch; }
+  .staging-sheet-actions { flex-direction: column; align-items: stretch; }
+  .staging-sheet-input, .staging-sheet-actions .retry-btn { width: 100%; min-height: 40px; }
+}
 
 /* ── 레이아웃 ── */
 .wrap { max-width: 1440px; margin: 0 auto; padding: 16px 16px 60px; display: grid; grid-template-columns: 268px 1fr; gap: 14px; align-items: start; }
@@ -1084,6 +1096,17 @@ body {
     </div>
   </div>
 </div>
+<div class="staging-sheet-banner no-print" id="stagingSheetBanner" hidden>
+  <div class="staging-sheet-main">
+    <strong>Google Sheets 연결</strong>
+    <span id="stagingSheetStatus">로컬 연결 상태 확인 중</span>
+  </div>
+  <div class="staging-sheet-actions">
+    <input class="staging-sheet-input" id="stagingSheetUrlInput" type="url" placeholder="staging Web App URL">
+    <button class="retry-btn no-print" id="stagingSheetSaveBtn" type="button">staging URL 저장</button>
+    <button class="retry-btn no-print" id="stagingSheetClearBtn" type="button">staging 해제</button>
+  </div>
+</div>
 
 <!-- ===================== 매뉴얼 탭 ===================== -->
 <div id="manualTab">
@@ -1764,7 +1787,7 @@ async function verifySheetResponse(res, label) {
 }
 
 async function postToSheet(payload, label) {
-  const res = await fetch(GS_URL, {
+  const res = await fetch(getSheetEndpointUrl(), {
     method: 'POST',
     body: JSON.stringify(payload),
   });
@@ -3734,7 +3757,85 @@ function showSheetRetry(kind, visible) {
 /* ══════════════════════════════════════
    📊 기록 시스템 — Google Sheets 연동
 ══════════════════════════════════════ */
-const GS_URL = 'https://script.google.com/macros/s/AKfycbzf1AhSOwtxoyIcA8X-CWLIrA5dR_Wb00S0PgKkwM-09jHX-xCGCMQLwpL3iNvXyHFAew/exec';
+const GS_PRODUCTION_URL = 'https://script.google.com/macros/s/AKfycbzf1AhSOwtxoyIcA8X-CWLIrA5dR_Wb00S0PgKkwM-09jHX-xCGCMQLwpL3iNvXyHFAew/exec';
+const GS_STAGING_KEY = 'thebox_gs_staging_url';
+
+function isLocalSheetOverrideAllowed() {
+  return location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+}
+function getStagingSheetUrl() {
+  if (!isLocalSheetOverrideAllowed()) return '';
+  try { return safeText(localStorage.getItem(GS_STAGING_KEY)); }
+  catch(e) { return ''; }
+}
+function isUsingStagingSheet() {
+  return !!getStagingSheetUrl();
+}
+function getSheetEndpointUrl() {
+  return getStagingSheetUrl() || GS_PRODUCTION_URL;
+}
+function getSheetActionUrl(action) {
+  const endpoint = getSheetEndpointUrl();
+  return endpoint + (endpoint.includes('?') ? '&' : '?') + 'action=' + encodeURIComponent(action);
+}
+function resetSheetHealthCache() {
+  sheetHealthCache = null;
+}
+function updateStagingSheetBanner() {
+  const banner = document.getElementById('stagingSheetBanner');
+  if (!banner) return;
+  if (!isLocalSheetOverrideAllowed()) {
+    banner.hidden = true;
+    return;
+  }
+  const stagingUrl = getStagingSheetUrl();
+  const status = document.getElementById('stagingSheetStatus');
+  const input = document.getElementById('stagingSheetUrlInput');
+  const clearBtn = document.getElementById('stagingSheetClearBtn');
+  banner.hidden = false;
+  if (input && input !== document.activeElement) input.value = stagingUrl;
+  if (clearBtn) clearBtn.disabled = !stagingUrl;
+  if (status) {
+    status.textContent = stagingUrl
+      ? 'STAGING Sheets 사용 중 · 실패해도 운영 endpoint로 fallback하지 않음'
+      : '로컬 테스트 모드 · staging URL 미설정 시 운영 endpoint를 사용';
+  }
+}
+function initStagingSheetControls() {
+  updateStagingSheetBanner();
+  if (!isLocalSheetOverrideAllowed()) return;
+  const input = document.getElementById('stagingSheetUrlInput');
+  const saveBtn = document.getElementById('stagingSheetSaveBtn');
+  const clearBtn = document.getElementById('stagingSheetClearBtn');
+  saveBtn?.addEventListener('click', () => {
+    const value = safeText(input?.value);
+    if (!value) {
+      localStorage.removeItem(GS_STAGING_KEY);
+      resetSheetHealthCache();
+      updateStagingSheetBanner();
+      showToast('staging URL을 해제했습니다.');
+      return;
+    }
+    try {
+      const url = new URL(value);
+      if (url.protocol !== 'https:' || !url.hostname.includes('script.google.com') || !url.pathname.endsWith('/exec')) {
+        throw new Error('invalid_staging_url');
+      }
+      localStorage.setItem(GS_STAGING_KEY, url.toString());
+      resetSheetHealthCache();
+      updateStagingSheetBanner();
+      showToast('로컬 staging Google Sheets URL을 저장했습니다.');
+    } catch(e) {
+      showToast('staging Web App URL 형식을 확인해주세요.');
+    }
+  });
+  clearBtn?.addEventListener('click', () => {
+    localStorage.removeItem(GS_STAGING_KEY);
+    resetSheetHealthCache();
+    updateStagingSheetBanner();
+    showToast('staging URL을 해제했습니다.');
+  });
+}
 
 /* ══════════════════════════════════════
    ⚙️ 반 설정 에디터
@@ -3758,7 +3859,7 @@ async function initPresetEditor() {
 
   // 구글 시트에서 불러오기 시도
   try {
-    const res = await fetch(GS_URL + '?action=getPresets');
+    const res = await fetch(getSheetActionUrl('getPresets'));
     const json = await verifySheetResponse(res, '반 설정 불러오기');
     if (json.ok && json.presets) {
       peData = json.presets;
@@ -3916,6 +4017,7 @@ const RECORD_SETTINGS_KEY = 'thebox_record_stats_settings_v1';
 const NAME_RULES_KEY = 'thebox_participant_name_rules_v1';
 let recordsCache = null;
 let recordsLoadedAt = 0;
+let sheetHealthCache = null;
 let statsSort = { key:'avgAttend', dir:'desc' };
 let openedClassStatKey = null;
 let participantSort = { key:'total', dir:'desc' };
@@ -4248,7 +4350,7 @@ async function loadRecords(options={}) {
   if (recordsCache && !options.force && Date.now() - recordsLoadedAt < 5 * 60 * 1000) return recordsCache;
   let sheetRecords = [];
   try {
-    const res = await fetch(GS_URL);
+    const res = await fetch(getSheetEndpointUrl());
     const data = await verifySheetResponse(res, '기록 불러오기');
     sheetRecords = (data.records || []).map(r => normalizeRecord({ ...r, _source:'sheet' }));
   } catch(e) {
@@ -4259,25 +4361,124 @@ async function loadRecords(options={}) {
   return recordsCache;
 }
 
-async function saveRecordToSheet(record) {
-  const compatible = {
-    dateKey: record.dateKey,
-    dateLabel: record.dateLabel,
-    dayLabel: record.dayLabel,
-    slotKey: record.slotKey,
-    slotLabel: record.slotLabel,
-    savedAt: record.savedAt,
-    classes: record.classes.map(c => ({
-      className: c.className,
-      holding: c.holding,
-      korMembers: c.korMembers,
-      korTeachers: c.korTeachers,
-      attend: c.attend === null ? '' : c.attend,
-      tutor: c.tutor === null ? '' : c.tutor,
-      memo: c.memo
-    }))
+function sheetNumberOrBlank(value) {
+  return value === null || value === undefined || value === '' ? '' : Number(value);
+}
+function serializeSheetParticipant(entry, fallbackType) {
+  const normalized = normalizeParticipantEntry(entry, fallbackType);
+  if (!normalized) return null;
+  return {
+    name: normalized.name,
+    type: normalized.type,
+    groupId: normalized.groupId ?? null,
+    groupName: normalized.groupName || '',
+    table: normalized.table || ''
   };
-  return postToSheet({ action: 'save', record: compatible }, '기록 저장');
+}
+function serializeSheetClassRecord(classRecord) {
+  return {
+    classId: classRecord.classId,
+    className: classRecord.className,
+    holding: classRecord.holding,
+    korMembers: classRecord.korMembers,
+    korTeachers: classRecord.korTeachers,
+    attend: sheetNumberOrBlank(classRecord.attend),
+    tutor: sheetNumberOrBlank(classRecord.tutor),
+    memo: classRecord.memo
+  };
+}
+function serializeSheetRecord(record) {
+  const normalized = normalizeRecord(record);
+  return {
+    recordVersion: RECORD_VERSION,
+    recordId: normalized.recordId,
+    dateKey: normalized.dateKey,
+    dateLabel: normalized.dateLabel,
+    dayLabel: normalized.dayLabel,
+    slotKey: normalized.slotKey,
+    slotLabel: normalized.slotLabel,
+    status: normalized.status || 'draft',
+    savedAt: normalized.savedAt,
+    updatedAt: normalized.updatedAt,
+    finalSavedAt: normalized.finalSavedAt || null,
+    classes: normalized.classes.map(serializeSheetClassRecord),
+    nativeMembers: normalizeParticipantEntries(normalized.nativeMembers, 'native')
+      .map(p => serializeSheetParticipant(p, 'native'))
+      .filter(Boolean),
+    nonNativeMembers: normalizeParticipantEntries(normalized.nonNativeMembers, 'nonnative')
+      .map(p => serializeSheetParticipant(p, 'nonnative'))
+      .filter(Boolean),
+    groupingSnapshot: normalized.groupingSnapshot ? cloneData(normalized.groupingSnapshot) : null
+  };
+}
+function serializeLegacySheetRecord(record) {
+  const normalized = normalizeRecord(record);
+  return {
+    recordId: normalized.recordId,
+    dateKey: normalized.dateKey,
+    dateLabel: normalized.dateLabel,
+    dayLabel: normalized.dayLabel,
+    slotKey: normalized.slotKey,
+    slotLabel: normalized.slotLabel,
+    status: 'draft',
+    savedAt: normalized.savedAt,
+    updatedAt: normalized.updatedAt,
+    classes: normalized.classes.map(serializeSheetClassRecord)
+  };
+}
+function verifySheetRecordSaveAck(response, record) {
+  if (!response || typeof response !== 'object') {
+    throw new Error('기록 저장 실패 응답: 서버 응답을 확인할 수 없습니다.');
+  }
+  const apiOk = Number(response.apiVersion || response.storedRecordVersion || response.recordVersion || response.record?.recordVersion || 0) >= RECORD_VERSION;
+  const storageOk = response.storage === 'recordJson';
+  const modeOk = response.mode === 'created' || response.mode === 'updated';
+  if (!apiOk || !storageOk || !modeOk || !response.recordId) {
+    throw new Error('기록 저장 실패 응답: 서버가 v2 전체 기록 저장을 확인하지 않았습니다. Apps Script v2 배포가 필요합니다.');
+  }
+  if (response.dateKey !== record.dateKey || response.slotKey !== record.slotKey) {
+    throw new Error('기록 저장 실패 응답: 저장된 날짜 또는 시간대가 일치하지 않습니다.');
+  }
+}
+function isSheetV2Health(data) {
+  return !!data &&
+    Number(data.apiVersion || 0) >= RECORD_VERSION &&
+    data.storage === 'recordJson' &&
+    data.supportsFinalGrouping === true;
+}
+function finalServerUnsupportedError() {
+  const err = new Error('현재 서버는 최종 반 편성 저장을 지원하지 않습니다. 이 PC에는 저장되지만 다른 PC에서는 복원되지 않습니다.');
+  err.code = 'final_server_not_supported';
+  return err;
+}
+function isFinalServerUnsupportedError(err) {
+  return err && err.code === 'final_server_not_supported';
+}
+async function getSheetHealth(options={}) {
+  const endpoint = getSheetEndpointUrl();
+  if (!options.force && sheetHealthCache && sheetHealthCache.endpoint === endpoint && Date.now() - sheetHealthCache.checkedAt < 5 * 60 * 1000) {
+    return sheetHealthCache.data;
+  }
+  const res = await fetch(getSheetActionUrl('health'));
+  const data = await verifySheetResponse(res, '기록 저장 준비 확인');
+  sheetHealthCache = { endpoint, checkedAt: Date.now(), data };
+  return data;
+}
+async function ensureSheetV2EndpointReady() {
+  const data = await getSheetHealth({ force:true });
+  if (!isSheetV2Health(data)) throw finalServerUnsupportedError();
+  return true;
+}
+async function saveDraftRecordToSheet(record) {
+  const sheetRecord = serializeLegacySheetRecord(record);
+  return postToSheet({ action: 'save', record: sheetRecord }, '인원 체크 기록 저장');
+}
+async function saveFinalRecordToSheet(record) {
+  const sheetRecord = serializeSheetRecord(record);
+  await ensureSheetV2EndpointReady();
+  const response = await postToSheet({ action: 'save', record: sheetRecord }, '오늘 운영 기록 확정');
+  verifySheetRecordSaveAck(response, sheetRecord);
+  return response;
 }
 
 async function deleteRecordFromSheet(dateKey, slotKey) {
@@ -4514,7 +4715,7 @@ async function saveHoldingRecord() {
   if (mode === 'update' && existing) backupRecord(existing);
   upsertLocalRecord(record, false);
   try {
-    await saveRecordToSheet(record);
+    await saveDraftRecordToSheet(record);
     showSheetSaveState('holding', 'saved', '인원 체크 기록 저장됨 · 운영 기록 미확정');
     showToast(`${record.dateLabel} ${record.slotLabel} 인원 체크 기록이 저장되었습니다. 오늘 운영 기록은 반 편성에서 확정해주세요.`);
   } catch(e) {
@@ -4614,14 +4815,20 @@ async function saveFinalGroupingRecord(options={}) {
   upsertLocalRecord(merged, false);
   let sheetSaved = false;
   try {
-    await saveRecordToSheet(merged);
+    await saveFinalRecordToSheet(merged);
     sheetSaved = true;
-    showSheetSaveState('holding', 'saved', '오늘 운영 기록 확정됨 · 확장 데이터 로컬 보관');
+    showSheetSaveState('holding', 'saved', '오늘 운영 기록 확정됨 · 서버 저장됨');
     showToast(`${merged.dateLabel} ${merged.slotLabel} 오늘 운영 기록을 확정했습니다.`);
   } catch(e) {
-    showSheetSaveState('holding', 'error', '로컬 운영 기록 확정됨 · 서버 저장 실패');
-    showSheetRetry('holding', true);
-    showToast('로컬에는 운영 기록을 확정했습니다. 서버 저장 실패: ' + (e.message || '네트워크를 확인해주세요.'), 4200);
+    if (isFinalServerUnsupportedError(e)) {
+      showSheetSaveState('holding', 'error', '로컬 운영 기록 확정됨 · 서버 최종 저장 미지원');
+      showSheetRetry('holding', false);
+      showToast(e.message, 6500);
+    } else {
+      showSheetSaveState('holding', 'error', '로컬 운영 기록 확정됨 · 서버 저장 실패');
+      showSheetRetry('holding', true);
+      showToast('로컬에는 운영 기록을 확정했습니다. 서버 저장 실패: ' + (e.message || '네트워크를 확인해주세요.'), 4200);
+    }
   } finally {
     isSavingHoldingRecord = false;
     setButtonBusy(btn, false);
@@ -4980,8 +5187,8 @@ async function deleteRecord(rec) {
 function restoreGroupingFromRecord(rec) {
   if (!rec.groupingSnapshot || !confirm('현재 반 편성을 기록 저장 당시 상태로 복원할까요?')) return;
   pushUndo('기록에서 반 편성 복원');
-  members = cloneData(rec.groupingSnapshot.members || []);
-  groups = cloneData(rec.groupingSnapshot.groups || []);
+  members = cloneData(rec.groupingSnapshot.members || rec.groupingSnapshot.rawMembers || []);
+  groups = cloneData(rec.groupingSnapshot.rawGroups || rec.groupingSnapshot.groups || []);
   idSeq = rec.groupingSnapshot.idSeq || idSeq;
   presetDay = rec.groupingSnapshot.presetDay || presetDay;
   presetTime = rec.groupingSnapshot.presetTime || presetTime;
@@ -6186,6 +6393,7 @@ function loadState() {
   document.getElementById('holdingDayPill').textContent=kor+'요일';
   document.getElementById('printTitle').textContent='더박스 — '+kor+'요일 반 편성표';
   document.getElementById('printDate').textContent=now.getFullYear()+'년 '+(now.getMonth()+1)+'월 '+now.getDate()+'일';
+  initStagingSheetControls();
 
   const restored = loadState();
   const hasData = restored && (members.length > 0 || groups.some(g => g.koreans.length > 0 || g.memberIds.length > 0));
@@ -6216,7 +6424,7 @@ function loadState() {
   // 시작 시 구글 시트에서 반 설정 자동 로드
   (async () => {
     try {
-      const res = await fetch(GS_URL + '?action=getPresets');
+      const res = await fetch(getSheetActionUrl('getPresets'));
       const json = await verifySheetResponse(res, '반 설정 불러오기');
       if (json.ok && json.presets) {
         // PRESETS 업데이트
