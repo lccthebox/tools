@@ -19,14 +19,35 @@ function doPost(e) {
   try {
     lock.waitLock(10000);
     const data = parsePostData_(e);
+    const action = stringValue_(data.action);
 
-    if (data.action === 'save') {
+    if (action === 'list') {
+      const authError = requireAuthorizedAction_(data);
+      if (authError) return jsonOutput_(authError);
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      return jsonOutput_({ ok: true, apiVersion: API_VERSION, records: loadRecords_(ss) });
+    }
+
+    if (action === 'getPresets') {
+      const authError = requireAuthorizedAction_(data);
+      if (authError) return jsonOutput_(authError);
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      return jsonOutput_({ ok: true, presets: loadPresets_(ss) });
+    }
+
+    if (action === 'save') {
+      const authError = requireAuthorizedAction_(data);
+      if (authError) return jsonOutput_(authError);
       return jsonOutput_(saveRecord_(data.record || {}));
     }
-    if (data.action === 'delete') {
-      return jsonOutput_(deleteRecord_(data.dateKey, data.slotKey));
+    if (action === 'delete') {
+      const authError = requireAuthorizedAction_(data);
+      if (authError) return jsonOutput_(authError);
+      return jsonOutput_(deleteRecord_(data.recordId, data.dateKey, data.slotKey));
     }
-    if (data.action === 'savePresets') {
+    if (action === 'savePresets') {
+      const authError = requireAuthorizedAction_(data);
+      if (authError) return jsonOutput_(authError);
       return jsonOutput_(savePresets_(data.presets));
     }
 
@@ -40,7 +61,6 @@ function doPost(e) {
 
 function doGet(e) {
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
     const action = e && e.parameter ? e.parameter.action : '';
 
     if (action === 'health') {
@@ -49,9 +69,16 @@ function doGet(e) {
         apiVersion: API_VERSION,
         storage: STORAGE_MODE,
         sheetName: SHEET_NAME,
-        supportsFinalGrouping: true
+        supportsFinalGrouping: true,
+        authRequired: isAuthRequired_()
       });
     }
+
+    if (isAuthRequired_()) {
+      return jsonOutput_({ ok: false, error: 'authentication_required' });
+    }
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
 
     if (action === 'getPresets') {
       return jsonOutput_({ ok: true, presets: loadPresets_(ss) });
@@ -82,6 +109,25 @@ function jsonOutput_(data) {
 
 function errorMessage_(err) {
   return err && err.message ? err.message : String(err);
+}
+
+function isAuthRequired_() {
+  return PropertiesService.getScriptProperties().getProperty('AUTH_REQUIRED') === 'true';
+}
+
+function getAccessToken_() {
+  return String(PropertiesService.getScriptProperties().getProperty('ACCESS_TOKEN') || '');
+}
+
+function isAuthorizedRequest_(data) {
+  if (!isAuthRequired_()) return true;
+  const expected = getAccessToken_();
+  const supplied = String(data && data.token ? data.token : '');
+  return !!expected && supplied === expected;
+}
+
+function requireAuthorizedAction_(data) {
+  return isAuthorizedRequest_(data) ? null : { ok: false, error: 'unauthorized' };
 }
 
 function getRecordSheet_(ss) {
@@ -375,27 +421,46 @@ function normalizeGroupingSnapshot_(snapshot) {
   return next;
 }
 
-function deleteRecord_(dateKey, slotKey) {
+function deleteRecord_(recordId, dateKey, slotKey) {
+  recordId = stringValue_(recordId);
   dateKey = stringValue_(dateKey);
   slotKey = stringValue_(slotKey);
-  if (!dateKey) throw new Error('missing_dateKey');
-  if (!slotKey) throw new Error('missing_slotKey');
+  if (!recordId) {
+    if (!dateKey) throw new Error('missing_dateKey');
+    if (!slotKey) throw new Error('missing_slotKey');
+  }
 
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = getRecordSheet_(ss);
   const rows = readRecordRows_(sheet).filter(function(row) {
+    if (recordId) return row.recordId === recordId;
     return row.dateKey === dateKey && row.slotKey === slotKey;
   });
 
-  rows.sort(function(a, b) { return b.rowNumber - a.rowNumber; }).forEach(function(row) {
-    sheet.deleteRow(row.rowNumber);
-  });
+  if (!rows.length) {
+    return { ok: false, error: 'record_not_found', recordId: recordId, dateKey: dateKey, slotKey: slotKey };
+  }
+  if (rows.length > 1) {
+    return {
+      ok: false,
+      error: 'duplicate_records',
+      duplicateCount: rows.length,
+      recordId: recordId,
+      dateKey: dateKey,
+      slotKey: slotKey
+    };
+  }
+
+  const target = rows[0];
+  sheet.deleteRow(target.rowNumber);
 
   return {
     ok: true,
-    deleted: rows.length,
-    dateKey: dateKey,
-    slotKey: slotKey
+    mode: 'deleted',
+    recordId: target.recordId || recordId,
+    dateKey: target.dateKey,
+    slotKey: target.slotKey,
+    deletedCount: 1
   };
 }
 

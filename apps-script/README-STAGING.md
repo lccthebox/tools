@@ -43,6 +43,35 @@ Production GitHub Pages always uses the production endpoint compiled in `holding
 If a staging URL is set and a request fails, the client does not fall back to production.
 Clear the key from the banner before testing against the production endpoint.
 
+## Optional Access Protection
+
+The Apps Script can keep legacy anonymous behavior or require a token using Script Properties.
+Do not commit real token values.
+
+```text
+AUTH_REQUIRED=true
+ACCESS_TOKEN=<set manually in Apps Script project settings>
+```
+
+If `AUTH_REQUIRED` is absent or any value other than exactly `true`, GET records and existing POST flows remain compatible.
+
+If `AUTH_REQUIRED=true`:
+
+- `GET ?action=health` remains public and returns `authRequired: true`.
+- Anonymous GET records returns `{ "ok": false, "error": "authentication_required" }` before reading the sheet.
+- Records are listed through POST `{ "action": "list", "token": "..." }`.
+- `save`, `delete`, `list`, `getPresets`, and `savePresets` require the same POST body token.
+- Invalid tokens return `{ "ok": false, "error": "unauthorized" }` before reading or writing the sheet.
+
+The HTML stores tokens only in browser localStorage:
+
+```text
+thebox_gs_access_token_v1
+thebox_gs_staging_access_token_v1
+```
+
+Use the staging token key only with a localhost staging URL. Do not reuse production tokens for staging.
+
 ## v2 Storage Contract
 
 The `기록` sheet keeps columns A-G compatible with the current operating structure:
@@ -98,7 +127,8 @@ Expected response:
   "apiVersion": 2,
   "storage": "recordJson",
   "sheetName": "기록",
-  "supportsFinalGrouping": true
+  "supportsFinalGrouping": true,
+  "authRequired": false
 }
 ```
 

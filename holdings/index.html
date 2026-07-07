@@ -43,6 +43,12 @@ body {
 .staging-sheet-actions { display: flex; align-items: center; gap: 6px; flex: 1; justify-content: flex-end; min-width: 0; }
 .staging-sheet-input { width: min(440px, 100%); border: 1px solid #E5E5E5; border-radius: 7px; padding: 7px 10px; font: inherit; font-size: 12px; background: #fff; color: #111; }
 .staging-sheet-input:focus { outline: 2px solid #111; outline-offset: 1px; }
+.sheet-auth-card { margin-bottom: 14px; padding: 14px; border: 1px solid #E5E5E5; border-radius: 8px; background: #fff; display: flex; align-items: center; justify-content: space-between; gap: 12px; line-height: 1.45; }
+.sheet-auth-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.sheet-auth-main strong { font-size: 13px; font-weight: 900; color: #111; }
+.sheet-auth-main span { font-size: 12px; color: #555; }
+.sheet-auth-actions { display: flex; align-items: center; gap: 6px; flex: 1; justify-content: flex-end; min-width: 0; }
+.sheet-auth-actions .staging-sheet-input { width: min(320px, 100%); }
 @media (max-width: 860px) {
   .hdr { padding: 0 12px; }
   .hdr-inner { height: auto; min-height: 52px; padding: 8px 0; align-items: flex-start; justify-content: flex-start; flex-wrap: wrap; gap: 8px; }
@@ -60,6 +66,9 @@ body {
   .staging-sheet-banner { margin: 8px 12px 0; flex-direction: column; align-items: stretch; }
   .staging-sheet-actions { flex-direction: column; align-items: stretch; }
   .staging-sheet-input, .staging-sheet-actions .retry-btn { width: 100%; min-height: 40px; }
+  .sheet-auth-card { flex-direction: column; align-items: stretch; }
+  .sheet-auth-actions { flex-direction: column; align-items: stretch; }
+  .sheet-auth-actions .staging-sheet-input, .sheet-auth-actions .retry-btn { width: 100%; min-height: 40px; }
 }
 @media (max-width: 360px) {
   #groupingBtns { grid-template-columns: 1fr; }
@@ -1607,6 +1616,18 @@ body {
 <!-- ═══════════════ 반 설정 탭 ═══════════════ -->
 <div id="presetEditorTab" style="display:none; max-width:900px; margin:0 auto; padding:20px 20px 80px;">
 
+  <div class="sheet-auth-card no-print">
+    <div class="sheet-auth-main">
+      <strong>Google Sheets 접근 토큰</strong>
+      <span id="sheetAccessTokenStatus">운영 기록 접근 인증 상태 확인 전</span>
+    </div>
+    <div class="sheet-auth-actions">
+      <input class="staging-sheet-input" id="sheetAccessTokenInput" type="password" autocomplete="off" placeholder="접근 토큰 입력">
+      <button class="retry-btn no-print" id="sheetAccessTokenSaveBtn" type="button">토큰 저장</button>
+      <button class="retry-btn no-print" id="sheetAccessTokenClearBtn" type="button">토큰 삭제</button>
+    </div>
+  </div>
+
   <div id="peLoading" style="text-align:center;padding:40px;color:#AAA;font-size:13px;">⏳ 불러오는 중…</div>
 
   <div id="peContent" style="display:none;">
@@ -1784,6 +1805,12 @@ function sheetOkFromJson(data) {
   return !('ok' in data || 'success' in data || 'status' in data || 'error' in data);
 }
 
+function sheetAuthMessageForError(error) {
+  if (error === 'authentication_required') return '운영 기록 접근 인증이 필요합니다. 설정에서 접근 토큰을 입력해주세요.';
+  if (error === 'unauthorized') return 'Google Sheets 접근 토큰이 올바르지 않습니다. 설정에서 토큰을 확인해주세요.';
+  return '';
+}
+
 async function verifySheetResponse(res, label) {
   const text = await res.text();
   if (!res.ok) {
@@ -1798,15 +1825,16 @@ async function verifySheetResponse(res, label) {
     return { ok:true, raw:text };
   }
   if (!sheetOkFromJson(data)) {
-    throw new Error(data.message || data.error || `${label} 실패 응답`);
+    throw new Error(sheetAuthMessageForError(data.error) || data.message || data.error || `${label} 실패 응답`);
   }
   return data;
 }
 
 async function postToSheet(payload, label) {
+  const authedPayload = withSheetAuthPayload(payload);
   const res = await fetch(getSheetEndpointUrl(), {
     method: 'POST',
-    body: JSON.stringify(payload),
+    body: JSON.stringify(authedPayload),
   });
   return verifySheetResponse(res, label);
 }
@@ -3776,6 +3804,8 @@ function showSheetRetry(kind, visible) {
 ══════════════════════════════════════ */
 const GS_PRODUCTION_URL = 'https://script.google.com/macros/s/AKfycbzf1AhSOwtxoyIcA8X-CWLIrA5dR_Wb00S0PgKkwM-09jHX-xCGCMQLwpL3iNvXyHFAew/exec';
 const GS_STAGING_KEY = 'thebox_gs_staging_url';
+const GS_ACCESS_TOKEN_KEY = 'thebox_gs_access_token_v1';
+const GS_STAGING_ACCESS_TOKEN_KEY = 'thebox_gs_staging_access_token_v1';
 
 function isLocalSheetOverrideAllowed() {
   return location.hostname === 'localhost' || location.hostname === '127.0.0.1';
@@ -3791,12 +3821,42 @@ function isUsingStagingSheet() {
 function getSheetEndpointUrl() {
   return getStagingSheetUrl() || GS_PRODUCTION_URL;
 }
+function getSheetAccessTokenKey() {
+  return isUsingStagingSheet() ? GS_STAGING_ACCESS_TOKEN_KEY : GS_ACCESS_TOKEN_KEY;
+}
+function getSheetAccessToken() {
+  try { return safeText(localStorage.getItem(getSheetAccessTokenKey())); }
+  catch(e) { return ''; }
+}
+function withSheetAuthPayload(payload) {
+  const token = getSheetAccessToken();
+  return token ? { ...payload, token } : { ...payload };
+}
+function isSheetAuthRequired(data) {
+  return !!data && data.authRequired === true;
+}
+function updateSheetAccessTokenControls() {
+  const input = document.getElementById('sheetAccessTokenInput');
+  const status = document.getElementById('sheetAccessTokenStatus');
+  const clearBtn = document.getElementById('sheetAccessTokenClearBtn');
+  if (input && input !== document.activeElement) input.value = '';
+  const token = getSheetAccessToken();
+  if (clearBtn) clearBtn.disabled = !token;
+  if (!status) return;
+  const scope = isUsingStagingSheet() ? 'STAGING' : '운영';
+  const health = sheetHealthCache && sheetHealthCache.endpoint === getSheetEndpointUrl() ? sheetHealthCache.data : null;
+  const authText = health
+    ? (isSheetAuthRequired(health) ? '인증 필요' : '인증 미사용')
+    : '인증 상태 미확인';
+  status.textContent = `${scope} endpoint · ${authText} · ${token ? '토큰 저장됨' : '토큰 없음'} · 토큰 값은 다시 표시하지 않습니다.`;
+}
 function getSheetActionUrl(action) {
   const endpoint = getSheetEndpointUrl();
   return endpoint + (endpoint.includes('?') ? '&' : '?') + 'action=' + encodeURIComponent(action);
 }
 function resetSheetHealthCache() {
   sheetHealthCache = null;
+  updateSheetAccessTokenControls();
 }
 function updateStagingSheetBanner() {
   const banner = document.getElementById('stagingSheetBanner');
@@ -3817,13 +3877,34 @@ function updateStagingSheetBanner() {
       ? 'STAGING Sheets 사용 중 · 실패해도 운영 endpoint로 fallback하지 않음'
       : '로컬 테스트 모드 · staging URL 미설정 시 운영 endpoint를 사용';
   }
+  updateSheetAccessTokenControls();
 }
 function initStagingSheetControls() {
   updateStagingSheetBanner();
-  if (!isLocalSheetOverrideAllowed()) return;
   const input = document.getElementById('stagingSheetUrlInput');
   const saveBtn = document.getElementById('stagingSheetSaveBtn');
   const clearBtn = document.getElementById('stagingSheetClearBtn');
+  const tokenInput = document.getElementById('sheetAccessTokenInput');
+  const tokenSaveBtn = document.getElementById('sheetAccessTokenSaveBtn');
+  const tokenClearBtn = document.getElementById('sheetAccessTokenClearBtn');
+  tokenSaveBtn?.addEventListener('click', () => {
+    const value = safeText(tokenInput?.value);
+    if (!value) {
+      showToast('저장할 접근 토큰을 입력해주세요.');
+      return;
+    }
+    localStorage.setItem(getSheetAccessTokenKey(), value);
+    if (tokenInput) tokenInput.value = '';
+    updateSheetAccessTokenControls();
+    showToast('Google Sheets 접근 토큰을 저장했습니다.');
+  });
+  tokenClearBtn?.addEventListener('click', () => {
+    localStorage.removeItem(getSheetAccessTokenKey());
+    if (tokenInput) tokenInput.value = '';
+    updateSheetAccessTokenControls();
+    showToast('Google Sheets 접근 토큰을 삭제했습니다.');
+  });
+  if (!isLocalSheetOverrideAllowed()) return;
   saveBtn?.addEventListener('click', () => {
     const value = safeText(input?.value);
     if (!value) {
@@ -3876,8 +3957,7 @@ async function initPresetEditor() {
 
   // 구글 시트에서 불러오기 시도
   try {
-    const res = await fetch(getSheetActionUrl('getPresets'));
-    const json = await verifySheetResponse(res, '반 설정 불러오기');
+    const json = await fetchPresetsFromSheet('반 설정 불러오기');
     if (json.ok && json.presets) {
       peData = json.presets;
       showToast('☁️ 저장된 반 설정을 불러왔습니다.');
@@ -4367,10 +4447,21 @@ async function loadRecords(options={}) {
   if (recordsCache && !options.force && Date.now() - recordsLoadedAt < 5 * 60 * 1000) return recordsCache;
   let sheetRecords = [];
   try {
-    const res = await fetch(getSheetEndpointUrl());
-    const data = await verifySheetResponse(res, '기록 불러오기');
+    let data = null;
+    const health = await getSheetHealth();
+    if (isSheetAuthRequired(health)) {
+      if (!getSheetAccessToken()) throw new Error(sheetAuthMessageForError('authentication_required'));
+      data = await postToSheet({ action: 'list' }, '기록 불러오기');
+    } else {
+      const res = await fetch(getSheetEndpointUrl());
+      data = await verifySheetResponse(res, '기록 불러오기');
+    }
     sheetRecords = (data.records || []).map(r => normalizeRecord({ ...r, _source:'sheet' }));
   } catch(e) {
+    if (sheetAuthMessageForError('authentication_required') === e.message || sheetAuthMessageForError('unauthorized') === e.message) {
+      resetSheetHealthCache();
+      showToast(e.message, 4200);
+    }
     sheetRecords = [];
   }
   recordsCache = mergeRecords(sheetRecords, loadLocalRecords());
@@ -4479,7 +4570,17 @@ async function getSheetHealth(options={}) {
   const res = await fetch(getSheetActionUrl('health'));
   const data = await verifySheetResponse(res, '기록 저장 준비 확인');
   sheetHealthCache = { endpoint, checkedAt: Date.now(), data };
+  updateSheetAccessTokenControls();
   return data;
+}
+async function fetchPresetsFromSheet(label='반 설정 불러오기') {
+  const health = await getSheetHealth();
+  if (isSheetAuthRequired(health)) {
+    if (!getSheetAccessToken()) throw new Error(sheetAuthMessageForError('authentication_required'));
+    return postToSheet({ action: 'getPresets' }, label);
+  }
+  const res = await fetch(getSheetActionUrl('getPresets'));
+  return verifySheetResponse(res, label);
 }
 async function ensureSheetV2EndpointReady() {
   const data = await getSheetHealth({ force:true });
@@ -4498,8 +4599,14 @@ async function saveFinalRecordToSheet(record) {
   return response;
 }
 
-async function deleteRecordFromSheet(dateKey, slotKey) {
-  return postToSheet({ action: 'delete', dateKey, slotKey }, '기록 삭제');
+async function deleteRecordFromSheet(record) {
+  const normalized = normalizeRecord(record);
+  return postToSheet({
+    action: 'delete',
+    recordId: normalized.recordId,
+    dateKey: normalized.dateKey,
+    slotKey: normalized.slotKey
+  }, '기록 삭제');
 }
 
 function classNameBase(name) {
@@ -5192,7 +5299,7 @@ async function deleteRecord(rec) {
     return;
   }
   try {
-    await deleteRecordFromSheet(rec.dateKey, rec.slotKey);
+    await deleteRecordFromSheet(rec);
     removeLocalRecord(rec.recordId);
     recordsCache = null;
     showToast('삭제 완료');
@@ -6441,8 +6548,7 @@ function loadState() {
   // 시작 시 구글 시트에서 반 설정 자동 로드
   (async () => {
     try {
-      const res = await fetch(getSheetActionUrl('getPresets'));
-      const json = await verifySheetResponse(res, '반 설정 불러오기');
+      const json = await fetchPresetsFromSheet('반 설정 불러오기');
       if (json.ok && json.presets) {
         // PRESETS 업데이트
         Object.assign(PRESETS, json.presets);
