@@ -17,10 +17,10 @@ body {
 
 /* ── 헤더 ── */
 .hdr { background: #fff; border-bottom: 1px solid #E5E5E5; padding: 0 20px; position: sticky; top: 0; z-index: 200; }
-.hdr-inner { max-width: 1440px; margin: 0 auto; height: 52px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.logo { font-size: 15px; font-weight: 900; color: #111; white-space: nowrap; }
+.hdr-inner { max-width: 1440px; margin: 0 auto; height: 52px; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
+.logo { font-size: 15px; font-weight: 900; color: #111; white-space: nowrap; min-width: 0; }
 .logo small { font-size: 12px; font-weight: 400; color: #999; margin-left: 6px; }
-.hbtns { display: flex; gap: 6px; align-items: center; }
+.hbtns { display: flex; gap: 6px; align-items: center; min-width: 0; }
 .hbtn { padding: 7px 14px; border-radius: 7px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; border: 1px solid #E0E0E0; background: #fff; color: #444; transition: all .12s; white-space: nowrap; }
 .hbtn:hover { background: #F5F5F5; border-color: #CCC; }
 .hbtn.hi { background: #111; color: #fff; border-color: #111; }
@@ -38,15 +38,32 @@ body {
 .retry-btn[hidden] { display: none !important; }
 .staging-sheet-banner { max-width: 1440px; margin: 8px auto 0; padding: 10px 14px; border: 1px solid #EAD18A; border-radius: 8px; background: #FFF9E8; color: #4A3600; display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12px; line-height: 1.45; }
 .staging-sheet-banner[hidden] { display: none !important; }
-.staging-sheet-main { display: flex; flex-direction: column; gap: 2px; min-width: 180px; }
+.staging-sheet-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .staging-sheet-main strong { font-size: 12px; font-weight: 900; color: #111; }
 .staging-sheet-actions { display: flex; align-items: center; gap: 6px; flex: 1; justify-content: flex-end; min-width: 0; }
 .staging-sheet-input { width: min(440px, 100%); border: 1px solid #E5E5E5; border-radius: 7px; padding: 7px 10px; font: inherit; font-size: 12px; background: #fff; color: #111; }
 .staging-sheet-input:focus { outline: 2px solid #111; outline-offset: 1px; }
-@media (max-width: 760px) {
+@media (max-width: 860px) {
+  .hdr { padding: 0 12px; }
+  .hdr-inner { height: auto; min-height: 52px; padding: 8px 0; align-items: flex-start; justify-content: flex-start; flex-wrap: wrap; gap: 8px; }
+  .logo { flex: 1 1 100%; }
+  .logo small { display: inline; }
+  .tab-btns { flex: 1 1 100%; min-width: 0; flex-wrap: wrap; }
+  .tab-btn { flex: 1 1 auto; min-width: 0; min-height: 40px; padding: 7px 9px; white-space: normal; }
+  .hbtns { flex: 1 1 100%; justify-content: flex-start; flex-wrap: wrap; }
+  .hbtn { min-height: 40px; padding: 8px 10px; white-space: normal; text-align: center; }
+  #groupingBtns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+  #groupingBtns .hbtn { width: 100%; min-width: 0; }
+  #holdingBtns, #presetEditorBtns { width: 100%; }
+  #holdingBtns .hbtn, #holdingBtns .retry-btn, #presetEditorBtns .hbtn, #presetEditorBtns .retry-btn { flex: 1 1 auto; min-width: 0; }
+  .save-status, .day-pill { white-space: normal; min-height: 32px; display: inline-flex; align-items: center; }
   .staging-sheet-banner { margin: 8px 12px 0; flex-direction: column; align-items: stretch; }
   .staging-sheet-actions { flex-direction: column; align-items: stretch; }
   .staging-sheet-input, .staging-sheet-actions .retry-btn { width: 100%; min-height: 40px; }
+}
+@media (max-width: 360px) {
+  #groupingBtns { grid-template-columns: 1fr; }
+  .tab-btn { flex-basis: calc(50% - 3px); }
 }
 
 /* ── 레이아웃 ── */
