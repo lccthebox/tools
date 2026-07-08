@@ -3318,7 +3318,7 @@ async function printAttendance() {
 
     const korList = [
       ...korMembers.map(k=>memberTag(k.name, k.isNew, k.isReturn, k.newDay)),
-      ...korTeachers.map(k=>memberTag(`${k.name} (쌤)`, k.isNew, k.isReturn, k.newDay))
+      ...korTeachers.map(k=>memberTag(`${k.name} (튜터)`, k.isNew, k.isReturn, k.newDay))
     ].join('<span style="color:#CCC;margin:0 4px;">·</span>');
     const natList = natives.map(m=>memberTag(m.name, m.isNew, false, m.newDay)).join('<span style="color:#CCC;margin:0 4px;">·</span>');
     const nonList = nonnatives.map(m=>memberTag(m.name, m.isNew, false, m.newDay)).join('<span style="color:#CCC;margin:0 4px;">·</span>');
