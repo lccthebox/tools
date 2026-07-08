@@ -112,11 +112,11 @@ function errorMessage_(err) {
 }
 
 function isAuthRequired_() {
-  return PropertiesService.getScriptProperties().getProperty('AUTH_REQUIRED') === 'true';
+  return !!getAccessToken_();
 }
 
 function getAccessToken_() {
-  return String(PropertiesService.getScriptProperties().getProperty('ACCESS_TOKEN') || '');
+  return stringValue_(PropertiesService.getScriptProperties().getProperty('ACCESS_TOKEN'));
 }
 
 function isAuthorizedRequest_(data) {

@@ -43,19 +43,18 @@ Production GitHub Pages always uses the production endpoint compiled in `holding
 If a staging URL is set and a request fails, the client does not fall back to production.
 Clear the key from the banner before testing against the production endpoint.
 
-## Optional Access Protection
+## Access Protection
 
-The Apps Script can keep legacy anonymous behavior or require a token using Script Properties.
+The Apps Script requires a token when the `ACCESS_TOKEN` Script Property has a non-empty value.
 Do not commit real token values.
 
 ```text
-AUTH_REQUIRED=true
 ACCESS_TOKEN=<set manually in Apps Script project settings>
 ```
 
-If `AUTH_REQUIRED` is absent or any value other than exactly `true`, GET records and existing POST flows remain compatible.
+If `ACCESS_TOKEN` is absent or blank, auth remains disabled for backward-compatible local testing.
 
-If `AUTH_REQUIRED=true`:
+If `ACCESS_TOKEN` has a non-empty value:
 
 - `GET ?action=health` remains public and returns `authRequired: true`.
 - Anonymous GET records returns `{ "ok": false, "error": "authentication_required" }` before reading the sheet.
@@ -128,7 +127,7 @@ Expected response:
   "storage": "recordJson",
   "sheetName": "기록",
   "supportsFinalGrouping": true,
-  "authRequired": false
+  "authRequired": true
 }
 ```
 
