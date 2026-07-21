@@ -110,6 +110,10 @@ main{padding-bottom:120px}
   font-size:14px;font-weight:700;color:var(--accent)}
 .a ul{list-style:none;margin:0}
 .a ul li{position:relative;padding:5px 0 5px 18px;font-size:15.5px;color:var(--ink-2);line-height:1.65}
+.a ul.rows li{padding:10px 0 10px 18px}
+.a ul.rows li+li{border-top:1px solid var(--line)}
+.a ul li em{font-style:normal;font-size:12px;font-weight:700;color:var(--accent);
+  background:var(--accent-soft);border-radius:5px;padding:1px 6px;margin-left:4px}
 .a ul li::before{content:"–";position:absolute;left:2px;top:5px;color:var(--ink-4);font-weight:700}
 .a strong{color:var(--ink);font-weight:700}
 .a a{color:var(--accent);font-weight:600;text-decoration:underline;text-underline-offset:2px}
@@ -269,6 +273,7 @@ if(sessionStorage.getItem('box_ok')==='1') document.getElementById('gate').style
      notes:["주의·예시. 없으면 notes:[]"]
    },
    ※ 순서가 아닌 목록(예: 선생님별·주문처별)은 list:"bullet" 추가 → 번호 대신 불릿
+   ※ 한 항목이 여러 줄(<br> 포함)로 길면 list:"rows" → 줄 사이 구분선 + 넓은 간격
    ※ 복사할 안내 문구가 있으면 copy:"문구..." 추가 → '복사' 버튼이 달림 (줄바꿈은 \n)
    규칙: 큰따옴표 " " / 줄·항목 끝 쉼표 ,
    ============================================================ */
@@ -728,6 +733,36 @@ const DATA = [
     notes:["아래 버튼으로 안내 문구를 복사해 보내면 됩니다."],
     copy:"안녕하세요, 더박스입니다. 😊\n\n요청하신 서류는 아래 링크를 통해 신청하실 수 있습니다.\n필요하신 서류를 선택하고 정보를 남겨주시면,\n확인 후 기재해 주신 이메일로 발송해 드리겠습니다.\n\n🔗 제출서류 신청하기 : https://lccthebox.github.io/tools/cert/\n\n감사합니다!"
   },
+
+  /* ===== 패스트트랙 ===== */
+  {
+    group:"패스트트랙",
+    when:"결제",
+    title:"패스트트랙 결제 관련",
+    tags:["패스트트랙","fasttrack","결제","계산기","단말기","시트","할인차감","수강료"],
+    steps:[
+      "결제 금액은 더박스 수강료 계산기에서 나온 금액으로 계산",
+      "입력값에 나온 대로 시트에 기재",
+      "결제는 <strong>스터디 단말기</strong>로 진행",
+      "재수강·지인·리뷰 등 기타 할인 → <strong>아카데미 금액</strong>에서 차감",
+      "패스트트랙 자체 할인 → <strong>스터디 금액</strong>에서 차감"
+    ],
+    notes:["금액 산정은 더박스 도구모음에서 → <a href='https://lccthebox.github.io/thebox-message-generator/' target='_blank'>수강료 계산기 열기</a>"]
+  },
+  {
+    group:"패스트트랙",
+    when:"주의사항",
+    title:"패스트트랙 주의사항",
+    tags:["패스트트랙","주의","제임스","크리스","코트니","홀딩","불가","최소"],
+    list:"bullet",
+    steps:[
+      "<strong>제임스·크리스는 패스트트랙 적용 불가</strong>",
+      "코트니는 패스트트랙 가격이 다르니 안내 시 주의 (금액은 계산기에서 나옴)",
+      "패스트트랙으로 결제한 스터디는 <strong>홀딩 불가</strong> — 결제 횟수에 맞춰 중간 결제가 되어 안 된다고 설명",
+      "아카데미 주2회 + 스터디 주1회로 1달분은 불가 — 아카데미 1달 시 <strong>최소 스터디는 주2회</strong>"
+    ],
+    notes:[]
+  },
 ];
 
 /* ============================================================
@@ -743,9 +778,9 @@ const ORDER=[];
 DATA.forEach((it,i)=>{it._id="i"+i;if(!ORDER.includes(it.group))ORDER.push(it.group);});
 
 function itemHTML(it){
-  const multi=it.steps.length>1 && it.list!=="bullet";
+  const multi=it.steps.length>1 && it.list!=="bullet" && it.list!=="rows";
   const steps=it.steps.map(s=>`<li>${s}</li>`).join("");
-  const list=multi?`<ol>${steps}</ol>`:`<ul>${steps}</ul>`;
+  const list=multi?`<ol>${steps}</ol>`:`<ul class="${it.list==='rows'?'rows':''}">${steps}</ul>`;
   const note=(it.notes&&it.notes.length&&it.notes[0])?`<div class="note">${it.notes[0]}</div>`:"";
   const copy=it.copy?`<div class="copybox"><button class="copybtn" onclick="copyMsg(this,'${it._id}')">📋 안내 문구 복사</button><pre class="copytext" id="msg-${it._id}">${it.copy}</pre></div>`:"";
   const tag=it.when?`<span class="tag">${it.when}</span>`:"";
