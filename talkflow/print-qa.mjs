@@ -34,10 +34,10 @@ const browser = await chromium.launch({ headless: true });
 const report = [];
 try {
   const page = await browser.newPage();
-  await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "networkidle" });
+  await page.goto(`http://127.0.0.1:${port}/?fixtures=conversation`, { waitUntil: "networkidle" });
   const topics = await page.evaluate(() => TalkFlow.getTopics());
   for (const topic of Object.values(topics).sort((a, b) => a.date.localeCompare(b.date))) {
-    await page.goto(`http://127.0.0.1:${port}/?date=${topic.date}&view=print`, { waitUntil: "networkidle" });
+    await page.goto(`http://127.0.0.1:${port}/?fixtures=conversation&date=${topic.date}&view=print`, { waitUntil: "networkidle" });
     const safeTitle = topic.title.ko.replace(/[\\/:*?"<>|\s]+/g, "_");
     const filename = `${topic.date}_TheBox_TalkFlow_${safeTitle}.pdf`;
     const path = join(output, filename);
@@ -49,12 +49,12 @@ try {
     await page.pdf({ path, format: "A4", printBackground: true, preferCSSPageSize: true, margin: { top: "0", right: "0", bottom: "0", left: "0" } });
     report.push({ date: topic.date, title: topic.title.ko, filename, domPages: pageCount, overflow });
   }
-  await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "networkidle" });
+  await page.goto(`http://127.0.0.1:${port}/?fixtures=conversation`, { waitUntil: "networkidle" });
   for (const date of ["2026-08-03", "2026-08-06", "2026-08-10"]) await page.locator(`[data-print-date="${date}"]`).check();
   await page.locator("[data-action='batch-print']").click();
   const batchPages = await page.locator(".a4-page").count();
   await page.pdf({ path: join(output, "batch-3-topics.pdf"), format: "A4", printBackground: true, preferCSSPageSize: true, margin: { top: "0", right: "0", bottom: "0", left: "0" } });
-  await page.goto(`http://127.0.0.1:${port}/?date=2026-08-03&view=leader`, { waitUntil: "networkidle" });
+  await page.goto(`http://127.0.0.1:${port}/?fixtures=conversation&date=2026-08-03&view=leader`, { waitUntil: "networkidle" });
   await page.locator("[data-print-leader]").first().click();
   const leaderPages = await page.locator(".a4-page").count();
   const leaderOverflow = await page.locator(".a4-page").evaluateAll(pages => pages.map(item => ({
