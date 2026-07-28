@@ -250,6 +250,6 @@
   window.addEventListener("beforeunload",event=>{if(dirty){event.preventDefault();event.returnValue=""}});
   window.addEventListener("error",event=>notify(`오류: ${event.message}`,true));
   const params=new URLSearchParams(location.search);if(params.get("date")&&topics[params.get("date")])activeDate=params.get("date");if(["student","leader","admin"].includes(params.get("view")))view=params.get("view");
-  window.TalkFlow={KEYS,validateTopic,validateAll,getTopics:()=>clone(topics),approvedMonth,monthFile};
+  window.TalkFlow={KEYS,validateTopic,validateAll,getTopics:()=>clone(topics),approvedMonth,monthFile,viewerHtml};
   render();
 })();

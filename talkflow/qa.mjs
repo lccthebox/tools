@@ -2,9 +2,17 @@ import { createRequire } from "node:module";
 import { createServer } from "node:http";
 import { readFile, mkdir } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
+import { homedir } from "node:os";
 
 const require = createRequire(import.meta.url);
-const { chromium } = require("playwright");
+let playwright;
+try {
+  playwright = require("playwright");
+} catch {
+  const bundledRequire = createRequire(join(homedir(), ".cache", "codex-runtimes", "codex-primary-runtime", "dependencies", "node", "node_modules", "playwright", "index.js"));
+  playwright = bundledRequire("playwright");
+}
+const { chromium } = playwright;
 const root = new URL(".", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
 const evidence = join(root, "..", ".omo", "evidence", "talkflow");
 await mkdir(evidence, { recursive: true });
@@ -47,6 +55,12 @@ try {
   await page.getByRole("button", { name: "리더" }).click();
   check("leader tools render", await page.locator(".leader-toolbar").isVisible());
   check("leader question checkboxes", await page.locator("[data-check]").count() === 10);
+  await page.locator("[data-check]").first().check();
+  check("leader completion check works", await page.locator("[data-check]").first().isChecked());
+  await page.getByRole("button", { name: "시작/일시정지" }).click();
+  await page.waitForFunction(() => document.querySelector("#timer-display").textContent !== "00:00");
+  await page.getByRole("button", { name: "시작/일시정지" }).click();
+  check("leader timer works", await page.locator("#timer-display").textContent() !== "00:00");
 
   await page.getByRole("button", { name: "관리" }).click();
   check("admin editor renders", await page.locator("[data-path='title.en']").isVisible());
@@ -55,6 +69,8 @@ try {
   await page.reload();
   await page.getByRole("button", { name: "관리" }).click();
   check("save and reload restores edit", await page.locator("[data-path='title.en']").inputValue() === "Edited Review Topic");
+  await page.locator("[data-path='title.en']").fill("Can You Trust the Stars?");
+  await page.getByRole("button", { name: "저장", exact: true }).click();
 
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: "월 JSON" }).click();
@@ -89,15 +105,38 @@ try {
     })));
     await page.screenshot({ path: join(evidence, `student-${width}.png`), fullPage: true });
   }
+  check("student view hides leader notes", await page.locator("#student-view .leader-note").count() === 0);
+  const firstCard = page.locator("#student-view .flow-card").first();
+  await firstCard.locator(".collapse").click();
+  check("section collapse works", await firstCard.evaluate(element => element.classList.contains("is-collapsed")));
+  await firstCard.locator(".collapse").click();
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "리더" }).click();
   await page.screenshot({ path: join(evidence, "leader-390.png"), fullPage: true });
   await page.getByRole("button", { name: "관리" }).click();
   await page.screenshot({ path: join(evidence, "admin-390.png"), fullPage: true });
+  const viewer = await context.newPage();
+  const viewerMarkup = await page.evaluate(() => TalkFlow.viewerHtml(TalkFlow.approvedMonth()));
+  await viewer.setViewportSize({ width: 390, height: 844 });
+  await viewer.setContent(viewerMarkup, { waitUntil: "load" });
+  check("public viewer contains approved topics", await viewer.locator(".topic-hero").count() === 8);
+  check("public viewer has no admin controls", await viewer.locator(".admin-toolbar,.leader-toolbar").count() === 0);
+  check("public viewer no horizontal overflow", await viewer.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1));
+  await viewer.screenshot({ path: join(evidence, "public-viewer-390.png"), fullPage: true });
+  await viewer.close();
+  await page.getByRole("button", { name: "학생" }).click();
+  await page.setViewportSize({ width: 1024, height: 900 });
+  await page.emulateMedia({ media: "print" });
+  check("print view hides navigation", await page.locator(".topbar").evaluate(element => getComputedStyle(element).display === "none"));
+  check("print view has no horizontal overflow", await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1));
+  await page.screenshot({ path: join(evidence, "print-1024.png"), fullPage: true });
+  await page.emulateMedia({ media: "screen" });
   check("no browser errors", errors.length === 0, errors.join("; "));
 
-  console.log(JSON.stringify({ pass: true, checks: results.length, evidence, results }, null, 2));
+  const report = { pass: true, checks: results.length, evidence, generatedAt: new Date().toISOString(), results };
+  await import("node:fs/promises").then(({ writeFile }) => writeFile(join(evidence, "qa-results.json"), `${JSON.stringify(report, null, 2)}\n`, "utf8"));
+  console.log(JSON.stringify(report, null, 2));
 } finally {
   await browser.close();
   await new Promise(resolve => server.close(resolve));
