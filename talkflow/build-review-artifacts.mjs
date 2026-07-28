@@ -137,5 +137,6 @@ for (const topic of topics) {
   );
 }
 
-await mkdir(join(root, "artifacts"), { recursive: true });
-await writeFile(join(root, "artifacts", "content-review.md"), `${lines.join("\n")}\n`, "utf8");
+const artifacts = join(root, "..", ".github", "qa-artifacts", "talkflow");
+await mkdir(artifacts, { recursive: true });
+await writeFile(join(artifacts, "content-review.md"), `${lines.join("\n")}\n`, "utf8");
