@@ -20,7 +20,8 @@ await mkdir(evidence, { recursive: true });
 const mime = { ".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "text/javascript" };
 const server = createServer(async (request, response) => {
   try {
-    const path = normalize(join(root, request.url === "/" ? "index.html" : request.url.split("?")[0]));
+    const pathname = new URL(request.url, "http://localhost").pathname;
+    const path = normalize(join(root, pathname === "/" ? "index.html" : pathname));
     if (!path.startsWith(normalize(root))) throw new Error("invalid path");
     response.setHeader("Content-Type", mime[extname(path)] || "application/octet-stream");
     response.end(await readFile(path));
@@ -45,14 +46,19 @@ try {
   page.on("pageerror", error => errors.push(error.message));
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "networkidle" });
 
+  check("daily management is default", await page.locator("#calendar-view").isVisible());
+  check("August date cards", await page.locator(".date-card").count() === 31);
   check("8 sample topics", await page.locator(".topic-day").count() === 8);
+  check("8 print-ready topics", await page.locator(".print-state.ready").count() === 8);
+  check("daily cards expose A4 actions", await page.getByRole("button", { name: "학생용 A4" }).count() === 8);
+  await page.getByRole("button", { name: "학생", exact: true }).click();
   check("student view renders all sections", await page.locator("#student-view .flow-card").count() === 9);
   const quality = await page.evaluate(() => Object.values(TalkFlow.getTopics()).map(topic => ({ title: topic.title.en, result: TalkFlow.validateTopic(topic) })));
   check("all samples pass quality", quality.every(item => item.result.status === "approved"), JSON.stringify(quality.filter(item => item.result.status !== "approved")));
   check("isolated storage keys", await page.evaluate(() => Object.values(TalkFlow.KEYS).every(key => key.startsWith("tb_talkflow_"))));
   check("legacy storage untouched", await page.evaluate(() => !Object.keys(localStorage).some(key => ["tb_topics_v5","tb_gist_token","tb_gist_id","tb_api_key_v2"].includes(key))));
 
-  await page.getByRole("button", { name: "리더" }).click();
+  await page.getByRole("button", { name: "리더", exact: true }).click();
   check("leader tools render", await page.locator(".leader-toolbar").isVisible());
   check("leader question checkboxes", await page.locator("[data-check]").count() === 10);
   await page.locator("[data-check]").first().check();
@@ -62,12 +68,12 @@ try {
   await page.getByRole("button", { name: "시작/일시정지" }).click();
   check("leader timer works", await page.locator("#timer-display").textContent() !== "00:00");
 
-  await page.getByRole("button", { name: "관리" }).click();
+  await page.getByRole("button", { name: "관리", exact: true }).click();
   check("admin editor renders", await page.locator("[data-path='title.en']").isVisible());
   await page.locator("[data-path='title.en']").fill("Edited Review Topic");
   await page.getByRole("button", { name: "저장", exact: true }).click();
   await page.reload();
-  await page.getByRole("button", { name: "관리" }).click();
+  await page.getByRole("button", { name: "관리", exact: true }).click();
   check("save and reload restores edit", await page.locator("[data-path='title.en']").inputValue() === "Edited Review Topic");
   await page.locator("[data-path='title.en']").fill("Can You Trust the Stars?");
   await page.getByRole("button", { name: "저장", exact: true }).click();
@@ -96,7 +102,11 @@ try {
   const sizes = [[360,800],[390,844],[768,900],[1024,900],[1440,1000]];
   for (const [width,height] of sizes) {
     await page.setViewportSize({ width, height });
-    await page.getByRole("button", { name: "학생" }).click();
+    await page.getByRole("button", { name: "일별 관리", exact: true }).click();
+    const calendarOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    check(`${width}px calendar has no horizontal overflow`, calendarOverflow <= 1, `${calendarOverflow}px`);
+    await page.screenshot({ path: join(evidence, `calendar-${width}.png`), fullPage: true });
+    await page.getByRole("button", { name: "학생", exact: true }).click();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     check(`${width}px no horizontal overflow`, overflow <= 1, `${overflow}px`);
     check(`${width}px controls inside viewport`, await page.evaluate(() => [...document.querySelectorAll("button:not(.topic-day)")].every(button => {
@@ -112,9 +122,9 @@ try {
   await firstCard.locator(".collapse").click();
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole("button", { name: "리더" }).click();
+  await page.getByRole("button", { name: "리더", exact: true }).click();
   await page.screenshot({ path: join(evidence, "leader-390.png"), fullPage: true });
-  await page.getByRole("button", { name: "관리" }).click();
+  await page.getByRole("button", { name: "관리", exact: true }).click();
   await page.screenshot({ path: join(evidence, "admin-390.png"), fullPage: true });
   const viewer = await context.newPage();
   const viewerMarkup = await page.evaluate(() => TalkFlow.viewerHtml(TalkFlow.approvedMonth()));
@@ -125,7 +135,22 @@ try {
   check("public viewer no horizontal overflow", await viewer.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1));
   await viewer.screenshot({ path: join(evidence, "public-viewer-390.png"), fullPage: true });
   await viewer.close();
-  await page.getByRole("button", { name: "학생" }).click();
+  await page.getByRole("button", { name: "일별 관리" }).click();
+  await page.locator("[data-open$=':print']").first().click();
+  check("single date print has exactly 2 A4 pages", await page.locator(".a4-page").count() === 2);
+  check("print title includes date and topic", (await page.title()).includes("2026-08-03_TheBox_TalkFlow"));
+  check("student print excludes admin and secrets", await page.locator(".a4-page").evaluateAll(pages => !pages.some(item => /Gist|Token|API Key|품질검사|민감도/.test(item.innerText))));
+  check("print URL preserves date and view", new URL(page.url()).searchParams.get("view") === "print" && new URL(page.url()).searchParams.get("date") === "2026-08-03");
+  await page.getByRole("button", { name: "일별 관리" }).click();
+  for (const date of ["2026-08-03", "2026-08-06", "2026-08-10"]) await page.locator(`[data-print-date="${date}"]`).check();
+  await page.locator("[data-action='batch-print']").click();
+  check("three selected dates produce 6 A4 pages", await page.locator(".a4-page").count() === 6);
+  check("batch print preserves selected dates", await page.locator(".a4-topic").evaluateAll(items => items.map(item => item.dataset.printTopic).join(",") === "2026-08-03,2026-08-06,2026-08-10"));
+  await page.getByRole("button", { name: "일별 관리" }).click();
+  await page.locator("[data-open$=':leader']").first().click();
+  await page.locator("[data-print-leader]").first().click();
+  check("leader print has exactly 2 A4 pages", await page.locator(".a4-page").count() === 2);
+  check("leader print includes facilitator notes", await page.locator(".a4-page .leader-only").count() > 0);
   await page.setViewportSize({ width: 1024, height: 900 });
   await page.emulateMedia({ media: "print" });
   check("print view hides navigation", await page.locator(".topbar").evaluate(element => getComputedStyle(element).display === "none"));
