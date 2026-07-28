@@ -434,6 +434,7 @@ body {
 .h-badge.holding { background: #E06030; color: #fff; }
 .h-badge.attend  { background: #22A06B; color: #fff; }
 .h-badge.tutor   { background: rgba(255,255,255,.2); color: #fff; }
+.h-badge.external { background: #FFF5D6; color: #7A4B00; border: 1px solid rgba(122,75,0,.22); }
 
 /* 태그 컨텍스트 메뉴 */
 .h-ctx-menu {
@@ -2570,7 +2571,8 @@ function pushHoldingUndo(label) {
     label,
     hActiveSlot,
     hIdSeq,
-    holdingData: cloneData(holdingData)
+    holdingData: cloneData(holdingData),
+    holdingClassTombstones: cloneData(holdingClassTombstones)
   });
   if (holdingUndoStack.length > UNDO_LIMIT) holdingUndoStack.shift();
   updateHoldingUndoButton();
@@ -2582,6 +2584,8 @@ function undoHoldingAction() {
   hActiveSlot = prev.hActiveSlot;
   hIdSeq = prev.hIdSeq;
   holdingData = cloneData(prev.holdingData);
+  holdingClassTombstones = cloneData(prev.holdingClassTombstones || {});
+  saveHoldingClassTombstones();
   saveHoldingSlot(hActiveSlot);
   renderHDayTabs();
   renderHClasses();
@@ -2655,6 +2659,8 @@ function isSlotPast(slot) {
 let holdingData = {};
 let hActiveSlot = '월수오전';
 const HOLDING_SAVE_PREFIX = 'thebox_holding_v1_';
+const HOLDING_CLASS_TOMBSTONE_KEY = 'thebox_holding_class_tombstones_v1';
+let holdingClassTombstones = loadHoldingClassTombstones();
 
 function formatDateKey(date) {
   return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
@@ -2682,6 +2688,47 @@ function getHoldingStorageMeta(slotKey=hActiveSlot) {
     dateKey,
     storageKey: HOLDING_SAVE_PREFIX + dateKey + '_' + slot.key
   };
+}
+
+function normalizeHoldingClassKey(name) {
+  return String(name ?? '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('ko-KR');
+}
+
+function loadHoldingClassTombstones() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(HOLDING_CLASS_TOMBSTONE_KEY) || '{}');
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch(e) {
+    return {};
+  }
+}
+
+function saveHoldingClassTombstones() {
+  try {
+    localStorage.setItem(HOLDING_CLASS_TOMBSTONE_KEY, JSON.stringify(holdingClassTombstones || {}));
+  } catch(e) {}
+}
+
+function holdingClassTombstoneKey(slotKey, className) {
+  const meta = getHoldingStorageMeta(slotKey);
+  return `${meta.dateKey}::${meta.slot.key}::${normalizeHoldingClassKey(className)}`;
+}
+
+function hasHoldingClassTombstone(slotKey, className) {
+  return !!holdingClassTombstones[holdingClassTombstoneKey(slotKey, className)];
+}
+
+function addHoldingClassTombstone(slotKey, className) {
+  const key = holdingClassTombstoneKey(slotKey, className);
+  holdingClassTombstones[key] = Date.now();
+  saveHoldingClassTombstones();
+}
+
+function clearHoldingClassTombstone(slotKey, className) {
+  const key = holdingClassTombstoneKey(slotKey, className);
+  if (!holdingClassTombstones[key]) return;
+  delete holdingClassTombstones[key];
+  saveHoldingClassTombstones();
 }
 
 function normalizeHoldingPerson(p) {
@@ -2713,7 +2760,9 @@ function normalizeHoldingClass(c, fallbackName='', slotKey='', idx=0) {
     korTeachers: normalizeHoldingPeople(c.korTeachers),
     attend: Number(c.attend)||0,
     tutor: Number(c.tutor)||0,
-    memo: c.memo || ''
+    memo: c.memo || '',
+    isManual: !!c.isManual,
+    isOutOfPreset: !!c.isOutOfPreset
   };
 }
 
@@ -2721,19 +2770,64 @@ function holdingListCount(cls, key) {
   return Array.isArray(cls?.[key]) ? cls[key].length : 0;
 }
 
-function normalizeHoldingClasses(slot, classes) {
-  const preset = PRESETS[slot.pday]?.[slot.ptime] || [];
+function getSlotPresetClasses(slot) {
+  return (PRESETS[slot.pday]?.[slot.ptime] || [])
+    .map((p, idx) => ({ ...p, name: String(p?.name || '').trim(), index: idx }))
+    .filter(p => p.name);
+}
+
+function isHoldingClassEmpty(cls) {
+  return !holdingListCount(cls, 'members') &&
+    !holdingListCount(cls, 'korMembers') &&
+    !holdingListCount(cls, 'korTeachers') &&
+    Number(cls?.attend || 0) === 0 &&
+    Number(cls?.tutor || 0) === 0 &&
+    !String(cls?.memo || '').trim();
+}
+
+function shouldKeepExternalHoldingClass(cls, options={}) {
+  return (!!options.keepManualEmpty && !!cls?.isManual) || !isHoldingClassEmpty(cls);
+}
+
+function normalizeHoldingClasses(slot, classes, options={}) {
+  const preset = getSlotPresetClasses(slot);
+  const presetKeyMap = new Map(preset.map(p => [normalizeHoldingClassKey(p.name), p]));
   const existing = (Array.isArray(classes) ? classes : []).map((c, idx) => normalizeHoldingClass(c, '', slot.key, idx));
-  const existingMap = new Map(existing.map(c => [c.className, c]));
-  const merged = preset.map(p => existingMap.get(p.name) || {
-    id: hUid(), className: p.name,
-    members: [], korMembers: [], korTeachers: [],
-    attend: 0, tutor: 0, memo: ''
-  });
+  const existingMap = new Map();
   existing.forEach(c => {
-    if (!merged.some(x=>x.className===c.className)) merged.push(c);
+    const key = normalizeHoldingClassKey(c.className);
+    if (!key) return;
+    const prev = existingMap.get(key);
+    if (!prev || (isHoldingClassEmpty(prev) && !isHoldingClassEmpty(c))) existingMap.set(key, c);
   });
-  return merged.map((c, idx) => normalizeHoldingClass(c, '', slot.key, idx));
+  const merged = [];
+  const seen = new Set();
+
+  preset.forEach(p => {
+    const key = normalizeHoldingClassKey(p.name);
+    if (!key || seen.has(key) || hasHoldingClassTombstone(slot.key, p.name)) return;
+    const saved = existingMap.get(key);
+    const entry = saved || {
+      id: hUid(), className: p.name,
+      members: [], korMembers: [], korTeachers: [],
+      attend: 0, tutor: 0, memo: ''
+    };
+    merged.push({ ...entry, className: saved?.className || p.name, isOutOfPreset: false });
+    seen.add(key);
+  });
+
+  existing.forEach(c => {
+    const key = normalizeHoldingClassKey(c.className);
+    if (!key || seen.has(key) || presetKeyMap.has(key) || hasHoldingClassTombstone(slot.key, c.className)) return;
+    if (!shouldKeepExternalHoldingClass(c, options)) return;
+    merged.push({ ...c, isOutOfPreset: true });
+    seen.add(key);
+  });
+  return merged.map((c, idx) => {
+    const normalized = normalizeHoldingClass(c, '', slot.key, idx);
+    normalized.isOutOfPreset = !presetKeyMap.has(normalizeHoldingClassKey(normalized.className));
+    return normalized;
+  });
 }
 
 function loadHoldingSlot(slotKey) {
@@ -2742,7 +2836,18 @@ function loadHoldingSlot(slotKey) {
     const raw = localStorage.getItem(meta.storageKey);
     if (!raw) return normalizeHoldingClasses(meta.slot, []);
     const saved = JSON.parse(raw);
-    return normalizeHoldingClasses(meta.slot, saved.classes || []);
+    const originalClasses = Array.isArray(saved.classes) ? saved.classes : [];
+    const normalized = normalizeHoldingClasses(meta.slot, originalClasses);
+    if (JSON.stringify(originalClasses) !== JSON.stringify(normalized)) {
+      localStorage.setItem(meta.storageKey, JSON.stringify({
+        ...saved,
+        dateKey: saved.dateKey || meta.dateKey,
+        slotKey: saved.slotKey || meta.slot.key,
+        savedAt: saved.savedAt || Date.now(),
+        classes: normalized
+      }));
+    }
+    return normalized;
   } catch(e) {
     return normalizeHoldingClasses(meta.slot, []);
   }
@@ -2774,12 +2879,13 @@ function updateHoldingLocalStatusFromStorage() {
 
 function saveHoldingSlot(slotKey=hActiveSlot) {
   const meta = getHoldingStorageMeta(slotKey);
+  const classes = normalizeHoldingClasses(meta.slot, holdingData[slotKey] || []);
   try {
     localStorage.setItem(meta.storageKey, JSON.stringify({
       dateKey: meta.dateKey,
       slotKey: meta.slot.key,
       savedAt: Date.now(),
-      classes: holdingData[slotKey] || []
+      classes
     }));
     updateHoldingLocalStatusFromStorage();
     return true;
@@ -2792,7 +2898,9 @@ function saveHoldingSlot(slotKey=hActiveSlot) {
 function initHoldingData() {
   H_SLOTS.forEach(s => {
     const existing = holdingData[s.key] && holdingData[s.key].length ? holdingData[s.key] : loadHoldingSlot(s.key);
+    const before = JSON.stringify(existing || []);
     holdingData[s.key] = normalizeHoldingClasses(s, existing);
+    if (JSON.stringify(holdingData[s.key] || []) !== before) saveHoldingSlot(s.key);
   });
   updateHoldingLocalStatusFromStorage();
 }
@@ -2894,7 +3002,9 @@ function makeHTag(name, type, onDel, flags={}) {
 function renderHClasses() {
   const slot = H_SLOTS.find(s=>s.key===hActiveSlot) || H_SLOTS[0];
   if (!Array.isArray(holdingData[hActiveSlot])) holdingData[hActiveSlot] = loadHoldingSlot(hActiveSlot);
-  holdingData[hActiveSlot] = holdingData[hActiveSlot].map((c, idx) => normalizeHoldingClass(c, '', hActiveSlot, idx));
+  const beforeNormalize = JSON.stringify(holdingData[hActiveSlot] || []);
+  holdingData[hActiveSlot] = normalizeHoldingClasses(slot, holdingData[hActiveSlot], { keepManualEmpty:true });
+  if (JSON.stringify(holdingData[hActiveSlot] || []) !== beforeNormalize) saveHoldingSlot(hActiveSlot);
   const classes = holdingData[hActiveSlot];
   updateHoldingLocalStatusFromStorage();
   const grid = document.getElementById('hClassGrid'); grid.innerHTML='';
@@ -2928,6 +3038,13 @@ function renderHClasses() {
       const tBadge=document.createElement('span'); tBadge.className='h-badge tutor'; tBadge.textContent='튜터 '+cls.tutor;
       badges.appendChild(tBadge);
     }
+    if (cls.isOutOfPreset) {
+      const externalBadge = document.createElement('span');
+      externalBadge.className = 'h-badge external';
+      externalBadge.textContent = '설정 외';
+      externalBadge.title = '현재 반 설정에는 없지만 이 날짜와 시간대 기록에 실제 데이터가 있어 표시됩니다.';
+      badges.appendChild(externalBadge);
+    }
     const classDelBtn = document.createElement('button');
     classDelBtn.type = 'button';
     classDelBtn.className = 'h-class-del no-print';
@@ -2938,6 +3055,7 @@ function renderHClasses() {
       e.stopPropagation();
       if (!confirm(`${cls.className} 반을 삭제할까요?`)) return;
       withHoldingUndo('반 삭제', () => {
+        addHoldingClassTombstone(hActiveSlot, cls.className);
         holdingData[hActiveSlot] = holdingData[hActiveSlot].filter(x => x.id !== cls.id);
         saveHoldingSlot();
         renderHClasses();
@@ -3207,11 +3325,19 @@ function renderHClasses() {
   const doAddClass = () => {
     const name = addInp.value.trim();
     if (!name) return;
+    const nameKey = normalizeHoldingClassKey(name);
+    const exists = (holdingData[hActiveSlot] || []).some(c => normalizeHoldingClassKey(c.className) === nameKey);
+    if (exists) {
+      showToast('이미 표시 중인 반입니다.');
+      return;
+    }
     withHoldingUndo('반 추가', () => {
+      clearHoldingClassTombstone(hActiveSlot, name);
       holdingData[hActiveSlot].push({
         id: hUid(), classId: classIdFor(hActiveSlot, name, holdingData[hActiveSlot].length), className: name,
         members: [], korMembers: [], korTeachers: [],
-        attend: 0, tutor: 0, memo: ''
+        attend: 0, tutor: 0, memo: '',
+        isManual: true
       });
       addInp.value = '';
       saveHoldingSlot();
@@ -3237,7 +3363,7 @@ document.getElementById('btnHoldingClear').addEventListener('click',()=>{
   const slot=H_SLOTS.find(s=>s.key===hActiveSlot);
   if(!confirm(`${slot?.baseLabel} 홀딩 데이터를 초기화할까요?`))return;
   withHoldingUndo('오늘 초기화', () => {
-    holdingData[hActiveSlot].forEach(c=>{c.members=[];c.korMembers=[];c.korTeachers=[];c.attend=0;c.tutor=0;c.memo='';});
+    holdingData[hActiveSlot] = normalizeHoldingClasses(slot, []);
     saveHoldingSlot();
     renderHDayTabs(); renderHClasses();
   });
@@ -4574,7 +4700,9 @@ function recordHasFinalParticipantData(record) {
 
 function makeRecordFromHolding(existing=null, mode='new', slotKey=hActiveSlot, status='draft') {
   const slot = H_SLOTS.find(s => s.key === slotKey);
-  const classes = Array.isArray(holdingData[slotKey]) ? holdingData[slotKey] : [];
+  const classes = slot
+    ? normalizeHoldingClasses(slot, holdingData[slotKey] || [])
+    : (Array.isArray(holdingData[slotKey]) ? holdingData[slotKey] : []);
   const now = new Date();
   const nowMs = Date.now();
   const opDate = slot ? getHoldingOperationalDate(slot) : now;
@@ -4639,6 +4767,8 @@ async function saveHoldingRecord() {
   if (isSavingHoldingRecord) return;
   const slot = H_SLOTS.find(s => s.key === hActiveSlot);
   if (!slot) return;
+  holdingData[hActiveSlot] = normalizeHoldingClasses(slot, holdingData[hActiveSlot] || []);
+  saveHoldingSlot(hActiveSlot);
   const classes = Array.isArray(holdingData[hActiveSlot]) ? holdingData[hActiveSlot] : [];
   const hasData = classes.some(c =>
     holdingListCount(c,'members') || holdingListCount(c,'korMembers') || holdingListCount(c,'korTeachers') ||
