@@ -8,7 +8,8 @@
   const $=s=>document.querySelector(s);
   const esc=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const clone=value=>JSON.parse(JSON.stringify(value));
-  let topics=loadTopics(),settings=loadSettings(),activeDate=Object.keys(topics).sort()[0]||today(),cursor=new Date("2026-08-01T12:00:00"),view="student",dirty=false;
+  let topics=loadTopics(),settings=loadSettings(),activeDate=Object.keys(topics).sort()[0]||today(),cursor=new Date("2026-08-01T12:00:00"),view="calendar",dirty=false;
+  let printDates=new Set(),printLeader=false;
   let timerSeconds=0,timerHandle=null;
 
   function today(){return new Date().toISOString().slice(0,10)}
@@ -64,12 +65,24 @@
   function render(){
     $("#month-label").textContent=new Intl.DateTimeFormat("ko-KR",{year:"numeric",month:"long"}).format(cursor);
     renderList();
+    $(".app-shell").classList.toggle("wide-mode",view==="calendar"||view==="print");
+    $("#calendar-view").innerHTML=view==="calendar"?renderCalendar():"";
     $("#student-view").innerHTML=view==="student"?renderStudent(current()):"";
     $("#leader-view").innerHTML=view==="leader"?renderLeader(current()):"";
     $("#admin-view").innerHTML=view==="admin"?renderAdmin(current()):"";
+    $("#print-view").innerHTML=view==="print"?renderPrintCollection():"";
+    $("#calendar-view").hidden=view!=="calendar";
     $("#student-view").hidden=view!=="student";$("#leader-view").hidden=view!=="leader";$("#admin-view").hidden=view!=="admin";
+    $("#print-view").hidden=view!=="print";
     document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("is-active",b.dataset.view===view));
+    updateUrl();
     bindDynamic();
+  }
+  function updateUrl(){
+    const url=new URL(location.href);
+    if(activeDate)url.searchParams.set("date",activeDate);else url.searchParams.delete("date");
+    if(view==="calendar")url.searchParams.delete("view");else url.searchParams.set("view",view);
+    history.replaceState(null,"",url);
   }
   function renderList(){
     const prefix=monthPrefix(),entries=Object.values(topics).filter(t=>t.date.startsWith(prefix)).sort((a,b)=>a.date.localeCompare(b.date));
@@ -78,10 +91,74 @@
       return `<button class="topic-day ${t.date===activeDate?"is-active":""}" data-date="${t.date}"><time>${t.date.slice(8)}</time><span><strong>${esc(t.title.en)}</strong><small>${esc(t.title.ko)}</small></span><i class="status-pill ${state}">${label}</i></button>`;
     }).join(""):`<p class="ko">이 달에는 작성된 토픽이 없습니다.</p>`;
   }
+  function weekday(date){return new Intl.DateTimeFormat("ko-KR",{weekday:"short",timeZone:"UTC"}).format(new Date(`${date}T12:00:00Z`))}
+  function renderCalendar(){
+    const year=cursor.getFullYear(),month=cursor.getMonth(),days=new Date(year,month+1,0).getDate(),prefix=monthPrefix();
+    const monthTopics=Object.values(topics).filter(t=>t.date?.startsWith(prefix));
+    const approved=monthTopics.filter(t=>t.quality?.status==="approved"&&!t.hidden);
+    return `<header class="manage-hero"><div><p class="eyebrow">OFFLINE STUDY OPERATIONS</p><h1>${year}년 ${month+1}월 일별 토픽</h1><p>날짜를 선택해 학생용 A4를 확인하고 인쇄하세요.</p></div><div class="manage-actions"><button class="button secondary" data-action="today">오늘</button><button class="button primary" data-action="create-for-month">＋ 토픽 생성</button><button class="button secondary" data-action="settings">⚙ 관리 설정</button></div></header>
+      <section class="month-summary"><div><strong>${monthTopics.length}</strong><span>작성 토픽</span></div><div><strong>${approved.length}</strong><span>인쇄 가능</span></div><div><strong>${monthTopics.filter(t=>t.quality?.status==="review").length}</strong><span>검토 필요</span></div><div><strong>${monthTopics.filter(t=>t.hidden).length}</strong><span>숨김</span></div></section>
+      <div class="batch-toolbar"><label><input type="checkbox" data-action="select-approved"> 승인 토픽 전체 선택</label><button class="button secondary" data-action="week-print">이번 주 인쇄</button><button class="button secondary" data-action="month-print">현재 월 전체 인쇄</button><button class="button primary" data-action="batch-print" ${printDates.size?"":"disabled"}>선택 날짜 인쇄 (${printDates.size})</button></div>
+      <section class="date-grid">${Array.from({length:days},(_,i)=>{
+        const date=`${prefix}-${String(i+1).padStart(2,"0")}`,t=topics[date];
+        if(!t)return `<article class="date-card is-empty"><header><label><input type="checkbox" disabled><time>${i+1}일 · ${weekday(date)}</time></label><span class="status-pill">미작성</span></header><div class="empty-date"><p>등록된 토픽이 없습니다.</p><button class="mini" data-create-date="${date}">토픽 생성</button><button class="mini" data-clone-to="${date}">기존 토픽 복제</button><button class="mini" data-move-to="${date}">다른 날짜에서 이동</button></div></article>`;
+        const state=t.quality?.status||"draft",label=state==="approved"?"승인":state==="review"?"검토 필요":"초안",print=validatePrint(t);
+        return `<article class="date-card ${t.hidden?"is-hidden":""}"><header><label><input type="checkbox" data-print-date="${date}" ${printDates.has(date)?"checked":""} ${state==="approved"&&!t.hidden?"":"disabled"}><time>${i+1}일 · ${weekday(date)}</time></label><span class="status-pill ${state}">${label}</span></header><h2>${esc(t.title.en)}</h2><p>${esc(t.title.ko)}</p><div class="date-meta"><span>${t.hidden?"◌ 숨김":"◉ 공개"}</span><span class="print-state ${print.status.toLowerCase()}">${print.label}</span></div><div class="date-actions"><button data-open="${date}:student">토픽 보기</button><button data-open="${date}:admin">수정</button><button data-open="${date}:print">학생용 A4</button><button data-open="${date}:leader">리더 보기</button><button data-clone-to="${date}">복제</button><button data-toggle-hidden="${date}">${t.hidden?"공개":"숨김"}</button></div></article>`;
+      }).join("")}</section>`;
+  }
+  function validatePrint(t){
+    const issues=[];
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(t?.date||""))issues.push("날짜");
+    if(!t?.title?.en||!t?.title?.ko)issues.push("제목");
+    if(t?.smallTalk?.length!==3||t?.easyEntry?.length!==3||t?.mainDiscussion?.length!==4)issues.push("질문");
+    if((t?.mainDiscussion||[]).some(q=>!q.starter||!q.exampleFollowUp||!q.deeperFollowUp))issues.push("후속 질문");
+    if(!t?.midGame?.options?.length)issues.push("Mid-game");
+    if(!t?.finalRound?.questionEn)issues.push("Final Round");
+    if(t?.quality?.status!=="approved"||t?.hidden)issues.push("승인");
+    return issues.length?{status:"review",label:"PRINT REVIEW REQUIRED",issues}:{status:"ready",label:"PRINT READY",issues:[]};
+  }
+  function printHeader(t,page,leader=false){
+    return `<header class="handout-header"><div class="handout-brand"><strong>THEBOX</strong><span>TALK FLOW</span></div><div class="handout-title"><span>${esc(t.date)} · ${weekday(t.date)}</span><h1>${esc(t.title.en)}</h1><p>${esc(t.title.ko)}</p></div><div class="handout-label">${leader?"Leader Guide":"Student Handout"}<b>Page ${page} / 2</b></div></header>`;
+  }
+  function handoutSection(title,body,className=""){return `<section class="handout-section ${className}"><h2>${title}</h2>${body}</section>`}
+  function handoutQuestions(items,{follow=false,deep=false}={}){
+    return `<ol class="handout-questions">${items.map(q=>`<li><strong>${esc(q.questionEn)}</strong><span>${esc(q.questionKo)}</span>${q.starter?`<p><b>STARTER</b> ${esc(q.starter)}</p>`:""}${follow&&q.followUp?`<p><b>FOLLOW-UP</b> ${esc(q.followUp)}</p>`:""}${deep?`<div class="handout-follow"><p><b>EXAMPLE</b> ${esc(q.exampleFollowUp)}</p><p><b>DEEPER</b> ${esc(q.deeperFollowUp)}</p></div>`:""}</li>`).join("")}</ol>`;
+  }
+  function handoutActivity(a){return `<div class="handout-activity"><strong>${esc(a.titleEn)} <small>${esc(a.titleKo)}</small></strong><p>${esc(a.instructionEn)}</p><span>${esc(a.instructionKo)}</span><div>${a.options.map(o=>`<i>${esc(o)}</i>`).join("")}</div></div>`}
+  function renderHandout(t,leader=false){
+    return `<article class="a4-topic" data-print-topic="${t.date}">
+      <section class="a4-page">${printHeader(t,1,leader)}<div class="handout-body page-one">
+        ${handoutSection("TODAY'S GOAL",bilingual(t.goal.en,t.goal.ko),"goal")}
+        ${handoutSection("TOPIC HOOK",bilingual(t.hook.en,t.hook.ko),"hook")}
+        ${handoutSection("SMALL TALK",handoutQuestions(t.smallTalk))}
+        ${handoutSection("QUICK ACTIVITY",handoutActivity(t.quickActivity))}
+        ${handoutSection("EASY ENTRY",handoutQuestions(t.easyEntry,{follow:true}))}
+        ${leader?handoutSection("LEADER CHECK","<p>Small Talk 10 min · Quick Activity 10 min · Easy Entry 20 min</p>","leader-only"):""}
+      </div><footer>${esc(t.title.en)}<span>1 / 2</span></footer></section>
+      <section class="a4-page">${printHeader(t,2,leader)}<div class="handout-body page-two">
+        ${handoutSection("MAIN DISCUSSION",handoutQuestions(t.mainDiscussion,{deep:true}))}
+        ${handoutSection("MID-GAME",handoutActivity(t.midGame))}
+        ${handoutSection("USEFUL PHRASES",`<div class="handout-phrases">${t.usefulPhrases.map(p=>`<div><strong>${esc(p.en)}</strong><span>${esc(p.ko)}</span><small>${esc(p.usage)}</small></div>`).join("")}</div>`)}
+        ${handoutSection("FINAL ROUND",`${bilingual(t.finalRound.questionEn,t.finalRound.questionKo)}<p class="final-starter"><b>STARTER</b> ${esc(t.finalRound.starter)}</p>`)}
+        ${leader?handoutSection("LEADER NOTES",`<p>${esc(t.leaderNotes.recommendedSkip)}</p><p>${esc(t.leaderNotes.sensitiveWarning)}</p><p>${t.leaderNotes.whenConversationStops.map(esc).join(" · ")}</p>`,"leader-only"):""}
+      </div><footer>${esc(t.title.en)}<span>2 / 2</span></footer></section>
+    </article>`;
+  }
+  function renderPrintCollection(){
+    const dates=printDates.size?[...printDates].sort():[activeDate],items=dates.map(date=>topics[date]).filter(Boolean);
+    if(!items.length)return empty();
+    document.title=items.length===1?`${items[0].date}_TheBox_TalkFlow_${safeFilename(items[0].title.ko)}`:`${monthPrefix()}_TheBox_TalkFlow_${items.length}topics`;
+    return `<div class="print-toolbar"><button class="button secondary" data-action="calendar">← 월 목록으로</button><span>${items.length}개 토픽 · ${items.length*2}페이지</span><button class="button secondary" data-action="toggle-print-role">${printLeader?"학생용 A4":"리더용 A4"}</button><button class="button primary" data-action="print-now">A4 PDF / 인쇄</button></div><div class="paper-stack">${items.map(t=>renderHandout(t,printLeader)).join("")}</div>`;
+  }
+  function safeFilename(value){return String(value||"topic").replace(/[\\/:*?"<>|]/g,"").replace(/\s+/g,"_")}
   function empty(){return `<div class="empty-state"><p class="eyebrow">OPEN A DATE</p><h1>선택한 날짜에 토픽이 없습니다.</h1><p>관리 화면에서 새 토픽을 만들거나 JSON을 가져와 시작하세요.</p><button class="button primary" data-action="create">새 토픽 만들기</button></div>`}
   function hero(t){return `<header class="topic-hero"><p class="eyebrow">${esc(t.date)} · ${esc(t.category).toUpperCase()}</p><h1>${esc(t.title.en)}<span class="ko-title">${esc(t.title.ko)}</span></h1><div class="topic-meta"><span class="chip">◷ ${t.leaderNotes.estimatedMinutes} min</span><span class="chip">같은 질문 · 다양한 깊이</span>${t.quality.status==="approved"?'<span class="chip">✓ Approved</span>':""}</div></header>`}
   function progress(){return `<nav class="progress-strip" aria-label="진행 섹션">${SECTION_LABELS.map((label,i)=>`<button data-scroll="section-${i+1}">${i+1}. ${label}</button>`).join("")}</nav>`}
   function heading(i,title){return `<div class="section-heading"><div><span class="section-num">STEP ${String(i).padStart(2,"0")}</span><h2>${title}</h2></div><button class="collapse" aria-label="${title} 접기 또는 펼치기">−</button></div>`}
+  function dailyNav(t,mode){
+    const dates=Object.keys(topics).sort(),index=dates.indexOf(t.date);
+    return `<div class="daily-nav"><button data-action="calendar">← 월 목록</button><div><strong>${t.date} · ${weekday(t.date)}</strong><span>${t.quality?.status==="approved"?"승인":t.quality?.status==="review"?"검토 필요":"초안"} · 마지막 저장 ${new Date(t.updatedAt||t.createdAt).toLocaleString("ko-KR")}</span></div><button data-prev-next="${dates[index-1]||""}" ${index<=0?"disabled":""}>이전 날짜</button><button data-prev-next="${dates[index+1]||""}" ${index<0||index>=dates.length-1?"disabled":""}>다음 날짜</button><button data-open="${t.date}:print">학생용 A4</button><button data-print-leader="${t.date}">리더용 A4</button>${mode!=="admin"?`<button data-open="${t.date}:admin">토픽 수정</button>`:""}<button data-approve="${t.date}">승인</button><button data-toggle-hidden="${t.date}">${t.hidden?"공개":"숨김"}</button></div>`;
+  }
   function bilingual(en,ko){return `<div class="bilingual"><div class="en">${esc(en)}</div><div class="ko" lang="ko">${esc(ko)}</div></div>`}
   function questions(items,mode="easy",leader=false){
     return `<div class="question-list">${items.map((q,i)=>`<article class="question">${leader?`<label class="checkline"><input type="checkbox" data-check="${mode}-${i}"><span>`:""}${bilingual(q.questionEn,q.questionKo)}<div class="starter"><b>STARTER</b>${esc(q.starter)}</div>${mode==="main"?`<div class="followups"><div class="followup"><b>KEEP IT GOING</b>${esc(q.exampleFollowUp)}</div><div class="followup"><b>GO DEEPER</b>${esc(q.deeperFollowUp)}</div></div>`:q.followUp?`<div class="followups"><div class="followup"><b>KEEP IT GOING</b>${esc(q.followUp)}</div></div>`:""}${leader?"</span></label>":""}</article>`).join("")}</div>`;
@@ -90,7 +167,7 @@
   function card(i,title,body){return `<section class="flow-card" id="section-${i}">${heading(i,title)}${body}</section>`}
   function renderStudent(t){
     if(!t)return empty();
-    return hero(t)+progress()+
+    return dailyNav(t,"student")+hero(t)+progress()+
       card(1,"Topic Hook",bilingual(t.hook.en,t.hook.ko))+
       card(2,"Today's Goal",bilingual(t.goal.en,t.goal.ko))+
       card(3,"Small Talk",questions(t.smallTalk,"small"))+
@@ -104,7 +181,7 @@
   function renderLeader(t){
     if(!t)return empty();
     const schedule=[["Small Talk","10"],["Quick","10"],["Easy Entry","20"],["Main 1","25"],["Mid-game","10"],["Main 2","20"],["Final","5"]];
-    return `<div class="leader-toolbar"><div class="timer" id="timer-display">${formatTime(timerSeconds)}</div><button data-action="timer-start">시작/일시정지</button><button data-action="timer-reset">초기화</button><button data-action="student-share">학생 화면 공유</button><button data-action="print">인쇄</button></div>${hero(t)}<div class="timeline">${schedule.map(s=>`<div class="time-block"><strong>${s[0]}</strong>${s[1]}분</div>`).join("")}</div>
+    return `${dailyNav(t,"leader")}<div class="leader-toolbar"><div class="timer" id="timer-display">${formatTime(timerSeconds)}</div><button data-action="timer-start">시작/일시정지</button><button data-action="timer-reset">초기화</button><button data-action="student-share">학생 화면 공유</button><button data-print-leader="${t.date}">리더용 A4</button></div>${hero(t)}<div class="timeline">${schedule.map(s=>`<div class="time-block"><strong>${s[0]}</strong>${s[1]}분</div>`).join("")}</div>
       <div class="leader-note"><strong>대화가 끊겼을 때</strong><br>${t.leaderNotes.whenConversationStops.map(esc).join(" · ")}</div>
       <div class="leader-note"><strong>진행 메모</strong><br>${esc(t.leaderNotes.recommendedSkip)}<br>${esc(t.leaderNotes.sensitiveWarning)}</div>
       ${card(1,"Topic Hook",bilingual(t.hook.en,t.hook.ko))}${card(2,"Today's Goal",bilingual(t.goal.en,t.goal.ko))}
@@ -118,7 +195,7 @@
   function renderAdmin(t){
     if(!t)return empty();
     const result=validateTopic(t),qStatus=result.status==="approved"?"approved":result.status==="review"?"review":"draft";
-    return `<div class="admin-toolbar"><button class="button primary" data-action="save">저장</button><button class="button secondary" data-action="validate">품질검사</button><button class="button secondary" data-action="generate-all">전체 생성</button><button class="button secondary" data-action="export">월 JSON</button><button class="button secondary" data-action="import">JSON 가져오기</button><button class="button secondary" data-action="viewer">공개 뷰어</button><span class="spacer"></span><button class="button danger" data-action="delete">삭제</button></div>
+    return `${dailyNav(t,"admin")}<div class="admin-toolbar"><button class="button primary" data-action="save">저장</button><button class="button secondary" data-action="validate">품질검사</button><button class="button secondary" data-action="generate-all">전체 생성</button><button class="button secondary" data-action="export">월 JSON</button><button class="button secondary" data-action="import">JSON 가져오기</button><button class="button secondary" data-action="viewer">공개 뷰어</button><span class="spacer"></span><button class="button danger" data-action="delete">삭제</button></div>
       <div class="quality-panel ${qStatus}"><h3>${result.status==="approved"?"승인 가능":result.status==="review"?"검토 필요":"재생성 권장"} · ${result.score}점</h3><div class="ko">${result.issues.length?`${result.issues.length}개 항목을 확인하세요.`:"구조, 발화 가능성, 민감도 기본 검사를 통과했습니다."}</div>${result.issues.length?`<ul class="issue-list">${result.issues.map(i=>`<li>${esc(i)}</li>`).join("")}</ul>`:""}</div>
       <div class="editor-section"><h3>기본 정보</h3><div class="form-grid">${field("date","날짜",t.date,"date")}${field("category","카테고리",t.category)}${field("title.en","English title",t.title.en)}${field("title.ko","한국어 제목",t.title.ko)}${area("hook.en","Topic Hook · English",t.hook.en)}${area("hook.ko","Topic Hook · 한국어",t.hook.ko)}${area("goal.en","Today's Goal · English",t.goal.en)}${area("goal.ko","Today's Goal · 한국어",t.goal.ko)}</div></div>
       ${editQuestionSection("smallTalk","Small Talk",t.smallTalk,false)}
@@ -152,6 +229,15 @@
     document.querySelectorAll("[data-scroll]").forEach(b=>b.onclick=()=>document.getElementById(b.dataset.scroll)?.scrollIntoView({behavior:"smooth",block:"start"}));
     document.querySelectorAll("[data-path]").forEach(input=>input.oninput=()=>{setPath(current(),input.dataset.path,input.value);current().updatedAt=new Date().toISOString();dirty=true;saveDraft()});
     document.querySelectorAll("[data-action]").forEach(b=>b.onclick=()=>handleAction(b.dataset.action));
+    document.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{const[date,target]=b.dataset.open.split(":");activeDate=date;printDates.clear();if(target==="print")printDates.add(date);view=target;render()});
+    document.querySelectorAll("[data-print-date]").forEach(input=>input.onchange=()=>{input.checked?printDates.add(input.dataset.printDate):printDates.delete(input.dataset.printDate);render()});
+    document.querySelectorAll("[data-create-date]").forEach(b=>b.onclick=()=>createTopic(b.dataset.createDate));
+    document.querySelectorAll("[data-clone-to]").forEach(b=>b.onclick=()=>cloneTopicTo(b.dataset.cloneTo));
+    document.querySelectorAll("[data-move-to]").forEach(b=>b.onclick=()=>moveTopicTo(b.dataset.moveTo));
+    document.querySelectorAll("[data-toggle-hidden]").forEach(b=>b.onclick=()=>{const t=topics[b.dataset.toggleHidden];t.hidden=!t.hidden;saveTopics(t.hidden?"토픽을 숨겼습니다.":"토픽을 공개했습니다.")});
+    document.querySelectorAll("[data-prev-next]").forEach(b=>b.onclick=()=>{if(b.dataset.prevNext){activeDate=b.dataset.prevNext;render()}});
+    document.querySelectorAll("[data-print-leader]").forEach(b=>b.onclick=()=>{activeDate=b.dataset.printLeader;printDates=new Set([activeDate]);printLeader=true;view="print";render()});
+    document.querySelectorAll("[data-approve]").forEach(b=>b.onclick=()=>{const t=topics[b.dataset.approve],result=validateTopic(t);if(result.status!=="approved"){notify(`승인 전 ${result.issues.length}개 품질 항목을 확인하세요.`,true);return}t.quality={status:"approved",score:result.score,issues:[]};saveTopics("토픽을 승인했습니다.")});
     document.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>{current()[b.dataset.add].push({questionEn:"",questionKo:"",starter:"",followUp:"",exampleFollowUp:"",deeperFollowUp:""});dirty=true;render()});
     document.querySelectorAll("[data-remove]").forEach(b=>b.onclick=()=>{const[k,i]=b.dataset.remove.split(":");current()[k].splice(Number(i),1);dirty=true;render()});
     document.querySelectorAll("[data-move]").forEach(b=>b.onclick=()=>{const[k,rawI,rawD]=b.dataset.move.split(":"),i=Number(rawI),to=i+Number(rawD),arr=current()[k];if(to<0||to>=arr.length)return;[arr[i],arr[to]]=[arr[to],arr[i]];dirty=true;render()});
@@ -171,9 +257,30 @@
     if(action==="timer-start")toggleTimer();
     if(action==="timer-reset"){timerSeconds=0;clearInterval(timerHandle);timerHandle=null;render()}
     if(action==="generate-all")regenerate("all");
+    if(action==="calendar"){view="calendar";printDates.clear();document.title="TheBox Talk Flow";render()}
+    if(action==="today"){cursor=new Date();render()}
+    if(action==="settings"){$("#settings-button").click()}
+    if(action==="create-for-month"){const date=prompt("새 토픽 날짜 (YYYY-MM-DD)",`${monthPrefix()}-01`);if(date&&/^\d{4}-\d{2}-\d{2}$/.test(date))createTopic(date)}
+    if(action==="select-approved"){printDates=new Set(Object.values(topics).filter(t=>t.date.startsWith(monthPrefix())&&t.quality?.status==="approved"&&!t.hidden).map(t=>t.date));render()}
+    if(action==="month-print"){printDates=new Set(Object.values(topics).filter(t=>t.date.startsWith(monthPrefix())&&t.quality?.status==="approved"&&!t.hidden).map(t=>t.date));view="print";render()}
+    if(action==="week-print"){const start=new Date();start.setDate(start.getDate()-((start.getDay()+6)%7));printDates=new Set(Object.values(topics).filter(t=>{const d=new Date(`${t.date}T12:00:00`),end=new Date(start);end.setDate(end.getDate()+7);return d>=start&&d<end&&t.quality?.status==="approved"&&!t.hidden}).map(t=>t.date));if(!printDates.size)notify("이번 주 승인 토픽이 없습니다.",true);else{view="print";render()}}
+    if(action==="batch-print"){if(printDates.size){view="print";render()}}
+    if(action==="toggle-print-role"){printLeader=!printLeader;render()}
+    if(action==="print-now")window.print()
   }
   function createTopic(date){
     const base=clone(Object.values(window.TALKFLOW_SAMPLE_TOPICS)[0]);base.id=`talkflow-${date}-${crypto.randomUUID()}`;base.date=date;base.title={en:"New Conversation Flow",ko:"새 대화 흐름"};base.quality={status:"draft",score:0,issues:["내용을 작성하고 품질검사를 실행하세요."]};base.createdAt=base.updatedAt=new Date().toISOString();topics[date]=base;activeDate=date;dirty=true;view="admin";render();
+  }
+  function cloneTopicTo(targetDate){
+    const sourceDate=prompt("복제할 기존 토픽 날짜 (YYYY-MM-DD)",activeDate);
+    if(!sourceDate||!topics[sourceDate]){if(sourceDate)notify("해당 날짜의 토픽을 찾을 수 없습니다.",true);return}
+    const copy=clone(topics[sourceDate]);copy.id=`talkflow-${targetDate}-${crypto.randomUUID()}`;copy.date=targetDate;copy.quality={...copy.quality,status:"draft"};copy.hidden=false;copy.createdAt=copy.updatedAt=new Date().toISOString();topics[targetDate]=copy;activeDate=targetDate;saveTopics("토픽을 새 날짜로 복제했습니다.")
+  }
+  function moveTopicTo(targetDate){
+    const sourceDate=prompt("이동할 기존 토픽 날짜 (YYYY-MM-DD)",activeDate);
+    if(!sourceDate||!topics[sourceDate]){if(sourceDate)notify("해당 날짜의 토픽을 찾을 수 없습니다.",true);return}
+    if(topics[targetDate]){notify("이동할 날짜에 이미 토픽이 있습니다.",true);return}
+    topics[targetDate]={...topics[sourceDate],date:targetDate,updatedAt:new Date().toISOString()};delete topics[sourceDate];activeDate=targetDate;saveTopics("토픽 날짜를 이동했습니다.")
   }
   function toggleTimer(){if(timerHandle){clearInterval(timerHandle);timerHandle=null}else timerHandle=setInterval(()=>{timerSeconds++;const el=$("#timer-display");if(el)el.textContent=formatTime(timerSeconds)},1000)}
 
@@ -244,12 +351,12 @@
   $("#month-label").onclick=()=>{cursor=new Date();render()};
   $("#new-topic").onclick=()=>{const date=prompt("새 토픽 날짜 (YYYY-MM-DD)",`${monthPrefix()}-01`);if(date&&/^\d{4}-\d{2}-\d{2}$/.test(date)){activeDate=date;createTopic(date)}};
   $("#settings-button").onclick=()=>{$("#api-key").value=settings.apiKey||"";$("#gist-token").value=settings.gistToken||"";$("#gist-id").value=settings.gistId||"";$("#settings-dialog").showModal()};
-  $("#settings-form").addEventListener("submit",event=>{if(event.submitter?.value==="cancel")return;settings={apiKey:$("#api-key").value.trim(),gistToken:$("#gist-token").value.trim(),gistId:$("#gist-id").value.trim()};saveSettings();notify("Talk Flow 전용 설정을 저장했습니다.")});
+  $("#settings-form").addEventListener("submit",event=>{if(event.submitter?.value==="cancel")return;settings={...settings,apiKey:$("#api-key").value.trim(),gistToken:$("#gist-token").value.trim(),gistId:$("#gist-id").value.trim()};saveSettings();notify("Talk Flow 전용 설정을 저장했습니다.")});
   $("#gist-push").onclick=gistPush;$("#gist-pull").onclick=gistPull;
   $("#json-import").onchange=event=>{const file=event.target.files?.[0];if(file)importJson(file);event.target.value=""};
   window.addEventListener("beforeunload",event=>{if(dirty){event.preventDefault();event.returnValue=""}});
   window.addEventListener("error",event=>notify(`오류: ${event.message}`,true));
-  const params=new URLSearchParams(location.search);if(params.get("date")&&topics[params.get("date")])activeDate=params.get("date");if(["student","leader","admin"].includes(params.get("view")))view=params.get("view");
+  const params=new URLSearchParams(location.search);if(params.get("date")&&topics[params.get("date")])activeDate=params.get("date");if(["calendar","student","leader","admin","print"].includes(params.get("view")))view=params.get("view");if(view==="print")printDates.add(activeDate);
   window.TalkFlow={KEYS,validateTopic,validateAll,getTopics:()=>clone(topics),approvedMonth,monthFile,viewerHtml};
   render();
 })();

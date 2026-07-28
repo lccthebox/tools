@@ -18,7 +18,8 @@
       <span><strong>TheBox Talk Flow</strong><small>One Topic. Better Conversation.</small></span>
     </a>
     <nav class="view-tabs" aria-label="화면 선택">
-      <button class="tab is-active" data-view="student">학생</button>
+      <button class="tab is-active" data-view="calendar">일별 관리</button>
+      <button class="tab" data-view="student">학생</button>
       <button class="tab" data-view="leader">리더</button>
       <button class="tab" data-view="admin">관리</button>
     </nav>
@@ -43,9 +44,11 @@
 
     <main id="main" tabindex="-1">
       <div id="notice" class="notice" role="status" aria-live="polite"></div>
+      <section id="calendar-view" class="view"></section>
       <section id="student-view" class="view"></section>
       <section id="leader-view" class="view" hidden></section>
       <section id="admin-view" class="view" hidden></section>
+      <section id="print-view" class="print-view" hidden></section>
     </main>
   </div>
 
