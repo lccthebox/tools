@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="혼합 레벨 영어 모임을 위한 완성형 대화 진행 도구">
+  <title>TheBox Talk Flow</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">본문으로 건너뛰기</a>
+  <header class="topbar">
+    <a class="brand" href="./" aria-label="TheBox Talk Flow 홈">
+      <span class="brand-mark" aria-hidden="true">T</span>
+      <span><strong>TheBox Talk Flow</strong><small>One Topic. Better Conversation.</small></span>
+    </a>
+    <nav class="view-tabs" aria-label="화면 선택">
+      <button class="tab is-active" data-view="student">학생</button>
+      <button class="tab" data-view="leader">리더</button>
+      <button class="tab" data-view="admin">관리</button>
+    </nav>
+    <button class="icon-button" id="settings-button" aria-label="설정 열기" title="설정">⚙</button>
+  </header>
+
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="토픽 선택">
+      <div class="month-nav">
+        <button id="prev-month" aria-label="이전 달">←</button>
+        <button id="month-label" class="month-label" title="이번 달로 이동"></button>
+        <button id="next-month" aria-label="다음 달">→</button>
+      </div>
+      <div class="status-legend" aria-label="상태 안내">
+        <span><i class="dot approved"></i>승인</span>
+        <span><i class="dot review"></i>검토</span>
+        <span><i class="dot empty"></i>미작성</span>
+      </div>
+      <div id="topic-list" class="topic-list"></div>
+      <button id="new-topic" class="button secondary wide">＋ 선택 날짜 새 토픽</button>
+    </aside>
+
+    <main id="main" tabindex="-1">
+      <div id="notice" class="notice" role="status" aria-live="polite"></div>
+      <section id="student-view" class="view"></section>
+      <section id="leader-view" class="view" hidden></section>
+      <section id="admin-view" class="view" hidden></section>
+    </main>
+  </div>
+
+  <dialog id="settings-dialog">
+    <form method="dialog" class="dialog-card" id="settings-form">
+      <div class="dialog-heading">
+        <div><p class="eyebrow">PRIVATE TO THIS BROWSER</p><h2>연결 및 생성 설정</h2></div>
+        <button value="cancel" class="icon-button" aria-label="닫기">×</button>
+      </div>
+      <label>Anthropic API key<input id="api-key" type="password" autocomplete="off" placeholder="sk-ant-…"></label>
+      <p class="field-help">키는 Talk Flow 전용 설정 키에만 저장되며 생성 요청 외에는 전송하지 않습니다.</p>
+      <label>GitHub Gist token<input id="gist-token" type="password" autocomplete="off" placeholder="gist 권한 토큰"></label>
+      <label>Talk Flow Gist ID<input id="gist-id" autocomplete="off" placeholder="최초 저장 시 자동 생성"></label>
+      <div class="button-row">
+        <button type="button" id="gist-pull" class="button secondary">Gist 불러오기</button>
+        <button type="button" id="gist-push" class="button secondary">Gist 저장</button>
+        <button value="save" class="button primary">설정 저장</button>
+      </div>
+    </form>
+  </dialog>
+
+  <input id="json-import" type="file" accept="application/json,.json" hidden>
+  <script src="./sample-topics.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

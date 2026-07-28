@@ -1,0 +1,104 @@
+import { createRequire } from "node:module";
+import { createServer } from "node:http";
+import { readFile, mkdir } from "node:fs/promises";
+import { extname, join, normalize } from "node:path";
+
+const require = createRequire(import.meta.url);
+const { chromium } = require("playwright");
+const root = new URL(".", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
+const evidence = join(root, "..", ".omo", "evidence", "talkflow");
+await mkdir(evidence, { recursive: true });
+
+const mime = { ".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "text/javascript" };
+const server = createServer(async (request, response) => {
+  try {
+    const path = normalize(join(root, request.url === "/" ? "index.html" : request.url.split("?")[0]));
+    if (!path.startsWith(normalize(root))) throw new Error("invalid path");
+    response.setHeader("Content-Type", mime[extname(path)] || "application/octet-stream");
+    response.end(await readFile(path));
+  } catch {
+    response.statusCode = 404;
+    response.end("Not found");
+  }
+});
+await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
+const port = server.address().port;
+const browser = await chromium.launch({ headless: true });
+const results = [];
+const check = (name, condition, detail = "") => {
+  results.push({ name, pass: Boolean(condition), detail });
+  if (!condition) throw new Error(`${name}: ${detail}`);
+};
+
+try {
+  const context = await browser.newContext({ acceptDownloads: true });
+  const page = await context.newPage();
+  const errors = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "networkidle" });
+
+  check("8 sample topics", await page.locator(".topic-day").count() === 8);
+  check("student view renders all sections", await page.locator("#student-view .flow-card").count() === 9);
+  const quality = await page.evaluate(() => Object.values(TalkFlow.getTopics()).map(topic => ({ title: topic.title.en, result: TalkFlow.validateTopic(topic) })));
+  check("all samples pass quality", quality.every(item => item.result.status === "approved"), JSON.stringify(quality.filter(item => item.result.status !== "approved")));
+  check("isolated storage keys", await page.evaluate(() => Object.values(TalkFlow.KEYS).every(key => key.startsWith("tb_talkflow_"))));
+  check("legacy storage untouched", await page.evaluate(() => !Object.keys(localStorage).some(key => ["tb_topics_v5","tb_gist_token","tb_gist_id","tb_api_key_v2"].includes(key))));
+
+  await page.getByRole("button", { name: "리더" }).click();
+  check("leader tools render", await page.locator(".leader-toolbar").isVisible());
+  check("leader question checkboxes", await page.locator("[data-check]").count() === 10);
+
+  await page.getByRole("button", { name: "관리" }).click();
+  check("admin editor renders", await page.locator("[data-path='title.en']").isVisible());
+  await page.locator("[data-path='title.en']").fill("Edited Review Topic");
+  await page.getByRole("button", { name: "저장", exact: true }).click();
+  await page.reload();
+  await page.getByRole("button", { name: "관리" }).click();
+  check("save and reload restores edit", await page.locator("[data-path='title.en']").inputValue() === "Edited Review Topic");
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "월 JSON" }).click();
+  const download = await downloadPromise;
+  check("JSON export file rule", download.suggestedFilename() === "thebox-talkflow-2026-08.json", download.suggestedFilename());
+  check("approved-only public filter", await page.evaluate(() => Object.values(TalkFlow.approvedMonth()).every(topic => topic.quality.status === "approved" && !topic.hidden)));
+  let gistFiles = [];
+  await page.route("https://api.github.com/gists", async route => {
+    const body = route.request().postDataJSON();
+    gistFiles = Object.keys(body.files);
+    await route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify({ id: "talkflow-test-gist" }) });
+  });
+  await page.getByRole("button", { name: "설정 열기" }).click();
+  await page.locator("#gist-token").fill("test-token");
+  await page.getByRole("button", { name: "설정 저장" }).click();
+  await page.getByRole("button", { name: "설정 열기" }).click();
+  await page.getByRole("button", { name: "Gist 저장" }).click();
+  await page.waitForFunction(() => document.querySelector("#gist-id").value === "talkflow-test-gist");
+  check("Gist uses isolated filenames", gistFiles.sort().join(",") === "thebox-talkflow-2026-08-viewer.html,thebox-talkflow-2026-08.json", gistFiles.join(","));
+  await page.keyboard.press("Escape");
+  await page.waitForFunction(() => !document.querySelector("#notice").classList.contains("show"));
+
+  const sizes = [[360,800],[390,844],[768,900],[1024,900],[1440,1000]];
+  for (const [width,height] of sizes) {
+    await page.setViewportSize({ width, height });
+    await page.getByRole("button", { name: "학생" }).click();
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    check(`${width}px no horizontal overflow`, overflow <= 1, `${overflow}px`);
+    check(`${width}px controls inside viewport`, await page.evaluate(() => [...document.querySelectorAll("button:not(.topic-day)")].every(button => {
+      const rect = button.getBoundingClientRect();
+      return rect.width === 0 || (rect.right <= innerWidth + 1 && rect.left >= -1);
+    })));
+    await page.screenshot({ path: join(evidence, `student-${width}.png`), fullPage: true });
+  }
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "리더" }).click();
+  await page.screenshot({ path: join(evidence, "leader-390.png"), fullPage: true });
+  await page.getByRole("button", { name: "관리" }).click();
+  await page.screenshot({ path: join(evidence, "admin-390.png"), fullPage: true });
+  check("no browser errors", errors.length === 0, errors.join("; "));
+
+  console.log(JSON.stringify({ pass: true, checks: results.length, evidence, results }, null, 2));
+} finally {
+  await browser.close();
+  await new Promise(resolve => server.close(resolve));
+}
