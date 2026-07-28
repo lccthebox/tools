@@ -1,6 +1,6 @@
 (function () {
   "use strict";
-  const KEYS={data:"tb_talkflow_v1",settings:"tb_talkflow_settings_v1",drafts:"tb_talkflow_drafts_v1"};
+  const KEYS={data:"tb_talkflow_v1",settings:"tb_talkflow_settings_v1",drafts:"tb_talkflow_drafts_v1",versions:"tb_talkflow_versions_v1",feedback:"tb_talkflow_feedback_v1"};
   const SECTION_KEYS=["hook","goal","smallTalk","quickActivity","easyEntry","mainDiscussion","midGame","usefulPhrases","finalRound"];
   const SECTION_LABELS=["Topic Hook","Today's Goal","Small Talk","Quick Activity","Easy Entry","Main Discussion","Mid-game","Useful Phrases","Final Round"];
   const BAD_ENGLISH=["say the truth","different with","go spontaneous","star point","if nobody would know"];
@@ -16,9 +16,15 @@
   function loadTopics(){
     try{
       const raw=localStorage.getItem(KEYS.data);
-      if(!raw)return clone(window.TALKFLOW_SAMPLE_TOPICS||{});
+      if(!raw){
+        const samples=clone(window.TALKFLOW_SAMPLE_TOPICS||{});
+        return new URLSearchParams(location.search).get("fixtures")==="conversation"?window.TalkFlowConversation.applyFixtures(samples):samples;
+      }
       const parsed=JSON.parse(raw);
-      return parsed&&typeof parsed==="object"&&!Array.isArray(parsed)?parsed:clone(window.TALKFLOW_SAMPLE_TOPICS||{});
+      if(parsed&&typeof parsed==="object"&&!Array.isArray(parsed)){
+        return new URLSearchParams(location.search).get("fixtures")==="conversation"?window.TalkFlowConversation.applyFixtures(parsed):parsed;
+      }
+      return clone(window.TALKFLOW_SAMPLE_TOPICS||{});
     }catch(error){setTimeout(()=>notify(`저장 데이터 복원 실패: ${error.message}`,true));return clone(window.TALKFLOW_SAMPLE_TOPICS||{})}
   }
   function loadSettings(){try{return JSON.parse(localStorage.getItem(KEYS.settings)||"{}")}catch{return{}}}
@@ -27,6 +33,12 @@
     catch(error){notify(`저장 실패: ${error.message}`,true)}
   }
   function saveDraft(){if(!dirty)return;try{localStorage.setItem(KEYS.drafts,JSON.stringify({activeDate,topic:topics[activeDate],savedAt:new Date().toISOString()}))}catch{}}
+  function loadRecord(key){try{return JSON.parse(localStorage.getItem(key)||"{}")}catch{return{}}}
+  function preserveVersion(topic){
+    const versions=loadRecord(KEYS.versions),list=versions[topic.id]||[];
+    versions[topic.id]=[{savedAt:new Date().toISOString(),topic:clone(topic)},...list].slice(0,5);
+    localStorage.setItem(KEYS.versions,JSON.stringify(versions));
+  }
   function notify(message,isError=false){const el=$("#notice");if(!el)return;el.textContent=message;el.className=`notice show${isError?" error":""}`;clearTimeout(notify.handle);notify.handle=setTimeout(()=>el.className="notice",3400)}
   function monthPrefix(){return `${cursor.getFullYear()}-${String(cursor.getMonth()+1).padStart(2,"0")}`}
   function monthFile(kind="json"){return `thebox-talkflow-${monthPrefix()}${kind==="viewer"?"-viewer.html":".json"}`}
@@ -57,6 +69,7 @@
     Object.values(allTopics).forEach(other=>{if(other.date!==topic.date&&other.id===topic.id)issues.push("중복 ID가 있습니다.")});
     const normalizedTitle=(topic.title?.en||"").toLowerCase().replace(/[^a-z0-9]/g,"");
     Object.values(allTopics).forEach(other=>{if(other.date!==topic.date&&(other.title?.en||"").toLowerCase().replace(/[^a-z0-9]/g,"")===normalizedTitle)issues.push("월간 제목이 중복됩니다.")});
+    if(topic.conversationFlow)issues.push(...window.TalkFlowConversation.issues(topic.conversationFlow));
     const score=Math.max(0,100-issues.length*9);
     return{status:issues.length===0?"approved":issues.length<=3?"review":"regenerate",score,issues:[...new Set(issues)]};
   }
@@ -96,7 +109,8 @@
     const year=cursor.getFullYear(),month=cursor.getMonth(),days=new Date(year,month+1,0).getDate(),prefix=monthPrefix();
     const monthTopics=Object.values(topics).filter(t=>t.date?.startsWith(prefix));
     const approved=monthTopics.filter(t=>t.quality?.status==="approved"&&!t.hidden);
-    return `<header class="manage-hero"><div><p class="eyebrow">OFFLINE STUDY OPERATIONS</p><h1>${year}년 ${month+1}월 일별 토픽</h1><p>날짜를 선택해 학생용 A4를 확인하고 인쇄하세요.</p></div><div class="manage-actions"><button class="button secondary" data-action="today">오늘</button><button class="button primary" data-action="create-for-month">＋ 토픽 생성</button><button class="button secondary" data-action="settings">⚙ 관리 설정</button></div></header>
+    return `<header class="manage-hero"><div><p class="eyebrow">CONVERSATION-FIRST OPERATIONS</p><h1>${year}년 ${month+1}월 토픽 제작</h1><p>날짜를 고르고 회화 흐름을 만든 뒤 A4로 확인하세요.</p></div><div class="manage-actions"><button class="button secondary" data-action="today">오늘</button><button class="button secondary" data-action="settings">고급 설정</button></div></header>
+      ${renderOperatorWorkflow()}
       <section class="month-summary"><div><strong>${monthTopics.length}</strong><span>작성 토픽</span></div><div><strong>${approved.length}</strong><span>인쇄 가능</span></div><div><strong>${monthTopics.filter(t=>t.quality?.status==="review").length}</strong><span>검토 필요</span></div><div><strong>${monthTopics.filter(t=>t.hidden).length}</strong><span>숨김</span></div></section>
       <div class="batch-toolbar"><label><input type="checkbox" data-action="select-approved"> 승인 토픽 전체 선택</label><button class="button secondary" data-action="week-print">이번 주 인쇄</button><button class="button secondary" data-action="month-print">현재 월 전체 인쇄</button><button class="button primary" data-action="batch-print" ${printDates.size?"":"disabled"}>선택 날짜 인쇄 (${printDates.size})</button></div>
       <section class="date-grid">${Array.from({length:days},(_,i)=>{
@@ -106,14 +120,35 @@
         return `<article class="date-card ${t.hidden?"is-hidden":""}"><header><label><input type="checkbox" data-print-date="${date}" ${printDates.has(date)?"checked":""} ${state==="approved"&&!t.hidden?"":"disabled"}><time>${i+1}일 · ${weekday(date)}</time></label><span class="status-pill ${state}">${label}</span></header><h2>${esc(t.title.en)}</h2><p>${esc(t.title.ko)}</p><div class="date-meta"><span>${t.hidden?"◌ 숨김":"◉ 공개"}</span><span class="print-state ${print.status.toLowerCase()}">${print.label}</span></div><div class="date-actions"><button data-open="${date}:student">토픽 보기</button><button data-open="${date}:admin">수정</button><button data-open="${date}:print">학생용 A4</button><button data-open="${date}:leader">리더 보기</button><button data-clone-to="${date}">복제</button><button data-toggle-hidden="${date}">${t.hidden?"공개":"숨김"}</button></div></article>`;
       }).join("")}</section>`;
   }
+  function nextOpenDate(){
+    const prefix=monthPrefix(),days=new Date(cursor.getFullYear(),cursor.getMonth()+1,0).getDate();
+    return Array.from({length:days},(_,i)=>`${prefix}-${String(i+1).padStart(2,"0")}`).find(date=>!topics[date])||`${prefix}-01`;
+  }
+  function renderOperatorWorkflow(){
+    const selected=topics[activeDate],review=selected?.conversationFlow?window.TalkFlowConversation.evaluate(selected.conversationFlow):null;
+    return `<section class="operator-workflow" aria-label="토픽 제작 5단계">
+      <ol class="workflow-steps"><li class="complete"><b>1</b>날짜</li><li class="current"><b>2</b>주제</li><li><b>3</b>생성</li><li><b>4</b>확인</li><li><b>5</b>승인·출력</li></ol>
+      <div class="operator-grid">
+        <label>날짜<input id="operator-date" type="date" value="${esc(selected?.date||nextOpenDate())}"></label>
+        <label>주제 또는 키워드<input id="operator-topic" placeholder="예: 온라인 리뷰, 주말 계획"></label>
+        <label>피하고 싶은 소재<input id="operator-avoid" placeholder="선택 입력"></label>
+        <label>분위기<select id="operator-mood"><option>가볍고 편하게</option><option selected>경험 중심</option><option>생각 확장</option><option>함께 결정하기</option></select></label>
+      </div>
+      <div class="operator-actions"><button class="button secondary" data-action="recommend-topic">오늘 토픽 자동 추천</button><button class="button primary" data-action="operator-create">회화 토픽 만들기</button>${selected?`<button class="button secondary" data-open="${selected.date}:print">학생용 미리보기</button><button class="button primary" data-action="approve-save">승인하고 저장</button>`:""}</div>
+      <div class="operator-status ${review?.status||"pending"}"><strong>${review?review.label:"날짜와 주제를 선택해 시작하세요."}</strong><span>${review?`${review.total}/80 · ${review.issues.length?review.issues[0]:"바로 사용 가능한 회화 흐름입니다."}`:"기술 설정 없이 기본 제작 흐름을 진행할 수 있습니다."}</span></div>
+    </section>`;
+  }
   function validatePrint(t){
     const issues=[];
     if(!/^\d{4}-\d{2}-\d{2}$/.test(t?.date||""))issues.push("날짜");
     if(!t?.title?.en||!t?.title?.ko)issues.push("제목");
-    if(t?.smallTalk?.length!==3||t?.easyEntry?.length!==3||t?.mainDiscussion?.length!==4)issues.push("질문");
-    if((t?.mainDiscussion||[]).some(q=>!q.starter||!q.exampleFollowUp||!q.deeperFollowUp))issues.push("후속 질문");
-    if(!t?.midGame?.options?.length)issues.push("Mid-game");
-    if(!t?.finalRound?.questionEn)issues.push("Final Round");
+    if(t?.conversationFlow)issues.push(...window.TalkFlowConversation.issues(t.conversationFlow));
+    else{
+      if(t?.smallTalk?.length!==3||t?.easyEntry?.length!==3||t?.mainDiscussion?.length!==4)issues.push("질문");
+      if((t?.mainDiscussion||[]).some(q=>!q.starter||!q.exampleFollowUp||!q.deeperFollowUp))issues.push("후속 질문");
+      if(!t?.midGame?.options?.length)issues.push("Mid-game");
+      if(!t?.finalRound?.questionEn)issues.push("Final Round");
+    }
     if(t?.quality?.status!=="approved"||t?.hidden)issues.push("승인");
     return issues.length?{status:"review",label:"PRINT REVIEW REQUIRED",issues}:{status:"ready",label:"PRINT READY",issues:[]};
   }
@@ -126,6 +161,7 @@
   }
   function handoutActivity(a){return `<div class="handout-activity"><strong>${esc(a.titleEn)} <small>${esc(a.titleKo)}</small></strong><p>${esc(a.instructionEn)}</p><span>${esc(a.instructionKo)}</span><div>${a.options.map(o=>`<i>${esc(o)}</i>`).join("")}</div></div>`}
   function renderHandout(t,leader=false){
+    if(t.conversationFlow)return renderConversationHandout(t,leader);
     return `<article class="a4-topic" data-print-topic="${t.date}">
       <section class="a4-page">${printHeader(t,1,leader)}<div class="handout-body page-one">
         ${handoutSection("TODAY'S GOAL",bilingual(t.goal.en,t.goal.ko),"goal")}
@@ -141,6 +177,32 @@
         ${handoutSection("USEFUL PHRASES",`<div class="handout-phrases">${t.usefulPhrases.map(p=>`<div><strong>${esc(p.en)}</strong><span>${esc(p.ko)}</span><small>${esc(p.usage)}</small></div>`).join("")}</div>`)}
         ${handoutSection("FINAL ROUND",`${bilingual(t.finalRound.questionEn,t.finalRound.questionKo)}<p class="final-starter"><b>STARTER</b> ${esc(t.finalRound.starter)}</p>`)}
         ${leader?handoutSection("LEADER NOTES",`<p>${esc(t.leaderNotes.recommendedSkip)}</p><p>${esc(t.leaderNotes.sensitiveWarning)}</p><p>${t.leaderNotes.whenConversationStops.map(esc).join(" · ")}</p>`,"leader-only"):""}
+      </div><footer>${esc(t.title.en)}<span>2 / 2</span></footer></section>
+    </article>`;
+  }
+  function actionCue(label,text){return `<p class="action-cue"><b>${label}</b><span>${esc(text)}</span></p>`}
+  function renderConversationHandout(t,leader=false){
+    const flow=t.conversationFlow;
+    const quick=flow.quickStarts.map((item,index)=>`<article class="start-card"><strong>${index+1}. ${esc(item.questionEn)}</strong><small>${esc(item.questionKo)}</small>${item.options.length?`<div class="choice-row">${item.options.map(option=>`<span>□ ${esc(option)}</span>`).join("")}</div>`:""}${actionCue("SAY",item.sayFrame)}</article>`).join("");
+    const stories=flow.storyPrompts.map((item,index)=>`<article class="story-card"><strong>${index+1}. ${esc(item.questionEn)}</strong><small>${esc(item.questionKo)}</small><ol>${item.storySteps.map(step=>`<li>${esc(step)}</li>`).join("")}</ol>${actionCue("ASK",item.askSomeone)}<p class="alternative">${esc(item.noExperienceAlternative)}</p></article>`).join("");
+    const rounds=flow.talkRounds.map((item,index)=>`<article class="round-card"><strong>${index+1}. ${esc(item.questionEn)}</strong><small>${esc(item.questionKo)}</small>${actionCue("SAY",item.sayFrame)}${actionCue("ASK",item.askPrompt)}${actionCue("REACT",item.reactionPrompts.slice(0,2).join(" / "))}</article>`).join("");
+    const phrases=flow.topicPhrases.map(item=>`<li><strong>${esc(item.en)}</strong><span>${esc(item.ko)}</span></li>`).join("");
+    const reactions=flow.reactionPhrases.map(item=>`<li>${esc(item)}</li>`).join("");
+    const guide=flow.leaderGuide||{};
+    return `<article class="a4-topic conversation-handout ${leader?"leader-handout":""}" data-print-topic="${t.date}">
+      <section class="a4-page">${printHeader(t,1,leader)}<div class="handout-body conversation-page page-one">
+        <section class="how-to-use"><h2>HOW TO USE</h2><p><b>CHOOSE</b><b>SAY WHY</b><b>ASK SOMEONE</b><b>REACT</b></p></section>
+        <section><h2>START NOW</h2><div class="start-grid">${quick}</div></section>
+        <section><h2>TELL YOUR STORY</h2><div class="story-grid">${stories}</div></section>
+        <section class="words"><h2>WORDS TO USE</h2><ul>${phrases}</ul></section>
+        ${leader?`<section class="leader-strip"><h2>LEADER PATH · START 10 · STORY 25 · WORDS 5</h2><p>Short answer: ${esc(guide.shortAnswerPrompts?.join(" / "))}</p><p>No experience: ${esc(guide.noExperiencePrompts?.join(" / "))}</p></section>`:""}
+      </div><footer>${esc(t.title.en)}<span>1 / 2</span></footer></section>
+      <section class="a4-page">${printHeader(t,2,leader)}<div class="handout-body conversation-page page-two">
+        <section><h2>TALK TOGETHER</h2><div class="round-grid">${rounds}</div></section>
+        <section class="mission"><h2>GROUP MISSION · DECIDE</h2><strong>${esc(flow.groupMission.titleEn)}</strong><small>${esc(flow.groupMission.titleKo)}</small><p>${esc(flow.groupMission.instructionEn)}</p><div class="mission-options">${flow.groupMission.options.map(option=>`<span>${esc(option)}</span>`).join("")}</div><b class="everyone-rule">${esc(flow.groupMission.everyoneSpeaksRule)}</b></section>
+        <section class="keep-going"><h2>KEEP IT GOING</h2><ul>${reactions}</ul></section>
+        <section class="conversation-final"><h2>FINAL ROUND</h2><strong>${esc(flow.finalRound.questionEn)}</strong><small>${esc(flow.finalRound.questionKo)}</small>${actionCue("SAY",flow.finalRound.sayFrame)}</section>
+        ${leader?`<section class="leader-strip leader-page-two"><h2>LEADER GUIDE · TALK 30 · MISSION 15 · REACT 5 · FINAL 10</h2><p>Pass the turn: ${esc(guide.turnTransitions?.join(" / "))}</p><p>Quiet speaker: ${esc(guide.quietSpeakerPrompts?.join(" / "))}</p><p>Mission: ${esc(guide.missionSteps?.join(" → "))}</p><p>Common errors: ${esc(guide.commonErrors?.join(" / ")||"Listen for a missing subject or tense.")}</p><p>Optional: ${esc(guide.optionalSections?.join(" "))}</p></section>`:""}
       </div><footer>${esc(t.title.en)}<span>2 / 2</span></footer></section>
     </article>`;
   }
@@ -167,6 +229,7 @@
   function card(i,title,body){return `<section class="flow-card" id="section-${i}">${heading(i,title)}${body}</section>`}
   function renderStudent(t){
     if(!t)return empty();
+    if(t.conversationFlow)return dailyNav(t,"student")+renderConversationScreen(t);
     return dailyNav(t,"student")+hero(t)+progress()+
       card(1,"Topic Hook",bilingual(t.hook.en,t.hook.ko))+
       card(2,"Today's Goal",bilingual(t.goal.en,t.goal.ko))+
@@ -178,8 +241,22 @@
       card(8,"Useful Phrases",`<div class="phrase-grid">${t.usefulPhrases.map(p=>`<div class="phrase"><strong>${esc(p.en)}</strong><span class="ko">${esc(p.ko)}</span><small>${esc(p.usage)}</small></div>`).join("")}</div>`)+
       card(9,"Final Round",`${bilingual(t.finalRound.questionEn,t.finalRound.questionKo)}<div class="starter"><b>STARTER</b>${esc(t.finalRound.starter)}</div>`);
   }
+  function renderConversationScreen(t){
+    const flow=t.conversationFlow;
+    return `${hero(t)}<nav class="conversation-path" aria-label="회화 진행 순서"><b>CHOOSE</b><b>SAY</b><b>ADD</b><b>ASK</b><b>REACT</b><b>DECIDE</b></nav>
+      ${card(1,"Start Now",flow.quickStarts.map(item=>`<article class="screen-conversation-card"><h3>${esc(item.questionEn)}</h3><p class="ko">${esc(item.questionKo)}</p><div class="choice-row">${item.options.map(option=>`<span>${esc(option)}</span>`).join("")}</div>${actionCue("SAY",item.sayFrame)}</article>`).join(""))}
+      ${card(2,"Tell Your Story",flow.storyPrompts.map(item=>`<article class="screen-conversation-card"><h3>${esc(item.questionEn)}</h3><ol>${item.storySteps.map(step=>`<li>${esc(step)}</li>`).join("")}</ol>${actionCue("ASK",item.askSomeone)}<p class="ko">${esc(item.noExperienceAlternative)}</p></article>`).join(""))}
+      ${card(3,"Talk Together",flow.talkRounds.map(item=>`<article class="screen-conversation-card"><h3>${esc(item.questionEn)}</h3>${actionCue("SAY",item.sayFrame)}${actionCue("ASK",item.askPrompt)}${actionCue("REACT",item.reactionPrompts.join(" / "))}</article>`).join(""))}
+      ${card(4,"Group Mission",`<article class="screen-conversation-card mission"><h3>${esc(flow.groupMission.titleEn)}</h3><p>${esc(flow.groupMission.instructionEn)}</p><div class="option-grid">${flow.groupMission.options.map(option=>`<span class="option">${esc(option)}</span>`).join("")}</div><strong>${esc(flow.groupMission.everyoneSpeaksRule)}</strong></article>`)}
+      ${card(5,"Final Round",`<article class="screen-conversation-card"><h3>${esc(flow.finalRound.questionEn)}</h3>${actionCue("SAY",flow.finalRound.sayFrame)}</article>`)}`;
+  }
   function renderLeader(t){
     if(!t)return empty();
+    if(t.conversationFlow){
+      const guide=t.conversationFlow.leaderGuide;
+      return `${dailyNav(t,"leader")}<div class="leader-toolbar"><div class="timer" id="timer-display">${formatTime(timerSeconds)}</div><button data-action="timer-start">시작/일시정지</button><button data-action="timer-reset">초기화</button><button data-print-leader="${t.date}">리더용 A4</button></div>${renderConversationScreen(t)}
+        <section class="leader-support"><h2>100분 진행 지원</h2><div><strong>짧게 답했을 때</strong><p>${esc(guide.shortAnswerPrompts.join(" · "))}</p></div><div><strong>경험이 없을 때</strong><p>${esc(guide.noExperiencePrompts.join(" · "))}</p></div><div><strong>턴 넘기기</strong><p>${esc(guide.turnTransitions.join(" · "))}</p></div><div><strong>조용한 참가자</strong><p>${esc(guide.quietSpeakerPrompts.join(" · "))}</p></div></section>${renderFeedback(t)}`;
+    }
     const schedule=[["Small Talk","10"],["Quick","10"],["Easy Entry","20"],["Main 1","25"],["Mid-game","10"],["Main 2","20"],["Final","5"]];
     return `${dailyNav(t,"leader")}<div class="leader-toolbar"><div class="timer" id="timer-display">${formatTime(timerSeconds)}</div><button data-action="timer-start">시작/일시정지</button><button data-action="timer-reset">초기화</button><button data-action="student-share">학생 화면 공유</button><button data-print-leader="${t.date}">리더용 A4</button></div>${hero(t)}<div class="timeline">${schedule.map(s=>`<div class="time-block"><strong>${s[0]}</strong>${s[1]}분</div>`).join("")}</div>
       <div class="leader-note"><strong>대화가 끊겼을 때</strong><br>${t.leaderNotes.whenConversationStops.map(esc).join(" · ")}</div>
@@ -190,22 +267,33 @@
       ${card(7,"Mid-game",activity(t.midGame))}${card(8,"Useful Phrases",`<div class="phrase-grid">${t.usefulPhrases.map(p=>`<div class="phrase"><strong>${esc(p.en)}</strong><span class="ko">${esc(p.ko)}</span><small>${esc(p.usage)}</small></div>`).join("")}</div>`)}
       ${card(9,"Final Round",bilingual(t.finalRound.questionEn,t.finalRound.questionKo))}`;
   }
+  function renderFeedback(t){
+    return `<form class="feedback-card" data-feedback-form="${esc(t.id)}"><h2>10초 사용 피드백</h2>
+      <label>첫 발화가 쉬웠나요?<select name="firstSpeech"><option>쉬움</option><option>보통</option><option>어려움</option></select></label>
+      <label>대화가 이어졌나요?<select name="continuity"><option>잘 이어짐</option><option>보통</option><option>자주 끊김</option></select></label>
+      <label>다시 사용할 만한가요?<select name="reuse"><option>추천</option><option>수정 후 사용</option><option>재사용하지 않음</option></select></label>
+      <fieldset><legend>문제가 있었던 이유</legend>${["주제가 어려움","질문이 추상적","비슷한 질문 반복","영어가 어려움","활동이 재미없음","개인 경험이 부족함","대화가 짧게 끝남","기타"].map(tag=>`<label><input type="checkbox" name="reason" value="${tag}">${tag}</label>`).join("")}</fieldset>
+      <button class="button primary" type="submit">피드백 저장</button></form>`;
+  }
   function formatTime(total){const m=String(Math.floor(total/60)).padStart(2,"0"),s=String(total%60).padStart(2,"0");return`${m}:${s}`}
 
   function renderAdmin(t){
     if(!t)return empty();
     const result=validateTopic(t),qStatus=result.status==="approved"?"approved":result.status==="review"?"review":"draft";
-    return `${dailyNav(t,"admin")}<div class="admin-toolbar"><button class="button primary" data-action="save">저장</button><button class="button secondary" data-action="validate">품질검사</button><button class="button secondary" data-action="generate-all">전체 생성</button><button class="button secondary" data-action="export">월 JSON</button><button class="button secondary" data-action="import">JSON 가져오기</button><button class="button secondary" data-action="viewer">공개 뷰어</button><span class="spacer"></span><button class="button danger" data-action="delete">삭제</button></div>
-      <div class="quality-panel ${qStatus}"><h3>${result.status==="approved"?"승인 가능":result.status==="review"?"검토 필요":"재생성 권장"} · ${result.score}점</h3><div class="ko">${result.issues.length?`${result.issues.length}개 항목을 확인하세요.`:"구조, 발화 가능성, 민감도 기본 검사를 통과했습니다."}</div>${result.issues.length?`<ul class="issue-list">${result.issues.map(i=>`<li>${esc(i)}</li>`).join("")}</ul>`:""}</div>
-      <div class="editor-section"><h3>기본 정보</h3><div class="form-grid">${field("date","날짜",t.date,"date")}${field("category","카테고리",t.category)}${field("title.en","English title",t.title.en)}${field("title.ko","한국어 제목",t.title.ko)}${area("hook.en","Topic Hook · English",t.hook.en)}${area("hook.ko","Topic Hook · 한국어",t.hook.ko)}${area("goal.en","Today's Goal · English",t.goal.en)}${area("goal.ko","Today's Goal · 한국어",t.goal.ko)}</div></div>
+    const conversation=t.conversationFlow?window.TalkFlowConversation.evaluate(t.conversationFlow):null;
+    return `${dailyNav(t,"admin")}<div class="admin-toolbar"><button class="button primary" data-action="save">저장</button><button class="button secondary" data-action="validate">자동 검수</button><button class="button secondary" data-action="${t.conversationFlow?"restore-version":"convert-flow"}">${t.conversationFlow?"이전 버전 복원":"회화형 구조로 변환"}</button><span class="spacer"></span><button class="button danger" data-action="delete">삭제</button></div>
+      <div class="quality-panel ${qStatus}"><h3>${conversation?conversation.status==="ready"?"바로 사용 가능":conversation.status==="review"?"확인할 부분 있음":"다시 생성 권장":result.status==="approved"?"승인 가능":result.status==="review"?"검토 필요":"재생성 권장"}</h3><div class="ko">${result.issues.length?`${result.issues.length}개 항목을 확인하세요.`:"회화 흐름과 인쇄 구조를 사용할 수 있습니다."}</div>${result.issues.length?`<ul class="issue-list">${result.issues.map((issue,index)=>`<li>${esc(issue)} <button class="mini" data-regenerate="${t.conversationFlow?"conversationFlow":SECTION_KEYS[index]||"all"}">문제 구간만 다시 만들기</button></li>`).join("")}</ul>`:""}</div>
+      ${t.conversationFlow?`<section class="review-actions"><button class="button secondary" data-open="${t.date}:print">학생용 A4 미리보기</button><button class="button secondary" data-regenerate="conversationFlow.talkRounds">질문만 다시 만들기</button><button class="button secondary" data-regenerate="conversationFlow.groupMission">활동만 다시 만들기</button><button class="button secondary" data-regenerate="conversationFlow.topicPhrases">표현만 다시 만들기</button><button class="button secondary" data-regenerate="conversationFlow.translation">번역만 확인하기</button><button class="button primary" data-action="approve-save">승인하고 저장</button></section>`:""}
+      ${t.conversationFlow?`<section class="conversation-flow-summary"><h2>회화 흐름 구성</h2><p>바로 시작 ${t.conversationFlow.quickStarts.length} · 경험 이야기 ${t.conversationFlow.storyPrompts.length} · 대화 라운드 ${t.conversationFlow.talkRounds.length} · 그룹 미션 1 · 표현 ${t.conversationFlow.topicPhrases.length}</p><p class="ko">학생용 A4에서 실제 발화 순서와 인쇄 밀도를 확인하세요. 기존 구조 데이터는 호환성을 위해 그대로 보존됩니다.</p></section>`:""}
+      <div class="${t.conversationFlow?"conversation-editor-summary":""}"><div class="editor-section"><h3>기본 정보</h3><div class="form-grid">${field("date","날짜",t.date,"date")}${field("category","카테고리",t.category)}${field("title.en","English title",t.title.en)}${field("title.ko","한국어 제목",t.title.ko)}${area("hook.en","Topic Hook · English",t.hook.en)}${area("hook.ko","Topic Hook · 한국어",t.hook.ko)}${area("goal.en","Today's Goal · English",t.goal.en)}${area("goal.ko","Today's Goal · 한국어",t.goal.ko)}</div></div>
       ${editQuestionSection("smallTalk","Small Talk",t.smallTalk,false)}
       ${editActivity("quickActivity","Quick Activity",t.quickActivity)}
       ${editQuestionSection("easyEntry","Easy Entry",t.easyEntry,false)}
       ${editQuestionSection("mainDiscussion","Main Discussion",t.mainDiscussion,true)}
       ${editActivity("midGame","Mid-game",t.midGame)}
       <div class="editor-section"><h3>Useful Phrases <button class="mini" data-regenerate="usefulPhrases">이 섹션 재생성</button></h3>${t.usefulPhrases.map((p,i)=>`<div class="editor-item form-grid">${field(`usefulPhrases.${i}.en`,"English",p.en)}${field(`usefulPhrases.${i}.ko`,"한국어",p.ko)}${area(`usefulPhrases.${i}.usage`,"Usage",p.usage)}</div>`).join("")}</div>
-      <div class="editor-section"><h3>Final Round <button class="mini" data-regenerate="finalRound">이 섹션 재생성</button></h3><div class="form-grid">${area("finalRound.questionEn","English",t.finalRound.questionEn)}${area("finalRound.questionKo","한국어",t.finalRound.questionKo)}${area("finalRound.starter","Starter",t.finalRound.starter)}</div></div>
-      <div class="editor-section"><h3>Leader Notes</h3><div class="form-grid">${field("leaderNotes.estimatedMinutes","예상 진행 시간",t.leaderNotes.estimatedMinutes,"number")}${area("leaderNotes.sensitiveWarning","민감도 주의",t.leaderNotes.sensitiveWarning)}${area("leaderNotes.recommendedSkip","건너뛰기 권장",t.leaderNotes.recommendedSkip)}<label>승인 상태<select data-path="quality.status"><option value="draft" ${t.quality.status==="draft"?"selected":""}>초안</option><option value="review" ${t.quality.status==="review"?"selected":""}>검토</option><option value="approved" ${t.quality.status==="approved"?"selected":""}>승인</option></select></label><label>공개 숨김<select data-path="hidden"><option value="false" ${!t.hidden?"selected":""}>공개</option><option value="true" ${t.hidden?"selected":""}>숨김</option></select></label></div></div>`;
+      <div class="editor-section"><h3>Final Round <button class="mini" data-regenerate="finalRound">이 섹션 재생성</button></h3><div class="form-grid">${area("finalRound.questionEn","English",t.finalRound.questionEn)}${area("finalRound.questionKo","한국어",t.finalRound.questionKo)}${area("finalRound.starter","Starter",t.finalRound.starter)}</div></div></div>
+      <details class="advanced-editor" ${t.conversationFlow?"":"open"}><summary>고급 편집 및 기술 데이터</summary><div class="editor-section"><h3>Leader Notes</h3><div class="form-grid">${field("leaderNotes.estimatedMinutes","예상 진행 시간",t.leaderNotes.estimatedMinutes,"number")}${area("leaderNotes.sensitiveWarning","민감도 주의",t.leaderNotes.sensitiveWarning)}${area("leaderNotes.recommendedSkip","건너뛰기 권장",t.leaderNotes.recommendedSkip)}<label>승인 상태<select data-path="quality.status"><option value="draft" ${t.quality.status==="draft"?"selected":""}>초안</option><option value="review" ${t.quality.status==="review"?"selected":""}>검토</option><option value="approved" ${t.quality.status==="approved"?"selected":""}>승인</option></select></label><label>공개 숨김<select data-path="hidden"><option value="false" ${!t.hidden?"selected":""}>공개</option><option value="true" ${t.hidden?"selected":""}>숨김</option></select></label></div><div class="button-row"><button class="button secondary" data-action="export">월 JSON</button><button class="button secondary" data-action="import">JSON 가져오기</button><button class="button secondary" data-action="viewer">공개 뷰어</button><button class="button secondary" data-action="generate-all">전체 다시 생성</button></div></div></details>`;
   }
   function field(path,label,value,type="text"){return `<label>${label}<input type="${type}" data-path="${path}" value="${esc(value)}"></label>`}
   function area(path,label,value){return `<label>${label}<textarea data-path="${path}">${esc(value)}</textarea></label>`}
@@ -216,7 +304,7 @@
 
   function setPath(object,path,value){
     const parts=path.split(".");let target=object;
-    for(let i=0;i<parts.length-1;i++)target=target[parts[i]];
+    for(let i=0;i<parts.length-1;i++){if(!target[parts[i]]||typeof target[parts[i]]!=="object")target[parts[i]]={};target=target[parts[i]]}
     const key=parts.at(-1);
     if(key==="estimatedMinutes")target[key]=Number(value);
     else if(path==="hidden")target[key]=value==="true";
@@ -242,6 +330,12 @@
     document.querySelectorAll("[data-remove]").forEach(b=>b.onclick=()=>{const[k,i]=b.dataset.remove.split(":");current()[k].splice(Number(i),1);dirty=true;render()});
     document.querySelectorAll("[data-move]").forEach(b=>b.onclick=()=>{const[k,rawI,rawD]=b.dataset.move.split(":"),i=Number(rawI),to=i+Number(rawD),arr=current()[k];if(to<0||to>=arr.length)return;[arr[i],arr[to]]=[arr[to],arr[i]];dirty=true;render()});
     document.querySelectorAll("[data-regenerate]").forEach(b=>b.onclick=()=>regenerate(b.dataset.regenerate));
+    document.querySelectorAll("[data-feedback-form]").forEach(form=>form.onsubmit=event=>{
+      event.preventDefault();
+      const data=new FormData(form),records=loadRecord(KEYS.feedback);
+      records[current().id]=[...(records[current().id]||[]),{createdAt:new Date().toISOString(),firstSpeech:data.get("firstSpeech"),continuity:data.get("continuity"),reuse:data.get("reuse"),reasons:data.getAll("reason")}].slice(-20);
+      localStorage.setItem(KEYS.feedback,JSON.stringify(records));notify("사용 피드백을 저장했습니다.");
+    });
   }
   function confirmDirty(){return!dirty||confirm("저장하지 않은 변경사항이 있습니다. 이동할까요?")}
   function handleAction(action){
@@ -261,6 +355,16 @@
     if(action==="today"){cursor=new Date();render()}
     if(action==="settings"){$("#settings-button").click()}
     if(action==="create-for-month"){const date=prompt("새 토픽 날짜 (YYYY-MM-DD)",`${monthPrefix()}-01`);if(date&&/^\d{4}-\d{2}-\d{2}$/.test(date))createTopic(date)}
+    if(action==="recommend-topic"){
+      const feedback=loadRecord(KEYS.feedback),blocked=new Set(Object.entries(feedback).filter(([,items])=>items.at(-1)?.reuse==="재사용하지 않음").map(([id])=>id));
+      const learned=Object.values(topics).filter(topic=>!blocked.has(topic.id)&&feedback[topic.id]?.at(-1)?.reuse==="추천").map(topic=>topic.title.ko);
+      const recommendations=[...learned,"작은 선택이 하루를 바꾸는 순간","새로운 장소를 고르는 기준","메시지를 더 편하게 주고받는 법","함께 정하는 주말 계획"];
+      $("#operator-topic").value=recommendations[new Date().getDate()%recommendations.length];notify("최근 토픽과 사용 피드백을 반영해 일상 주제를 추천했습니다.");
+    }
+    if(action==="operator-create")createConversationTopic();
+    if(action==="convert-flow")convertCurrentToConversation();
+    if(action==="restore-version")restoreVersion();
+    if(action==="approve-save")approveAndSave();
     if(action==="select-approved"){printDates=new Set(Object.values(topics).filter(t=>t.date.startsWith(monthPrefix())&&t.quality?.status==="approved"&&!t.hidden).map(t=>t.date));render()}
     if(action==="month-print"){printDates=new Set(Object.values(topics).filter(t=>t.date.startsWith(monthPrefix())&&t.quality?.status==="approved"&&!t.hidden).map(t=>t.date));view="print";render()}
     if(action==="week-print"){const start=new Date();start.setDate(start.getDate()-((start.getDay()+6)%7));printDates=new Set(Object.values(topics).filter(t=>{const d=new Date(`${t.date}T12:00:00`),end=new Date(start);end.setDate(end.getDate()+7);return d>=start&&d<end&&t.quality?.status==="approved"&&!t.hidden}).map(t=>t.date));if(!printDates.size)notify("이번 주 승인 토픽이 없습니다.",true);else{view="print";render()}}
@@ -270,6 +374,30 @@
   }
   function createTopic(date){
     const base=clone(Object.values(window.TALKFLOW_SAMPLE_TOPICS)[0]);base.id=`talkflow-${date}-${crypto.randomUUID()}`;base.date=date;base.title={en:"New Conversation Flow",ko:"새 대화 흐름"};base.quality={status:"draft",score:0,issues:["내용을 작성하고 품질검사를 실행하세요."]};base.createdAt=base.updatedAt=new Date().toISOString();topics[date]=base;activeDate=date;dirty=true;view="admin";render();
+  }
+  function createConversationTopic(){
+    const date=$("#operator-date").value,keyword=$("#operator-topic").value.trim(),mood=$("#operator-mood").value;
+    if(!date||!keyword){notify("날짜와 주제를 입력해 주세요.",true);return}
+    if(topics[date]){notify("선택한 날짜에 토픽이 있습니다. 기존 토픽을 열거나 다른 날짜를 선택하세요.",true);return}
+    const feedback=loadRecord(KEYS.feedback),samples=Object.values(window.TALKFLOW_SAMPLE_TOPICS),preferred=samples.filter(topic=>feedback[topic.id]?.at(-1)?.reuse!=="재사용하지 않음"),pool=preferred.length?preferred:samples;
+    const base=clone(pool[Math.abs(keyword.length)%pool.length]);
+    base.id=`talkflow-${date}-${crypto.randomUUID()}`;base.date=date;base.title={en:keyword,ko:keyword};base.category=mood;base.conversationFlow=window.TalkFlowConversation.fromLegacy(base);
+    base.quality={status:"review",score:0,issues:[]};base.createdAt=base.updatedAt=new Date().toISOString();topics[date]=base;activeDate=date;dirty=true;view="admin";saveTopics("회화 흐름 초안과 자동 검수를 완료했습니다.");
+  }
+  function convertCurrentToConversation(){
+    const topic=current();if(topic.conversationFlow){notify("이미 회화형 구조를 사용하고 있습니다.");return}
+    preserveVersion(topic);topic.conversationFlow=window.TalkFlowConversation.fromLegacy(topic);topic.quality={...topic.quality,status:"review"};topic.updatedAt=new Date().toISOString();dirty=true;saveTopics("직전 버전을 보존하고 회화형 구조를 만들었습니다.");
+  }
+  function restoreVersion(){
+    const versions=loadRecord(KEYS.versions),previous=versions[current().id]?.[0];
+    if(!previous){notify("복원할 이전 버전이 없습니다.",true);return}
+    topics[activeDate]=clone(previous.topic);versions[current().id]=versions[current().id].slice(1);localStorage.setItem(KEYS.versions,JSON.stringify(versions));saveTopics("이전 버전을 복원했습니다.");
+  }
+  async function approveAndSave(){
+    const topic=current(),result=validateTopic(topic);
+    if(result.status!=="approved"){notify(`확인할 부분 ${result.issues.length}개를 먼저 해결해 주세요.`,true);return}
+    topic.quality={status:"approved",score:result.score,issues:[]};saveTopics("토픽을 승인하고 이 컴퓨터에 저장했습니다.");
+    if(settings.gistToken)await gistPush();else notify("토픽은 이 컴퓨터에 저장되었습니다. 온라인 동기화는 아직 연결되지 않았습니다.");
   }
   function cloneTopicTo(targetDate){
     const sourceDate=prompt("복제할 기존 토픽 날짜 (YYYY-MM-DD)",activeDate);
@@ -285,17 +413,19 @@
   function toggleTimer(){if(timerHandle){clearInterval(timerHandle);timerHandle=null}else timerHandle=setInterval(()=>{timerSeconds++;const el=$("#timer-display");if(el)el.textContent=formatTime(timerSeconds)},1000)}
 
   async function regenerate(section){
-    if(!settings.apiKey){notify("설정에서 Anthropic API 키를 먼저 저장하세요.",true);$("#settings-dialog").showModal();return}
+    if(!settings.apiKey){notify("자동 생성 연결이 필요합니다. 작성된 내용은 그대로 보존했습니다.",true);return}
     const topic=current(),scope=section==="all"?"complete topic":section;
-    notify(`${scope} 생성 중…`);
-    const prompt=`Create a TheBox Talk Flow ${scope} as strict JSON. One shared topic for mixed English levels. Keep meaning aligned in English and Korean. Required counts: smallTalk 3, easyEntry 3, mainDiscussion 4, usefulPhrases 3. Every main question needs starter, exampleFollowUp, deeperFollowUp. Activities need complete options. Avoid sensitive personal disclosure, stereotypes, medical/legal/financial claims, generic phrases, and yes/no dead ends. Topic context: ${JSON.stringify({title:topic.title,category:topic.category,section:section==="all"?undefined:topic[section]})}. Return ${section==="all"?"the full schema matching this existing object":"only the replacement value for "+section}: ${JSON.stringify(section==="all"?topic:topic[section])}. Raw JSON only.`;
+    notify("말하기 흐름을 만들고 있습니다.");
+    const target=section.split(".").reduce((value,key)=>value?.[key],topic);
+    const prompt=`Create or repair TheBox Talk Flow ${scope} as strict JSON. The paper must drive CHOOSE, SAY, ADD, ASK, REACT, then DECIDE for one mixed-confidence adult group. Conversation Flow counts: quickStarts 3, storyPrompts 2, talkRounds 3, groupMission 1, topicPhrases 5, reactionPhrases 6, finalRound 1. Quick starts need a five-second entry and short spoken English. Every story needs storySteps, askSomeone, and noExperienceAlternative. Every talk round needs sayFrame, askPrompt, and reactionPrompts. Everyone must speak before the mission result. Avoid sensitive disclosure, stereotypes, academic phrasing, literal Korean translation, repeated generic starters, and yes/no dead ends. Independently review natural English, aligned Korean, speech friction, duplication, and print density once; repair only the failing fields. Topic context: ${JSON.stringify({title:topic.title,category:topic.category,target})}. Return only the replacement JSON for ${scope}. Raw JSON only.`;
     try{
+      preserveVersion(topic);
       const response=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"content-type":"application/json","x-api-key":settings.apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:6000,messages:[{role:"user",content:prompt}]})});
       const payload=await response.json();if(!response.ok)throw new Error(payload.error?.message||`HTTP ${response.status}`);
       const text=payload.content?.map(c=>c.text||"").join("")||"",match=text.match(/\{[\s\S]*\}|\[[\s\S]*\]/);if(!match)throw new Error("응답에서 JSON을 찾지 못했습니다.");
-      const result=JSON.parse(match[0]);if(section==="all"){result.id=topic.id;result.date=topic.date;result.createdAt=topic.createdAt;result.updatedAt=new Date().toISOString();result.quality={status:"draft",score:0,issues:[]};topics[activeDate]=result}else topic[section]=result;
+      const result=JSON.parse(match[0]);if(section==="all"){result.id=topic.id;result.date=topic.date;result.createdAt=topic.createdAt;result.updatedAt=new Date().toISOString();result.quality={status:"draft",score:0,issues:[]};topics[activeDate]=result}else setPath(topic,section,result);
       dirty=true;const quality=validateTopic(current());current().quality={status:quality.status==="approved"?"review":"review",score:quality.score,issues:quality.issues};saveTopics(`${scope} 생성과 품질검사를 완료했습니다.`);
-    }catch(error){notify(`생성 실패: ${error.message}`,true)}
+    }catch(error){notify("토픽 내용을 완성하지 못했습니다. 작성된 부분은 보존했으며 문제가 있는 구간만 다시 생성할 수 있습니다.",true)}
   }
 
   function exportMonth(){
@@ -357,6 +487,6 @@
   window.addEventListener("beforeunload",event=>{if(dirty){event.preventDefault();event.returnValue=""}});
   window.addEventListener("error",event=>notify(`오류: ${event.message}`,true));
   const params=new URLSearchParams(location.search);if(params.get("date")&&topics[params.get("date")])activeDate=params.get("date");if(["calendar","student","leader","admin","print"].includes(params.get("view")))view=params.get("view");if(view==="print")printDates.add(activeDate);
-  window.TalkFlow={KEYS,validateTopic,validateAll,getTopics:()=>clone(topics),approvedMonth,monthFile,viewerHtml};
+  window.TalkFlow={KEYS,validateTopic,validateAll,getTopics:()=>clone(topics),approvedMonth,monthFile,viewerHtml,conversation:window.TalkFlowConversation,getVersions:()=>loadRecord(KEYS.versions),getFeedback:()=>loadRecord(KEYS.feedback)};
   render();
 })();

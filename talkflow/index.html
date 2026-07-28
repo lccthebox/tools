@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./conversation.css">
 </head>
 <body>
   <a class="skip-link" href="#main">본문으로 건너뛰기</a>
@@ -23,7 +24,7 @@
       <button class="tab" data-view="leader">리더</button>
       <button class="tab" data-view="admin">관리</button>
     </nav>
-    <button class="icon-button" id="settings-button" aria-label="설정 열기" title="설정">⚙</button>
+    <button class="button secondary advanced-button" id="settings-button" aria-label="고급 설정 열기">고급 설정</button>
   </header>
 
   <div class="app-shell">
@@ -55,7 +56,7 @@
   <dialog id="settings-dialog">
     <form method="dialog" class="dialog-card" id="settings-form">
       <div class="dialog-heading">
-        <div><p class="eyebrow">PRIVATE TO THIS BROWSER</p><h2>연결 및 생성 설정</h2></div>
+        <div><p class="eyebrow">ADVANCED SETTINGS</p><h2>연결 및 기술 설정</h2></div>
         <button value="cancel" class="icon-button" aria-label="닫기">×</button>
       </div>
       <label>Anthropic API key<input id="api-key" type="password" autocomplete="off" placeholder="sk-ant-…"></label>
@@ -72,6 +73,7 @@
 
   <input id="json-import" type="file" accept="application/json,.json" hidden>
   <script src="./sample-topics.js"></script>
+  <script src="./conversation-fixtures.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>
