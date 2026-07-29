@@ -30,8 +30,11 @@ Talk Flow is an operational tool for a non-technical study coordinator, a discus
 - `button`: primary, secondary, danger, disabled, focus-visible.
 - `workflow-step`: pending, current, complete.
 - `operator-panel`: date/topic input, generation progress, review result, final actions.
+- `operator-review`: scaled A4 preview, location-specific diagnostics, partial repair, separated preview and approval actions.
 - `conversation-block`: start, story, round, mission, phrase, final.
-- `action-cue`: CHOOSE, SAY, ASK, REACT, DECIDE.
+- `action-cue`: SAY uses a solid marker, ASK a directional dashed marker, and REACT a return/double marker so actions remain distinct without color.
+- `story-path`: connected spoken openings rather than fill-in boxes.
+- `response-groups`: three immediate ASK phrases and three immediate REACT phrases.
 - `quality-panel`: ready, review, regenerate.
 - `feedback-card`: unanswered and submitted.
 - `a4-page`: screen preview and print state.
@@ -50,6 +53,8 @@ Talk Flow is an operational tool for a non-technical study coordinator, a discus
 - Korean appears only for situation, difficult meaning, or activity rules.
 - Core flow: CHOOSE → SAY → ADD → ASK → REACT → DECIDE.
 - A prompt must permit a short first answer and a longer voluntary expansion.
+- Quick Start questions and options share one answer axis; experience prompts do not force choices.
+- Page one exposes four topic-specific `SAY THIS` phrases; page two requires one immediate response from `USE ONE NOW`.
 
 ## 8. Accepted debt
 
