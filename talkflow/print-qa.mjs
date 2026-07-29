@@ -14,7 +14,9 @@ try {
 const { chromium } = playwright;
 const root = fileURLToPath(new URL(".", import.meta.url));
 const output = join(root, ".qa-pdf");
+const evidence = join(root, "..", ".omo", "evidence", "talkflow-pdf-render");
 await mkdir(output, { recursive: true });
+await mkdir(evidence, { recursive: true });
 const mime = { ".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "text/javascript" };
 const server = createServer(async (request, response) => {
   try {
@@ -32,12 +34,13 @@ await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
 const port = server.address().port;
 const browser = await chromium.launch({ headless: true });
 const report = [];
+const representative = new Set(["2026-08-10", "2026-08-13", "2026-08-20", "2026-08-31", "2026-09-03"]);
 try {
   const page = await browser.newPage();
-  await page.goto(`http://127.0.0.1:${port}/?fixtures=conversation`, { waitUntil: "networkidle" });
+  await page.goto(`http://127.0.0.1:${port}/?fixtures=sessions`, { waitUntil: "networkidle" });
   const topics = await page.evaluate(() => TalkFlow.getTopics());
   for (const topic of Object.values(topics).sort((a, b) => a.date.localeCompare(b.date))) {
-    await page.goto(`http://127.0.0.1:${port}/?fixtures=conversation&date=${topic.date}&view=print`, { waitUntil: "networkidle" });
+    await page.goto(`http://127.0.0.1:${port}/?fixtures=sessions&date=${topic.date}&view=print`, { waitUntil: "networkidle" });
     const safeTitle = topic.title.ko.replace(/[\\/:*?"<>|\s]+/g, "_");
     const filename = `${topic.date}_TheBox_TalkFlow_${safeTitle}.pdf`;
     const path = join(output, filename);
@@ -47,14 +50,21 @@ try {
       horizontal: item.scrollWidth - item.clientWidth
     })));
     await page.pdf({ path, format: "A4", printBackground: true, preferCSSPageSize: true, margin: { top: "0", right: "0", bottom: "0", left: "0" } });
+    if (representative.has(topic.date)) {
+      await page.emulateMedia({ media: "print" });
+      for (let index = 0; index < pageCount; index += 1) {
+        await page.locator(".a4-page").nth(index).screenshot({ path: join(evidence, `${topic.date}-student-${index + 1}.png`) });
+      }
+      await page.emulateMedia({ media: "screen" });
+    }
     report.push({ date: topic.date, title: topic.title.ko, filename, domPages: pageCount, overflow });
   }
-  await page.goto(`http://127.0.0.1:${port}/?fixtures=conversation`, { waitUntil: "networkidle" });
-  for (const date of ["2026-08-03", "2026-08-06", "2026-08-10"]) await page.locator(`[data-print-date="${date}"]`).check();
+  await page.goto(`http://127.0.0.1:${port}/?fixtures=sessions`, { waitUntil: "networkidle" });
+  await page.locator("[data-action='select-approved']").click();
   await page.locator("[data-action='batch-print']").click();
   const batchPages = await page.locator(".a4-page").count();
-  await page.pdf({ path: join(output, "batch-3-topics.pdf"), format: "A4", printBackground: true, preferCSSPageSize: true, margin: { top: "0", right: "0", bottom: "0", left: "0" } });
-  await page.goto(`http://127.0.0.1:${port}/?fixtures=conversation&date=2026-08-03&view=leader`, { waitUntil: "networkidle" });
+  await page.pdf({ path: join(output, "batch-approved-topics.pdf"), format: "A4", printBackground: true, preferCSSPageSize: true, margin: { top: "0", right: "0", bottom: "0", left: "0" } });
+  await page.goto(`http://127.0.0.1:${port}/?fixtures=sessions&date=2026-08-03&view=leader`, { waitUntil: "networkidle" });
   await page.locator("[data-print-leader]").first().click();
   const leaderPages = await page.locator(".a4-page").count();
   const leaderOverflow = await page.locator(".a4-page").evaluateAll(pages => pages.map(item => ({
@@ -62,10 +72,15 @@ try {
     horizontal: item.scrollWidth - item.clientWidth
   })));
   await page.pdf({ path: join(output, "2026-08-03_TheBox_TalkFlow_leader.pdf"), format: "A4", printBackground: true, preferCSSPageSize: true, margin: { top: "0", right: "0", bottom: "0", left: "0" } });
+  await page.emulateMedia({ media: "print" });
+  for (let index = 0; index < leaderPages; index += 1) {
+    await page.locator(".a4-page").nth(index).screenshot({ path: join(evidence, `2026-08-03-leader-${index + 1}.png`) });
+  }
   const pass = report.every(item => item.domPages === 2 && item.overflow.every(value => value.vertical <= 1 && value.horizontal <= 1))
-    && batchPages === 6 && leaderPages === 2 && leaderOverflow.every(value => value.vertical <= 1 && value.horizontal <= 1);
+    && report.length === 10 && batchPages === 16 && leaderPages === 2 && leaderOverflow.every(value => value.vertical <= 1 && value.horizontal <= 1);
   await writeFile(join(output, "generation-results.json"), `${JSON.stringify({ pass, topics: report, batchPages, leaderPages, leaderOverflow }, null, 2)}\n`, "utf8");
   console.log(JSON.stringify(report, null, 2));
+  if (!pass) process.exitCode = 1;
 } finally {
   await browser.close();
   await new Promise(resolve => server.close(resolve));

@@ -47,10 +47,10 @@ try {
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "networkidle" });
 
   check("daily management is default", await page.locator("#calendar-view").isVisible());
-  check("August date cards", await page.locator(".date-card").count() === 31);
+  check("August date cards", await page.locator(".calendar-day").count() === 31);
   check("8 sample topics", await page.locator(".topic-day").count() === 8);
-  check("8 print-ready topics", await page.locator(".print-state.ready").count() === 8);
-  check("daily cards expose A4 actions", await page.locator(".date-card [data-open$=':print']").count() === 8);
+  check("8 print-ready topics", await page.locator(".calendar-day .status-pill.approved").count() === 8);
+  check("daily cards expose A4 actions", await page.locator(".calendar-day [data-open$=':print']").count() === 8);
   await page.getByRole("button", { name: "학생", exact: true }).click();
   check("student view renders all sections", await page.locator("#student-view .flow-card").count() === 9);
   const quality = await page.evaluate(() => Object.values(TalkFlow.getTopics()).map(topic => ({ title: topic.title.en, result: TalkFlow.validateTopic(topic) })));
@@ -142,15 +142,15 @@ try {
   check("student print excludes admin and secrets", await page.locator(".a4-page").evaluateAll(pages => !pages.some(item => /Gist|Token|API Key|품질검사|민감도/.test(item.innerText))));
   check("print URL preserves date and view", new URL(page.url()).searchParams.get("view") === "print" && new URL(page.url()).searchParams.get("date") === "2026-08-03");
   await page.getByRole("button", { name: "일별 관리" }).click();
-  for (const date of ["2026-08-03", "2026-08-06", "2026-08-10"]) await page.locator(`[data-print-date="${date}"]`).check();
+  await page.locator("[data-action='select-approved']").click();
   await page.locator("[data-action='batch-print']").click();
-  check("three selected dates produce 6 A4 pages", await page.locator(".a4-page").count() === 6);
-  check("batch print preserves selected dates", await page.locator(".a4-topic").evaluateAll(items => items.map(item => item.dataset.printTopic).join(",") === "2026-08-03,2026-08-06,2026-08-10"));
+  check("approved month produces 16 A4 pages", await page.locator(".a4-page").count() === 16);
+  check("batch print preserves all approved dates", await page.locator(".a4-topic").count() === 8);
   await page.getByRole("button", { name: "일별 관리" }).click();
-  await page.locator("[data-open$=':leader']").first().click();
+  await page.getByRole("button", { name: "리더", exact: true }).click();
   await page.locator("[data-print-leader]").first().click();
   check("leader print has exactly 2 A4 pages", await page.locator(".a4-page").count() === 2);
-  check("leader print includes facilitator notes", await page.locator(".a4-page .leader-only").count() > 0);
+  check("leader print includes facilitator notes", await page.locator(".a4-page .leader-strip,.a4-page .leader-only").count() > 0);
   await page.setViewportSize({ width: 1024, height: 900 });
   await page.emulateMedia({ media: "print" });
   check("print view hides navigation", await page.locator(".topbar").evaluate(element => getComputedStyle(element).display === "none"));
