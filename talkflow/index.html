@@ -63,7 +63,20 @@
       <p class="field-help">키는 Talk Flow 전용 설정 키에만 저장되며 생성 요청 외에는 전송하지 않습니다.</p>
       <label>GitHub Gist token<input id="gist-token" type="password" autocomplete="off" placeholder="gist 권한 토큰"></label>
       <label>Talk Flow Gist ID<input id="gist-id" autocomplete="off" placeholder="최초 저장 시 자동 생성"></label>
+      <fieldset class="settings-group"><legend>운영 요일</legend>
+        <label><input type="checkbox" name="operating-day" value="1">월</label>
+        <label><input type="checkbox" name="operating-day" value="2">화</label>
+        <label><input type="checkbox" name="operating-day" value="3">수</label>
+        <label><input type="checkbox" name="operating-day" value="4">목</label>
+        <label><input type="checkbox" name="operating-day" value="5">금</label>
+        <label><input type="checkbox" name="operating-day" value="6">토</label>
+        <label><input type="checkbox" name="operating-day" value="0">일</label>
+      </fieldset>
+      <label>추가 운영 날짜<input id="additional-dates" placeholder="2026-08-08, 2026-08-22"></label>
+      <label>제외 날짜<input id="excluded-dates" placeholder="2026-08-15, 2026-08-20"></label>
+      <label class="check-option"><input id="exclude-public-holidays" type="checkbox"> 알려진 공휴일을 운영일에서 제외</label>
       <div class="button-row">
+        <button type="button" id="copy-schedule" class="button secondary">이전 설정 복사</button>
         <button type="button" id="gist-pull" class="button secondary">Gist 불러오기</button>
         <button type="button" id="gist-push" class="button secondary">Gist 저장</button>
         <button value="save" class="button primary">설정 저장</button>
@@ -71,8 +84,21 @@
     </form>
   </dialog>
 
+  <dialog id="custom-topic-dialog">
+    <form method="dialog" class="dialog-card" id="custom-topic-form">
+      <div class="dialog-heading"><div><p class="eyebrow">GUIDED GENERATION</p><h2>주제 지정해서 생성</h2></div><button value="cancel" class="icon-button" aria-label="닫기">×</button></div>
+      <input id="custom-date" type="hidden">
+      <label>주제 또는 키워드<input id="custom-keyword" required placeholder="예: 새로운 소비 트렌드"></label>
+      <label>참고 자료 URL 또는 텍스트<textarea id="custom-source" placeholder="https://... 또는 참고할 내용을 붙여넣으세요"></textarea></label>
+      <label>피하고 싶은 내용<input id="custom-avoid" placeholder="선택 입력"></label>
+      <details><summary>추가 옵션</summary><label>회화 방향<select id="custom-mood"><option>가볍고 편한 분위기</option><option selected>경험 중심</option><option>생각 확장</option><option>함께 해결하기</option></select></label></details>
+      <div class="button-row"><button value="cancel" class="button secondary">취소</button><button value="create" class="button primary">토픽 생성하기</button></div>
+    </form>
+  </dialog>
+
   <input id="json-import" type="file" accept="application/json,.json" hidden>
   <script src="./sample-topics.js"></script>
+  <script src="./session-workflow.js"></script>
   <script src="./conversation-fixtures.js"></script>
   <script src="./app.js"></script>
 </body>
