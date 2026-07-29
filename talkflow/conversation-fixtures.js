@@ -25,7 +25,7 @@
     ],
     "2026-08-13":[
       ["First, I book...","Then I plan...","I leave room for...","That helps me..."],
-      ["The plan included...","I felt stressed when...","We changed...","After that..."]
+      ["The plan included...","I felt stress when...","We changed...","After that..."]
     ],
     "2026-08-17":[
       ["I went there to...","I ordered...","I stayed because...","I left when..."],
