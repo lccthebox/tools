@@ -126,16 +126,17 @@
   }
   function renderOperatorWorkflow(){
     const selected=topics[activeDate],review=selected?.conversationFlow?window.TalkFlowConversation.evaluate(selected.conversationFlow):null;
+    const stage=selected?.quality?.status==="approved"?5:selected?.conversationFlow?4:2;
     return `<section class="operator-workflow" aria-label="토픽 제작 5단계">
-      <ol class="workflow-steps"><li class="complete"><b>1</b>날짜</li><li class="current"><b>2</b>주제</li><li><b>3</b>생성</li><li><b>4</b>확인</li><li><b>5</b>승인·출력</li></ol>
+      <ol class="workflow-steps">${["날짜","주제","생성","확인","승인·출력"].map((label,index)=>`<li class="${index+1<stage?"complete":index+1===stage?"current":""}"><b>${index+1}</b>${label}</li>`).join("")}</ol>
       <div class="operator-grid">
         <label>날짜<input id="operator-date" type="date" value="${esc(selected?.date||nextOpenDate())}"></label>
         <label>주제 또는 키워드<input id="operator-topic" placeholder="예: 온라인 리뷰, 주말 계획"></label>
         <label>피하고 싶은 소재<input id="operator-avoid" placeholder="선택 입력"></label>
         <label>분위기<select id="operator-mood"><option>가볍고 편하게</option><option selected>경험 중심</option><option>생각 확장</option><option>함께 결정하기</option></select></label>
       </div>
-      <div class="operator-actions"><button class="button secondary" data-action="recommend-topic">오늘 토픽 자동 추천</button><button class="button primary" data-action="operator-create">회화 토픽 만들기</button>${selected?`<button class="button secondary" data-open="${selected.date}:print">학생용 미리보기</button><button class="button primary" data-action="approve-save">승인하고 저장</button>`:""}</div>
-      <div class="operator-status ${review?.status||"pending"}"><strong>${review?review.label:"날짜와 주제를 선택해 시작하세요."}</strong><span>${review?`${review.total}/80 · ${review.issues.length?review.issues[0]:"바로 사용 가능한 회화 흐름입니다."}`:"기술 설정 없이 기본 제작 흐름을 진행할 수 있습니다."}</span></div>
+      <div class="operator-actions create-actions"><span><button class="button secondary" data-action="recommend-topic">추천 주제 넣기</button><small>최근 사용하지 않은 주제를 입력합니다.</small></span><span><button class="button primary" data-action="operator-create" disabled>토픽 생성하기</button><small>입력한 주제로 학생용 회화 흐름을 만듭니다.</small></span>${selected?`<span class="preview-action"><button class="button secondary" data-open="${selected.date}:print">학생용 A4 미리보기</button></span><span class="approve-action"><button class="button primary" data-action="approve-save">✓ 승인하고 저장</button></span>`:""}</div>
+      <div class="operator-status ${review?.status||"pending"}"><strong>${review?review.status==="ready"?"바로 사용 가능":review.status==="review"?"확인할 부분 있음":"다시 생성 권장":"날짜와 주제를 선택해 시작하세요."}</strong><span>${review?`${review.issues.length}개 확인 항목 · ${review.issues[0]||"학생용 A4 미리보기 후 승인하세요."}`:"추천 주제를 넣거나 직접 입력하면 생성 버튼이 활성화됩니다."}</span></div>
     </section>`;
   }
   function validatePrint(t){
@@ -180,29 +181,33 @@
       </div><footer>${esc(t.title.en)}<span>2 / 2</span></footer></section>
     </article>`;
   }
-  function actionCue(label,text){return `<p class="action-cue"><b>${label}</b><span>${esc(text)}</span></p>`}
+  function actionCue(label,text){
+    const meta={SAY:["●","말하기"],ASK:["→","질문하기"],REACT:["↺","반응하기"]}[label]||["•",""];
+    return `<p class="action-cue ${label.toLowerCase()}"><b><i aria-hidden="true">${meta[0]}</i>${label}<small>${meta[1]}</small></b><span>${esc(text)}</span></p>`;
+  }
   function renderConversationHandout(t,leader=false){
     const flow=t.conversationFlow;
     const quick=flow.quickStarts.map((item,index)=>`<article class="start-card"><strong>${index+1}. ${esc(item.questionEn)}</strong><small>${esc(item.questionKo)}</small>${item.options.length?`<div class="choice-row">${item.options.map(option=>`<span>□ ${esc(option)}</span>`).join("")}</div>`:""}${actionCue("SAY",item.sayFrame)}</article>`).join("");
     const stories=flow.storyPrompts.map((item,index)=>`<article class="story-card"><strong>${index+1}. ${esc(item.questionEn)}</strong><small>${esc(item.questionKo)}</small><ol>${item.storySteps.map(step=>`<li>${esc(step)}</li>`).join("")}</ol>${actionCue("ASK",item.askSomeone)}<p class="alternative">${esc(item.noExperienceAlternative)}</p></article>`).join("");
     const rounds=flow.talkRounds.map((item,index)=>`<article class="round-card"><strong>${index+1}. ${esc(item.questionEn)}</strong><small>${esc(item.questionKo)}</small>${actionCue("SAY",item.sayFrame)}${actionCue("ASK",item.askPrompt)}${actionCue("REACT",item.reactionPrompts.slice(0,2).join(" / "))}</article>`).join("");
     const phrases=flow.topicPhrases.map(item=>`<li><strong>${esc(item.en)}</strong><span>${esc(item.ko)}</span></li>`).join("");
-    const reactions=flow.reactionPhrases.map(item=>`<li>${esc(item)}</li>`).join("");
+    const askReactions=flow.reactionPhrases.slice(0,3).map(item=>`<li>${esc(item)}</li>`).join("");
+    const reactReactions=flow.reactionPhrases.slice(3,6).map(item=>`<li>${esc(item)}</li>`).join("");
     const guide=flow.leaderGuide||{};
     return `<article class="a4-topic conversation-handout ${leader?"leader-handout":""}" data-print-topic="${t.date}">
       <section class="a4-page">${printHeader(t,1,leader)}<div class="handout-body conversation-page page-one">
         <section class="how-to-use"><h2>HOW TO USE</h2><p><b>CHOOSE</b><b>SAY WHY</b><b>ASK SOMEONE</b><b>REACT</b></p></section>
         <section><h2>START NOW</h2><div class="start-grid">${quick}</div></section>
         <section><h2>TELL YOUR STORY</h2><div class="story-grid">${stories}</div></section>
-        <section class="words"><h2>WORDS TO USE</h2><ul>${phrases}</ul></section>
-        ${leader?`<section class="leader-strip"><h2>LEADER PATH · START 10 · STORY 25 · WORDS 5</h2><p>Short answer: ${esc(guide.shortAnswerPrompts?.join(" / "))}</p><p>No experience: ${esc(guide.noExperiencePrompts?.join(" / "))}</p></section>`:""}
+        <section class="words"><h2>SAY THIS</h2><p class="section-hint">Use one phrase when you share your answer.</p><ul>${phrases}</ul></section>
+        ${leader?`<section class="leader-strip"><h2>LEADER CHECK · PAGE 1</h2><ul><li>START NOW: Give everyone one turn.</li><li>STORY: Ask for one real detail; use the alternative when needed.</li><li>SAY THIS: Prompt use before explaining a phrase.</li><li>After 90 seconds: “Let's hear from someone new.”</li></ul></section>`:""}
       </div><footer>${esc(t.title.en)}<span>1 / 2</span></footer></section>
       <section class="a4-page">${printHeader(t,2,leader)}<div class="handout-body conversation-page page-two">
         <section><h2>TALK TOGETHER</h2><div class="round-grid">${rounds}</div></section>
         <section class="mission"><h2>GROUP MISSION · DECIDE</h2><strong>${esc(flow.groupMission.titleEn)}</strong><small>${esc(flow.groupMission.titleKo)}</small><p>${esc(flow.groupMission.instructionEn)}</p><div class="mission-options">${flow.groupMission.options.map(option=>`<span>${esc(option)}</span>`).join("")}</div><b class="everyone-rule">${esc(flow.groupMission.everyoneSpeaksRule)}</b></section>
-        <section class="keep-going"><h2>KEEP IT GOING</h2><ul>${reactions}</ul></section>
+        <section class="keep-going"><h2>USE ONE NOW</h2><p class="section-hint">After someone speaks, choose one response.</p><div class="response-groups"><div><b>ASK · 질문하기</b><ul>${askReactions}</ul></div><div><b>REACT · 반응하기</b><ul>${reactReactions}</ul></div></div></section>
         <section class="conversation-final"><h2>FINAL ROUND</h2><strong>${esc(flow.finalRound.questionEn)}</strong><small>${esc(flow.finalRound.questionKo)}</small>${actionCue("SAY",flow.finalRound.sayFrame)}</section>
-        ${leader?`<section class="leader-strip leader-page-two"><h2>LEADER GUIDE · TALK 30 · MISSION 15 · REACT 5 · FINAL 10</h2><p>Pass the turn: ${esc(guide.turnTransitions?.join(" / "))}</p><p>Quiet speaker: ${esc(guide.quietSpeakerPrompts?.join(" / "))}</p><p>Mission: ${esc(guide.missionSteps?.join(" → "))}</p><p>Common errors: ${esc(guide.commonErrors?.join(" / ")||"Listen for a missing subject or tense.")}</p><p>Optional: ${esc(guide.optionalSections?.join(" "))}</p></section>`:""}
+        ${leader?`<section class="leader-strip leader-page-two"><h2>LEADER CHECK · PAGE 2</h2><ul><li>TALK: Experience → criteria → group decision.</li><li>MISSION: Choose a facilitator; no result before everyone speaks.</li><li>FINAL: One sentence per person.</li><li>Pass the turn: ${esc(guide.turnTransitions?.[0]||"Let's hear from someone new.")}</li></ul></section>`:""}
       </div><footer>${esc(t.title.en)}<span>2 / 2</span></footer></section>
     </article>`;
   }
@@ -281,9 +286,10 @@
     if(!t)return empty();
     const result=validateTopic(t),qStatus=result.status==="approved"?"approved":result.status==="review"?"review":"draft";
     const conversation=t.conversationFlow?window.TalkFlowConversation.evaluate(t.conversationFlow):null;
+    const diagnostics=conversation?.diagnostics||[];
     return `${dailyNav(t,"admin")}<div class="admin-toolbar"><button class="button primary" data-action="save">저장</button><button class="button secondary" data-action="validate">자동 검수</button><button class="button secondary" data-action="${t.conversationFlow?"restore-version":"convert-flow"}">${t.conversationFlow?"이전 버전 복원":"회화형 구조로 변환"}</button><span class="spacer"></span><button class="button danger" data-action="delete">삭제</button></div>
-      <div class="quality-panel ${qStatus}"><h3>${conversation?conversation.status==="ready"?"바로 사용 가능":conversation.status==="review"?"확인할 부분 있음":"다시 생성 권장":result.status==="approved"?"승인 가능":result.status==="review"?"검토 필요":"재생성 권장"}</h3><div class="ko">${result.issues.length?`${result.issues.length}개 항목을 확인하세요.`:"회화 흐름과 인쇄 구조를 사용할 수 있습니다."}</div>${result.issues.length?`<ul class="issue-list">${result.issues.map((issue,index)=>`<li>${esc(issue)} <button class="mini" data-regenerate="${t.conversationFlow?"conversationFlow":SECTION_KEYS[index]||"all"}">문제 구간만 다시 만들기</button></li>`).join("")}</ul>`:""}</div>
-      ${t.conversationFlow?`<section class="review-actions"><button class="button secondary" data-open="${t.date}:print">학생용 A4 미리보기</button><button class="button secondary" data-regenerate="conversationFlow.talkRounds">질문만 다시 만들기</button><button class="button secondary" data-regenerate="conversationFlow.groupMission">활동만 다시 만들기</button><button class="button secondary" data-regenerate="conversationFlow.topicPhrases">표현만 다시 만들기</button><button class="button secondary" data-regenerate="conversationFlow.translation">번역만 확인하기</button><button class="button primary" data-action="approve-save">승인하고 저장</button></section>`:""}
+      <div class="quality-panel ${qStatus}"><h3>${conversation?conversation.status==="ready"?"바로 사용 가능":conversation.status==="review"?"확인할 부분 있음":"다시 생성 권장":result.status==="approved"?"승인 가능":result.status==="review"?"검토 필요":"재생성 권장"}</h3><div class="ko">${diagnostics.length?`${diagnostics.length}개 항목을 위치별로 확인하세요.`:"회화 흐름과 인쇄 구조를 사용할 수 있습니다."}</div>${diagnostics.length?`<ul class="issue-list">${diagnostics.map(item=>`<li class="${item.critical?"critical":""}"><strong>${esc(item.location)}</strong><span>${esc(item.message)}</span><button class="mini" data-regenerate="${esc(item.target)}">이 부분만 다시 만들기</button></li>`).join("")}</ul>`:""}</div>
+      ${t.conversationFlow?`<section class="operator-review"><div class="review-heading"><div><p class="eyebrow">STEP 4 · 확인</p><h2>학생용 A4와 문제 위치를 확인하세요</h2></div><span>${diagnostics.length}개 확인 항목</span></div><p class="review-preview-help">미리보기 안을 스크롤해 2페이지까지 확인하세요. 자세히 보려면 아래 ‘학생용 A4 미리보기’를 누르세요.</p><div class="review-preview" aria-label="학생용 A4 축소 미리보기">${renderConversationHandout(t)}</div></section><section class="review-actions"><button class="button secondary preview-button" data-open="${t.date}:print">학생용 A4 미리보기</button><button class="button secondary" data-regenerate="conversationFlow.talkRounds">질문만 다시 만들기</button><button class="button secondary" data-regenerate="conversationFlow.groupMission.options">선택지만 다시 만들기</button><button class="button secondary" data-regenerate="conversationFlow.topicPhrases">표현만 다시 만들기</button><button class="button secondary" data-regenerate="conversationFlow.translation">번역만 확인하기</button><button class="button primary approve-button" data-action="approve-save">✓ 승인하고 저장</button></section>${diagnostics.length&&!conversation.critical?`<p class="approval-warning">현재 확인이 필요한 항목이 있습니다. 문제를 확인한 뒤 승인하는 것을 권장합니다.</p>`:""}`:""}
       ${t.conversationFlow?`<section class="conversation-flow-summary"><h2>회화 흐름 구성</h2><p>바로 시작 ${t.conversationFlow.quickStarts.length} · 경험 이야기 ${t.conversationFlow.storyPrompts.length} · 대화 라운드 ${t.conversationFlow.talkRounds.length} · 그룹 미션 1 · 표현 ${t.conversationFlow.topicPhrases.length}</p><p class="ko">학생용 A4에서 실제 발화 순서와 인쇄 밀도를 확인하세요. 기존 구조 데이터는 호환성을 위해 그대로 보존됩니다.</p></section>`:""}
       <div class="${t.conversationFlow?"conversation-editor-summary":""}"><div class="editor-section"><h3>기본 정보</h3><div class="form-grid">${field("date","날짜",t.date,"date")}${field("category","카테고리",t.category)}${field("title.en","English title",t.title.en)}${field("title.ko","한국어 제목",t.title.ko)}${area("hook.en","Topic Hook · English",t.hook.en)}${area("hook.ko","Topic Hook · 한국어",t.hook.ko)}${area("goal.en","Today's Goal · English",t.goal.en)}${area("goal.ko","Today's Goal · 한국어",t.goal.ko)}</div></div>
       ${editQuestionSection("smallTalk","Small Talk",t.smallTalk,false)}
@@ -317,6 +323,8 @@
     document.querySelectorAll("[data-scroll]").forEach(b=>b.onclick=()=>document.getElementById(b.dataset.scroll)?.scrollIntoView({behavior:"smooth",block:"start"}));
     document.querySelectorAll("[data-path]").forEach(input=>input.oninput=()=>{setPath(current(),input.dataset.path,input.value);current().updatedAt=new Date().toISOString();dirty=true;saveDraft()});
     document.querySelectorAll("[data-action]").forEach(b=>b.onclick=()=>handleAction(b.dataset.action));
+    const operatorTopic=$("#operator-topic"),operatorCreate=document.querySelector("[data-action='operator-create']");
+    if(operatorTopic&&operatorCreate)operatorTopic.oninput=()=>{operatorCreate.disabled=!operatorTopic.value.trim()};
     document.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{const[date,target]=b.dataset.open.split(":");activeDate=date;printDates.clear();if(target==="print")printDates.add(date);view=target;render()});
     document.querySelectorAll("[data-print-date]").forEach(input=>input.onchange=()=>{input.checked?printDates.add(input.dataset.printDate):printDates.delete(input.dataset.printDate);render()});
     document.querySelectorAll("[data-create-date]").forEach(b=>b.onclick=()=>createTopic(b.dataset.createDate));
@@ -359,7 +367,9 @@
       const feedback=loadRecord(KEYS.feedback),blocked=new Set(Object.entries(feedback).filter(([,items])=>items.at(-1)?.reuse==="재사용하지 않음").map(([id])=>id));
       const learned=Object.values(topics).filter(topic=>!blocked.has(topic.id)&&feedback[topic.id]?.at(-1)?.reuse==="추천").map(topic=>topic.title.ko);
       const recommendations=[...learned,"작은 선택이 하루를 바꾸는 순간","새로운 장소를 고르는 기준","메시지를 더 편하게 주고받는 법","함께 정하는 주말 계획"];
-      $("#operator-topic").value=recommendations[new Date().getDate()%recommendations.length];notify("최근 토픽과 사용 피드백을 반영해 일상 주제를 추천했습니다.");
+      $("#operator-topic").value=recommendations[new Date().getDate()%recommendations.length];
+      const createButton=document.querySelector("[data-action='operator-create']");if(createButton)createButton.disabled=false;
+      notify("추천 주제를 입력했습니다. 내용을 확인한 뒤 토픽 생성하기를 누르세요.");
     }
     if(action==="operator-create")createConversationTopic();
     if(action==="convert-flow")convertCurrentToConversation();
@@ -395,7 +405,10 @@
   }
   async function approveAndSave(){
     const topic=current(),result=validateTopic(topic);
-    if(result.status!=="approved"){notify(`확인할 부분 ${result.issues.length}개를 먼저 해결해 주세요.`,true);return}
+    const review=topic.conversationFlow?window.TalkFlowConversation.evaluate(topic.conversationFlow):null;
+    const conversationIssues=new Set((review?.diagnostics||[]).map(item=>`${item.location}: ${item.message}`));
+    const legacyCritical=result.issues.filter(issue=>!conversationIssues.has(issue));
+    if(review?.critical||legacyCritical.length){notify("치명 오류가 있어 승인할 수 없습니다. 표시된 문제 위치를 먼저 수정해 주세요.",true);return}
     topic.quality={status:"approved",score:result.score,issues:[]};saveTopics("토픽을 승인하고 이 컴퓨터에 저장했습니다.");
     if(settings.gistToken)await gistPush();else notify("토픽은 이 컴퓨터에 저장되었습니다. 온라인 동기화는 아직 연결되지 않았습니다.");
   }
@@ -417,7 +430,7 @@
     const topic=current(),scope=section==="all"?"complete topic":section;
     notify("말하기 흐름을 만들고 있습니다.");
     const target=section.split(".").reduce((value,key)=>value?.[key],topic);
-    const prompt=`Create or repair TheBox Talk Flow ${scope} as strict JSON. The paper must drive CHOOSE, SAY, ADD, ASK, REACT, then DECIDE for one mixed-confidence adult group. Conversation Flow counts: quickStarts 3, storyPrompts 2, talkRounds 3, groupMission 1, topicPhrases 5, reactionPhrases 6, finalRound 1. Quick starts need a five-second entry and short spoken English. Every story needs storySteps, askSomeone, and noExperienceAlternative. Every talk round needs sayFrame, askPrompt, and reactionPrompts. Everyone must speak before the mission result. Avoid sensitive disclosure, stereotypes, academic phrasing, literal Korean translation, repeated generic starters, and yes/no dead ends. Independently review natural English, aligned Korean, speech friction, duplication, and print density once; repair only the failing fields. Topic context: ${JSON.stringify({title:topic.title,category:topic.category,target})}. Return only the replacement JSON for ${scope}. Raw JSON only.`;
+    const prompt=`Create or repair TheBox Talk Flow ${scope} as strict JSON. The paper must drive CHOOSE, SAY, ADD, ASK, REACT, then DECIDE for one mixed-confidence adult group. Conversation Flow counts: quickStarts 3, storyPrompts 2, talkRounds 3, groupMission 1, topicPhrases 4, reactionPhrases 6, finalRound 1. Each quickStart question and its options must use the same answer axis; an experience question gets no forced options; a yes/no question gets natural Yes / Maybe / No responses. Options must be parallel complete answers and connect grammatically to sayFrame. Story steps must be question-specific spoken openings, never repeated generic transitions. The three talkRounds must have distinct roles: experience, personal criteria, and group judgment or solution. Every story needs storySteps, askSomeone, and noExperienceAlternative. Every talk round needs sayFrame, askPrompt, and reactionPrompts. Group Mission options must remain in one topic context and everyone must speak before the result. Topic phrases must not duplicate story starters or the final frame. Reaction phrases must be three immediate ASK responses and three immediate REACT responses, not copies of Main Talk prompts. Korean must be shorter and more natural than the English support text. Minimize total reading on the two-page A4. Avoid sensitive disclosure, stereotypes, academic phrasing, literal Korean translation, and yes/no dead ends. Independently review natural English, aligned Korean, speech friction, duplication, context consistency, and print density once; repair only the failing fields. Topic context: ${JSON.stringify({title:topic.title,category:topic.category,target})}. Return only the replacement JSON for ${scope}. Raw JSON only.`;
     try{
       preserveVersion(topic);
       const response=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"content-type":"application/json","x-api-key":settings.apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:6000,messages:[{role:"user",content:prompt}]})});
