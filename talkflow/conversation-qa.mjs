@@ -33,10 +33,21 @@ try{
     quick:topic.conversationFlow.quickStarts.length,story:topic.conversationFlow.storyPrompts.length,rounds:topic.conversationFlow.talkRounds.length,phrases:topic.conversationFlow.topicPhrases.length,reactions:topic.conversationFlow.reactionPhrases.length
   },review:TalkFlow.conversation.evaluate(topic.conversationFlow)})));
   check("8 separate conversation fixtures",fixtureResult.length===8&&fixtureResult.every(item=>item.fixture));
-  check("conversation schema exact counts",fixtureResult.every(item=>JSON.stringify(item.counts)===JSON.stringify({quick:3,story:2,rounds:3,phrases:5,reactions:6})),JSON.stringify(fixtureResult));
+  check("conversation schema exact counts",fixtureResult.every(item=>JSON.stringify(item.counts)===JSON.stringify({quick:3,story:2,rounds:3,phrases:4,reactions:6})),JSON.stringify(fixtureResult));
   check("8 fixtures score 80/80",fixtureResult.every(item=>item.review.total===80&&item.review.status==="ready"),JSON.stringify(fixtureResult));
   check("operator has five steps",await page.locator(".workflow-steps li").count()===5);
   check("technical settings not expanded",await page.locator(".advanced-editor[open]").count()===0);
+  check("generation disabled before topic input",await page.getByRole("button",{name:"토픽 생성하기"}).isDisabled());
+  const fixtureCountBefore=await page.locator(".topic-day").count();
+  await page.getByRole("button",{name:"추천 주제 넣기"}).click();
+  check("recommendation only fills topic input",Boolean(await page.locator("#operator-topic").inputValue())&&await page.locator(".topic-day").count()===fixtureCountBefore);
+  check("recommendation enables generation",await page.getByRole("button",{name:"토픽 생성하기"}).isEnabled());
+  const alignmentCritical=await page.evaluate(()=>{
+    const flow=TalkFlow.getTopics()["2026-08-03"].conversationFlow;
+    flow.quickStarts[0].options=["Reviewer history"];
+    return TalkFlow.conversation.evaluate(flow).critical;
+  });
+  check("question-option mismatch is critical",alignmentCritical);
   const legacyContext=await browser.newContext(),legacyPage=await legacyContext.newPage();
   await legacyPage.goto(`http://127.0.0.1:${port}/`,{waitUntil:"networkidle"});
   await legacyPage.getByRole("button",{name:"관리",exact:true}).click();
@@ -48,11 +59,15 @@ try{
   await legacyPage.getByRole("button",{name:"일별 관리",exact:true}).click();
   await legacyPage.locator("#operator-date").fill("2026-08-01");
   await legacyPage.locator("#operator-topic").fill("Weekend plans");
-  await legacyPage.getByRole("button",{name:"회화 토픽 만들기"}).click();
+  await legacyPage.getByRole("button",{name:"토픽 생성하기"}).click();
   check("operator creates without overwriting another date",await legacyPage.evaluate(()=>Boolean(TalkFlow.getTopics()["2026-08-01"]?.conversationFlow)&&Object.keys(TalkFlow.getTopics()).length===9));
   const beforeRegeneration=await legacyPage.evaluate(()=>JSON.stringify(TalkFlow.getTopics()["2026-08-01"].conversationFlow.talkRounds));
   await legacyPage.getByRole("button",{name:"질문만 다시 만들기"}).click();
   check("failed partial generation preserves content",await legacyPage.evaluate(before=>JSON.stringify(TalkFlow.getTopics()["2026-08-01"].conversationFlow.talkRounds)===before,beforeRegeneration));
+  const statusBeforePreview=await legacyPage.evaluate(()=>TalkFlow.getTopics()["2026-08-01"].quality.status);
+  await legacyPage.getByRole("button",{name:"학생용 A4 미리보기"}).first().click();
+  check("preview does not approve topic",await legacyPage.evaluate(before=>TalkFlow.getTopics()["2026-08-01"].quality.status===before,statusBeforePreview));
+  await legacyPage.getByRole("button",{name:"관리",exact:true}).click();
   let autoGistCalls=0;
   await legacyPage.route("https://api.github.com/gists",async route=>{autoGistCalls++;await route.fulfill({status:201,contentType:"application/json",body:JSON.stringify({id:"approve-test-gist"})})});
   await legacyPage.evaluate(key=>localStorage.setItem(key,JSON.stringify({gistToken:"test-token"})),await legacyPage.evaluate(()=>TalkFlow.KEYS.settings));
@@ -72,6 +87,21 @@ try{
     check(`${width}px student no horizontal overflow`,await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1));
     check(`${width}px conversation sequence visible`,await page.locator(".conversation-path b").count()===6);
     await page.screenshot({path:join(evidence,`student-${width}.png`),fullPage:true});
+    await page.getByRole("button",{name:"관리",exact:true}).click();
+    check(`${width}px operator review no horizontal overflow`,await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1));
+    check(`${width}px preview and approval controls separated`,await page.evaluate(()=>{
+      const preview=document.querySelector(".preview-button")?.getBoundingClientRect(),approve=document.querySelector(".approve-button")?.getBoundingClientRect();
+      if(!preview||!approve)return false;
+      return Math.abs(approve.top-preview.top)>8||approve.left-preview.right>=8;
+    }));
+    check(`${width}px both review pages scroll-accessible`,await page.locator(".review-preview").evaluate(node=>{
+      const pages=[...node.querySelectorAll(".a4-page")];
+      return pages.length===2&&pages.every(page=>getComputedStyle(page).display!=="none")&&node.scrollHeight>node.clientHeight;
+    }));
+    await page.screenshot({path:join(evidence,`admin-${width}.png`),fullPage:true});
+    await page.locator(".review-preview").evaluate(node=>{node.scrollTop=node.scrollHeight;});
+    await page.screenshot({path:join(evidence,`admin-${width}-page2.png`),fullPage:true});
+    await page.locator(".review-preview").evaluate(node=>{node.scrollTop=0;node.scrollLeft=0;});
   }
   await page.getByRole("button",{name:"리더",exact:true}).click();
   check("leader support and feedback visible",await page.locator(".leader-support,.feedback-card").count()===2);
@@ -81,11 +111,13 @@ try{
   check("anonymous local feedback stored",Object.values(feedback).flat().length===1&&!JSON.stringify(feedback).match(/name|email|phone/i),JSON.stringify(feedback));
   await page.getByRole("button",{name:"관리",exact:true}).click();
   check("conversation review actions visible",await page.locator(".review-actions").isVisible());
+  check("scaled A4 review preview visible",await page.locator(".review-preview .a4-page").count()===2);
   check("legacy technical editor hidden",await page.locator(".conversation-editor-summary").evaluate(node=>getComputedStyle(node).display==="none"));
   await page.locator("[data-open$=':print']").first().click();
   check("student handout exactly two DOM pages",await page.locator(".a4-page").count()===2);
   const studentText=await page.locator(".a4-topic").innerText();
-  check("student handout required order",["HOW TO USE","START NOW","TELL YOUR STORY","WORDS TO USE","TALK TOGETHER","GROUP MISSION","KEEP IT GOING","FINAL ROUND"].every((label,index,all)=>studentText.indexOf(label)>=0&&(index===0||studentText.indexOf(label)>studentText.indexOf(all[index-1]))),studentText);
+  check("student handout required order",["HOW TO USE","START NOW","TELL YOUR STORY","SAY THIS","TALK TOGETHER","GROUP MISSION","USE ONE NOW","FINAL ROUND"].every((label,index,all)=>studentText.indexOf(label)>=0&&(index===0||studentText.indexOf(label)>studentText.indexOf(all[index-1]))),studentText);
+  check("action phrases split into ASK and REACT",studentText.includes("ASK · 질문하기")&&studentText.includes("REACT · 반응하기"));
   check("legacy print labels absent",!/TODAY'S GOAL|TOPIC HOOK|EXAMPLE FOLLOW-UP|DEEPER FOLLOW-UP/.test(studentText));
   const overflows=await page.locator(".a4-page").evaluateAll(nodes=>nodes.map(node=>({x:node.scrollWidth-node.clientWidth,y:node.scrollHeight-node.clientHeight})));
   check("student A4 DOM has no overflow",overflows.every(item=>item.x<=1&&item.y<=1),JSON.stringify(overflows));

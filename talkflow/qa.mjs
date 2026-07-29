@@ -50,7 +50,7 @@ try {
   check("August date cards", await page.locator(".date-card").count() === 31);
   check("8 sample topics", await page.locator(".topic-day").count() === 8);
   check("8 print-ready topics", await page.locator(".print-state.ready").count() === 8);
-  check("daily cards expose A4 actions", await page.getByRole("button", { name: "학생용 A4" }).count() === 8);
+  check("daily cards expose A4 actions", await page.locator(".date-card [data-open$=':print']").count() === 8);
   await page.getByRole("button", { name: "학생", exact: true }).click();
   check("student view renders all sections", await page.locator("#student-view .flow-card").count() === 9);
   const quality = await page.evaluate(() => Object.values(TalkFlow.getTopics()).map(topic => ({ title: topic.title.en, result: TalkFlow.validateTopic(topic) })));
