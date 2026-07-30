@@ -1,15 +1,17 @@
 import { createRequire } from "node:module";
 import { createServer } from "node:http";
-import { readFile, mkdir, writeFile } from "node:fs/promises";
+import { readFile, mkdir, writeFile, readdir, unlink } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
 
-let playwright;
+let playwright, PDFDocument;
 try {
   playwright = createRequire(import.meta.url)("playwright");
+  ({ PDFDocument } = createRequire(import.meta.url)("pdf-lib"));
 } catch {
   playwright = createRequire(join(homedir(), ".cache", "codex-runtimes", "codex-primary-runtime", "dependencies", "node", "node_modules", "playwright", "index.js"))("playwright");
+  ({ PDFDocument } = createRequire(join(homedir(), ".cache", "codex-runtimes", "codex-primary-runtime", "dependencies", "node", "node_modules", "pdf-lib", "cjs", "index.js"))("pdf-lib"));
 }
 const { chromium } = playwright;
 const root = fileURLToPath(new URL(".", import.meta.url));
@@ -17,6 +19,7 @@ const output = join(root, ".qa-pdf");
 const evidence = join(root, "..", ".omo", "evidence", "talkflow-pdf-render");
 await mkdir(output, { recursive: true });
 await mkdir(evidence, { recursive: true });
+await Promise.all((await readdir(evidence)).filter(name=>name.endsWith(".png")).map(name=>unlink(join(evidence,name))));
 const mime = { ".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "text/javascript" };
 const server = createServer(async (request, response) => {
   try {
@@ -34,7 +37,7 @@ await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
 const port = server.address().port;
 const browser = await chromium.launch({ headless: true });
 const report = [];
-const representative = new Set(["2026-08-10", "2026-08-13", "2026-08-20", "2026-08-31", "2026-09-03"]);
+const representative = new Set(["2026-08-03", "2026-08-10", "2026-08-13", "2026-08-27", "2026-08-31"]);
 try {
   const page = await browser.newPage();
   await page.goto(`http://127.0.0.1:${port}/?fixtures=sessions`, { waitUntil: "networkidle" });
@@ -49,15 +52,23 @@ try {
       vertical: item.scrollHeight - item.clientHeight,
       horizontal: item.scrollWidth - item.clientWidth
     })));
+    const printText = await page.locator(".a4-topic").innerText();
+    const speakingContent = {
+      material: topic.date === "2026-08-03" ? ["REVIEW A", "REVIEW B", "REVIEW C"].every(label => printText.includes(label)) : printText.includes("USE THIS EVIDENCE") && /[.!?]/.test(printText),
+      timing: topic.date === "2026-08-03" ? ["12 MIN", "18 MIN", "20 MIN", "5 MIN", "10 MIN"].every(label => printText.includes(label)) : printText.includes("45 SEC EACH"),
+      turns: (printText.includes("EVERYONE") || printText.includes("everyone has spoken")) && /ASK|question|follow-up/i.test(printText),
+      decision: (printText.includes("FINAL DECISION") || printText.includes("GROUP DECISION")) && /because|reason|이유/i.test(printText),
+      onlineActivities: topic.date !== "2026-08-03" || (printText.includes("WRITE THE FAKE") && printText.includes("STAR FIGHT") && !printText.includes("Spot the Fake"))
+    };
     await page.pdf({ path, format: "A4", printBackground: true, preferCSSPageSize: true, margin: { top: "0", right: "0", bottom: "0", left: "0" } });
+    const physicalPages=(await PDFDocument.load(await readFile(path))).getPageCount();
     if (representative.has(topic.date)) {
-      await page.emulateMedia({ media: "print" });
+      await page.addStyleTag({ content: ".topbar,.print-toolbar{display:none!important}.a4-page{box-shadow:none!important}" });
       for (let index = 0; index < pageCount; index += 1) {
         await page.locator(".a4-page").nth(index).screenshot({ path: join(evidence, `${topic.date}-student-${index + 1}.png`) });
       }
-      await page.emulateMedia({ media: "screen" });
     }
-    report.push({ date: topic.date, title: topic.title.ko, filename, domPages: pageCount, overflow });
+    report.push({ date: topic.date, title: topic.title.ko, filename, domPages: pageCount, physicalPages, overflow, speakingContent });
   }
   await page.goto(`http://127.0.0.1:${port}/?fixtures=sessions`, { waitUntil: "networkidle" });
   await page.locator("[data-action='select-approved']").click();
@@ -72,13 +83,14 @@ try {
     horizontal: item.scrollWidth - item.clientWidth
   })));
   await page.pdf({ path: join(output, "2026-08-03_TheBox_TalkFlow_leader.pdf"), format: "A4", printBackground: true, preferCSSPageSize: true, margin: { top: "0", right: "0", bottom: "0", left: "0" } });
-  await page.emulateMedia({ media: "print" });
+  await page.addStyleTag({ content: ".topbar,.print-toolbar{display:none!important}.a4-page{box-shadow:none!important}" });
   for (let index = 0; index < leaderPages; index += 1) {
     await page.locator(".a4-page").nth(index).screenshot({ path: join(evidence, `2026-08-03-leader-${index + 1}.png`) });
   }
-  const pass = report.every(item => item.domPages === 2 && item.overflow.every(value => value.vertical <= 1 && value.horizontal <= 1))
-    && report.length === 10 && batchPages === 16 && leaderPages === 2 && leaderOverflow.every(value => value.vertical <= 1 && value.horizontal <= 1);
-  await writeFile(join(output, "generation-results.json"), `${JSON.stringify({ pass, topics: report, batchPages, leaderPages, leaderOverflow }, null, 2)}\n`, "utf8");
+  const pngManifest=(await readdir(evidence)).filter(name=>name.endsWith(".png")).sort();
+  const pass = report.every(item => item.domPages === 2 && item.physicalPages === 2 && item.overflow.every(value => value.vertical <= 1 && value.horizontal <= 1) && Object.values(item.speakingContent).every(Boolean))
+    && report.length === 10 && pngManifest.length === 12 && batchPages === 16 && leaderPages === 2 && leaderOverflow.every(value => value.vertical <= 1 && value.horizontal <= 1);
+  await writeFile(join(output, "generation-results.json"), `${JSON.stringify({ pass, topics: report, pngManifest, batchPages, leaderPages, leaderOverflow }, null, 2)}\n`, "utf8");
   console.log(JSON.stringify(report, null, 2));
   if (!pass) process.exitCode = 1;
 } finally {

@@ -38,12 +38,19 @@ try{
   const sessionContext=await browser.newContext(),sessionPage=await sessionContext.newPage();
   await sessionPage.goto(`http://127.0.0.1:${port}/?fixtures=sessions`,{waitUntil:"networkidle"});
   const sessionFixtures=await sessionPage.evaluate(()=>Object.values(TalkFlow.getTopics()).map(topic=>({
+    topic,
     mode:topic.topicMode,
     source:topic.sourceMaterial,
     common:topic.commonGround,
     one:topic.sessionOne,
     two:topic.sessionTwo,
-    operator:topic.operatorStatus
+    operator:topic.operatorStatus,
+    mechanisms:topic.speakingMechanisms,
+    materials:topic.conversationMaterials,
+    axes:topic.promptAxes,
+    turns:topic.turnProtocol,
+    activity:topic.activityEvidence,
+    speaking:TalkFlow.sessions.speakingEvaluate(topic)
   })));
   check("10 two-session fixtures",sessionFixtures.length===10);
   check("8 everyday and 2 context fixtures",sessionFixtures.filter(item=>item.mode==="everyday").length===8&&sessionFixtures.filter(item=>item.mode==="context").length===2);
@@ -51,6 +58,29 @@ try{
   check("session two fixed at 40 minutes",sessionFixtures.every(item=>item.two?.minutes===40&&item.two.reset&&item.two.mainActivity&&item.two.groupDecision&&item.two.finalRound));
   check("context fixtures have source-backed brief",sessionFixtures.filter(item=>item.mode==="context").every(item=>item.common?.enabled&&item.common.briefEn.length===3&&item.common.keywords.length===3&&item.source.publisher&&item.source.publishedAt));
   check("generated fixtures require review",sessionFixtures.every(item=>item.operator?.reviewStatus==="review"));
+  check("10 fixtures are speaking ready",sessionFixtures.every(item=>item.speaking.status==="ready"),JSON.stringify(sessionFixtures.map(item=>item.speaking)));
+  const mutantResults=await sessionPage.evaluate(()=>{
+    const topics=Object.values(TalkFlow.getTopics()),clone=value=>structuredClone(value);
+    const incomplete=clone(topics[0]);
+    incomplete.conversationMaterials=[{contentEn:"This is only a short placeholder label",contentKo:"짧은 라벨",hasSingleCorrectAnswer:false}];
+    const missingRoles=clone(topics.find(topic=>topic.speakingMechanisms.assignedOpposition));
+    missingRoles.sessionTwo.mainActivity.roles=[];
+    if(missingRoles.sessionTwo.secondaryActivity)missingRoles.sessionTwo.secondaryActivity.roles=[];
+    const missingDecision=clone(topics[0]);
+    missingDecision.sessionTwo.groupDecision={...missingDecision.sessionTwo.groupDecision,promptEn:"",promptKo:""};
+    return [incomplete,missingRoles,missingDecision].map(topic=>TalkFlow.sessions.speakingEvaluate(topic).status);
+  });
+  check("speaking QA rejects label-like material",mutantResults[0]==="fail");
+  check("speaking QA rejects declared opposition without rendered roles",mutantResults[1]==="fail");
+  check("speaking QA rejects declared decision without prompt",mutantResults[2]==="fail");
+  check("all fixtures have three speaking mechanisms",sessionFixtures.every(item=>Object.values(item.mechanisms).filter(Boolean).length>=3));
+  check("all fixtures have complete conversation material",sessionFixtures.every(item=>item.materials.length&&item.materials.every(material=>material.contentEn.trim().split(/\s+/).length>=8&&!material.hasSingleCorrectAnswer)));
+  check("all fixtures have three distinct axes with no axis over two",sessionFixtures.every(item=>new Set(item.axes).size>=3&&Math.max(...Object.values(item.axes.reduce((counts,axis)=>(counts[axis]=(counts[axis]||0)+1,counts),{})))<=2));
+  check("all fixtures require turns and follow-up",sessionFixtures.every(item=>item.turns.secondsPerPerson>=45&&item.turns.followUpRequired&&item.turns.everyoneBeforeNextStep));
+  check("all fixtures require disagreement output and open decision",sessionFixtures.every(item=>item.activity.expectedMinutes===20&&item.activity.requiresDisagreement&&item.activity.requiresParticipantOutput&&item.mechanisms.openEndedDecision));
+  const onlineSession=sessionFixtures.find(item=>item.one?.format==="evidenceRounds");
+  check("online review uses 12 18 20 minute evidence rounds",onlineSession?.one.rounds.map(round=>round.minutes).join(",")==="12,18,20"&&onlineSession.materials.length===3);
+  check("online review replaces Spot the Fake with Write the Fake and Star Fight",onlineSession?.two.mainActivity.titleEn==="WRITE THE FAKE"&&onlineSession.two.secondaryActivity?.titleEn==="STAR FIGHT"&&!JSON.stringify(onlineSession).includes("Spot the Fake"));
   await sessionContext.close();
   check("calendar is monthly seven-column default",await page.locator(".month-calendar").isVisible()&&await page.locator(".weekday-row span").count()===7);
   check("month toolbar has one-click actions",await page.getByRole("button",{name:"이번 달 자동 구성"}).isVisible()&&await page.getByRole("button",{name:"고급 설정",exact:true}).isVisible());
@@ -126,13 +156,15 @@ try{
   check("anonymous local feedback stored",Object.values(feedback).flat().length===1&&!JSON.stringify(feedback).match(/name|email|phone/i),JSON.stringify(feedback));
   await page.getByRole("button",{name:"관리",exact:true}).click();
   check("conversation review actions visible",await page.locator(".review-actions").isVisible());
+  check("structure and speaking readiness are separately visible",await page.locator(".readiness-split").innerText().then(text=>text.includes("STRUCTURE READY")&&text.includes("SPEAKING READY")));
+  check("five plain-language speaking checks are visible",await page.locator(".speaking-checks li").count()===5&&await page.locator(".speaking-checks").innerText().then(text=>["실제 말할 재료","서로 다른 내용","참가자의 순번","반대 의견","정답 없는 그룹 결론"].every(label=>text.includes(label))));
   check("scaled A4 review preview visible",await page.locator(".review-preview .a4-page").count()===2);
   check("legacy technical editor hidden",await page.locator(".conversation-editor-summary").evaluate(node=>getComputedStyle(node).display==="none"));
   await page.locator("[data-open$=':print']").first().click();
   check("student handout exactly two DOM pages",await page.locator(".a4-page").count()===2);
   const studentText=await page.locator(".a4-topic").innerText();
-  check("student handout required session order",["SESSION 1","HOW TO USE","START NOW","TELL YOUR STORY","TALK TOGETHER","SAY THIS","SESSION 2","RESET","MAIN ACTIVITY","GROUP DECISION","FINAL ROUND"].every((label,index,all)=>studentText.indexOf(label)>=0&&(index===0||studentText.indexOf(label)>studentText.indexOf(all[index-1]))),studentText);
-  check("each conversation prompt has five action cues",["START","SAY","ADD","ASK","REACT"].every(label=>studentText.includes(label)));
+  check("student handout required evidence round order",["SESSION 1","REAL ITEM ROUND","EVIDENCE ROUND","STORY ROUND","SAY THIS","SESSION 2","RESET VOTE","WRITE THE FAKE","STAR FIGHT","FINAL DECISION"].every((label,index,all)=>studentText.indexOf(label)>=0&&(index===0||studentText.indexOf(label)>studentText.indexOf(all[index-1]))),studentText);
+  check("student handout includes timed turns ask react and full materials",studentText.includes("45 SEC EACH")&&studentText.includes("NEXT PERSON MUST ASK")&&studentText.includes("I still disagree because")&&["REVIEW A","REVIEW B","REVIEW C"].every(label=>studentText.includes(label)));
   check("legacy print labels absent",!/TODAY'S GOAL|TOPIC HOOK|EXAMPLE FOLLOW-UP|DEEPER FOLLOW-UP/.test(studentText));
   const overflows=await page.locator(".a4-page").evaluateAll(nodes=>nodes.map(node=>({x:node.scrollWidth-node.clientWidth,y:node.scrollHeight-node.clientHeight})));
   check("student A4 DOM has no overflow",overflows.every(item=>item.x<=1&&item.y<=1),JSON.stringify(overflows));
