@@ -1,49 +1,92 @@
 # TheBox Talk Flow Standard v2
 
-상태: 생성기·검증기·학생/리더 v4 인쇄 템플릿의 공통 기준
+상태: Fail-Closed 생성기·검증기·학생/리더 v4 인쇄 템플릿의 공통 기준
 
-## 변경 원칙
+## 생성 계약
 
-- 게임은 수정 금지 대상이 아니다. 목표에 맞지 않으면 다른 대화 활동으로 교체한다.
-- 섹션은 완전 고정하지 않는다. 시간 합계와 학습 흐름을 지키면서 합치거나 재구성할 수 있다.
-- 기존 운영 토픽, Gist 데이터, localStorage 스키마는 파괴적으로 변경하지 않는다.
+- 코드가 섹션명, 섹션 수, 순서, 시간, 페이지 구성을 만든다.
+- AI는 영어·한국어 제목, 질문, 번역, 실제 자료, 말하기 예문, 역할·규칙, 최종 결정 문장만 채운다.
+- 생성은 `Topic Plan → Plan 검증 → Content Fill → Content 검증` 두 단계다.
+- 각 단계는 최초 요청 뒤 재시도 한 번만 허용한다.
+- Plan이 실패하면 Content Fill을 요청하지 않는다.
+- 재시도에는 직전 결과와 실패 위치를 전달하며 통과한 필드는 유지하고 실패 위치만 수정한다.
+- 신규 자동 생성에서 v1 `conversationFlow` 또는 샘플 토픽 복제 fallback을 사용하지 않는다.
 
-## Session 1 · 50분
+## 고정 Skeleton
 
-Session 1은 다음 네 기능을 실제 인쇄 내용으로 제공한다.
+### Session 1 · 50분
 
-1. 쉬운 진입: 바로 답할 수 있는 짧은 질문과 `START`
-2. 경험: 개인 경험 또는 경험이 없을 때의 안전한 대안
-3. 판단 재료: 리뷰, 메시지, 조건, 일정, 수치 등 완전한 자료
-4. 상호작용: 후속 질문, 반응, 순번 규칙
+1. Quick Start · 10분
+2. Personal / Experience Round · 15분
+3. Evidence / Decision Round · 20분
+4. Short Wrap-up · 5분
 
-학습자 진행 표시는 `START / ADD / GO FURTHER`를 사용한다.
+### Session 2 · 40분
 
-## Session 2 · 40분
+1. Reset · 5분
+2. Main Activity · 20분
+3. Role / Challenge · 10분
+4. Final Decision · 5분
 
-Session 2는 일반 Discussion 질문 목록이 아니라 참가자 행동 중심 활동이다.
+Session 1은 쉬운 진입, 개인 경험과 경험이 없을 때의 대안, 완전한 판단 자료, 상호작용을 제공한다. Session 2는 일반 Discussion 질문 목록이 아니라 참가자가 준비·공유·질문·반론·결정하는 활동이다.
 
-- 정보 격차: 비공개 선택, 서로 다른 정보, 추측 또는 비교
-- 역할: 서로 다른 입장이나 행동 지시
-- 그룹 결정: 전원이 말한 뒤 하나의 열린 결론 기록
-- 모든 활동 단계, 역할, 결정 규칙에 자연스러운 한국어 안내 필수
+## 엄격한 데이터 경계
 
-## 발화 강제
+생성 결과는 `schema/generated-topic-v2.schema.json`을 따른다. 다음은 필수다.
 
-활성 발화 강제 장치를 최소 3개 제공한다. 예: 제한 시간 순번, 정보 격차, 개인 산출물, 반대 역할, 전원 발화 후 결정. 두 페이지 모두 실제로 작동하는 장치를 최소 2개 포함한다.
+- `title.en`, `title.ko`
+- `sessionOne.sections`, `sessionTwo.sections`
+- `conversationMaterials`
+- `speakingFrames`
+- `leaderGuide`
+- `bilingualInstructions`
 
-## 준비 상태 분리
+빈 문자열과 `Option A`, `Option B`, `Ask and react.`, `Use this evidence.`, `Add details.`, `TBD`, `Example`, `Placeholder` 같은 임시 문구는 실패다. Schema에 선언되지 않은 필드도 실패다.
 
-- Structure Ready: 50/40분 구성, Session 1 네 기능, Session 2 활동 구조
-- Speaking Ready: 최소 3개 발화 장치, 후속 질문, 역할/이견, 참가자 산출물
-- Print Ready: 학생·리더 v4 2페이지, 넘침 없음, 핵심 질문 11pt 이상, 행동 문구 9.5pt 이상, 한국어 활동 안내 8.5pt 이상
+## 질문과 실제 자료
 
-세 상태는 독립적으로 검증하며 하나를 다른 상태의 대리값으로 사용하지 않는다.
+- 모든 질문에는 허용된 `axis`가 있다.
+- 서로 다른 축은 최소 3개이며 같은 축은 최대 2개다.
+- 같은 질문, 포함관계 질문, 표현만 바꾼 질문, 같은 Starter 재사용은 실패다.
+- 완전한 리뷰·메시지·조건표·상황 카드·역할별 정보·일정표·통계·실제 사례 중 최소 1세트를 제공한다.
+- 자료는 영어와 한국어로 된 완전한 항목 3개 이상과 그 자료를 인용하는 판단 질문을 포함한다.
+- 라벨만 있는 선택지, 인물·상황·조건이 없는 추상 문장, 정답이 명백한 자료는 실패다.
 
-## 연결 계약
+## 발화 강제와 한국어
 
-- 생성 기준: `<talkflow-standard version="2" student-template="student-v4" leader-template="leader-v4">`
+- 정보 격차, 개인 실제 자료, 제한시간 순번, 반대 역할, 정답 없는 그룹 결정 중 최소 3개를 실제 활동에 연결한다.
+- Session 2에는 참가자 산출물, 역할 대립, 정보 격차 중 하나 이상이 있어야 한다.
+- Final Decision 전에 전원이 입장을 말해야 한다.
+- 활동 규칙, 순서, 팀 역할, 시간, 최종 결과, 대체 참여 방법을 영어와 자연스러운 한국어로 제공한다.
+- 영문 제목에 한국어가 포함되거나 한국어 제목에 한국어가 없으면 실패다.
+- 두 제목이 같거나 같은 언어로 생성되면 실패다.
+
+## Fail-Closed 준비 상태
+
+- `STRUCTURE FAIL`: 고정 Skeleton, 시간, 필수 필드, 질문 축, Session 2 활동 실패
+- `CONTENT FAIL`: 제목 언어, 빈 값, placeholder, 실제 자료, 영어·한국어 짝 실패
+- `SPEAKING FAIL`: 발화 장치, 참가자 산출물, 역할 대립, 전원 발화 실패
+- `PRINT FAIL`: A4 2페이지, 넘침, 잘림, 최소 글자 크기 실패
+- `CONVERSATION READY`: 위 네 상태가 모두 Ready일 때만 표시
+
+생성 실패는 `GENERATION FAILED`로 표시한다. 작성된 초안은 보존하고 미리보기·승인·PDF를 차단한다. 구형 자동 생성 초안은 `LEGACY OR INVALID DRAFT`로 표시하고 v2 재생성, 삭제, 원문 보기만 제공한다. 자동 변환하지 않는다.
+
+## v4 화면 계약
+
+- 학생용 A4는 페이지마다 주요 섹션 4개만 표시한다.
+- 한 섹션의 시각 계층은 섹션 제목, 질문/활동, 말하기 도움의 3단계다.
+- 한 질문은 영어 질문, 한국어 뜻, 말하기 도움 2~3줄로 제한한다.
+- 신규 v2 출력에는 중첩된 `START / ADD / GO FURTHER / Ask and react` 상자를 사용하지 않는다.
+- 영어 발화 문장을 가장 크게 표시한다.
+- 학생·리더 A4는 정확히 2페이지이며 넘침과 잘림이 없어야 한다.
+- 최소 인쇄 크기는 제목 18pt, 질문 10.5pt, 영어 활동 문구 9pt, 한국어 안내 8.5pt, 메타 7.5pt다.
+
+## 연결 위치
+
+- 고정 Skeleton·스키마·검증: `generation-engine.js`
+- 최종 JSON Schema: `schema/generated-topic-v2.schema.json`
+- 생성 API 연결·승인·PDF 차단: `app.js`
+- 학생/리더 v4 렌더: `app.js`의 `renderGeneratedHandout`
 - 학생 레퍼런스: `reference/student-v4.html`
 - 리더 레퍼런스: `reference/leader-v4.html`
-- 데이터 표식: `standardVersion: "2"`, `templateVersion: "4"`
-- 렌더 표식: `data-talkflow-standard="v2"`와 `data-template-version`
+- 데이터 표식: `generationEngine: "v2-fail-closed"`, `standardVersion: "2"`, `templateVersion: "4"`

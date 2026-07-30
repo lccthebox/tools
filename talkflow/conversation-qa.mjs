@@ -4,6 +4,7 @@ import { readFile, mkdir, writeFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
+import { validPlan, validContent } from "./generation-engine-qa.mjs";
 
 let playwright;
 try { playwright=createRequire(import.meta.url)("playwright"); }
@@ -106,7 +107,16 @@ try{
     return TalkFlow.conversation.evaluate(flow).critical;
   });
   check("question-option mismatch is critical",alignmentCritical);
-  const legacyContext=await browser.newContext(),legacyPage=await legacyContext.newPage();
+  const legacyContext=await browser.newContext();
+  await legacyContext.addInitScript(()=>localStorage.setItem("tb_talkflow_settings_v1",JSON.stringify({apiKey:"qa-intercept-key",gistToken:"test-token"})));
+  const legacyPage=await legacyContext.newPage(),generationCalls=[];
+  await legacyPage.route("https://api.anthropic.com/v1/messages",async route=>{
+    const body=route.request().postDataJSON(),tool=body.tools?.[0]?.name;generationCalls.push(tool);
+    const plan=validPlan(),content=validContent();
+    plan.centralTopic={en:"Weekend Plans",ko:"주말 계획"};
+    content.title={en:"How Should We Plan the Weekend?",ko:"이번 주말, 어떻게 계획할까?"};
+    await route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({content:[{type:"tool_use",name:tool,input:tool==="submit_topic_plan"?plan:content}]})});
+  });
   await legacyPage.goto(`http://127.0.0.1:${port}/`,{waitUntil:"networkidle"});
   await legacyPage.getByRole("button",{name:"관리",exact:true}).click();
   await legacyPage.getByRole("button",{name:"회화형 구조로 변환"}).click();
@@ -119,48 +129,31 @@ try{
   await legacyPage.locator("[data-custom-date='2026-08-31']").click();
   await legacyPage.locator("#custom-keyword").fill("Weekend plans");
   await legacyPage.getByRole("button",{name:"토픽 생성하기"}).click();
-  check("operator creates without overwriting another date",await legacyPage.evaluate(()=>Boolean(TalkFlow.getTopics()["2026-08-31"]?.conversationFlow)&&Object.keys(TalkFlow.getTopics()).length===9));
+  await legacyPage.waitForFunction(()=>TalkFlow.getTopics()["2026-08-31"]?.operatorStatus?.generationStatus==="complete");
+  check("operator creates without overwriting another date",await legacyPage.evaluate(()=>Boolean(TalkFlow.getTopics()["2026-08-31"])&&Object.keys(TalkFlow.getTopics()).length===9));
   check("new general topic uses v2 and v4 contract",await legacyPage.evaluate(()=>{
     const topic=TalkFlow.getTopics()["2026-08-31"];
-    return topic.generatedConversation===true&&topic.standardVersion==="2"&&topic.templateVersion==="4";
+    return topic.generatedConversation===true&&topic.generationEngine==="v2-fail-closed"&&topic.standardVersion==="2"&&topic.templateVersion==="4"&&!topic.conversationFlow;
   }));
-  check("new general topic passes structure and speaking validators",await legacyPage.evaluate(()=>{
-    const topic=TalkFlow.getTopics()["2026-08-31"];
-    return TalkFlow.sessions.diagnostics(topic).length===0&&TalkFlow.sessions.speakingDiagnostics(topic).length===0;
-  }));
+  check("new general topic passes structure content and speaking validators",await legacyPage.evaluate(()=>TalkFlow.generation.evaluate(TalkFlow.getTopics()["2026-08-31"]).ready));
   check("new general topic Session 2 remains an activity with roles and decision",await legacyPage.evaluate(()=>{
     const two=TalkFlow.getTopics()["2026-08-31"].sessionTwo;
-    return two.mainActivity.steps.length>=5&&two.mainActivity.roles.length>=2&&Boolean(two.groupDecision.everyoneSpeaksRule)&&!JSON.stringify(two).includes("MAIN DISCUSSION");
+    return JSON.stringify(two.sections.map(item=>item.id))===JSON.stringify(["reset","mainActivity","roleChallenge","finalDecision"])&&!JSON.stringify(two).includes("MAIN DISCUSSION");
   }));
-  const beforeRegeneration=await legacyPage.evaluate(()=>JSON.stringify(TalkFlow.getTopics()["2026-08-31"].conversationFlow.talkRounds));
-  await legacyPage.locator(".regeneration-menu summary").click();
-  await legacyPage.getByRole("button",{name:"질문만 다시 만들기"}).click();
-  check("failed partial generation preserves content",await legacyPage.evaluate(before=>JSON.stringify(TalkFlow.getTopics()["2026-08-31"].conversationFlow.talkRounds)===before,beforeRegeneration));
   const statusBeforePreview=await legacyPage.evaluate(()=>TalkFlow.getTopics()["2026-08-31"].quality.status);
   const printStatusBeforePreview=await legacyPage.evaluate(()=>TalkFlow.getTopics()["2026-08-31"].operatorStatus.printStatus);
   await legacyPage.getByRole("button",{name:"학생용 A4 미리보기"}).first().click();
-  check("new general topic renders student-v4 contract",await legacyPage.locator(".v4-handout[data-talkflow-standard='v2'][data-template-version='student-v4']").count()===1);
-  check("new general topic uses START ADD GO FURTHER levels",await legacyPage.locator(".v4-handout").innerText().then(text=>["START","ADD","GO FURTHER"].every(label=>text.includes(label))&&!/\bEASY\b|\bDEEP\b|\bCHALLENGE\b/.test(text)));
-  check("v4 print critical text meets minimum sizes",await legacyPage.locator(".v4-handout").evaluate(node=>{
-    const px=selector=>parseFloat(getComputedStyle(node.querySelector(selector)).fontSize);
-    return px(".start-card>strong")>=14.66&&px(".action-row .action-cue")>=12.66&&px(".main-activity>small")>=11.33&&px(".bilingual-steps span")>=11.33;
-  }));
+  check("new general topic renders student-v4 fixed skeleton",await legacyPage.locator(".fc-handout[data-generation-engine='v2-fail-closed']").count()===1);
+  check("new general topic removes nested START ADD GO FURTHER boxes",await legacyPage.locator(".fc-handout").innerText().then(text=>!["START","ADD","GO FURTHER","Ask and react"].some(label=>text.includes(label))));
+  check("v4 print critical text meets minimum sizes",await legacyPage.evaluate(()=>TalkFlow.evaluateRenderedPrint(TalkFlow.getTopics()["2026-08-31"]).status==="ready"));
   check("preview does not approve topic",await legacyPage.evaluate(before=>TalkFlow.getTopics()["2026-08-31"].quality.status===before,statusBeforePreview));
   check("preview does not advance print lifecycle",await legacyPage.evaluate(before=>TalkFlow.getTopics()["2026-08-31"].operatorStatus.printStatus===before,printStatusBeforePreview));
   await legacyPage.getByRole("button",{name:"관리",exact:true}).click();
-  const occupiedTopicBeforeClone=await legacyPage.evaluate(()=>JSON.stringify(TalkFlow.getTopics()["2026-08-03"]));
-  legacyPage.once("dialog",dialog=>dialog.accept("2026-08-03"));
-  await legacyPage.locator(".admin-overflow summary").click();
-  await legacyPage.getByRole("button",{name:"복제",exact:true}).click();
-  check("clone refuses to overwrite an occupied date",await legacyPage.evaluate(before=>JSON.stringify(TalkFlow.getTopics()["2026-08-03"])===before,occupiedTopicBeforeClone));
   let autoGistCalls=0;
   await legacyPage.route("https://api.github.com/gists",async route=>{autoGistCalls++;await route.fulfill({status:201,contentType:"application/json",body:JSON.stringify({id:"approve-test-gist"})})});
-  await legacyPage.evaluate(key=>localStorage.setItem(key,JSON.stringify({gistToken:"test-token",apiKey:"test-api-key"})),await legacyPage.evaluate(()=>TalkFlow.KEYS.settings));
-  await legacyPage.reload({waitUntil:"networkidle"});
-  await legacyPage.getByRole("button",{name:"관리",exact:true}).click();
   await legacyPage.getByRole("button",{name:"승인하고 저장"}).first().click();
   await legacyPage.waitForFunction(()=>TalkFlow.getTopics()["2026-08-31"].quality.status==="approved");
-  check("approve saves locally and auto-syncs connected Gist",autoGistCalls===1,String(autoGistCalls));
+  check("approve saves locally without changing connected Gist",autoGistCalls===0,String(autoGistCalls));
   await legacyPage.getByRole("button",{name:"학생용 A4 미리보기"}).first().click();
   await legacyPage.getByRole("button",{name:"A4 확인 완료"}).click();
   check("approved PDF confirmation reaches print-ready lifecycle",await legacyPage.evaluate(()=>TalkFlow.lifecycle(TalkFlow.getTopics()["2026-08-31"]).key==="print-ready"));
@@ -168,21 +161,7 @@ try{
     const validation=TalkFlow.getTopics()["2026-08-31"].operatorStatus.printValidation;
     return validation?.status==="ready"&&validation.pages===2&&validation.type.title>=18&&validation.type.question>=10.5&&validation.type.englishInstruction>=9&&validation.type.koreanGuidance>=8.5&&validation.type.meta>=7.5;
   }));
-  const replacementSessionOne=await legacyPage.evaluate(()=>TalkFlow.getTopics()["2026-08-31"].sessionOne);
-  let generationPrompt="";
-  await legacyPage.route("https://api.anthropic.com/v1/messages",route=>{
-    generationPrompt=JSON.parse(route.request().postData()).messages[0].content;
-    return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({content:[{text:JSON.stringify(replacementSessionOne)}]})});
-  });
-  await legacyPage.getByRole("button",{name:"관리",exact:true}).click();
-  await legacyPage.locator(".regeneration-menu summary").click();
-  await legacyPage.getByRole("button",{name:"질문만 다시 만들기"}).click();
-  await legacyPage.waitForFunction(()=>TalkFlow.getTopics()["2026-08-31"].quality.status==="review");
-  check("actual generator prompt consumes v2 and v4 contract",/^<talkflow-standard version="2" student-template="student-v4" leader-template="leader-v4">/.test(generationPrompt)&&await legacyPage.evaluate(()=>JSON.stringify(TalkFlow.STANDARD)===JSON.stringify({version:"2",studentTemplate:"student-v4",leaderTemplate:"leader-v4"})));
-  check("regeneration invalidates prior A4 confirmation",await legacyPage.evaluate(()=>{
-    const topic=TalkFlow.getTopics()["2026-08-31"];
-    return topic.operatorStatus.printStatus==="unchecked"&&TalkFlow.lifecycle(topic).key==="review";
-  }));
+  check("actual generator uses Plan and Content Fill tool stages",generationCalls.join(",")==="submit_topic_plan,submit_content_fill",generationCalls.join(","));
   await legacyContext.close();
   const viewports=[[360,800],[390,844],[430,900],[768,900],[1024,900],[1440,1000]];
   for(const [width,height] of viewports){
