@@ -120,6 +120,18 @@ try{
   await legacyPage.locator("#custom-keyword").fill("Weekend plans");
   await legacyPage.getByRole("button",{name:"토픽 생성하기"}).click();
   check("operator creates without overwriting another date",await legacyPage.evaluate(()=>Boolean(TalkFlow.getTopics()["2026-08-31"]?.conversationFlow)&&Object.keys(TalkFlow.getTopics()).length===9));
+  check("new general topic uses v2 and v4 contract",await legacyPage.evaluate(()=>{
+    const topic=TalkFlow.getTopics()["2026-08-31"];
+    return topic.generatedConversation===true&&topic.standardVersion==="2"&&topic.templateVersion==="4";
+  }));
+  check("new general topic passes structure and speaking validators",await legacyPage.evaluate(()=>{
+    const topic=TalkFlow.getTopics()["2026-08-31"];
+    return TalkFlow.sessions.diagnostics(topic).length===0&&TalkFlow.sessions.speakingDiagnostics(topic).length===0;
+  }));
+  check("new general topic Session 2 remains an activity with roles and decision",await legacyPage.evaluate(()=>{
+    const two=TalkFlow.getTopics()["2026-08-31"].sessionTwo;
+    return two.mainActivity.steps.length>=5&&two.mainActivity.roles.length>=2&&Boolean(two.groupDecision.everyoneSpeaksRule)&&!JSON.stringify(two).includes("MAIN DISCUSSION");
+  }));
   const beforeRegeneration=await legacyPage.evaluate(()=>JSON.stringify(TalkFlow.getTopics()["2026-08-31"].conversationFlow.talkRounds));
   await legacyPage.locator(".regeneration-menu summary").click();
   await legacyPage.getByRole("button",{name:"질문만 다시 만들기"}).click();
@@ -127,6 +139,12 @@ try{
   const statusBeforePreview=await legacyPage.evaluate(()=>TalkFlow.getTopics()["2026-08-31"].quality.status);
   const printStatusBeforePreview=await legacyPage.evaluate(()=>TalkFlow.getTopics()["2026-08-31"].operatorStatus.printStatus);
   await legacyPage.getByRole("button",{name:"학생용 A4 미리보기"}).first().click();
+  check("new general topic renders student-v4 contract",await legacyPage.locator(".v4-handout[data-talkflow-standard='v2'][data-template-version='student-v4']").count()===1);
+  check("new general topic uses START ADD GO FURTHER levels",await legacyPage.locator(".v4-handout").innerText().then(text=>["START","ADD","GO FURTHER"].every(label=>text.includes(label))&&!/\bEASY\b|\bDEEP\b|\bCHALLENGE\b/.test(text)));
+  check("v4 print critical text meets minimum sizes",await legacyPage.locator(".v4-handout").evaluate(node=>{
+    const px=selector=>parseFloat(getComputedStyle(node.querySelector(selector)).fontSize);
+    return px(".start-card>strong")>=14.66&&px(".action-row .action-cue")>=12.66&&px(".main-activity>small")>=11.33&&px(".bilingual-steps span")>=11.33;
+  }));
   check("preview does not approve topic",await legacyPage.evaluate(before=>TalkFlow.getTopics()["2026-08-31"].quality.status===before,statusBeforePreview));
   check("preview does not advance print lifecycle",await legacyPage.evaluate(before=>TalkFlow.getTopics()["2026-08-31"].operatorStatus.printStatus===before,printStatusBeforePreview));
   await legacyPage.getByRole("button",{name:"관리",exact:true}).click();
@@ -146,12 +164,21 @@ try{
   await legacyPage.getByRole("button",{name:"학생용 A4 미리보기"}).first().click();
   await legacyPage.getByRole("button",{name:"A4 확인 완료"}).click();
   check("approved PDF confirmation reaches print-ready lifecycle",await legacyPage.evaluate(()=>TalkFlow.lifecycle(TalkFlow.getTopics()["2026-08-31"]).key==="print-ready"));
+  check("print readiness stores an independent rendered-page validation",await legacyPage.evaluate(()=>{
+    const validation=TalkFlow.getTopics()["2026-08-31"].operatorStatus.printValidation;
+    return validation?.status==="ready"&&validation.pages===2&&validation.type.title>=18&&validation.type.question>=10.5&&validation.type.englishInstruction>=9&&validation.type.koreanGuidance>=8.5&&validation.type.meta>=7.5;
+  }));
   const replacementSessionOne=await legacyPage.evaluate(()=>TalkFlow.getTopics()["2026-08-31"].sessionOne);
-  await legacyPage.route("https://api.anthropic.com/v1/messages",route=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({content:[{text:JSON.stringify(replacementSessionOne)}]})}));
+  let generationPrompt="";
+  await legacyPage.route("https://api.anthropic.com/v1/messages",route=>{
+    generationPrompt=JSON.parse(route.request().postData()).messages[0].content;
+    return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({content:[{text:JSON.stringify(replacementSessionOne)}]})});
+  });
   await legacyPage.getByRole("button",{name:"관리",exact:true}).click();
   await legacyPage.locator(".regeneration-menu summary").click();
   await legacyPage.getByRole("button",{name:"질문만 다시 만들기"}).click();
   await legacyPage.waitForFunction(()=>TalkFlow.getTopics()["2026-08-31"].quality.status==="review");
+  check("actual generator prompt consumes v2 and v4 contract",/^<talkflow-standard version="2" student-template="student-v4" leader-template="leader-v4">/.test(generationPrompt)&&await legacyPage.evaluate(()=>JSON.stringify(TalkFlow.STANDARD)===JSON.stringify({version:"2",studentTemplate:"student-v4",leaderTemplate:"leader-v4"})));
   check("regeneration invalidates prior A4 confirmation",await legacyPage.evaluate(()=>{
     const topic=TalkFlow.getTopics()["2026-08-31"];
     return topic.operatorStatus.printStatus==="unchecked"&&TalkFlow.lifecycle(topic).key==="review";
@@ -191,13 +218,15 @@ try{
   check("anonymous local feedback stored",Object.values(feedback).flat().length===1&&!JSON.stringify(feedback).match(/name|email|phone/i),JSON.stringify(feedback));
   await page.getByRole("button",{name:"관리",exact:true}).click();
   check("conversation review actions visible",await page.locator(".review-actions").isVisible());
-  check("structure and speaking readiness are separately visible",await page.locator(".readiness-split").innerText().then(text=>text.includes("STRUCTURE READY")&&text.includes("SPEAKING READY")));
+  check("structure speaking and print readiness are separately visible",await page.locator(".readiness-split").innerText().then(text=>text.includes("STRUCTURE READY")&&text.includes("SPEAKING READY")&&text.includes("PRINT REVIEW")));
   check("five plain-language speaking checks are visible",await page.locator(".speaking-checks li").count()===5&&await page.locator(".speaking-checks").innerText().then(text=>["실제 말할 재료","서로 다른 내용","참가자의 순번","반대 의견","정답 없는 그룹 결론"].every(label=>text.includes(label))));
   check("scaled A4 two-page review preview visible",await page.locator(".review-preview-grid .a4-page").count()===2);
   check("legacy technical editor hidden",await page.locator(".conversation-editor-summary").evaluate(node=>getComputedStyle(node).display==="none"));
   await page.locator("[data-open$=':print']").first().click();
   check("student handout exactly two DOM pages",await page.locator(".a4-page").count()===2);
+  check("student renderer uses v4 contract",await page.locator(".v4-handout[data-talkflow-standard='v2'][data-template-version='student-v4']").count()===1);
   const studentText=await page.locator(".a4-topic").innerText();
+  check("online review Q1 Q2 Q3 corrections are rendered",studentText.includes("What do you check first: □ Reviews · □ Photos · □ Price")&&studentText.includes("what made you decide to buy it?")&&studentText.includes("Three reviews aren’t enough.")&&!/press buy|Three reviews is too few/i.test(studentText));
   check("student handout required evidence round order",["SESSION 1","REAL ITEM ROUND","EVIDENCE ROUND","STORY ROUND","SAY THIS","SESSION 2","RESET VOTE","WRITE THE FAKE","STAR FIGHT","FINAL DECISION"].every((label,index,all)=>studentText.indexOf(label)>=0&&(index===0||studentText.indexOf(label)>studentText.indexOf(all[index-1]))),studentText);
   check("student handout includes timed turns ask react and full materials",studentText.includes("45 SEC EACH")&&studentText.includes("NEXT PERSON MUST ASK")&&studentText.includes("I still disagree because")&&["REVIEW A","REVIEW B","REVIEW C"].every(label=>studentText.includes(label)));
   const sentenceOptionsText=await page.locator(".sentence-options").innerText();
@@ -208,6 +237,7 @@ try{
   await page.screenshot({path:join(evidence,"student-print-screen.png"),fullPage:true});
   await page.getByRole("button",{name:"리더용 A4"}).click();
   check("leader handout exactly two DOM pages",await page.locator(".a4-page").count()===2);
+  check("leader renderer uses v4 contract",await page.locator(".v4-handout[data-talkflow-standard='v2'][data-template-version='leader-v4']").count()===1);
   check("leader handout has both guidance strips",await page.locator(".leader-strip").count()===2);
   const leaderOverflows=await page.locator(".a4-page").evaluateAll(nodes=>nodes.map(node=>({x:node.scrollWidth-node.clientWidth,y:node.scrollHeight-node.clientHeight})));
   check("leader A4 DOM has no overflow",leaderOverflows.every(item=>item.x<=1&&item.y<=1),JSON.stringify(leaderOverflows));

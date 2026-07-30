@@ -124,9 +124,9 @@
     };
     if(topic.date==="2026-08-03"){
       flow.quickStarts=[
-        {questionEn:"What was the last thing you checked reviews for?",questionKo:"최근 어떤 물건의 리뷰를 확인했나요?",options:[],answerMode:"open",sayFrame:"The last thing I checked was..."},
-        {questionEn:"Which do you check first?",questionKo:"무엇을 가장 먼저 확인하나요?",options:["Star rating","Photo reviews","Written comments"],answerMode:"choice",sayFrame:"I check ______ first because ______."},
-        {questionEn:"Would you trust a review with no photo?",questionKo:"사진이 없는 리뷰를 믿을 수 있나요?",options:["Yes, usually.","Sometimes.","No, not really."],answerMode:"scale",sayFrame:"I might trust it if..."}
+        {questionEn:"What do you check first when you shop online: reviews, photos, or the price?",questionKo:"온라인 쇼핑할 때 리뷰, 사진, 가격 중 무엇을 먼저 봐요?",options:["Reviews","Photos","Price"],answerMode:"choice",sayFrame:"I check ______ first because ______."},
+        {questionEn:"What was the last thing you bought online, and what made you decide to buy it?",questionKo:"최근 온라인에서 산 물건이 뭐예요? 무엇 때문에 사기로 결정했어요?",options:[],answerMode:"open",sayFrame:"I bought... because..."},
+        {questionEn:"A product has 4.8 stars, but only three reviews. Would you buy it?",questionKo:"어떤 상품이 별점 4.8점인데 리뷰가 세 개뿐이에요. 사시겠어요?",options:["Yes","No","It depends"],answerMode:"scale",sayFrame:"Three reviews aren’t enough."}
       ];
       flow.talkRounds=[
         {role:"experience",questionEn:"Tell us about a review that changed your mind.",questionKo:"생각을 바꾸게 한 리뷰 경험을 말해 보세요.",sayFrame:"One review changed my mind because...",askPrompt:"What did you decide in the end?",reactionPrompts:["That sounds reasonable.","I would have chosen differently."]},

@@ -114,7 +114,7 @@
         stepsKo:["자신의 선택을 다른 사람에게 보이지 않게 준비하세요.","한 사람씩 정해진 시간 동안 말하세요.","다음 사람에게 질문을 하나 하세요.","근거 하나를 변호하거나 반박하세요.","결정하기 전에 근거를 비교하세요."],
         use:["I would choose... because...","I see one problem with...","Can you change my mind?","I disagree because..."],
         options:[...options],
-        roles:assignedOpposition?[{name:"SIDE A",brief:`Defend ${options[0]||"the first option"} with one fact.`,briefKo:"첫 번째 선택을 구체적인 사실 하나로 변호하세요."},{name:"SIDE B",brief:`Challenge ${options[0]||"the first option"} and defend ${options[1]||"another option"}.`,briefKo:"첫 번째 선택을 반박하고 다른 선택을 변호하세요."}]:[],
+        roles:[{name:assignedOpposition?"SIDE A":"OPTION A",brief:`Defend ${options[0]||"the first option"} with one fact.`,briefKo:"첫 번째 선택을 구체적인 사실 하나로 변호하세요."},{name:assignedOpposition?"SIDE B":"OPTION B",brief:`Challenge ${options[0]||"the first option"} and defend ${options[1]||"another option"}.`,briefKo:"첫 번째 선택을 반박하고 다른 선택을 변호하세요."}],
         result:"One shared result",participantOutput:"One defended choice from every person"
       },
       groupDecision:{minutes:10,resultType:type==="plan"?"plan":type==="spot"?"ranking":"choice",promptEn:"Record one final group result.",promptKo:"그룹의 최종 결과 하나를 정하세요.",everyoneSpeaksRule:"Don't decide until everyone has spoken.",everyoneSpeaksRuleKo:"모두 한 번 이상 말한 뒤 결정하세요."},
@@ -122,8 +122,11 @@
     };
   }
   function onlineReviewSession(topic) {
-    topic.conversationFlow.quickStarts[0]=
-      {axis:"recentExperience",questionEn:"What was the last thing you bought online?",questionKo:"가장 최근에 온라인으로 산 물건이 뭐예요?",options:[],answerMode:"open",sayFrame:"I bought... It had... stars."};
+    topic.conversationFlow.quickStarts=[
+      {axis:"firstCheck",questionEn:"What do you check first when you shop online: reviews, photos, or the price?",questionKo:"온라인 쇼핑할 때 리뷰, 사진, 가격 중 무엇을 먼저 봐요?",options:["Reviews","Photos","Price"],answerMode:"choice",sayFrame:"I check ______ first because ______."},
+      {axis:"recentExperience",questionEn:"What was the last thing you bought online, and what made you decide to buy it?",questionKo:"최근 온라인에서 산 물건이 뭐예요? 무엇 때문에 사기로 결정했어요?",options:[],answerMode:"open",sayFrame:"I bought... because..."},
+      {axis:"trustThreshold",questionEn:"A product has 4.8 stars, but only three reviews. Would you buy it?",questionKo:"어떤 상품이 별점 4.8점인데 리뷰가 세 개뿐이에요. 사시겠어요?",options:["Yes","No","It depends"],answerMode:"scale",sayFrame:"Three reviews aren’t enough."}
+    ];
     topic.conversationFlow.storyPrompts[0]={
       axis:"personalStory",questionEn:"Tell us about a purchase that did not match the reviews.",questionKo:"리뷰와 달랐던 구매 경험을 말해 보세요.",
       storySteps:["I bought...","The reviews said...","But when I received it...","So I..."],askSomeone:"What happened next?",noExperienceAlternative:"If that has never happened, describe the least useful review you have seen."
@@ -141,7 +144,7 @@
     topic.sessionOne={
       minutes:50,format:"evidenceRounds",
       rounds:[
-        {type:"personalArtifact",title:"REAL ITEM ROUND",minutes:12,goalEn:"Show one real purchase and tell us what you checked.",goalKo:"실제 구매 물건 하나와 확인한 내용을 말하세요.",instructionEn:"Open one recent purchase on your phone. If you cannot use your phone, think of one item you bought recently. Share only the item name if you prefer.",instructionKo:"최근 구매 내역 하나를 보세요. 휴대폰을 사용하기 어렵다면 최근에 산 물건 하나를 떠올리세요. 원하면 물건명만 말해도 됩니다.",prompts:["What did you buy?","How many stars did it have?","How many reviews did you read?","What detail did you check first?"]},
+        {type:"personalArtifact",title:"REAL ITEM ROUND",minutes:12,goalEn:"Answer three easy questions before using the review evidence.",goalKo:"리뷰 자료를 사용하기 전에 쉬운 질문 세 개에 답하세요.",instructionEn:"Choose, share one recent experience, and give a light opinion. A short answer is enough; add a reason if you can.",instructionKo:"하나를 고르고 최근 경험과 가벼운 의견을 말하세요. 짧게 답해도 괜찮고, 가능하면 이유를 덧붙이세요.",prompts:["Q1 · What do you check first: □ Reviews · □ Photos · □ Price","Q2 · What was the last thing you bought online, and what made you decide to buy it?","Q3 · A product has 4.8 stars, but only three reviews. Would you buy it?","START · Three reviews aren’t enough."]},
         {type:"evidence",title:"EVIDENCE ROUND",minutes:18,goalEn:"Would you buy this jacket after reading these reviews?",goalKo:"이 리뷰들을 읽고 이 재킷을 사시겠어요?",instructionEn:"1. Read all three reviews. 2. For each review, choose BUY or DON'T BUY. 3. Mark one detail that influenced your choice. 4. Choose one review and explain your decision for 30 seconds. 5. Ask someone with the opposite choice. 6. Decide whether to change your mind.",instructionKo:"1. 리뷰 3개를 모두 읽으세요. 2. 각 리뷰마다 살지 말지 고르세요. 3. 선택에 영향을 준 문장 하나를 표시하세요. 4. 리뷰 하나를 골라 30초 동안 이유를 말하세요. 5. 반대 선택을 한 사람에게 질문하세요. 6. 상대 의견을 듣고 선택을 바꿀지 정하세요."},
         {type:"story",title:"STORY ROUND",minutes:20,instructionEn:"Speak for 60 seconds. The next person must ask one follow-up question.",instructionKo:"60초 동안 말하세요. 다음 사람은 반드시 후속 질문을 하나 하세요."}
       ],
@@ -159,6 +162,8 @@
   function upgradeTopic(topic) {
     const upgraded=clone(topic),flow=upgraded.conversationFlow;
     if(!flow)return upgraded;
+    upgraded.standardVersion=upgraded.standardVersion||"2";
+    upgraded.templateVersion=upgraded.templateVersion||"4";
     upgraded.topicMode=upgraded.topicMode||"everyday";
     upgraded.sourceMaterial=upgraded.sourceMaterial||{type:"none",url:"",title:"",publisher:"",publishedAt:"",qrEnabled:false};
     upgraded.commonGround=upgraded.commonGround||{enabled:false,briefEn:[],briefKo:[],exampleEn:"",exampleKo:"",keywords:[]};
@@ -233,10 +238,15 @@
   }
   function diagnostics(topic) {
     const found=[],add=(location,message,target,critical=false)=>found.push({location,message,target,critical});
+    if(topic.standardVersion!=="2"||topic.templateVersion!=="4")add("STANDARD","v2 기준과 v4 템플릿 표식이 없습니다.","standardVersion",true);
     if(!topic.sessionOne||topic.sessionOne.minutes!==50)add("SESSION 1","50분 구성이 없습니다.","sessionOne",true);
+    if(!topic.sessionOne?.quickStarts?.length||!topic.sessionOne?.storyPrompts?.length||!topic.conversationMaterials?.length||!topic.sessionOne?.talkRounds?.length)add("SESSION 1","쉬운 진입·경험·판단 재료·상호작용 중 누락이 있습니다.","sessionOne",true);
     if(!topic.sessionTwo||topic.sessionTwo.minutes!==40)add("SESSION 2","40분 구성이 없습니다.","sessionTwo",true);
     if(!topic.sessionTwo?.reset)add("RESET","환기 활동이 없습니다.","sessionTwo.reset",true);
     if(!topic.sessionTwo?.mainActivity?.options?.length)add("MAIN ACTIVITY","활동 선택지가 없습니다.","sessionTwo.mainActivity",true);
+    if(!topic.speakingMechanisms?.informationGap)add("MAIN ACTIVITY","정보 격차 장치가 없습니다.","speakingMechanisms.informationGap",true);
+    const roleCount=(topic.sessionTwo?.mainActivity?.roles?.length||0)+(topic.sessionTwo?.secondaryActivity?.roles?.length||0);
+    if(roleCount<2)add("SESSION 2","서로 다른 역할이 2개 미만입니다.","sessionTwo",true);
     if(!topic.sessionTwo?.groupDecision?.everyoneSpeaksRule)add("GROUP DECISION","전원 발화 규칙이 없습니다.","sessionTwo.groupDecision",true);
     if(!topic.sessionTwo?.finalRound?.questionEn&&!topic.sessionTwo?.secondaryActivity)add("FINAL ROUND","마무리 발화가 없습니다.","sessionTwo.finalRound",true);
     if(topic.topicMode==="context"){

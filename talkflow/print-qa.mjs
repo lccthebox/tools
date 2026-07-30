@@ -40,7 +40,7 @@ await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
 const port = server.address().port;
 const browser = await chromium.launch({ headless: true });
 const report = [];
-const representative = new Set(["2026-08-03", "2026-08-10", "2026-08-13", "2026-08-27", "2026-08-31"]);
+let onlineColorText = "";
 try {
   const page = await browser.newPage();
   await page.goto(`http://127.0.0.1:${port}/?fixtures=sessions`, { waitUntil: "networkidle" });
@@ -56,7 +56,19 @@ try {
       horizontal: item.scrollWidth - item.clientWidth
     })));
     const printText = await page.locator(".a4-topic").innerText();
+    if (topic.date === "2026-08-03") onlineColorText = printText;
     const sentenceOptionsText = topic.date === "2026-08-03" ? await page.locator(".sentence-options").innerText() : "";
+    const printType = await page.evaluate(() => {
+      const points = selector => [...document.querySelectorAll(selector)].map(node => Math.round(Number.parseFloat(getComputedStyle(node).fontSize) * 72 / 96 * 100) / 100);
+      const minimum = values => values.length ? Math.min(...values) : 0;
+      return {
+        title: minimum(points(".v4-handout .handout-title h1")),
+        question: minimum(points(".v4-handout .start-card>strong,.v4-handout .story-card>strong,.v4-handout .round-card>strong,.v4-handout .timed-round>strong,.v4-handout .main-activity>strong,.v4-handout .group-decision>strong")),
+        englishInstruction: minimum(points(".v4-handout .timed-round>p,.v4-handout .bilingual-steps b,.v4-handout .assigned-opposition>p,.v4-handout .assigned-role-briefs span")),
+        koreanGuidance: minimum(points(".v4-handout .timed-round>small,.v4-handout .timed-round>p small,.v4-handout .start-card>small,.v4-handout .story-card>small,.v4-handout .round-card>small,.v4-handout .session-reset small,.v4-handout .main-activity>small,.v4-handout .assigned-opposition>small,.v4-handout .assigned-opposition>p small,.v4-handout .group-decision>small,.v4-handout .everyone-rule small,.v4-handout .material-card small,.v4-handout .leader-inline span")),
+        meta: minimum(points(".v4-handout .session-banner span,.v4-handout .turn-rule,.v4-handout .material-card b,.v4-handout .evidence-choice,.v4-handout .section-hint"))
+      };
+    });
     const speakingContent = {
       material: topic.date === "2026-08-03" ? ["REVIEW A", "REVIEW B", "REVIEW C"].every(label => printText.includes(label)) : printText.includes("USE THIS EVIDENCE") && /[.!?]/.test(printText),
       timing: topic.date === "2026-08-03" ? ["12 MIN", "18 MIN", "20 MIN", "5 MIN", "10 MIN"].every(label => printText.includes(label)) : printText.includes("45 SEC EACH"),
@@ -69,13 +81,11 @@ try {
     };
     await page.pdf({ path, format: "A4", printBackground: true, preferCSSPageSize: true, margin: { top: "0", right: "0", bottom: "0", left: "0" } });
     const physicalPages=(await PDFDocument.load(await readFile(path))).getPageCount();
-    if (representative.has(topic.date)) {
-      await page.addStyleTag({ content: ".topbar,.print-toolbar{display:none!important}.a4-page{box-shadow:none!important}" });
-      for (let index = 0; index < pageCount; index += 1) {
-        await page.locator(".a4-page").nth(index).screenshot({ path: join(evidence, `${topic.date}-student-${index + 1}.png`) });
-      }
+    await page.addStyleTag({ content: ".topbar,.print-toolbar{display:none!important}.a4-page{box-shadow:none!important}" });
+    for (let index = 0; index < pageCount; index += 1) {
+      await page.locator(".a4-page").nth(index).screenshot({ path: join(evidence, `${topic.date}-student-${index + 1}.png`) });
     }
-    report.push({ date: topic.date, title: topic.title.ko, filename, domPages: pageCount, physicalPages, overflow, speakingContent });
+    report.push({ date: topic.date, title: topic.title.ko, filename, domPages: pageCount, physicalPages, overflow, speakingContent, printType });
   }
   await page.goto(`http://127.0.0.1:${port}/?fixtures=sessions`, { waitUntil: "networkidle" });
   await page.locator("[data-action='select-approved']").click();
@@ -96,6 +106,8 @@ try {
     await page.locator(".a4-page").nth(index).screenshot({ path: join(evidence, `2026-08-03-leader-${index + 1}.png`) });
   }
   await page.goto(`http://127.0.0.1:${port}/?fixtures=sessions&date=2026-08-03&view=print`, { waitUntil: "networkidle" });
+  const grayscaleText=await page.locator(".a4-topic").innerText();
+  const grayscaleMatchesColor=grayscaleText===onlineColorText;
   await page.addStyleTag({ content: ".topbar,.print-toolbar{display:none!important}.a4-page{box-shadow:none!important;filter:grayscale(1)!important}" });
   const grayscalePdf=join(output,"2026-08-03_TheBox_TalkFlow_온라인_리뷰_grayscale.pdf");
   await page.pdf({ path: grayscalePdf, format: "A4", printBackground: true, preferCSSPageSize: true, margin: { top: "0", right: "0", bottom: "0", left: "0" } });
@@ -105,10 +117,11 @@ try {
   }
   const pngManifest=(await readdir(evidence)).filter(name=>name.endsWith(".png")).sort();
   const grayscaleManifest=(await readdir(grayscaleEvidence)).filter(name=>name.endsWith(".png")).sort();
-  const pass = report.every(item => item.domPages === 2 && item.physicalPages === 2 && item.overflow.every(value => value.vertical <= 1 && value.horizontal <= 1) && Object.values(item.speakingContent).every(Boolean))
-    && report.length === 10 && pngManifest.length === 12 && grayscaleManifest.length === 2 && grayscalePages === 2 && batchPages === 16 && leaderPages === 2 && leaderOverflow.every(value => value.vertical <= 1 && value.horizontal <= 1)
+  const pass = report.every(item => item.domPages === 2 && item.physicalPages === 2 && item.overflow.every(value => value.vertical <= 1 && value.horizontal <= 1) && Object.values(item.speakingContent).every(Boolean)
+      && item.printType.title >= 18 && item.printType.question >= 11 && item.printType.englishInstruction >= 9.5 && item.printType.koreanGuidance >= 8.5 && item.printType.meta >= 7.5)
+    && report.length === 10 && pngManifest.length === 22 && grayscaleManifest.length === 2 && grayscalePages === 2 && grayscaleMatchesColor && batchPages === 16 && leaderPages === 2 && leaderOverflow.every(value => value.vertical <= 1 && value.horizontal <= 1)
     && ["12 MIN","18 MIN","20 MIN","5 MIN","10 MIN","TIME CUT","LEADER TIME","Write the Fake는 최소 15분"].every(label=>leaderText.includes(label));
-  await writeFile(join(output, "generation-results.json"), `${JSON.stringify({ pass, topics: report, pngManifest, grayscaleManifest, grayscalePages, batchPages, leaderPages, leaderOverflow }, null, 2)}\n`, "utf8");
+  await writeFile(join(output, "generation-results.json"), `${JSON.stringify({ pass, topics: report, pngManifest, grayscaleManifest, grayscalePages, grayscaleMatchesColor, batchPages, leaderPages, leaderOverflow }, null, 2)}\n`, "utf8");
   console.log(JSON.stringify(report, null, 2));
   if (!pass) process.exitCode = 1;
 } finally {

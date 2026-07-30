@@ -8,8 +8,8 @@ Talk Flow is an operational tool for a non-technical study coordinator, a discus
 
 - Warm paper canvas, white work surfaces, deep evergreen ink, mint and restrained yellow accents.
 - DM Sans leads English hierarchy; Noto Sans KR supports concise Korean guidance.
-- Screen surfaces may use modest radii and shadows. Printed surfaces use black rules, no decorative shadows, and minimal fills.
-- The signature element is the ordered conversation path: CHOOSE, SAY, ASK, REACT, DECIDE.
+- Screen surfaces may use modest radii and shadows. Printed v4 surfaces use a charcoal header and footer, neutral rules, no decorative shadows, and restrained evergreen activity accents.
+- The learner progression is `START / ADD / GO FURTHER`; interaction rules still require choosing, speaking, asking, reacting, and deciding.
 
 ## 3. Tokens
 
@@ -40,7 +40,7 @@ Talk Flow is an operational tool for a non-technical study coordinator, a discus
 - `lifecycle-state`: one visible progression only — draft, review, approved, print-ready, completed. Internal PDF and approval fields remain backward compatible.
 - `regeneration-menu`: one secondary disclosure containing issue repair, question, activity, option, and translation regeneration actions.
 - `common-brief`: three facts, one example, three keywords, source line, and optional QR link; capped at 15% of page one.
-- `session-header`: Session 1 uses KNOW · SHARE · ASK; Session 2 uses RESET · PLAY · DECIDE.
+- `session-header`: Session 1 exposes easy entry, experience, evidence, and interaction; Session 2 exposes activity, information gap, roles, and group decision.
 - `reset-activity`: compact 3–5 minute no-preparation warm reset.
 - `main-activity`: goal, complete choices or roles, numbered procedure, useful English, and result.
 - `group-decision`: compact result control plus the everyone-speaks rule.
@@ -81,9 +81,9 @@ Talk Flow is an operational tool for a non-technical study coordinator, a discus
 - Every topic uses at least three speaking mechanisms, at least three prompt axes, one complete conversation material, and one open-ended group decision.
 - Page one uses at least two speaking mechanisms. Page two uses at least two and always includes a timed turn or assigned opposition.
 - The same REACT phrase appears at most twice; each sheet includes surprise/follow-up, agreement, different experience, opposition, and reason-request language.
-- `STRUCTURE READY` covers schema, language, translation, and print validity. `SPEAKING READY` separately covers material, axis diversity, information gap, turns, opposition, open decision, and sustainable activity duration. Only both may produce `CONVERSATION READY`.
+- `STRUCTURE READY`, `SPEAKING READY`, and `PRINT READY` are independent. Only all three may produce `CONVERSATION READY`.
 - Everyday topics begin immediately without a brief. Context topics include a source-backed `60-SECOND BRIEF` that remains usable without opening the optional link or QR.
-- Every Session 1 core prompt supports START, ADD, ASK, and REACT.
+- Every Session 1 core prompt exposes `START / ADD / GO FURTHER`; the last cue activates a follow-up and reaction.
 - Session 2 is an activity, not another question list: RESET → MAIN ACTIVITY → GROUP DECISION → FINAL ROUND.
 - Automatic generation saves a review draft and never approves it. Existing or approved dates are never overwritten.
 - Printed sections use a shared white-surface, deep-green left rule, charcoal body, neutral bordered phrase-chip system, and remain separable in grayscale.
