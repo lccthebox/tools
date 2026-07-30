@@ -36,6 +36,9 @@ Talk Flow is an operational tool for a non-technical study coordinator, a discus
 - `date-action`: automatic generation and guided generation states for an empty operating date.
 - `generation-progress`: four concise status messages without storage, API, prompt, or schema details.
 - `operator-review`: scaled A4 preview, location-specific diagnostics, partial repair, separated preview and approval actions.
+- `two-page-preview`: page-one and page-two thumbnails side by side on desktop and stacked on mobile; opens a full-size, keyboard-dismissable A4 dialog.
+- `lifecycle-state`: one visible progression only — draft, review, approved, print-ready, completed. Internal PDF and approval fields remain backward compatible.
+- `regeneration-menu`: one secondary disclosure containing issue repair, question, activity, option, and translation regeneration actions.
 - `common-brief`: three facts, one example, three keywords, source line, and optional QR link; capped at 15% of page one.
 - `session-header`: Session 1 uses KNOW · SHARE · ASK; Session 2 uses RESET · PLAY · DECIDE.
 - `reset-activity`: compact 3–5 minute no-preparation warm reset.
@@ -53,21 +56,24 @@ Talk Flow is an operational tool for a non-technical study coordinator, a discus
 - `quality-panel`: ready, review, regenerate.
 - `feedback-card`: unanswered and submitted.
 - `a4-page`: screen preview and print state.
+- `bilingual-rule`: English action text is primary; its Korean operational meaning sits directly below at 75–80% scale.
+- `evidence-choice`: review body, BUY / DON'T BUY checks, and a visible evidence-mark line.
 
 ## 6. Interaction and accessibility
 
 - Every control is a real button, input, select, or labelled group.
 - Keyboard focus remains visible. Status updates use the existing polite live region.
 - Technical settings remain available but closed by default.
-- Calendar cards expose only date, weekday, title, work status, and PDF status. Status always combines text with a non-color marker.
-- Empty operating dates expose two actions: `토픽 자동 생성` and `주제 지정해서 생성`.
+- Calendar cards expose one lifecycle status only. Status always combines text with a non-color marker; contradictory approval/PDF/used labels are never shown together.
+- Empty operating dates expose a ghost `자동 생성` action and a quiet `주제 지정` action. Non-operating dates expose no generation control.
 - No level labels appear. Instructions use short action verbs and concise Korean support.
 - Motion is limited to existing scroll and state feedback; no decorative animation.
 
 ## 7. Content rules
 
 - English is visually primary.
-- Korean appears only for situation, difficult meaning, or activity rules.
+- Korean appears for every activity rule needed to complete the task without translating the English; English remains the spoken-output language.
+- Student activity instructions use `~하세요`; original review examples use consistent `~해요`.
 - Core flow: CHOOSE → SAY → ADD → ASK → REACT → DECIDE.
 - A prompt must permit a short first answer and a longer voluntary expansion.
 - Quick Start questions and options share one answer axis; experience prompts do not force choices.
@@ -80,6 +86,7 @@ Talk Flow is an operational tool for a non-technical study coordinator, a discus
 - Every Session 1 core prompt supports START, ADD, ASK, and REACT.
 - Session 2 is an activity, not another question list: RESET → MAIN ACTIVITY → GROUP DECISION → FINAL ROUND.
 - Automatic generation saves a review draft and never approves it. Existing or approved dates are never overwritten.
+- Printed sections use a shared white-surface, deep-green left rule, charcoal body, neutral bordered phrase-chip system, and remain separable in grayscale.
 
 ## 8. Accepted debt
 
