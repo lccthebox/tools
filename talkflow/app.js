@@ -270,7 +270,8 @@
     const dates=printDates.size?[...printDates].sort():[activeDate],items=dates.map(date=>topics[date]).filter(Boolean);
     if(!items.length)return empty();
     document.title=items.length===1?`${items[0].date}_TheBox_TalkFlow_${safeFilename(items[0].title.ko)}`:`${monthPrefix()}_TheBox_TalkFlow_${items.length}topics`;
-    return `<div class="print-toolbar"><button class="button secondary" data-action="calendar">← 월 목록으로</button><span>${items.length}개 토픽 · ${items.length*2}페이지</span><button class="button secondary" data-action="toggle-print-role">${printLeader?"학생용 A4":"리더용 A4"}</button><button class="button primary" data-action="print-now">A4 PDF / 인쇄</button></div><div class="paper-stack">${items.map(t=>renderHandout(t,printLeader)).join("")}</div>`;
+    const canConfirm=items.length===1&&items[0].quality?.status==="approved"&&!["checked","printed"].includes(items[0].operatorStatus?.printStatus);
+    return `<div class="print-toolbar"><button class="button secondary" data-action="calendar">← 월 목록으로</button><span>${items.length}개 토픽 · ${items.length*2}페이지</span><button class="button secondary" data-action="toggle-print-role">${printLeader?"학생용 A4":"리더용 A4"}</button>${canConfirm?`<button class="button secondary" data-action="confirm-print">A4 확인 완료</button>`:""}<button class="button primary" data-action="print-now">A4 PDF / 인쇄</button></div><div class="paper-stack">${items.map(t=>renderHandout(t,printLeader)).join("")}</div>`;
   }
   function safeFilename(value){return String(value||"topic").replace(/[\\/:*?"<>|]/g,"").replace(/\s+/g,"_")}
   function empty(){return `<div class="empty-state"><p class="eyebrow">OPEN A DATE</p><h1>선택한 날짜에 토픽이 없습니다.</h1><p>관리 화면에서 새 토픽을 만들거나 JSON을 가져와 시작하세요.</p><button class="button primary" data-action="create">새 토픽 만들기</button></div>`}
@@ -460,6 +461,12 @@
     if(action==="week-print"){const start=new Date();start.setDate(start.getDate()-((start.getDay()+6)%7));printDates=new Set(Object.values(topics).filter(t=>{const d=new Date(`${t.date}T12:00:00`),end=new Date(start);end.setDate(end.getDate()+7);return d>=start&&d<end&&t.quality?.status==="approved"&&!t.hidden}).map(t=>t.date));if(!printDates.size)notify("이번 주 승인 토픽이 없습니다.",true);else{view="print";render()}}
     if(action==="batch-print"){if(printDates.size){view="print";render()}}
     if(action==="toggle-print-role"){printLeader=!printLeader;render()}
+    if(action==="confirm-print"){
+      const topic=topics[[...printDates][0]];
+      if(topic?.quality?.status!=="approved"){notify("승인된 토픽만 인쇄 준비 완료로 표시할 수 있습니다.",true);return}
+      topic.operatorStatus={...topic.operatorStatus,printStatus:"checked"};
+      saveTopics("A4 확인을 완료해 인쇄 준비 상태로 변경했습니다.");
+    }
     if(action==="print-now")window.print()
   }
   function createTopic(date){
@@ -535,7 +542,7 @@
     if(!targetDate)return;
     if(!/^\d{4}-\d{2}-\d{2}$/.test(targetDate)){notify("날짜를 YYYY-MM-DD 형식으로 입력해 주세요.",true);return}
     if(topics[targetDate]){notify("선택한 날짜에 토픽이 있습니다. 다른 날짜를 선택하세요.",true);return}
-    const copy=clone(topics[sourceDate]);copy.id=`talkflow-${targetDate}-${crypto.randomUUID()}`;copy.date=targetDate;copy.quality={...copy.quality,status:"draft"};copy.hidden=false;copy.createdAt=copy.updatedAt=new Date().toISOString();topics[targetDate]=copy;activeDate=targetDate;saveTopics("토픽을 새 날짜로 복제했습니다.")
+    const copy=clone(topics[sourceDate]);copy.id=`talkflow-${targetDate}-${crypto.randomUUID()}`;copy.date=targetDate;copy.quality={...copy.quality,status:"draft"};copy.operatorStatus={...copy.operatorStatus,reviewStatus:"review",printStatus:"unchecked",used:false};copy.hidden=false;copy.createdAt=copy.updatedAt=new Date().toISOString();topics[targetDate]=copy;activeDate=targetDate;saveTopics("토픽을 새 날짜로 복제했습니다.")
   }
   function moveTopicTo(targetDate){
     const sourceDate=prompt("이동할 기존 토픽 날짜 (YYYY-MM-DD)",activeDate);

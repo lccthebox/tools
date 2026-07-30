@@ -143,6 +143,9 @@ try{
   await legacyPage.getByRole("button",{name:"승인하고 저장"}).first().click();
   await legacyPage.waitForFunction(()=>TalkFlow.getTopics()["2026-08-31"].quality.status==="approved");
   check("approve saves locally and auto-syncs connected Gist",autoGistCalls===1,String(autoGistCalls));
+  await legacyPage.getByRole("button",{name:"학생용 A4 미리보기"}).first().click();
+  await legacyPage.getByRole("button",{name:"A4 확인 완료"}).click();
+  check("approved PDF confirmation reaches print-ready lifecycle",await legacyPage.evaluate(()=>TalkFlow.lifecycle(TalkFlow.getTopics()["2026-08-31"]).key==="print-ready"));
   await legacyContext.close();
   const viewports=[[360,800],[390,844],[430,900],[768,900],[1024,900],[1440,1000]];
   for(const [width,height] of viewports){
