@@ -13,9 +13,9 @@
   };
   const fallbackActivity = ["Best Choice Challenge","choice","Choose the strongest option and explain why.",["Option A","Option B","Option C","Option D"]];
   const resetByType = {
-    spot:{titleEn:"Fast Trust Vote",titleKo:"빠른 신뢰 투표",instructionEn:"Raise your hand for the review you trust first. Give one 20-second reason.",instructionKo:"가장 먼저 믿는 리뷰에 손을 들고 20초로 이유를 말하세요."},
+    spot:{titleEn:"Fast Trust Vote",titleKo:"빠른 신뢰 투표",instructionEn:"Raise your hand for the review you trust first. Give one 20-second reason.",instructionKo:"가장 먼저 믿는 리뷰에 손을 들고 20초 동안 이유를 말하세요."},
     choice:{titleEn:"A/B Stand or Hand",titleKo:"A/B 선택",instructionEn:"Stand if possible, or raise your hand for A or B. Ask one person why.",instructionKo:"가능하면 이동하고, 아니면 손으로 A/B를 고른 뒤 한 명에게 이유를 물으세요."},
-    advice:{titleEn:"Twenty-Second Reply",titleKo:"20초 답장",instructionEn:"Give a 20-second reply, then change partners once.",instructionKo:"20초로 답하고 파트너를 한 번 바꾸세요."},
+    advice:{titleEn:"Twenty-Second Reply",titleKo:"20초 답장",instructionEn:"Give a 20-second reply, then change partners once.",instructionKo:"20초 동안 답하고 파트너를 한 번 바꾸세요."},
     plan:{titleEn:"One-Word Relay",titleKo:"한 단어 릴레이",instructionEn:"Add one travel word each without repeating.",instructionKo:"겹치지 않게 여행 단어를 한 사람씩 말하세요."},
     negotiate:{titleEn:"Quick Corner",titleKo:"빠른 선택 위치",instructionEn:"Choose quiet, social, cheap, or convenient. Move if possible, or raise your hand.",instructionKo:"조용함·대화·가격·접근성 중 하나를 고르세요. 가능하면 이동하고 아니면 손을 드세요."},
     budget:{titleEn:"Keep or Cut",titleKo:"유지 또는 해지",instructionEn:"Show keep or cut with your hand, then give one reason.",instructionKo:"손으로 유지·해지를 표시하고 이유를 하나 말하세요."},
@@ -61,9 +61,9 @@
     "2026-09-03": ["scenario","Store A is open 24 hours with camera support. Store B closes at midnight but has remote staff. Store C accepts cash but stores face data for entry.","A 매장은 카메라 지원으로 24시간 운영합니다. B 매장은 자정에 닫지만 원격 직원이 있습니다. C 매장은 현금을 받지만 입장용 얼굴 데이터를 저장합니다."]
   };
   const onlineReviews = [
-    {type:"reviewText",title:"REVIEW A",contentEn:"The color was darker than the photos, but the size chart was accurate. Delivery was one day late, and the seller answered my question within an hour.",contentKo:"색상은 사진보다 어두웠지만 사이즈표는 정확했어요. 배송은 하루 늦었고 판매자는 한 시간 안에 질문에 답했습니다.",hasSingleCorrectAnswer:false},
-    {type:"reviewText",title:"REVIEW B",contentEn:"It worked well at first, then froze once after a week. It restarted normally, and the price was low enough that I might keep it.",contentKo:"처음에는 잘 작동했지만 일주일 뒤 한 번 멈췄어요. 다시 켜니 정상 작동했고 가격이 저렴해서 계속 쓸지 고민 중입니다.",hasSingleCorrectAnswer:false},
-    {type:"reviewText",title:"REVIEW C",contentEn:"The fabric felt thinner than I expected, but it kept its shape after two washes. At the same price, I am not sure I would buy it again.",contentKo:"소재는 예상보다 얇았지만 두 번 세탁한 뒤에도 모양이 유지됐어요. 같은 가격이라면 다시 살지는 잘 모르겠습니다.",hasSingleCorrectAnswer:false}
+    {type:"reviewText",product:"jacket",title:"REVIEW A",contentEn:"The jacket was darker than in the photos, but the size chart was accurate. Delivery was one day late, and the seller answered my question within an hour.",contentKo:"재킷 색상은 사진보다 어두웠지만 사이즈표는 정확했어요. 배송은 하루 늦었지만 판매자는 한 시간 안에 질문에 답해줬어요.",hasSingleCorrectAnswer:false},
+    {type:"reviewText",product:"jacket",title:"REVIEW B",contentEn:"The jacket fabric felt thinner than I expected, but it kept its shape after two washes. The zipper was a little stiff, although it worked every time.",contentKo:"재킷 원단은 예상보다 얇았지만 두 번 세탁한 뒤에도 모양이 유지됐어요. 지퍼는 조금 뻑뻑했지만 매번 잘 잠겼어요.",hasSingleCorrectAnswer:false},
+    {type:"reviewText",product:"jacket",title:"REVIEW C",contentEn:"The jacket looked well finished for the price, but the pockets were too small. It was comfortable enough for work, though I might not buy it again.",contentKo:"재킷은 가격에 비해 마감이 괜찮았지만 주머니가 너무 작았어요. 출근할 때 입기에는 편했지만 다시 살지는 고민돼요.",hasSingleCorrectAnswer:false}
   ];
   const axesByDate = {
     "2026-08-03":["recentExperience","evaluationCriteria","personalStory","conflict","decision"],
@@ -111,12 +111,13 @@
       mainActivity:{
         minutes:20,type,titleEn,titleKo:"메인 활동",goalEn:goal,goalKo:"모두 말하며 하나의 결과를 만드세요.",
         steps:["Prepare one private choice.","Take one timed turn each.","Ask the next person one question.","Defend or challenge one reason.","Compare the evidence before deciding."],
+        stepsKo:["자신의 선택을 다른 사람에게 보이지 않게 준비하세요.","한 사람씩 정해진 시간 동안 말하세요.","다음 사람에게 질문을 하나 하세요.","근거 하나를 변호하거나 반박하세요.","결정하기 전에 근거를 비교하세요."],
         use:["I would choose... because...","I see one problem with...","Can you change my mind?","I disagree because..."],
         options:[...options],
-        roles:assignedOpposition?[{name:"SIDE A",brief:`Defend ${options[0]||"the first option"} with one fact.`},{name:"SIDE B",brief:`Challenge ${options[0]||"the first option"} and defend ${options[1]||"another option"}.`}]:[],
+        roles:assignedOpposition?[{name:"SIDE A",brief:`Defend ${options[0]||"the first option"} with one fact.`,briefKo:"첫 번째 선택을 구체적인 사실 하나로 변호하세요."},{name:"SIDE B",brief:`Challenge ${options[0]||"the first option"} and defend ${options[1]||"another option"}.`,briefKo:"첫 번째 선택을 반박하고 다른 선택을 변호하세요."}]:[],
         result:"One shared result",participantOutput:"One defended choice from every person"
       },
-      groupDecision:{minutes:10,resultType:type==="plan"?"plan":type==="spot"?"ranking":"choice",promptEn:"Record one final group result.",promptKo:"그룹의 최종 결과 하나를 정하세요.",everyoneSpeaksRule:"Don't decide until everyone has spoken."},
+      groupDecision:{minutes:10,resultType:type==="plan"?"plan":type==="spot"?"ranking":"choice",promptEn:"Record one final group result.",promptKo:"그룹의 최종 결과 하나를 정하세요.",everyoneSpeaksRule:"Don't decide until everyone has spoken.",everyoneSpeaksRuleKo:"모두 한 번 이상 말한 뒤 결정하세요."},
       finalRound:{minutes:5,questionEn:"What is one line you will remember today?",questionKo:"오늘 기억에 남는 말 하나는?",sayFrame:"One line I will remember is..."}
     };
   }
@@ -131,27 +132,27 @@
       {axis:"evaluationCriteria",role:"evidence",questionEn:"Which review gives you the strongest reason to buy or skip?",questionKo:"어떤 리뷰가 구매 여부를 판단할 가장 강한 근거를 주나요?",sayFrame:"I would buy it because...",askPrompt:"Can you change my mind?",reactionPrompts:["I still disagree because...","That detail matters to me too."]}
     ;
     topic.conversationFlow.topicPhrases=[
-      {en:"I don't fully trust that rating.",ko:"그 평점을 완전히 믿지는 않아요."},
-      {en:"The details sound believable.",ko:"세부 내용이 믿을 만해요."},
-      {en:"That would stop me from buying it.",ko:"그렇다면 사지 않을 거예요."},
-      {en:"I would still give it a chance.",ko:"그래도 한 번은 사볼 수 있어요."}
+      {purpose:"EXPLAIN",en:"I don't fully trust that rating.",ko:"그 평점은 완전히 믿지 않아요."},
+      {purpose:"JUDGE",en:"The details sound believable.",ko:"세부 내용은 믿을 만해 보여요."},
+      {purpose:"DECIDE",en:"That would stop me from buying it.",ko:"그 부분 때문에 사지 않을 것 같아요."},
+      {purpose:"STAY OPEN",en:"I would still give it a chance.",ko:"그래도 한번 사볼 만해요."}
     ];
     topic.conversationFlow.reactionPhrases=["Really? What happened next?","Same here.","I had a different experience.","I'd say the opposite.","Why do you think that?","Can you give one example?"];
     topic.sessionOne={
       minutes:50,format:"evidenceRounds",
       rounds:[
-        {type:"personalArtifact",title:"REAL ITEM ROUND",minutes:12,instructionEn:"Open one recent purchase on your phone. If you cannot use your phone, remember one item. Share only the item name if you prefer.",instructionKo:"최근 구매 내역 하나를 보세요. 휴대폰 사용이 어렵다면 기억나는 물건을 떠올리세요. 원하면 물건명만 말해도 됩니다.",prompts:["What did you buy?","How many stars did it have?","How many reviews did you read?","What detail did you check first?"]},
-        {type:"evidence",title:"EVIDENCE ROUND",minutes:18,instructionEn:"Choose BUY or DON'T BUY. Mark one detail, explain for 30 seconds, ask someone with the opposite choice, then decide whether to change.",instructionKo:"구매 또는 비구매를 고르고 근거 하나를 표시하세요. 30초로 설명한 뒤 반대 선택자에게 질문하고 선택을 바꿀지 정하세요."},
+        {type:"personalArtifact",title:"REAL ITEM ROUND",minutes:12,goalEn:"Show one real purchase and tell us what you checked.",goalKo:"실제 구매 물건 하나와 확인한 내용을 말하세요.",instructionEn:"Open one recent purchase on your phone. If you cannot use your phone, think of one item you bought recently. Share only the item name if you prefer.",instructionKo:"최근 구매 내역 하나를 보세요. 휴대폰을 사용하기 어렵다면 최근에 산 물건 하나를 떠올리세요. 원하면 물건명만 말해도 됩니다.",prompts:["What did you buy?","How many stars did it have?","How many reviews did you read?","What detail did you check first?"]},
+        {type:"evidence",title:"EVIDENCE ROUND",minutes:18,goalEn:"Would you buy this jacket after reading these reviews?",goalKo:"이 리뷰들을 읽고 이 재킷을 사시겠어요?",instructionEn:"1. Read all three reviews. 2. For each review, choose BUY or DON'T BUY. 3. Mark one detail that influenced your choice. 4. Choose one review and explain your decision for 30 seconds. 5. Ask someone with the opposite choice. 6. Decide whether to change your mind.",instructionKo:"1. 리뷰 3개를 모두 읽으세요. 2. 각 리뷰마다 살지 말지 고르세요. 3. 선택에 영향을 준 문장 하나를 표시하세요. 4. 리뷰 하나를 골라 30초 동안 이유를 말하세요. 5. 반대 선택을 한 사람에게 질문하세요. 6. 상대 의견을 듣고 선택을 바꿀지 정하세요."},
         {type:"story",title:"STORY ROUND",minutes:20,instructionEn:"Speak for 60 seconds. The next person must ask one follow-up question.",instructionKo:"60초 동안 말하세요. 다음 사람은 반드시 후속 질문을 하나 하세요."}
       ],
       quickStarts:topic.conversationFlow.quickStarts.slice(0,1),storyPrompts:topic.conversationFlow.storyPrompts.slice(0,1),talkRounds:topic.conversationFlow.talkRounds.slice(0,1),phrases:topic.conversationFlow.topicPhrases
     };
     topic.sessionTwo={
       minutes:40,
-      reset:{minutes:5,titleEn:"RESET VOTE",titleKo:"손들기 투표",instructionEn:"Which is more useful: a detailed three-star review or a short five-star review? One person from each side gives a 20-second reason.",instructionKo:"자세한 3점 리뷰와 짧은 5점 리뷰 중 더 유용한 쪽에 손을 드세요. 각 그룹 한 명이 20초로 이유를 말합니다."},
-      mainActivity:{minutes:20,type:"informationGap",titleEn:"WRITE THE FAKE",titleKo:"진짜 한 문장, 가짜 한 문장",goalEn:"Write one true purchase sentence and one invented sentence. Mix the order, read both, hear guesses, defend both, then reveal.",goalKo:"실제 경험 한 문장과 지어낸 문장 한 개를 순서를 섞어 읽고, 추측과 변호 뒤 정답을 공개하세요.",steps:["Prepare two private sentences for 3 minutes.","Read both in a mixed order.","Everyone chooses the fake and gives a reason.","The writer defends both sentences.","Reveal only after everyone has spoken."],use:["I think this one is fake because...","This one sounds more believable.","Let me defend that sentence.","What made you suspicious?"],options:["TRUE sentence: ____________________","FAKE sentence: ____________________"],result:"The group records its strongest clue.",participantOutput:"Two sentences and one defended guess per person"},
-      secondaryActivity:{minutes:10,titleEn:"STAR FIGHT",titleKo:"별점 대결",scenarioEn:"Low price · one-day delay · darker color · accurate size · fast seller reply",scenarioKo:"저렴한 가격 · 하루 배송 지연 · 어두운 색상 · 정확한 사이즈 · 빠른 판매자 답변",roles:[{name:"TEAM A",brief:"Give it five stars."},{name:"TEAM B",brief:"Give it one star."}],rule:"Use facts, give every person one sentence, and challenge the other team once.",use:["I would still give it five stars because...","One star is fair because...","That does not outweigh...","I disagree with that rating because..."]},
-      groupDecision:{minutes:5,resultType:"rating",promptEn:"Our group gives it ______ stars because ______.",promptKo:"우리 그룹의 최종 별점과 이유를 정하세요.",everyoneSpeaksRule:"Don't decide until everyone has spoken."},
+      reset:{minutes:5,titleEn:"RESET VOTE",titleKo:"손들기 투표",instructionEn:"Which is more useful: a detailed three-star review or a short five-star review? One person from each side gives a 20-second reason.",instructionKo:"자세한 3점 리뷰와 짧은 5점 리뷰 중 더 유용한 쪽에 손을 드세요. 각 그룹에서 한 명씩 20초 동안 이유를 말하세요."},
+      mainActivity:{minutes:20,type:"informationGap",titleEn:"WRITE THE FAKE",titleKo:"가짜 문장 만들기",goalEn:"Keep your page private. Do not show which sentence is fake.",goalKo:"작성한 문장은 다른 사람에게 보여주지 마세요. 어느 문장이 가짜인지 표시하지 마세요.",steps:["Write two sentences. You have 3 minutes.","One sentence is true and one is invented.","Read both without revealing the answer.","Everyone chooses the fake sentence and gives a reason.","Defend both sentences.","Reveal the answer only after everyone has spoken."],stepsKo:["3분 동안 문장 두 개를 쓰세요.","하나는 실제 경험이고 하나는 지어낸 내용입니다.","정답을 밝히지 않고 두 문장을 읽으세요.","다른 사람들은 가짜 문장을 고르고 이유를 말하세요.","작성자는 두 문장을 모두 진짜처럼 변호하세요.","모두 말한 뒤 정답을 공개하세요."],use:["I think this one is fake because...","This one sounds more believable.","Let me defend that sentence.","What made you suspicious?"],options:["SENTENCE 1\n____________________","SENTENCE 2\n____________________"],privateAnswer:{labelEn:"My fake sentence is:",labelKo:"내가 만든 가짜 문장:",choices:["1","2"]},result:"The group records its strongest clue.",participantOutput:"Two sentences and one defended guess per person"},
+      secondaryActivity:{minutes:10,titleEn:"STAR FIGHT",titleKo:"별점 대결",contextEn:"Use the same jacket from the Evidence Round.",contextKo:"Evidence Round에서 본 같은 재킷을 기준으로 토론하세요.",scenarioEn:"Low price · one-day delay · darker color · accurate size · fast seller reply",scenarioKo:"저렴한 가격 · 하루 배송 지연 · 어두운 색상 · 정확한 사이즈 · 빠른 판매자 답변",assignmentEn:"The leader assigns Team A and Team B. If there is an extra person, that person becomes the judge.",assignmentKo:"리더가 A팀과 B팀을 정합니다. 한 명이 남으면 심판 역할을 맡습니다.",roles:[{name:"TEAM A",nameKo:"A팀",brief:"Give it five stars.",briefKo:"이 재킷에 별점 5점을 주세요."},{name:"TEAM B",nameKo:"B팀",brief:"Give it one star.",briefKo:"이 재킷에 별점 1점을 주세요."}],rule:"Use facts, give every person one sentence, and challenge the other team once.",ruleKo:"구체적인 사실을 사용하세요. 모두 한 문장 이상 말하고 상대 팀 의견을 한 번 반박하세요.",use:["I would still give it five stars because...","One star is fair because...","That is not enough to fix...","I disagree with that rating because..."]},
+      groupDecision:{minutes:5,resultType:"rating",promptEn:"Our group gives it ______ stars because ______.",promptKo:"우리 그룹의 최종 별점과 이유를 정하세요.",everyoneSpeaksRule:"Don't decide until everyone has spoken.",everyoneSpeaksRuleKo:"모두 한 번 이상 말한 뒤 결정하세요."},
       finalRound:{minutes:0,questionEn:"",questionKo:"",sayFrame:""}
     };
   }
@@ -201,7 +202,7 @@
       quickStarts:quickQuestions.map((question,index)=>({questionEn:question[0],questionKo:question[1],options:index===2?["The source","The details","The account history"]:[],answerMode:index===2?"choice":"open",sayFrame:"I would say... because..."})),
       storyPrompts:stories.map(question=>({questionEn:question[0],questionKo:question[1],storySteps:["The situation was...","I noticed...","That made me...","In the end, I..."],askSomeone:"What would you have done?",noExperienceAlternative:`If you have no experience, imagine one situation with ${subject}.`})),
       talkRounds:talk.map((question,index)=>({role:["experience","criteria","group"][index],questionEn:question[0],questionKo:question[1],sayFrame:"My view is... because...",askPrompt:"What makes you say that?",reactionPrompts:["I agree because...","I see one risk..."]})),
-      groupMission:{titleEn:definition.activity[0],titleKo:"그룹 미션",instructionEn:definition.activity[2],instructionKo:"근거를 비교하고 그룹의 결과 하나를 정하세요.",options:[...definition.activity[3]],resultType:"choice",contextTag:definition.date,everyoneSpeaksRule:"Do not finalize the result until everyone has spoken."},
+      groupMission:{titleEn:definition.activity[0],titleKo:"그룹 미션",instructionEn:definition.activity[2],instructionKo:"근거를 비교하고 그룹의 결과 하나를 정하세요.",options:[...definition.activity[3]],resultType:"choice",contextTag:definition.date,everyoneSpeaksRule:"Don't decide until everyone has spoken."},
       topicPhrases:(ai?[["How can we verify it?","어떻게 확인할 수 있나요?"],["The evidence is limited.","근거가 부족해요."],["It sounds convincing, but...","설득력 있어 보이지만…"],["We need a clear label.","명확한 표시가 필요해요."]]:[["It saves routine work.","반복 업무를 줄여요."],["I still need human help.","그래도 사람의 도움이 필요해요."],["The privacy trade-off is...","개인정보 측면의 대가는…"],["A clear fallback would help.","명확한 대안이 있으면 좋아요."]]).map(([en,ko])=>({en,ko})),
       reactionPhrases:["Really? What happened?","Why do you think so?","Can you give an example?","That makes sense.","I agree because...","I see it differently because..."],
       finalRound:{questionEn:`What is one idea you will remember about ${subject}?`,questionKo:"기억에 남는 생각 하나는 무엇인가요?",sayFrame:"One idea I will remember is..."},
@@ -262,6 +263,11 @@
     };
     if(!materials.length||materials.some(item=>!completeMaterial(item)))add("대화 재료","영문·국문으로 판단할 수 있는 완전한 문장이나 데이터가 없습니다.","conversationMaterials",true);
     if(materials.some(item=>item.hasSingleCorrectAnswer))add("대화 재료","정답이 표시된 자료가 있습니다.","conversationMaterials",true);
+    const reviewMaterials=materials.filter(item=>item.type==="reviewText");
+    if(reviewMaterials.length>1&&new Set(reviewMaterials.map(item=>item.product).filter(Boolean)).size!==1)add("Evidence Round","리뷰가 동일한 상품을 다루지 않습니다.","conversationMaterials",true);
+    const studentText=JSON.stringify({sessionOne:topic.sessionOne,sessionTwo:topic.sessionTwo});
+    if(/TRUE sentence|FAKE sentence/i.test(JSON.stringify(topic.sessionTwo?.mainActivity?.options||[])))add("Write the Fake","학생용 시트에 정답 라벨이 노출됩니다.","sessionTwo.mainActivity",true);
+    if(/USE A DIFFERENT REACT/i.test(studentText))add("Story Round","존재하지 않는 REACT 영역을 참조합니다.","sessionOne",true);
     if(!topic.turnProtocol?.followUpRequired||!topic.turnProtocol?.everyoneBeforeNextStep)add("순번 규칙","후속 질문 또는 전원 발화 규칙이 없습니다.","turnProtocol",true);
     if(topic.sessionTwo?.mainActivity?.steps?.length<5||!topic.sessionTwo?.mainActivity?.participantOutput)add("20분 활동","추측·변호·산출물이 있는 20분 단계가 부족합니다.","sessionTwo.mainActivity",true);
     if(!topic.activityEvidence?.requiresDisagreement||!topic.activityEvidence?.requiresParticipantOutput)add("활동 지속성","이견 또는 참가자 산출물이 필요하지 않습니다.","activityEvidence",true);
@@ -272,6 +278,17 @@
     const pageOneMechanisms=[materials.length>0,Boolean(topic.turnProtocol?.secondsPerPerson),Boolean(topic.turnProtocol?.followUpRequired),Boolean(mechanisms.personalArtifact)].filter(Boolean).length;
     const pageTwoMechanisms=[Boolean(topic.sessionTwo?.mainActivity?.steps?.length>=5),renderedRoles.length>=2,Boolean(decision?.everyoneSpeaksRule),Boolean(topic.sessionTwo?.mainActivity?.participantOutput)].filter(Boolean).length;
     if(pageOneMechanisms<2||pageTwoMechanisms<2)add("페이지별 발화 장치","각 페이지에 실제 발화 강제 장치가 2종 이상 필요합니다.","sessionOne",true);
+    const main=topic.sessionTwo?.mainActivity;
+    if(main?.steps?.length&&main.stepsKo?.length!==main.steps.length)add("Session 2 > Main Activity","단계별 한국어 안내가 부족합니다.","sessionTwo.mainActivity",true);
+    if(!topic.sessionTwo?.reset?.instructionKo||!main?.goalKo||main?.stepsKo?.some(step=>!step?.trim()))add("Session 2","Reset 또는 Main Activity의 한국어 안내가 부족합니다.","sessionTwo",true);
+    if(topic.sessionTwo?.secondaryActivity&&(!topic.sessionTwo.secondaryActivity.contextKo||!topic.sessionTwo.secondaryActivity.assignmentKo||!topic.sessionTwo.secondaryActivity.ruleKo||topic.sessionTwo.secondaryActivity.roles?.some(role=>!role.nameKo||!role.briefKo)))add("Session 2 > Star Fight","맥락·팀 배정·역할·반박 규칙의 한국어 안내가 부족합니다.","sessionTwo.secondaryActivity",true);
+    if(!decision?.promptKo||!decision?.everyoneSpeaksRuleKo)add("Session 2 > Group Decision","최종 결정의 한국어 안내가 부족합니다.","sessionTwo.groupDecision",true);
+    const koreanText=JSON.stringify(topic);
+    if(/무엇의 리뷰|20초로|30초로 설명|비구매를 고르/.test(koreanText))add("한국어 문체","비문 또는 직역체 표현이 남아 있습니다.","sessionTwo",true);
+    const sessionOneMinutes=topic.sessionOne?.rounds?.reduce((sum,round)=>sum+Number(round.minutes||0),0);
+    const sessionTwoMinutes=[topic.sessionTwo?.reset,main,topic.sessionTwo?.secondaryActivity,decision,topic.sessionTwo?.finalRound].reduce((sum,item)=>sum+Number(item?.minutes||0),0);
+    if(topic.sessionOne?.rounds&&sessionOneMinutes!==topic.sessionOne.minutes)add("시간 모델","Session 1 표기 시간 합계가 맞지 않습니다.","sessionOne",true);
+    if(sessionTwoMinutes!==topic.sessionTwo?.minutes)add("시간 모델","Session 2 표기 시간 합계가 맞지 않습니다.","sessionTwo",true);
     const reactions=topic.conversationFlow?.reactionPhrases||[],normalized=reactions.map(item=>item.toLowerCase()),counts=normalized.reduce((all,item)=>(all[item]=(all[item]||0)+1,all),{});
     if(Object.values(counts).some(count=>count>2))add("REACT","같은 반응 표현이 2회를 초과합니다.","conversationFlow.reactionPhrases");
     if(!reactions.some(item=>/(disagree|opposite|different)/i.test(item)))add("REACT","반박형 반응 표현이 없습니다.","conversationFlow.reactionPhrases",true);

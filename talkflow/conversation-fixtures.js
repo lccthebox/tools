@@ -124,7 +124,7 @@
     };
     if(topic.date==="2026-08-03"){
       flow.quickStarts=[
-        {questionEn:"What was the last thing you checked reviews for?",questionKo:"최근 무엇의 리뷰를 확인했나요?",options:[],answerMode:"open",sayFrame:"The last thing I checked was..."},
+        {questionEn:"What was the last thing you checked reviews for?",questionKo:"최근 어떤 물건의 리뷰를 확인했나요?",options:[],answerMode:"open",sayFrame:"The last thing I checked was..."},
         {questionEn:"Which do you check first?",questionKo:"무엇을 가장 먼저 확인하나요?",options:["Star rating","Photo reviews","Written comments"],answerMode:"choice",sayFrame:"I check ______ first because ______."},
         {questionEn:"Would you trust a review with no photo?",questionKo:"사진이 없는 리뷰를 믿을 수 있나요?",options:["Yes, usually.","Sometimes.","No, not really."],answerMode:"scale",sayFrame:"I might trust it if..."}
       ];
