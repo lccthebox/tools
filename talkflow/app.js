@@ -54,17 +54,15 @@
     const config=operationConfig(),scheduled=window.TalkFlowSessions.operatingDates(monthPrefix(),config.weekdays,config.excluded);
     return [...new Set([...scheduled,...config.included.filter(date=>date.startsWith(monthPrefix())&&!config.excluded.includes(date))])].sort()
   }
-  function workState(topic){
-    if(!topic)return["empty","[ ] 미작성"];
-    if(topic.operatorStatus?.used)return["used","[✓] 사용 완료"];
-    if(topic.quality?.status==="approved")return["approved","[✓] 인쇄 가능"];
-    if(topic.operatorStatus?.generationStatus==="running")return["running","[…] 생성 중"];
-    return["review","[!] 확인 필요"];
+  function lifecycleState(topic){
+    if(!topic)return{key:"empty",label:"토픽 미작성",action:"자동 생성"};
+    if(topic.operatorStatus?.used)return{key:"completed",label:"사용 완료",action:"학생용 PDF"};
+    if(topic.quality?.status==="approved"&&["checked","printed"].includes(topic.operatorStatus?.printStatus))return{key:"print-ready",label:"인쇄 준비 완료",action:"학생용 PDF"};
+    if(topic.quality?.status==="approved")return{key:"approved",label:"승인 완료",action:"PDF 확인"};
+    if(topic.operatorStatus?.generationStatus==="running"||topic.quality?.status==="draft")return{key:"draft",label:topic.operatorStatus?.generationStatus==="running"?"생성 중":"초안",action:"수정"};
+    return{key:"review",label:"확인 필요",action:"확인하기"};
   }
-  function pdfState(topic){
-    const status=topic?.operatorStatus?.printStatus;
-    return status==="printed"?"[✓] 인쇄 완료":status==="checked"?"[✓] A4 확인 완료":"[ ] PDF 미확인";
-  }
+  function workState(topic){const state=lifecycleState(topic);return[state.key,state.label]}
 
   function validateTopic(topic,allTopics=topics){
     const issues=[];
@@ -126,8 +124,8 @@
   function renderList(){
     const prefix=monthPrefix(),entries=Object.values(topics).filter(t=>t.date.startsWith(prefix)).sort((a,b)=>a.date.localeCompare(b.date));
     $("#topic-list").innerHTML=entries.length?entries.map(t=>{
-      const state=t.quality?.status||"draft",label=state==="approved"?"승인":state==="review"?"검토":"초안";
-      return `<button class="topic-day ${t.date===activeDate?"is-active":""}" data-date="${t.date}"><time>${t.date.slice(8)}</time><span><strong>${esc(t.title.en)}</strong><small>${esc(t.title.ko)}</small></span><i class="status-pill ${state}">${label}</i></button>`;
+      const state=lifecycleState(t);
+      return `<button class="topic-day ${t.date===activeDate?"is-active":""}" data-date="${t.date}"><time>${t.date.slice(8)}</time><span><strong>${esc(t.title.en)}</strong><small>${esc(t.title.ko)}</small></span><i class="status-pill ${state.key}">${state.label}</i></button>`;
     }).join(""):`<p class="ko">이 달에는 작성된 토픽이 없습니다.</p>`;
   }
   function weekday(date){return new Intl.DateTimeFormat("ko-KR",{weekday:"short",timeZone:"UTC"}).format(new Date(`${date}T12:00:00Z`))}
@@ -140,10 +138,11 @@
       <div class="weekday-row" aria-hidden="true">${["월","화","수","목","금","토","일"].map(day=>`<span>${day}</span>`).join("")}</div>
       <section class="month-calendar">${Array.from({length:offset},()=>'<span class="calendar-spacer"></span>').join("")}${Array.from({length:days},(_,i)=>{
         const date=`${prefix}-${String(i+1).padStart(2,"0")}`,t=topics[date];
-        const isOperating=operationDays.has(date),[state,label]=workState(t);
+        const isOperating=operationDays.has(date),status=lifecycleState(t),state=status.key,label=status.label;
         if(!isOperating&&!t)return `<article class="calendar-day is-off"><header><time>${i+1}일 · ${weekday(date)}</time></header><p>운영 없음</p></article>`;
-        if(!t)return `<article class="calendar-day is-empty"><header><time>${i+1}일 · ${weekday(date)}</time><span class="status-pill">${label}</span></header><h2>토픽 미작성</h2><p class="pdf-state">[ ] PDF 미확인</p><div class="date-actions"><button class="button primary" data-auto-date="${date}">토픽 자동 생성</button><button class="button secondary" data-custom-date="${date}">주제 지정해서 생성</button></div></article>`;
-        return `<article class="calendar-day ${t.hidden?"is-hidden":""}"><header><time>${i+1}일 · ${weekday(date)}</time><span class="status-pill ${state}">${label}</span></header><h2>${esc(t.title.ko||t.title.en)}</h2><p class="pdf-state">${pdfState(t)}</p><div class="date-actions"><button data-open="${date}:print">학생용 PDF</button><button data-open="${date}:admin">수정</button>${state==="approved"?`<button data-used="${date}">사용 완료</button>`:""}</div></article>`;
+        if(!t)return `<article class="calendar-day is-empty"><header><time>${i+1}일 · ${weekday(date)}</time><span class="status-pill">${label}</span></header><h2>토픽 미작성</h2><div class="date-actions empty-actions"><button class="button ghost" data-auto-date="${date}">자동 생성</button><button class="text-action" data-custom-date="${date}">주제 지정</button></div></article>`;
+        const primaryTarget=state==="review"||state==="draft"?"admin":"print";
+        return `<article class="calendar-day is-complete ${t.hidden?"is-hidden":""}"><header><time>${i+1}일 · ${weekday(date)}</time><span class="status-pill ${state}">${label}</span></header><h2>${esc(t.title.ko||t.title.en)}</h2><div class="date-actions"><button class="button ${state==="print-ready"?"primary":"secondary"}" data-open="${date}:${primaryTarget}">${status.action}</button><details class="card-overflow"><summary aria-label="추가 작업">⋯</summary><div><button data-open="${date}:admin">수정</button><button data-print-leader="${date}">리더용 PDF</button>${state==="print-ready"?`<button data-used="${date}">사용 완료로 표시</button>`:""}<button data-toggle-hidden="${date}">${t.hidden?"공개":"숨김"}</button><button data-clone-from="${date}">복제</button></div></details></div></article>`;
       }).join("")}</section><details class="quick-help"><summary>처음 사용하시나요?</summary><p>빈 날짜에서 자동 생성 → 두 페이지 확인 → 필요한 부분만 수정 → 승인 → PDF 출력 순서로 진행하세요.</p></details>
       <div class="batch-toolbar"><label><input type="checkbox" data-action="select-approved"> 인쇄 가능 날짜 선택</label><button class="button primary" data-action="batch-print" ${printDates.size?"":"disabled"}>선택 PDF (${printDates.size})</button></div>`;
   }
@@ -153,7 +152,7 @@
   }
   function renderOperatorWorkflow(){
     const selected=topics[activeDate],review=selected?.conversationFlow?window.TalkFlowConversation.evaluate(selected.conversationFlow):null;
-    const stage=selected?.quality?.status==="approved"?5:selected?.conversationFlow?4:2;
+    const stage=["approved","print-ready","completed"].includes(lifecycleState(selected).key)?5:selected?.conversationFlow?4:2;
     return `<section class="operator-workflow" aria-label="토픽 제작 5단계">
       <ol class="workflow-steps">${["날짜","주제","생성","확인","승인·출력"].map((label,index)=>`<li class="${index+1<stage?"complete":index+1===stage?"current":""}"><b>${index+1}</b>${label}</li>`).join("")}</ol>
       <div class="operator-grid">
@@ -162,7 +161,7 @@
         <label>피하고 싶은 소재<input id="operator-avoid" placeholder="선택 입력"></label>
         <label>분위기<select id="operator-mood"><option>가볍고 편하게</option><option selected>경험 중심</option><option>생각 확장</option><option>함께 결정하기</option></select></label>
       </div>
-      <div class="operator-actions create-actions"><span><button class="button secondary" data-action="recommend-topic">추천 주제 넣기</button><small>최근 사용하지 않은 주제를 입력합니다.</small></span><span><button class="button primary" data-action="operator-create" disabled>토픽 생성하기</button><small>입력한 주제로 학생용 회화 흐름을 만듭니다.</small></span>${selected?`<span class="preview-action"><button class="button secondary" data-open="${selected.date}:print">학생용 A4 미리보기</button></span><span class="approve-action"><button class="button primary" data-action="approve-save">✓ 승인하고 저장</button></span>`:""}</div>
+      <div class="operator-actions create-actions"><span><button class="button secondary" data-action="recommend-topic">추천 주제 넣기</button><small>최근 사용하지 않은 주제를 입력합니다.</small></span><span><button class="button primary" data-action="operator-create" disabled>토픽 생성하기</button><small>입력한 주제로 학생용 회화 흐름을 만듭니다.</small></span>${selected?`<span class="preview-action"><button class="button secondary" data-open="${selected.date}:print">학생용 A4 미리보기</button></span>`:""}</div>
       <div class="operator-status ${review?.status||"pending"}"><strong>${review?review.status==="ready"?"바로 사용 가능":review.status==="review"?"확인할 부분 있음":"다시 생성 권장":"날짜와 주제를 선택해 시작하세요."}</strong><span>${review?`${review.issues.length}개 확인 항목 · ${review.issues[0]||"학생용 A4 미리보기 후 승인하세요."}`:"추천 주제를 넣거나 직접 입력하면 생성 버튼이 활성화됩니다."}</span></div>
     </section>`;
   }
@@ -218,16 +217,30 @@
     return `<div class="action-row">${actionCue("START",item.sayFrame||item.storySteps?.[0]||"My answer is...")}${actionCue("SAY",story?"Tell it.":"Give a reason.")}${actionCue("ADD",item.storySteps?.[1]||"Add one detail.")}${actionCue("ASK",item.askPrompt||item.askSomeone||"What about you?")}${actionCue("REACT",item.reactionPrompts?.[0]||"That makes sense.")}</div>`;
   }
   function materialCards(items){
-    return `<div class="material-grid">${(items||[]).map(item=>`<article class="material-card"><b>${esc(item.title)}</b><p>${esc(item.contentEn)}</p><small>${esc(item.contentKo)}</small></article>`).join("")}</div>`;
+    return `<div class="material-grid">${(items||[]).map(item=>`<article class="material-card"><b>${esc(item.title)}</b><p>${esc(item.contentEn)}</p><small>${esc(item.contentKo)}</small>${item.type==="reviewText"?`<div class="evidence-choice"><span>□ BUY</span><span>□ DON'T BUY</span><i>MARK ONE DETAIL · 근거 한 곳 표시</i></div>`:""}</article>`).join("")}</div>`;
   }
   function renderEvidenceSessionOne(t,one,leader){
     const [real,evidence,story]=one.rounds,storyItem=one.storyPrompts[0];
-    return `<section class="session-banner"><b>SESSION 1 · 50 MINUTES</b><span>PREPARE → SHARE → CHALLENGE</span></section>
-      <section class="timed-round real-item"><h2>${esc(real.title)} · ${safeMinutes(real.minutes,12)} MIN</h2><p>${esc(real.instructionEn)}<small>${esc(real.instructionKo)}</small></p><div class="prompt-line">${real.prompts.map(prompt=>`<span>${esc(prompt)}</span>`).join("")}</div><b class="turn-rule">45 SEC EACH · NEXT PERSON ASKS ONE QUESTION · EVERYONE FINISHES BEFORE THE NEXT ROUND</b></section>
-      <section class="timed-round evidence-round"><h2>${esc(evidence.title)} · ${safeMinutes(evidence.minutes,18)} MIN</h2><p>${esc(evidence.instructionEn)}<small>${esc(evidence.instructionKo)}</small></p>${materialCards(t.conversationMaterials)}<div class="activity-language"><b>I would buy it because...</b><b>I would skip it because...</b><b>Can you change my mind?</b><b>I still disagree because...</b></div></section>
-      <section class="timed-round story-round"><h2>${esc(story.title)} · ${safeMinutes(story.minutes,20)} MIN</h2><strong>${esc(storyItem.questionEn)}</strong><small>${esc(storyItem.questionKo)}</small><div class="story-path-inline">${storyItem.storySteps.map(step=>`<span>${esc(step)}</span>`).join("")}</div><p class="alternative">${esc(storyItem.noExperienceAlternative)}</p><b class="turn-rule">60 SEC EACH · NEXT PERSON MUST ASK A FOLLOW-UP · USE A DIFFERENT REACT</b></section>
-      <section class="words"><h2>SAY THIS</h2><ul>${one.phrases.map(item=>`<li><strong>${esc(item.en)}</strong><span>${esc(item.ko)}</span></li>`).join("")}</ul></section>
-      ${leader?`<section class="leader-strip"><h2>LEADER CHECK · SESSION 1</h2><ul><li>Use a visible timer. Do not advance before every turn.</li><li>“Let’s pause there and hear from someone else.”</li><li>“You have 20 seconds left.”</li><li>“Could you ask the next person a question?”</li></ul></section>`:""}`;
+    const evidenceStepsEn=["Read all three reviews.","For each review, choose BUY or DON'T BUY.","Mark one detail that influenced your choice.","Choose one review and explain your decision for 30 seconds.","Ask someone with the opposite choice.","Decide whether to change your mind."];
+    const evidenceStepsKo=["리뷰 3개를 모두 읽으세요.","각 리뷰마다 살지 말지 고르세요.","선택에 영향을 준 문장 하나를 표시하세요.","리뷰 하나를 골라 30초 동안 이유를 말하세요.","반대 선택을 한 사람에게 질문하세요.","상대 의견을 듣고 선택을 바꿀지 정하세요."];
+    return `<section class="session-banner"><b>SESSION 1 · 50 MINUTES</b><span>ITEM · 실제 물건 → EVIDENCE · 리뷰 판단 → STORY · 경험 이야기</span></section>
+      <section class="timed-round real-item"><h2>${esc(real.title)} · ${safeMinutes(real.minutes,12)} MIN</h2><strong>${esc(real.goalEn)}</strong><small>${esc(real.goalKo)}</small><p>${esc(real.instructionEn)}<small>${esc(real.instructionKo)}</small></p><div class="prompt-line">${real.prompts.map(prompt=>`<span>${esc(prompt)}</span>`).join("")}</div><b class="turn-rule">45 SEC EACH · NEXT PERSON ASKS ONE QUESTION · EVERYONE FINISHES BEFORE THE NEXT ROUND<small>한 명당 45초 · 다음 사람이 질문 1개 · 전원이 끝난 뒤 이동</small></b>${leader?`<aside class="leader-inline"><b>LEADER</b><span>시계 방향 · 45초씩 · 다음 사람이 질문 1개 · 전원 완료 전 이동 금지</span><i>“Let’s hear from someone new.” · “You have 20 seconds left.”</i></aside>`:""}</section>
+      <section class="timed-round evidence-round"><h2>${esc(evidence.title)} · ${safeMinutes(evidence.minutes,18)} MIN</h2><strong>${esc(evidence.goalEn)}</strong><small>${esc(evidence.goalKo)}</small>${materialCards(t.conversationMaterials)}<ol class="bilingual-steps">${evidenceStepsEn.map((step,index)=>`<li><b>${esc(step)}</b><span>${esc(evidenceStepsKo[index])}</span></li>`).join("")}</ol><div class="activity-language"><b>I would buy it because...</b><b>I would skip it because...</b><b>Can you change my mind?</b><b>I still disagree because...</b></div>${leader?`<aside class="leader-inline"><b>LEADER</b><span>A/B/C를 모두 판단하게 하고 반대 선택끼리 연결하세요. 시간이 부족하면 Review C를 생략할 수 있습니다.</span></aside>`:""}</section>
+      <section class="timed-round story-round"><h2>${esc(story.title)} · ${safeMinutes(story.minutes,20)} MIN</h2><strong>${esc(storyItem.questionEn)}</strong><small>${esc(storyItem.questionKo)}</small><div class="story-path-inline">${storyItem.storySteps.map(step=>`<span>${esc(step)}</span>`).join("")}</div><p class="alternative">${esc(storyItem.noExperienceAlternative)}</p><b class="turn-rule">60 SEC EACH · NEXT PERSON MUST ASK A FOLLOW-UP · USE A DIFFERENT PHRASE FROM “SAY THIS.”<small>한 명당 60초 · 다음 사람은 후속 질문 · SAY THIS에서 서로 다른 표현 사용</small></b>${leader?`<aside class="leader-inline"><b>LEADER</b><span>짧은 답은 명사+이유도 인정하고, 여유 있는 참가자는 후속 질문을 추가하게 하세요.</span></aside>`:""}</section>
+      <section class="words"><h2>SAY THIS</h2><ul>${one.phrases.map(item=>`<li>${item.purpose?`<i>${esc(item.purpose)}</i>`:""}<strong>${esc(item.en)}</strong><span>${esc(item.ko)}</span></li>`).join("")}</ul></section>
+      ${leader?"":`<section class="notes-lines"><h2>NOTES · 기억하고 싶은 표현</h2><i></i><i></i><i></i></section>`}
+      ${leader?`<section class="leader-strip"><h2>TIME CUT</h2><ul><li>Real Item 12 → 8분</li><li>Evidence 18 → 12분</li><li>Story 20 → 12분</li><li>Write the Fake는 최소 15분 유지</li></ul></section>`:""}`;
+  }
+  function renderSessionTwo(two,leader){
+    const main=two.mainActivity,secondary=two.secondaryActivity,decision=two.groupDecision;
+    const stepsKo=main.stepsKo||main.steps.map(()=>main.goalKo||"순서대로 활동을 진행하세요.");
+    return `<section class="session-banner"><b>SESSION 2 · ${safeMinutes(two.minutes,40)} MINUTES</b><span>RESET · 환기 → CREATE · 만들기 → DEBATE · 대결 → DECIDE · 결정</span></section>
+      <section class="session-reset"><h2>${esc(two.reset.titleEn)} · ${safeMinutes(two.reset.minutes,5)} MIN</h2><strong>${esc(two.reset.instructionEn)}</strong><small>${esc(two.reset.instructionKo)}</small></section>
+      <section class="main-activity"><h2>${esc(main.titleEn)} · ${safeMinutes(main.minutes,20)} MIN</h2><strong>${esc(main.goalEn)}</strong><small>${esc(main.goalKo)}</small><ol class="bilingual-steps">${main.steps.map((step,index)=>`<li><b>${esc(step)}</b><span>${esc(stepsKo[index])}</span></li>`).join("")}</ol>${main.roles?.length?`<div class="assigned-role-briefs">${main.roles.map(role=>`<b>${esc(role.name)}<span>${esc(role.brief)}</span><small>${esc(role.briefKo)}</small></b>`).join("")}</div>`:""}<div class="mission-options sentence-options">${main.options.map(option=>`<span>${esc(option)}</span>`).join("")}</div>${main.privateAnswer?`<div class="private-answer"><b>${esc(main.privateAnswer.labelEn)}</b><small>${esc(main.privateAnswer.labelKo)}</small>${main.privateAnswer.choices.map(choice=>`<span>□ ${esc(choice)}</span>`).join("")}</div>`:""}<div class="activity-language">${main.use.map(line=>`<b>${esc(line)}</b>`).join("")}</div>${leader?`<aside class="leader-inline"><b>LEADER</b><span>${main.titleEn==="WRITE THE FAKE"?"예시 한 쌍을 먼저 보여주고 종이를 가리게 하세요. 전원이 추측과 이유를 말한 뒤 공개합니다.":"모든 참가자의 준비·발화·질문·반박을 확인하세요."}</span>${main.titleEn==="WRITE THE FAKE"?`<i>Sentence 1: It arrived two days late. · Sentence 2: The seller sent a handwritten apology.</i>`:""}</aside>`:""}</section>
+      ${secondary?`<section class="assigned-opposition"><h2>${esc(secondary.titleEn)} · ${safeMinutes(secondary.minutes,10)} MIN</h2><strong>${esc(secondary.contextEn)}</strong><small>${esc(secondary.contextKo)}</small><p>${esc(secondary.scenarioEn)}<small>${esc(secondary.scenarioKo)}</small></p><p class="team-assignment">${esc(secondary.assignmentEn)}<small>${esc(secondary.assignmentKo)}</small></p><div>${secondary.roles.map(role=>`<b>${esc(role.name)} · ${esc(role.nameKo)}<span>${esc(role.brief)}</span><small>${esc(role.briefKo)}</small></b>`).join("")}</div><p>${esc(secondary.rule)}<small>${esc(secondary.ruleKo)}</small></p><div class="activity-language">${secondary.use.map(line=>`<b>${esc(line)}</b>`).join("")}</div>${leader?`<aside class="leader-inline"><b>LEADER</b><span>팀을 배정하고 홀수 인원은 Judge로 지정하세요. 전원 한 문장, 팀별 반박 한 번을 확인하세요.</span></aside>`:""}</section>`:""}
+      <section class="group-decision"><h2>${secondary?"FINAL DECISION":"GROUP DECISION"} · ${safeMinutes(decision.minutes,10)} MIN</h2><strong>${esc(decision.promptEn)}</strong><small>${esc(decision.promptKo)}</small><b class="everyone-rule">${esc(decision.everyoneSpeaksRule)}<small>${esc(decision.everyoneSpeaksRuleKo||"모두 한 번 이상 말한 뒤 결정하세요.")}</small></b><div class="result-line">OUR RESULT:</div></section>
+      ${two.finalRound?.minutes?`<section class="conversation-final"><h2>FINAL ROUND · ${safeMinutes(two.finalRound.minutes,5)} MIN</h2><strong>${esc(two.finalRound.questionEn)}</strong><small>${esc(two.finalRound.questionKo)}</small>${actionCue("SAY",two.finalRound.sayFrame)}</section>`:""}
+      ${leader?`<section class="leader-strip leader-page-two"><h2>LEADER TIME · SESSION 2</h2><ul><li>${secondary?"Reset Vote 5 · Write the Fake 20 · Star Fight 10 · Final Decision 5":"Reset 5 · Main Activity 20 · Group Decision 10 · Final Round 5"}</li><li>어려운 참가자는 명사+짧은 이유를 인정하고, 가능한 참가자는 follow-up 또는 반박을 추가합니다.</li><li>Write the Fake는 최소 15분, Final Decision은 5분을 유지하세요.</li></ul></section>`:""}`;
   }
   function renderConversationHandout(t,leader=false){
     const flow=t.conversationFlow,one=t.sessionOne||{minutes:50,quickStarts:flow.quickStarts,storyPrompts:flow.storyPrompts,talkRounds:flow.talkRounds.slice(0,1),phrases:flow.topicPhrases},two=t.sessionTwo;
@@ -238,7 +251,7 @@
     const guide=flow.leaderGuide||{};
     return `<article class="a4-topic conversation-handout ${t.topicMode==="context"?"context-handout":""} ${one.format==="evidenceRounds"?"evidence-handout":""} ${leader?"leader-handout":""}" data-print-topic="${t.date}">
       <section class="a4-page">${printHeader(t,1,leader)}<div class="handout-body conversation-page page-one">
-        ${one.format==="evidenceRounds"?renderEvidenceSessionOne(t,one,leader):`<section class="session-banner"><b>SESSION 1 · ${one.minutes} MINUTES</b><span>KNOW → SHARE → ASK</span></section>
+        ${one.format==="evidenceRounds"?renderEvidenceSessionOne(t,one,leader):`<section class="session-banner"><b>SESSION 1 · ${one.minutes} MINUTES</b><span>START → STORY → TALK</span></section>
         ${t.topicMode==="context"?`<section class="common-brief"><div><h2>60-SECOND BRIEF</h2>${t.commonGround.briefEn.map((line,index)=>`<p><b>${index+1}</b>${esc(line)}<small>${esc(t.commonGround.briefKo[index])}</small></p>`).join("")}<div class="brief-extra"><span>EXAMPLE · ${esc(t.commonGround.exampleEn)}</span><b>${t.commonGround.keywords.map(esc).join(" · ")}</b></div><div class="brief-source">${esc(t.sourceMaterial.publisher)} · ${esc(t.sourceMaterial.title)} · ${esc(t.sourceMaterial.publishedAt)}</div></div>${t.sourceMaterial.qrEnabled&&t.sourceMaterial.qrAsset?`<a class="brief-qr" href="${esc(t.sourceMaterial.url)}"><img src="${esc(t.sourceMaterial.qrAsset)}" alt="More context QR"><span>More context<br>선택 자료 보기</span></a>`:""}</section>`:""}
         <section class="how-to-use"><h2>HOW TO USE</h2><p><b>START</b><b>SAY</b><b>ADD</b><b>ASK</b><b>REACT</b></p></section><b class="turn-rule">CHOOSE PRIVATELY · 45 SEC EACH · NEXT PERSON ASKS · EVERYONE BEFORE THE NEXT STEP</b>
         ${t.conversationMaterials?.length?`<section class="conversation-material"><h2>USE THIS EVIDENCE</h2>${materialCards(t.conversationMaterials)}</section>`:""}
@@ -249,13 +262,7 @@
         ${leader?`<section class="leader-strip"><h2>LEADER CHECK · SESSION 1</h2><ul><li>Start 10 · Story 20 · Talk 15 · Wrap 5.</li><li>One turn each; use the no-experience path without pressure.</li></ul></section>`:""}`}
       </div><footer>${esc(t.title.en)}<span>1 / 2</span></footer></section>
       <section class="a4-page">${printHeader(t,2,leader)}<div class="handout-body conversation-page page-two">
-        <section class="session-banner"><b>SESSION 2 · ${two?.minutes||40} MINUTES</b><span>RESET → DO → DECIDE → SHARE</span></section>
-        <section class="session-reset"><h2>RESET · ${two?.reset.minutes||5} MIN</h2><strong>${esc(two?.reset.titleEn)}</strong><small>${esc(two?.reset.titleKo)}</small><p>${esc(two?.reset.instructionEn)}</p></section>
-        <section class="main-activity"><h2>${two?.mainActivity.titleEn==="WRITE THE FAKE"?"WRITE THE FAKE":"MAIN ACTIVITY"} · ${two?.mainActivity.minutes||20} MIN</h2><strong>${esc(two?.mainActivity.titleEn)}</strong><p>${esc(two?.mainActivity.goalEn)}</p><ol>${two?.mainActivity.steps.map(step=>`<li>${esc(step)}</li>`).join("")}</ol>${two?.mainActivity.roles?.length?`<div class="assigned-role-briefs">${two.mainActivity.roles.map(role=>`<b>${esc(role.name)}<span>${esc(role.brief)}</span></b>`).join("")}</div>`:""}<div class="mission-options">${two?.mainActivity.options.map(option=>`<span>□ ${esc(option)}</span>`).join("")}</div><div class="activity-language">${two?.mainActivity.use.map(line=>`<b>${esc(line)}</b>`).join("")}</div></section>
-        ${two?.secondaryActivity?`<section class="assigned-opposition"><h2>${esc(two.secondaryActivity.titleEn)} · ${safeMinutes(two.secondaryActivity.minutes,10)} MIN</h2><p>${esc(two.secondaryActivity.scenarioEn)}<small>${esc(two.secondaryActivity.scenarioKo)}</small></p><div>${two.secondaryActivity.roles.map(role=>`<b>${esc(role.name)}<span>${esc(role.brief)}</span></b>`).join("")}</div><p>${esc(two.secondaryActivity.rule)}</p><div class="activity-language">${two.secondaryActivity.use.map(line=>`<b>${esc(line)}</b>`).join("")}</div></section>`:""}
-        <section class="group-decision"><h2>${two?.secondaryActivity?"FINAL DECISION":"GROUP DECISION"} · ${safeMinutes(two?.groupDecision.minutes,10)} MIN</h2><p>${esc(two?.groupDecision.promptEn)}</p><b class="everyone-rule">${esc(two?.groupDecision.everyoneSpeaksRule)}</b><div class="result-line">OUR RESULT:</div></section>
-        ${two?.finalRound?.minutes?`<section class="conversation-final"><h2>FINAL ROUND · ${safeMinutes(two.finalRound.minutes,5)} MIN</h2><strong>${esc(two.finalRound.questionEn)}</strong><small>${esc(two.finalRound.questionKo)}</small>${actionCue("SAY",two.finalRound.sayFrame)}</section>`:""}
-        ${leader?`<section class="leader-strip leader-page-two"><h2>LEADER CHECK · SESSION 2</h2><ul><li>Reset 5 · Main 20 · Decision 10 · Final 5.</li><li>Show one example; decide only after everyone speaks.</li></ul></section>`:""}
+        ${renderSessionTwo(two,leader)}
       </div><footer>${esc(t.title.en)}<span>2 / 2</span></footer></section>
     </article>`;
   }
@@ -272,7 +279,7 @@
   function heading(i,title){return `<div class="section-heading"><div><span class="section-num">STEP ${String(i).padStart(2,"0")}</span><h2>${title}</h2></div><button class="collapse" aria-label="${title} 접기 또는 펼치기">−</button></div>`}
   function dailyNav(t,mode){
     const dates=Object.keys(topics).sort(),index=dates.indexOf(t.date);
-    return `<div class="daily-nav"><button data-action="calendar">← 월 목록</button><div><strong>${t.date} · ${weekday(t.date)}</strong><span>${t.quality?.status==="approved"?"승인":t.quality?.status==="review"?"검토 필요":"초안"} · 마지막 저장 ${new Date(t.updatedAt||t.createdAt).toLocaleString("ko-KR")}</span></div><button data-prev-next="${dates[index-1]||""}" ${index<=0?"disabled":""}>이전 날짜</button><button data-prev-next="${dates[index+1]||""}" ${index<0||index>=dates.length-1?"disabled":""}>다음 날짜</button><button data-open="${t.date}:print">학생용 A4</button><button data-print-leader="${t.date}">리더용 A4</button>${mode!=="admin"?`<button data-open="${t.date}:admin">토픽 수정</button>`:""}<button data-approve="${t.date}">승인</button><button data-toggle-hidden="${t.date}">${t.hidden?"공개":"숨김"}</button></div>`;
+    return `<div class="daily-nav"><button data-action="calendar">← 월 목록</button><div><strong>${t.date} · ${weekday(t.date)}</strong><span>${lifecycleState(t).label} · 마지막 저장 ${new Date(t.updatedAt||t.createdAt).toLocaleString("ko-KR")}</span></div><button data-prev-next="${dates[index-1]||""}" ${index<=0?"disabled":""}>이전 날짜</button><button data-prev-next="${dates[index+1]||""}" ${index<0||index>=dates.length-1?"disabled":""}>다음 날짜</button><button data-open="${t.date}:print">학생용 A4</button><button data-print-leader="${t.date}">리더용 A4</button>${mode!=="admin"?`<button data-open="${t.date}:admin">토픽 수정</button>`:""}</div>`;
   }
   function bilingual(en,ko){return `<div class="bilingual"><div class="en">${esc(en)}</div><div class="ko" lang="ko">${esc(ko)}</div></div>`}
   function questions(items,mode="easy",leader=false){
@@ -329,6 +336,17 @@
       <button class="button primary" type="submit">피드백 저장</button></form>`;
   }
   function formatTime(total){const m=String(Math.floor(total/60)).padStart(2,"0"),s=String(total%60).padStart(2,"0");return`${m}:${s}`}
+  function sessionSummary(t){
+    const one=t.sessionOne,two=t.sessionTwo,oneRows=one.rounds||[
+      {title:"START NOW",minutes:10},{title:"TELL YOUR STORY",minutes:20},{title:"TALK TOGETHER",minutes:15},{title:"WRAP",minutes:5}
+    ];
+    const twoRows=[two.reset,two.mainActivity,two.secondaryActivity,two.groupDecision,two.finalRound].filter(item=>Number(item?.minutes)>0).map((item,index)=>({
+      title:item.titleEn||(item===two.groupDecision?(two.secondaryActivity?"FINAL DECISION":"GROUP DECISION"):item===two.finalRound?"FINAL ROUND":`ACTIVITY ${index+1}`),
+      minutes:item.minutes
+    }));
+    const mechanismLabels={personalArtifact:"실제 물건 사용",timedTurn:"순서대로 말하기",informationGap:"서로 다른 정보",assignedOpposition:"반대 역할",openEndedDecision:"그룹 최종 결정"};
+    return `<div class="session-meta"><section><h3>SESSION 1 · ${safeMinutes(one.minutes,50)} MIN</h3>${oneRows.map(row=>`<p><b>${esc(row.title)}</b><span>${safeMinutes(row.minutes,0)}분</span></p>`).join("")}</section><section><h3>SESSION 2 · ${safeMinutes(two.minutes,40)} MIN</h3>${twoRows.map(row=>`<p><b>${esc(row.titleEn||row.title)}</b><span>${safeMinutes(row.minutes,0)}분</span></p>`).join("")}</section><section><h3>말하기 장치</h3>${Object.entries(t.speakingMechanisms||{}).filter(([,enabled])=>enabled).map(([key])=>`<p><b>${mechanismLabels[key]||key}</b></p>`).join("")}</section></div>`;
+  }
 
   function renderAdmin(t){
     if(!t)return empty();
@@ -342,8 +360,8 @@
     const repairLabel=item=>item.target==="sessionTwo.mainActivity"?"활동 다시 만들기":item.target?.includes("options")?"선택지 보완":item.target==="commonGround"?"설명 줄이기":"이 부분만 다시 만들기";
     return `${dailyNav(t,"admin")}${t.conversationFlow?"":`<div class="admin-toolbar"><button class="button primary" data-action="save">저장</button><button class="button secondary" data-action="validate">자동 검수</button><button class="button secondary" data-action="convert-flow">회화형 구조로 변환</button><span class="spacer"></span><button class="button danger" data-action="delete">삭제</button></div>`}
       <div class="quality-panel ${qStatus}"><h3>${esc(finalLabel)}</h3><b class="topic-mode-label">${t.topicMode==="context"?"60초 설명이 포함된 정보형":"바로 대화 가능한 생활형"}</b><div class="readiness-split"><span class="${structureReady?"ready":""}">STRUCTURE ${structureReady?"READY":"REVIEW"}</span><span class="${speaking.status==="ready"?"ready":""}">${esc(speaking.label)}</span></div><ul class="speaking-checks">${speakingChecks.map(([key,label])=>`<li class="${speaking.checks[key]?"ready":"review"}"><b>${speaking.checks[key]?"✓":"!"}</b>${label}</li>`).join("")}</ul><div class="ko">${diagnostics.length?`${diagnostics.length}개 문제를 확인하세요.`:"구조와 실제 발화 준비가 완료됐습니다."}</div>${diagnostics.length?`<ul class="issue-list">${diagnostics.map(item=>`<li class="${item.critical?"critical":""}"><strong>${esc(item.location)}</strong><span>${esc(item.message)}</span><button class="mini" data-regenerate="${esc(item.target)}">${repairLabel(item)}</button></li>`).join("")}</ul>`:""}</div>
-      ${t.conversationFlow?`<section class="operator-review"><div class="review-heading"><div><p class="eyebrow">확인 · 승인 전 초안</p><h2>학생용 A4와 문제를 확인하세요</h2></div><span>${diagnostics.length}개 확인 항목</span></div><p class="review-preview-help">미리보기 안을 아래로 스크롤해 SESSION 1과 SESSION 2를 확인하세요. 자세한 글자는 ‘학생용 A4 미리보기’에서 확인할 수 있습니다.</p><div class="review-preview" aria-label="학생용 A4 축소 미리보기">${renderConversationHandout(t)}</div></section><section class="review-actions"><button class="button secondary preview-button" data-open="${t.date}:print">학생용 A4 미리보기</button><button class="button secondary" data-regenerate="all">문제 자동 수정</button><button class="button secondary" data-regenerate="sessionOne">질문만 다시 만들기</button><button class="button secondary" data-regenerate="sessionTwo.mainActivity">활동 다시 만들기</button><button class="button secondary" data-regenerate="sessionTwo.mainActivity.options">선택지 보완</button><button class="button primary approve-button" data-action="approve-save">✓ 승인하고 저장</button></section>${diagnostics.length&&!conversation.critical?`<p class="approval-warning">현재 확인이 필요한 항목이 있습니다. 문제를 확인한 뒤 승인하는 것을 권장합니다.</p>`:""}`:""}
-      ${t.conversationFlow?`<section class="conversation-flow-summary"><h2>회화 흐름 구성</h2><p>바로 시작 ${t.conversationFlow.quickStarts.length} · 경험 이야기 ${t.conversationFlow.storyPrompts.length} · 대화 라운드 ${t.conversationFlow.talkRounds.length} · 그룹 활동 1 · 표현 ${t.conversationFlow.topicPhrases.length}</p><p class="ko">학생용 A4에서 실제 발화 순서와 인쇄 밀도를 확인하세요. 기존 구조 데이터는 호환성을 위해 그대로 보존됩니다.</p></section>`:""}
+      ${t.conversationFlow?`<section class="operator-review"><div class="review-heading"><div><p class="eyebrow">${esc(lifecycleState(t).label)} · 승인 전 확인</p><h2>학생용 A4 1·2페이지</h2></div><span>${diagnostics.length}개 확인 항목</span></div><p class="review-preview-help">두 페이지를 함께 확인하세요. 페이지를 누르면 큰 A4 미리보기가 열립니다.</p><button class="review-preview-grid" data-preview-modal aria-label="학생용 A4 두 페이지 크게 보기">${renderConversationHandout(t)}</button></section><section class="review-actions"><button class="button secondary preview-button" data-open="${t.date}:print">학생용 A4 미리보기</button><details class="regeneration-menu"><summary class="button secondary">다시 생성 ▾</summary><div><button data-regenerate="all">문제 자동 수정</button><button data-regenerate="sessionOne">질문만 다시 만들기</button><button data-regenerate="sessionTwo.mainActivity">활동만 다시 만들기</button><button data-regenerate="sessionTwo.mainActivity.options">선택지만 보완</button><button data-regenerate="translation">번역만 다시 확인</button></div></details><button class="button primary approve-button" data-action="approve-save">승인하고 저장</button><details class="admin-overflow"><summary class="button secondary">⋯</summary><div><button data-toggle-hidden="${t.date}">${t.hidden?"공개":"숨김"}</button><button data-clone-from="${t.date}">복제</button><button data-action="export">월 JSON</button><button data-action="advanced-open">고급 편집</button></div></details></section>${diagnostics.length&&!conversation.critical?`<p class="approval-warning">현재 확인이 필요한 항목이 있습니다. 문제를 확인한 뒤 승인하세요.</p>`:""}<dialog class="a4-preview-dialog"><button class="dialog-close" data-preview-close aria-label="미리보기 닫기">닫기</button><div>${renderConversationHandout(t)}</div><button class="button primary" data-open="${t.date}:print">학생용 PDF 열기</button></dialog>`:""}
+      ${t.conversationFlow?`<section class="conversation-flow-summary"><h2>실제 세션 구성</h2>${sessionSummary(t)}</section>`:""}
       <div class="${t.conversationFlow?"conversation-editor-summary":""}"><div class="editor-section"><h3>기본 정보</h3><div class="form-grid">${field("date","날짜",t.date,"date")}${field("category","카테고리",t.category)}${field("title.en","English title",t.title.en)}${field("title.ko","한국어 제목",t.title.ko)}${area("hook.en","Topic Hook · English",t.hook.en)}${area("hook.ko","Topic Hook · 한국어",t.hook.ko)}${area("goal.en","Today's Goal · English",t.goal.en)}${area("goal.ko","Today's Goal · 한국어",t.goal.ko)}</div></div>
       ${editQuestionSection("smallTalk","Small Talk",t.smallTalk,false)}
       ${editActivity("quickActivity","Quick Activity",t.quickActivity)}
@@ -378,13 +396,15 @@
     document.querySelectorAll("[data-action]").forEach(b=>b.onclick=()=>handleAction(b.dataset.action));
     const operatorTopic=$("#operator-topic"),operatorCreate=document.querySelector("[data-action='operator-create']");
     if(operatorTopic&&operatorCreate)operatorTopic.oninput=()=>{operatorCreate.disabled=!operatorTopic.value.trim()};
-    document.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{const[date,target]=b.dataset.open.split(":");activeDate=date;printDates.clear();if(target==="print"){printDates.add(date);const topic=topics[date];if(topic?.operatorStatus){topic.operatorStatus.printStatus="checked";localStorage.setItem(KEYS.data,JSON.stringify(topics))}}view=target;render()});
+    document.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{const[date,target]=b.dataset.open.split(":");activeDate=date;printDates.clear();if(target==="print")printDates.add(date);view=target;render()});
     document.querySelectorAll("[data-print-date]").forEach(input=>input.onchange=()=>{input.checked?printDates.add(input.dataset.printDate):printDates.delete(input.dataset.printDate);render()});
     document.querySelectorAll("[data-create-date]").forEach(b=>b.onclick=()=>createTopic(b.dataset.createDate));
     document.querySelectorAll("[data-auto-date]").forEach(b=>b.onclick=()=>autoCreateDate(b.dataset.autoDate));
     document.querySelectorAll("[data-custom-date]").forEach(b=>b.onclick=()=>openCustomTopic(b.dataset.customDate));
     document.querySelectorAll("[data-used]").forEach(b=>b.onclick=()=>{const topic=topics[b.dataset.used];topic.operatorStatus={...topic.operatorStatus,used:true};saveTopics("사용 완료로 표시했습니다.")});
-    document.querySelectorAll("[data-clone-to]").forEach(b=>b.onclick=()=>cloneTopicTo(b.dataset.cloneTo));
+    document.querySelectorAll("[data-preview-modal]").forEach(button=>button.onclick=()=>document.querySelector(".a4-preview-dialog")?.showModal());
+    document.querySelectorAll("[data-preview-close]").forEach(button=>button.onclick=()=>button.closest("dialog")?.close());
+    document.querySelectorAll("[data-clone-from]").forEach(b=>b.onclick=()=>cloneTopicFrom(b.dataset.cloneFrom));
     document.querySelectorAll("[data-move-to]").forEach(b=>b.onclick=()=>moveTopicTo(b.dataset.moveTo));
     document.querySelectorAll("[data-toggle-hidden]").forEach(b=>b.onclick=()=>{const t=topics[b.dataset.toggleHidden];t.hidden=!t.hidden;saveTopics(t.hidden?"토픽을 숨겼습니다.":"토픽을 공개했습니다.")});
     document.querySelectorAll("[data-prev-next]").forEach(b=>b.onclick=()=>{if(b.dataset.prevNext){activeDate=b.dataset.prevNext;render()}});
@@ -434,6 +454,7 @@
     if(action==="convert-flow")convertCurrentToConversation();
     if(action==="restore-version")restoreVersion();
     if(action==="approve-save")approveAndSave();
+    if(action==="advanced-open"){const advanced=document.querySelector(".advanced-editor");if(advanced){advanced.open=true;advanced.scrollIntoView({behavior:"smooth",block:"start"})}}
     if(action==="select-approved"){printDates=new Set(Object.values(topics).filter(t=>t.date.startsWith(monthPrefix())&&t.quality?.status==="approved"&&!t.hidden).map(t=>t.date));render()}
     if(action==="month-print"){printDates=new Set(Object.values(topics).filter(t=>t.date.startsWith(monthPrefix())&&t.quality?.status==="approved"&&!t.hidden).map(t=>t.date));view="print";render()}
     if(action==="week-print"){const start=new Date();start.setDate(start.getDate()-((start.getDay()+6)%7));printDates=new Set(Object.values(topics).filter(t=>{const d=new Date(`${t.date}T12:00:00`),end=new Date(start);end.setDate(end.getDate()+7);return d>=start&&d<end&&t.quality?.status==="approved"&&!t.hidden}).map(t=>t.date));if(!printDates.size)notify("이번 주 승인 토픽이 없습니다.",true);else{view="print";render()}}
@@ -488,7 +509,7 @@
   }
   function convertCurrentToConversation(){
     const topic=current();if(topic.conversationFlow){notify("이미 회화형 구조를 사용하고 있습니다.");return}
-    preserveVersion(topic);topic.conversationFlow=window.TalkFlowConversation.fromLegacy(topic);topic.quality={...topic.quality,status:"review"};topic.updatedAt=new Date().toISOString();dirty=true;saveTopics("직전 버전을 보존하고 회화형 구조를 만들었습니다.");
+    preserveVersion(topic);topic.conversationFlow=window.TalkFlowConversation.fromLegacy(topic);topic.quality={...topic.quality,status:"review"};topic.updatedAt=new Date().toISOString();topics[activeDate]=window.TalkFlowSessions.upgradeTopic(topic);dirty=true;saveTopics("직전 버전을 보존하고 회화형 구조를 만들었습니다.");
   }
   function restoreVersion(){
     const versions=loadRecord(KEYS.versions),previous=versions[current().id]?.[0];
@@ -508,9 +529,12 @@
     saveTopics("토픽을 승인하고 이 컴퓨터에 저장했습니다.");
     if(settings.gistToken)await gistPush();else notify("토픽은 이 컴퓨터에 저장되었습니다. 온라인 동기화는 아직 연결되지 않았습니다.");
   }
-  function cloneTopicTo(targetDate){
-    const sourceDate=prompt("복제할 기존 토픽 날짜 (YYYY-MM-DD)",activeDate);
-    if(!sourceDate||!topics[sourceDate]){if(sourceDate)notify("해당 날짜의 토픽을 찾을 수 없습니다.",true);return}
+  function cloneTopicFrom(sourceDate){
+    if(!topics[sourceDate]){notify("복제할 토픽을 찾을 수 없습니다.",true);return}
+    const targetDate=prompt("복제할 새 날짜 (YYYY-MM-DD)");
+    if(!targetDate)return;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(targetDate)){notify("날짜를 YYYY-MM-DD 형식으로 입력해 주세요.",true);return}
+    if(topics[targetDate]){notify("선택한 날짜에 토픽이 있습니다. 다른 날짜를 선택하세요.",true);return}
     const copy=clone(topics[sourceDate]);copy.id=`talkflow-${targetDate}-${crypto.randomUUID()}`;copy.date=targetDate;copy.quality={...copy.quality,status:"draft"};copy.hidden=false;copy.createdAt=copy.updatedAt=new Date().toISOString();topics[targetDate]=copy;activeDate=targetDate;saveTopics("토픽을 새 날짜로 복제했습니다.")
   }
   function moveTopicTo(targetDate){
@@ -628,6 +652,6 @@
   window.addEventListener("beforeunload",event=>{if(dirty){event.preventDefault();event.returnValue=""}});
   window.addEventListener("error",event=>notify(`오류: ${event.message}`,true));
   const params=new URLSearchParams(location.search);if(params.get("date")&&topics[params.get("date")])activeDate=params.get("date");if(["calendar","student","leader","admin","print"].includes(params.get("view")))view=params.get("view");if(view==="print")printDates.add(activeDate);
-  window.TalkFlow={KEYS,validateTopic,validateAll,getTopics:()=>clone(topics),approvedMonth,monthFile,viewerHtml,conversation:window.TalkFlowConversation,sessions:window.TalkFlowSessions,getVersions:()=>loadRecord(KEYS.versions),getFeedback:()=>loadRecord(KEYS.feedback)};
+  window.TalkFlow={KEYS,validateTopic,validateAll,getTopics:()=>clone(topics),approvedMonth,monthFile,viewerHtml,lifecycle:topic=>clone(lifecycleState(topic)),conversation:window.TalkFlowConversation,sessions:window.TalkFlowSessions,getVersions:()=>loadRecord(KEYS.versions),getFeedback:()=>loadRecord(KEYS.feedback)};
   render();
 })();
