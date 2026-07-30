@@ -76,6 +76,9 @@
 .v4-handout .material-card b,.v4-handout .evidence-choice,.v4-handout .words i,.v4-handout .section-hint,.v4-handout .brief-source,.v4-handout .brief-extra,.v4-handout .private-answer,.v4-handout .result-line,.v4-handout .leader-strip li{font-size:7.5pt}
 .v4-handout .bilingual-steps{gap:.3mm 2mm;margin:.5mm 0;padding-left:4mm}
 .v4-handout .activity-language{gap:.4mm;margin-top:.4mm}
+.v4-handout.context-handout .page-one .action-row{grid-template-columns:1fr;gap:.2mm}
+.v4-handout.context-handout .page-one .action-row .action-cue{display:grid;grid-template-columns:18mm 1fr;align-items:start;gap:.5mm;padding:.2mm .5mm}
+.v4-handout.context-handout .page-one .action-row .action-cue b{margin:0}
 .v4-handout .activity-language b,.v4-handout .assigned-role-briefs b,.v4-handout .assigned-role-briefs small,.v4-handout .assigned-opposition>div>b,.v4-handout .assigned-opposition>div>b span,.v4-handout .assigned-opposition>div>b small{padding:.4mm;font-size:8.5pt;line-height:1.1}
 .v4-handout .leader-inline{margin-top:.4mm;padding:.5mm;font-size:8.5pt;line-height:1.1}
 .v4-handout .leader-strip{padding:.5mm 1mm}

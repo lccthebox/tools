@@ -51,10 +51,14 @@ try {
     const filename = `${topic.date}_TheBox_TalkFlow_${safeTitle}.pdf`;
     const path = join(output, filename);
     const pageCount = await page.locator(".a4-page").count();
-    const overflow = await page.locator(".a4-page").evaluateAll(pages => pages.map(item => ({
-      vertical: item.scrollHeight - item.clientHeight,
-      horizontal: item.scrollWidth - item.clientWidth
-    })));
+    const overflow = await page.locator(".a4-page").evaluateAll(pages => pages.map(item => {
+      const body=item.querySelector(".handout-body"),last=body?.lastElementChild;
+      return {
+        vertical: item.scrollHeight - item.clientHeight,
+        horizontal: item.scrollWidth - item.clientWidth,
+        contentCollision:body&&last?Math.max(0,last.getBoundingClientRect().bottom-body.getBoundingClientRect().bottom):0
+      };
+    }));
     const printText = await page.locator(".a4-topic").innerText();
     if (topic.date === "2026-08-03") onlineColorText = printText;
     const sentenceOptionsText = topic.date === "2026-08-03" ? await page.locator(".sentence-options").innerText() : "";
@@ -117,7 +121,7 @@ try {
   }
   const pngManifest=(await readdir(evidence)).filter(name=>name.endsWith(".png")).sort();
   const grayscaleManifest=(await readdir(grayscaleEvidence)).filter(name=>name.endsWith(".png")).sort();
-  const pass = report.every(item => item.domPages === 2 && item.physicalPages === 2 && item.overflow.every(value => value.vertical <= 1 && value.horizontal <= 1) && Object.values(item.speakingContent).every(Boolean)
+  const pass = report.every(item => item.domPages === 2 && item.physicalPages === 2 && item.overflow.every(value => value.vertical <= 1 && value.horizontal <= 1 && value.contentCollision <= 1) && Object.values(item.speakingContent).every(Boolean)
       && item.printType.title >= 18 && item.printType.question >= 11 && item.printType.englishInstruction >= 9.5 && item.printType.koreanGuidance >= 8.5 && item.printType.meta >= 7.5)
     && report.length === 10 && pngManifest.length === 22 && grayscaleManifest.length === 2 && grayscalePages === 2 && grayscaleMatchesColor && batchPages === 16 && leaderPages === 2 && leaderOverflow.every(value => value.vertical <= 1 && value.horizontal <= 1)
     && ["12 MIN","18 MIN","20 MIN","5 MIN","10 MIN","TIME CUT","LEADER TIME","Write the Fake는 최소 15분"].every(label=>leaderText.includes(label));

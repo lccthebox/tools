@@ -220,7 +220,7 @@
     topic.topicMode="context";
     topic.sourceMaterial=clone(definition.source);
     topic.commonGround={enabled:true,briefEn:definition.briefEn,briefKo:definition.briefKo,exampleEn:definition.exampleEn,exampleKo:definition.exampleKo,keywords:definition.keywords};
-    topic.sessionOne={minutes:50,quickStarts:topic.conversationFlow.quickStarts.slice(0,2),storyPrompts:topic.conversationFlow.storyPrompts.slice(0,1),talkRounds:topic.conversationFlow.talkRounds.slice(0,2),phrases:topic.conversationFlow.topicPhrases};
+    topic.sessionOne={minutes:50,quickStarts:topic.conversationFlow.quickStarts.slice(0,2),storyPrompts:topic.conversationFlow.storyPrompts.slice(0,1),talkRounds:topic.conversationFlow.talkRounds.slice(0,1),phrases:topic.conversationFlow.topicPhrases};
     topic.sessionTwo=sessionTwo(topic,definition.activity);
     topic.operatorStatus={generationStatus:"complete",reviewStatus:"review",printStatus:"unchecked",used:false};
     topic.contextFixture=true;

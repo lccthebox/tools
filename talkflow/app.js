@@ -514,7 +514,7 @@
       topic.topicMode="context";
       topic.sourceMaterial={type:isUrl?"webpage":"pastedText",url:isUrl?source:"",title:`${keyword} 참고 자료`,publisher,publishedAt:today(),qrEnabled:isUrl};
       topic.commonGround={enabled:true,briefEn:[`${keyword} is changing how people make everyday choices.`,`The source shows both a practical benefit and a concern.`,`Use the shared facts, then add your own experience.`],briefKo:[`${keyword}은 일상의 선택 방식을 바꾸고 있습니다.`,`자료에는 실용적인 장점과 우려가 함께 나옵니다.`,`공통 사실을 바탕으로 자신의 경험을 더해 보세요.`],exampleEn:`One person may value convenience while another needs more support.`,exampleKo:"누군가는 편리함을, 다른 사람은 충분한 도움을 더 중요하게 볼 수 있습니다.",keywords:["change","benefit","concern"]};
-      topic.sessionOne={...topic.sessionOne,quickStarts:topic.sessionOne.quickStarts.slice(0,2),storyPrompts:topic.sessionOne.storyPrompts.slice(0,1),talkRounds:topic.conversationFlow.talkRounds.slice(0,2)};
+      topic.sessionOne={...topic.sessionOne,quickStarts:topic.sessionOne.quickStarts.slice(0,2),storyPrompts:topic.sessionOne.storyPrompts.slice(0,1),talkRounds:topic.conversationFlow.talkRounds.slice(0,1)};
     }
     topic.operatorStatus={generationStatus:"complete",reviewStatus:"review",printStatus:"unchecked",used:false};
     return topic;
