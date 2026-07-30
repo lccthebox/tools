@@ -137,7 +137,7 @@ try{
   check("clone refuses to overwrite an occupied date",await legacyPage.evaluate(before=>JSON.stringify(TalkFlow.getTopics()["2026-08-03"])===before,occupiedTopicBeforeClone));
   let autoGistCalls=0;
   await legacyPage.route("https://api.github.com/gists",async route=>{autoGistCalls++;await route.fulfill({status:201,contentType:"application/json",body:JSON.stringify({id:"approve-test-gist"})})});
-  await legacyPage.evaluate(key=>localStorage.setItem(key,JSON.stringify({gistToken:"test-token"})),await legacyPage.evaluate(()=>TalkFlow.KEYS.settings));
+  await legacyPage.evaluate(key=>localStorage.setItem(key,JSON.stringify({gistToken:"test-token",apiKey:"test-api-key"})),await legacyPage.evaluate(()=>TalkFlow.KEYS.settings));
   await legacyPage.reload({waitUntil:"networkidle"});
   await legacyPage.getByRole("button",{name:"관리",exact:true}).click();
   await legacyPage.getByRole("button",{name:"승인하고 저장"}).first().click();
@@ -146,6 +146,16 @@ try{
   await legacyPage.getByRole("button",{name:"학생용 A4 미리보기"}).first().click();
   await legacyPage.getByRole("button",{name:"A4 확인 완료"}).click();
   check("approved PDF confirmation reaches print-ready lifecycle",await legacyPage.evaluate(()=>TalkFlow.lifecycle(TalkFlow.getTopics()["2026-08-31"]).key==="print-ready"));
+  const replacementSessionOne=await legacyPage.evaluate(()=>TalkFlow.getTopics()["2026-08-31"].sessionOne);
+  await legacyPage.route("https://api.anthropic.com/v1/messages",route=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({content:[{text:JSON.stringify(replacementSessionOne)}]})}));
+  await legacyPage.getByRole("button",{name:"관리",exact:true}).click();
+  await legacyPage.locator(".regeneration-menu summary").click();
+  await legacyPage.getByRole("button",{name:"질문만 다시 만들기"}).click();
+  await legacyPage.waitForFunction(()=>TalkFlow.getTopics()["2026-08-31"].quality.status==="review");
+  check("regeneration invalidates prior A4 confirmation",await legacyPage.evaluate(()=>{
+    const topic=TalkFlow.getTopics()["2026-08-31"];
+    return topic.operatorStatus.printStatus==="unchecked"&&TalkFlow.lifecycle(topic).key==="review";
+  }));
   await legacyContext.close();
   const viewports=[[360,800],[390,844],[430,900],[768,900],[1024,900],[1440,1000]];
   for(const [width,height] of viewports){

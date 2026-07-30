@@ -7,6 +7,7 @@
   const SENSITIVE=["big secret","income","salary","work mistake","dating conflict","family problem","disease","political view","religion","appearance","trauma","큰 비밀","소득","연봉","직장 실수","연애 갈등","가족 문제","질병","정치 성향","종교","외모","트라우마"];
   const $=s=>document.querySelector(s);
   const esc=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const koTitle=value=>esc(value).replace(/ (?=\S+$)/,"&nbsp;");
   const clone=value=>JSON.parse(JSON.stringify(value));
   let topics=loadTopics(),settings=loadSettings(),activeDate=Object.keys(topics).sort()[0]||today(),cursor=new Date("2026-08-01T12:00:00"),view="calendar",dirty=false;
   let printDates=new Set(),printLeader=false;
@@ -125,7 +126,7 @@
     const prefix=monthPrefix(),entries=Object.values(topics).filter(t=>t.date.startsWith(prefix)).sort((a,b)=>a.date.localeCompare(b.date));
     $("#topic-list").innerHTML=entries.length?entries.map(t=>{
       const state=lifecycleState(t);
-      return `<button class="topic-day ${t.date===activeDate?"is-active":""}" data-date="${t.date}"><time>${t.date.slice(8)}</time><span><strong>${esc(t.title.en)}</strong><small>${esc(t.title.ko)}</small></span><i class="status-pill ${state.key}">${state.label}</i></button>`;
+      return `<button class="topic-day ${t.date===activeDate?"is-active":""}" data-date="${t.date}"><time>${t.date.slice(8)}</time><span><strong>${esc(t.title.en)}</strong><small>${koTitle(t.title.ko)}</small></span><i class="status-pill ${state.key}">${state.label}</i></button>`;
     }).join(""):`<p class="ko">이 달에는 작성된 토픽이 없습니다.</p>`;
   }
   function weekday(date){return new Intl.DateTimeFormat("ko-KR",{weekday:"short",timeZone:"UTC"}).format(new Date(`${date}T12:00:00Z`))}
@@ -142,7 +143,7 @@
         if(!isOperating&&!t)return `<article class="calendar-day is-off"><header><time>${i+1}일 · ${weekday(date)}</time></header><p>운영 없음</p></article>`;
         if(!t)return `<article class="calendar-day is-empty"><header><time>${i+1}일 · ${weekday(date)}</time><span class="status-pill">${label}</span></header><h2>토픽 미작성</h2><div class="date-actions empty-actions"><button class="button ghost" data-auto-date="${date}">자동 생성</button><button class="text-action" data-custom-date="${date}">주제 지정</button></div></article>`;
         const primaryTarget=state==="review"||state==="draft"?"admin":"print";
-        return `<article class="calendar-day is-complete ${t.hidden?"is-hidden":""}"><header><time>${i+1}일 · ${weekday(date)}</time><span class="status-pill ${state}">${label}</span></header><h2>${esc(t.title.ko||t.title.en)}</h2><div class="date-actions"><button class="button ${state==="print-ready"?"primary":"secondary"}" data-open="${date}:${primaryTarget}">${status.action}</button><details class="card-overflow"><summary aria-label="추가 작업">⋯</summary><div><button data-open="${date}:admin">수정</button><button data-print-leader="${date}">리더용 PDF</button>${state==="print-ready"?`<button data-used="${date}">사용 완료로 표시</button>`:""}<button data-toggle-hidden="${date}">${t.hidden?"공개":"숨김"}</button><button data-clone-from="${date}">복제</button></div></details></div></article>`;
+        return `<article class="calendar-day is-complete ${t.hidden?"is-hidden":""}"><header><time>${i+1}일 · ${weekday(date)}</time><span class="status-pill ${state}">${label}</span></header><h2>${koTitle(t.title.ko||t.title.en)}</h2><div class="date-actions"><button class="button ${state==="print-ready"?"primary":"secondary"}" data-open="${date}:${primaryTarget}">${status.action}</button><details class="card-overflow"><summary aria-label="추가 작업">⋯</summary><div><button data-open="${date}:admin">수정</button><button data-print-leader="${date}">리더용 PDF</button>${state==="print-ready"?`<button data-used="${date}">사용 완료로 표시</button>`:""}<button data-toggle-hidden="${date}">${t.hidden?"공개":"숨김"}</button><button data-clone-from="${date}">복제</button></div></details></div></article>`;
       }).join("")}</section><details class="quick-help"><summary>처음 사용하시나요?</summary><p>빈 날짜에서 자동 생성 → 두 페이지 확인 → 필요한 부분만 수정 → 승인 → PDF 출력 순서로 진행하세요.</p></details>
       <div class="batch-toolbar"><label><input type="checkbox" data-action="select-approved"> 인쇄 가능 날짜 선택</label><button class="button primary" data-action="batch-print" ${printDates.size?"":"disabled"}>선택 PDF (${printDates.size})</button></div>`;
   }
@@ -564,7 +565,7 @@
       const payload=await response.json();if(!response.ok)throw new Error(payload.error?.message||`HTTP ${response.status}`);
       const text=payload.content?.map(c=>c.text||"").join("")||"",match=text.match(/\{[\s\S]*\}|\[[\s\S]*\]/);if(!match)throw new Error("응답에서 JSON을 찾지 못했습니다.");
       const result=JSON.parse(match[0]);if(section==="all"){result.id=topic.id;result.date=topic.date;result.createdAt=topic.createdAt;result.updatedAt=new Date().toISOString();result.quality={status:"draft",score:0,issues:[]};topics[activeDate]=result}else setPath(topic,section,result);
-      dirty=true;const quality=validateTopic(current());current().quality={status:quality.status==="approved"?"review":"review",score:quality.score,issues:quality.issues};saveTopics(`${scope} 생성과 품질검사를 완료했습니다.`);
+      dirty=true;const quality=validateTopic(current());current().quality={status:"review",score:quality.score,issues:quality.issues};current().operatorStatus={...current().operatorStatus,reviewStatus:"review",printStatus:"unchecked",used:false};saveTopics(`${scope} 생성과 품질검사를 완료했습니다.`);
     }catch(error){notify("토픽 내용을 완성하지 못했습니다. 작성된 부분은 보존했으며 문제가 있는 구간만 다시 생성할 수 있습니다.",true)}
   }
 
