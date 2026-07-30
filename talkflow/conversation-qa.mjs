@@ -81,11 +81,25 @@ try{
   const onlineSession=sessionFixtures.find(item=>item.one?.format==="evidenceRounds");
   check("online review uses 12 18 20 minute evidence rounds",onlineSession?.one.rounds.map(round=>round.minutes).join(",")==="12,18,20"&&onlineSession.materials.length===3);
   check("online review replaces Spot the Fake with Write the Fake and Star Fight",onlineSession?.two.mainActivity.titleEn==="WRITE THE FAKE"&&onlineSession.two.secondaryActivity?.titleEn==="STAR FIGHT"&&!JSON.stringify(onlineSession).includes("Spot the Fake"));
+  check("online reviews describe one jacket in complete 25–45 word texts",onlineSession?.materials.every(material=>material.product==="jacket"&&material.contentEn.trim().split(/\s+/).length>=25&&material.contentEn.trim().split(/\s+/).length<=45),JSON.stringify(onlineSession?.materials));
+  check("hidden answers use numbered sentences without answer labels",onlineSession?.two.mainActivity.options?.every(option=>/^SENTENCE [12]/.test(option))&&onlineSession.two.mainActivity.privateAnswer?.choices?.join(",")==="1,2"&&!/TRUE sentence|FAKE sentence/i.test(JSON.stringify(onlineSession.two.mainActivity.options)));
+  check("student and leader rules have complete Korean pairs",onlineSession?.two.mainActivity.stepsKo?.length===onlineSession.two.mainActivity.steps?.length&&onlineSession.two.secondaryActivity?.roles?.every(role=>role.nameKo&&role.briefKo)&&onlineSession.two.groupDecision?.everyoneSpeaksRuleKo);
+  const onlineMutants=await sessionPage.evaluate(()=>{
+    const online=structuredClone(Object.values(TalkFlow.getTopics()).find(topic=>topic.sessionOne?.format==="evidenceRounds"));
+    const mismatch=structuredClone(online); mismatch.conversationMaterials[1].product="shoes";
+    const exposed=structuredClone(online); exposed.sessionTwo.mainActivity.options[0]="TRUE sentence";
+    const broken=structuredClone(online); broken.sessionOne.rounds[2].instructionEn="USE A DIFFERENT REACT";
+    const missingKo=structuredClone(online); missingKo.sessionTwo.mainActivity.stepsKo.pop();
+    return [mismatch,exposed,broken,missingKo].map(topic=>TalkFlow.sessions.speakingEvaluate(topic).status);
+  });
+  check("speaking QA rejects material mismatch answer exposure broken reference and missing Korean",onlineMutants.every(status=>status==="fail"),JSON.stringify(onlineMutants));
   await sessionContext.close();
   check("calendar is monthly seven-column default",await page.locator(".month-calendar").isVisible()&&await page.locator(".weekday-row span").count()===7);
   check("month toolbar has one-click actions",await page.getByRole("button",{name:"이번 달 자동 구성"}).isVisible()&&await page.getByRole("button",{name:"고급 설정",exact:true}).isVisible());
   check("written dates expose PDF and edit",await page.locator(".calendar-day [data-open$=':print']").count()===8&&await page.locator(".calendar-day [data-open$=':admin']").count()===8);
   check("empty operating dates expose two generation paths",await page.locator("[data-auto-date]").count()>0&&await page.locator("[data-custom-date]").count()>0);
+  check("non-operating dates expose no generation action",await page.locator(".calendar-day.is-off [data-auto-date],.calendar-day.is-off [data-custom-date]").count()===0);
+  check("calendar cards expose exactly one lifecycle state",await page.locator(".calendar-day:not(.is-off)").evaluateAll(cards=>cards.every(card=>card.querySelectorAll(".status-pill").length===1)));
   const alignmentCritical=await page.evaluate(()=>{
     const flow=TalkFlow.getTopics()["2026-08-03"].conversationFlow;
     flow.quickStarts[0].options=["Reviewer history"];
@@ -107,12 +121,20 @@ try{
   await legacyPage.getByRole("button",{name:"토픽 생성하기"}).click();
   check("operator creates without overwriting another date",await legacyPage.evaluate(()=>Boolean(TalkFlow.getTopics()["2026-08-31"]?.conversationFlow)&&Object.keys(TalkFlow.getTopics()).length===9));
   const beforeRegeneration=await legacyPage.evaluate(()=>JSON.stringify(TalkFlow.getTopics()["2026-08-31"].conversationFlow.talkRounds));
+  await legacyPage.locator(".regeneration-menu summary").click();
   await legacyPage.getByRole("button",{name:"질문만 다시 만들기"}).click();
   check("failed partial generation preserves content",await legacyPage.evaluate(before=>JSON.stringify(TalkFlow.getTopics()["2026-08-31"].conversationFlow.talkRounds)===before,beforeRegeneration));
   const statusBeforePreview=await legacyPage.evaluate(()=>TalkFlow.getTopics()["2026-08-31"].quality.status);
+  const printStatusBeforePreview=await legacyPage.evaluate(()=>TalkFlow.getTopics()["2026-08-31"].operatorStatus.printStatus);
   await legacyPage.getByRole("button",{name:"학생용 A4 미리보기"}).first().click();
   check("preview does not approve topic",await legacyPage.evaluate(before=>TalkFlow.getTopics()["2026-08-31"].quality.status===before,statusBeforePreview));
+  check("preview does not advance print lifecycle",await legacyPage.evaluate(before=>TalkFlow.getTopics()["2026-08-31"].operatorStatus.printStatus===before,printStatusBeforePreview));
   await legacyPage.getByRole("button",{name:"관리",exact:true}).click();
+  const occupiedTopicBeforeClone=await legacyPage.evaluate(()=>JSON.stringify(TalkFlow.getTopics()["2026-08-03"]));
+  legacyPage.once("dialog",dialog=>dialog.accept("2026-08-03"));
+  await legacyPage.locator(".admin-overflow summary").click();
+  await legacyPage.getByRole("button",{name:"복제",exact:true}).click();
+  check("clone refuses to overwrite an occupied date",await legacyPage.evaluate(before=>JSON.stringify(TalkFlow.getTopics()["2026-08-03"])===before,occupiedTopicBeforeClone));
   let autoGistCalls=0;
   await legacyPage.route("https://api.github.com/gists",async route=>{autoGistCalls++;await route.fulfill({status:201,contentType:"application/json",body:JSON.stringify({id:"approve-test-gist"})})});
   await legacyPage.evaluate(key=>localStorage.setItem(key,JSON.stringify({gistToken:"test-token"})),await legacyPage.evaluate(()=>TalkFlow.KEYS.settings));
@@ -139,14 +161,14 @@ try{
       if(!preview||!approve)return false;
       return Math.abs(approve.top-preview.top)>8||approve.left-preview.right>=8;
     }));
-    check(`${width}px both review pages scroll-accessible`,await page.locator(".review-preview").evaluate(node=>{
-      const pages=[...node.querySelectorAll(".a4-page")];
-      return pages.length===2&&pages.every(page=>getComputedStyle(page).display!=="none")&&node.scrollHeight>node.clientHeight;
-    }));
+    check(`${width}px both review page thumbnails visible`,await page.locator(".review-preview-grid .a4-page").evaluateAll(pages=>pages.length===2&&pages.every(item=>getComputedStyle(item).display!=="none")));
+    check(`${width}px one primary approval action`,await page.locator("[data-action='approve-save']").count()===1);
+    check(`${width}px regeneration and overflow menus visible`,await page.locator(".regeneration-menu,.admin-overflow").count()===2);
     await page.screenshot({path:join(evidence,`admin-${width}.png`),fullPage:true});
-    await page.locator(".review-preview").evaluate(node=>{node.scrollTop=node.scrollHeight;});
+    await page.locator("[data-preview-modal]").click();
+    check(`${width}px large preview dialog contains both pages`,await page.locator(".a4-preview-dialog[open] .a4-page").count()===2);
     await page.screenshot({path:join(evidence,`admin-${width}-page2.png`),fullPage:true});
-    await page.locator(".review-preview").evaluate(node=>{node.scrollTop=0;node.scrollLeft=0;});
+    await page.locator("[data-preview-close]").click();
   }
   await page.getByRole("button",{name:"리더",exact:true}).click();
   check("leader support and feedback visible",await page.locator(".leader-support,.feedback-card").count()===2);
@@ -158,13 +180,15 @@ try{
   check("conversation review actions visible",await page.locator(".review-actions").isVisible());
   check("structure and speaking readiness are separately visible",await page.locator(".readiness-split").innerText().then(text=>text.includes("STRUCTURE READY")&&text.includes("SPEAKING READY")));
   check("five plain-language speaking checks are visible",await page.locator(".speaking-checks li").count()===5&&await page.locator(".speaking-checks").innerText().then(text=>["실제 말할 재료","서로 다른 내용","참가자의 순번","반대 의견","정답 없는 그룹 결론"].every(label=>text.includes(label))));
-  check("scaled A4 review preview visible",await page.locator(".review-preview .a4-page").count()===2);
+  check("scaled A4 two-page review preview visible",await page.locator(".review-preview-grid .a4-page").count()===2);
   check("legacy technical editor hidden",await page.locator(".conversation-editor-summary").evaluate(node=>getComputedStyle(node).display==="none"));
   await page.locator("[data-open$=':print']").first().click();
   check("student handout exactly two DOM pages",await page.locator(".a4-page").count()===2);
   const studentText=await page.locator(".a4-topic").innerText();
   check("student handout required evidence round order",["SESSION 1","REAL ITEM ROUND","EVIDENCE ROUND","STORY ROUND","SAY THIS","SESSION 2","RESET VOTE","WRITE THE FAKE","STAR FIGHT","FINAL DECISION"].every((label,index,all)=>studentText.indexOf(label)>=0&&(index===0||studentText.indexOf(label)>studentText.indexOf(all[index-1]))),studentText);
   check("student handout includes timed turns ask react and full materials",studentText.includes("45 SEC EACH")&&studentText.includes("NEXT PERSON MUST ASK")&&studentText.includes("I still disagree because")&&["REVIEW A","REVIEW B","REVIEW C"].every(label=>studentText.includes(label)));
+  const sentenceOptionsText=await page.locator(".sentence-options").innerText();
+  check("student handout contains bilingual numbered evidence and hidden-answer rules",await page.locator(".evidence-round .bilingual-steps li").count()===6&&studentText.includes("For each review, choose BUY or DON'T BUY.")&&studentText.includes("각 리뷰마다 살지 말지 고르세요.")&&sentenceOptionsText.includes("SENTENCE 1")&&sentenceOptionsText.includes("SENTENCE 2")&&!/TRUE sentence|FAKE sentence/i.test(sentenceOptionsText));
   check("legacy print labels absent",!/TODAY'S GOAL|TOPIC HOOK|EXAMPLE FOLLOW-UP|DEEPER FOLLOW-UP/.test(studentText));
   const overflows=await page.locator(".a4-page").evaluateAll(nodes=>nodes.map(node=>({x:node.scrollWidth-node.clientWidth,y:node.scrollHeight-node.clientHeight})));
   check("student A4 DOM has no overflow",overflows.every(item=>item.x<=1&&item.y<=1),JSON.stringify(overflows));

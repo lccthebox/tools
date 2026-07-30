@@ -17,9 +17,12 @@ const { chromium } = playwright;
 const root = fileURLToPath(new URL(".", import.meta.url));
 const output = join(root, ".qa-pdf");
 const evidence = join(root, "..", ".omo", "evidence", "talkflow-pdf-render");
+const grayscaleEvidence = join(root, "..", ".omo", "evidence", "talkflow-pdf-grayscale");
 await mkdir(output, { recursive: true });
 await mkdir(evidence, { recursive: true });
+await mkdir(grayscaleEvidence, { recursive: true });
 await Promise.all((await readdir(evidence)).filter(name=>name.endsWith(".png")).map(name=>unlink(join(evidence,name))));
+await Promise.all((await readdir(grayscaleEvidence)).filter(name=>name.endsWith(".png")).map(name=>unlink(join(grayscaleEvidence,name))));
 const mime = { ".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "text/javascript" };
 const server = createServer(async (request, response) => {
   try {
@@ -53,12 +56,16 @@ try {
       horizontal: item.scrollWidth - item.clientWidth
     })));
     const printText = await page.locator(".a4-topic").innerText();
+    const sentenceOptionsText = topic.date === "2026-08-03" ? await page.locator(".sentence-options").innerText() : "";
     const speakingContent = {
       material: topic.date === "2026-08-03" ? ["REVIEW A", "REVIEW B", "REVIEW C"].every(label => printText.includes(label)) : printText.includes("USE THIS EVIDENCE") && /[.!?]/.test(printText),
       timing: topic.date === "2026-08-03" ? ["12 MIN", "18 MIN", "20 MIN", "5 MIN", "10 MIN"].every(label => printText.includes(label)) : printText.includes("45 SEC EACH"),
       turns: (printText.includes("EVERYONE") || printText.includes("everyone has spoken")) && /ASK|question|follow-up/i.test(printText),
       decision: (printText.includes("FINAL DECISION") || printText.includes("GROUP DECISION")) && /because|reason|이유/i.test(printText),
       onlineActivities: topic.date !== "2026-08-03" || (printText.includes("WRITE THE FAKE") && printText.includes("STAR FIGHT") && !printText.includes("Spot the Fake"))
+      ,
+      bilingualRules: topic.date !== "2026-08-03" || (printText.includes("For each review, choose BUY or DON'T BUY.") && printText.includes("각 리뷰마다 살지 말지 고르세요.") && printText.includes("SENTENCE 1") && printText.includes("SENTENCE 2")),
+      hiddenAnswer: topic.date !== "2026-08-03" || !/TRUE sentence|FAKE sentence/i.test(sentenceOptionsText)
     };
     await page.pdf({ path, format: "A4", printBackground: true, preferCSSPageSize: true, margin: { top: "0", right: "0", bottom: "0", left: "0" } });
     const physicalPages=(await PDFDocument.load(await readFile(path))).getPageCount();
@@ -82,15 +89,26 @@ try {
     vertical: item.scrollHeight - item.clientHeight,
     horizontal: item.scrollWidth - item.clientWidth
   })));
+  const leaderText=await page.locator(".a4-topic").innerText();
   await page.pdf({ path: join(output, "2026-08-03_TheBox_TalkFlow_leader.pdf"), format: "A4", printBackground: true, preferCSSPageSize: true, margin: { top: "0", right: "0", bottom: "0", left: "0" } });
   await page.addStyleTag({ content: ".topbar,.print-toolbar{display:none!important}.a4-page{box-shadow:none!important}" });
   for (let index = 0; index < leaderPages; index += 1) {
     await page.locator(".a4-page").nth(index).screenshot({ path: join(evidence, `2026-08-03-leader-${index + 1}.png`) });
   }
+  await page.goto(`http://127.0.0.1:${port}/?fixtures=sessions&date=2026-08-03&view=print`, { waitUntil: "networkidle" });
+  await page.addStyleTag({ content: ".topbar,.print-toolbar{display:none!important}.a4-page{box-shadow:none!important;filter:grayscale(1)!important}" });
+  const grayscalePdf=join(output,"2026-08-03_TheBox_TalkFlow_온라인_리뷰_grayscale.pdf");
+  await page.pdf({ path: grayscalePdf, format: "A4", printBackground: true, preferCSSPageSize: true, margin: { top: "0", right: "0", bottom: "0", left: "0" } });
+  const grayscalePages=(await PDFDocument.load(await readFile(grayscalePdf))).getPageCount();
+  for (let index = 0; index < 2; index += 1) {
+    await page.locator(".a4-page").nth(index).screenshot({ path: join(grayscaleEvidence, `2026-08-03-student-${index + 1}-grayscale.png`) });
+  }
   const pngManifest=(await readdir(evidence)).filter(name=>name.endsWith(".png")).sort();
+  const grayscaleManifest=(await readdir(grayscaleEvidence)).filter(name=>name.endsWith(".png")).sort();
   const pass = report.every(item => item.domPages === 2 && item.physicalPages === 2 && item.overflow.every(value => value.vertical <= 1 && value.horizontal <= 1) && Object.values(item.speakingContent).every(Boolean))
-    && report.length === 10 && pngManifest.length === 12 && batchPages === 16 && leaderPages === 2 && leaderOverflow.every(value => value.vertical <= 1 && value.horizontal <= 1);
-  await writeFile(join(output, "generation-results.json"), `${JSON.stringify({ pass, topics: report, pngManifest, batchPages, leaderPages, leaderOverflow }, null, 2)}\n`, "utf8");
+    && report.length === 10 && pngManifest.length === 12 && grayscaleManifest.length === 2 && grayscalePages === 2 && batchPages === 16 && leaderPages === 2 && leaderOverflow.every(value => value.vertical <= 1 && value.horizontal <= 1)
+    && ["12 MIN","18 MIN","20 MIN","5 MIN","10 MIN","TIME CUT","LEADER TIME","Write the Fake는 최소 15분"].every(label=>leaderText.includes(label));
+  await writeFile(join(output, "generation-results.json"), `${JSON.stringify({ pass, topics: report, pngManifest, grayscaleManifest, grayscalePages, batchPages, leaderPages, leaderOverflow }, null, 2)}\n`, "utf8");
   console.log(JSON.stringify(report, null, 2));
   if (!pass) process.exitCode = 1;
 } finally {
