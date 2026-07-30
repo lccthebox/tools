@@ -41,6 +41,11 @@ Talk Flow is an operational tool for a non-technical study coordinator, a discus
 - `reset-activity`: compact 3–5 minute no-preparation warm reset.
 - `main-activity`: goal, complete choices or roles, numbered procedure, useful English, and result.
 - `group-decision`: compact result control plus the everyone-speaks rule.
+- `speaking-readiness`: five plain-language checks for material, axis diversity, turns, opposition, and open-ended decision; states are ready, review, and regenerate.
+- `conversation-material`: a complete review, message, statistic, scenario, schedule, or option set that gives learners evidence to judge; never a label-only chip.
+- `timed-round`: a named round with visible minutes, per-person time, follow-up requirement, and a no-advance-until-everyone-speaks rule.
+- `assigned-opposition`: two contrasting role briefs that let adults disagree without exposing their personal view.
+- `information-gap`: participant-created or sequentially revealed information that cannot be completed silently.
 - `conversation-block`: start, story, round, mission, phrase, final.
 - `action-cue`: SAY uses a solid marker, ASK a directional dashed marker, and REACT a return/double marker so actions remain distinct without color.
 - `story-path`: connected spoken openings rather than fill-in boxes.
@@ -67,6 +72,10 @@ Talk Flow is an operational tool for a non-technical study coordinator, a discus
 - A prompt must permit a short first answer and a longer voluntary expansion.
 - Quick Start questions and options share one answer axis; experience prompts do not force choices.
 - Page one exposes four topic-specific `SAY THIS` phrases; page two requires one immediate response from `USE ONE NOW`.
+- Every topic uses at least three speaking mechanisms, at least three prompt axes, one complete conversation material, and one open-ended group decision.
+- Page one uses at least two speaking mechanisms. Page two uses at least two and always includes a timed turn or assigned opposition.
+- The same REACT phrase appears at most twice; each sheet includes surprise/follow-up, agreement, different experience, opposition, and reason-request language.
+- `STRUCTURE READY` covers schema, language, translation, and print validity. `SPEAKING READY` separately covers material, axis diversity, information gap, turns, opposition, open decision, and sustainable activity duration. Only both may produce `CONVERSATION READY`.
 - Everyday topics begin immediately without a brief. Context topics include a source-backed `60-SECOND BRIEF` that remains usable without opening the optional link or QR.
 - Every Session 1 core prompt supports START, ADD, ASK, and REACT.
 - Session 2 is an activity, not another question list: RESET → MAIN ACTIVITY → GROUP DECISION → FINAL ROUND.
@@ -76,4 +85,5 @@ Talk Flow is an operational tool for a non-technical study coordinator, a discus
 
 - The application is a dependency-free vanilla JavaScript tool with string-template renderers. This change keeps that architecture to protect deployed storage and Gist behavior.
 - Real classroom timing and printer hardware behavior require offline observation after local QA.
+- Speaking readiness proves the designed constraints and printable materials, not real-world learner participation; first-speech latency, ASK/REACT counts, leader interventions, and actual 20-minute duration remain pilot measurements.
 - Public-holiday lookup is not network-backed in this local build; coordinators can exclude specific dates and copy weekday settings month to month.
