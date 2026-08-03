@@ -134,4 +134,4 @@
 .legacy-format-badge{display:inline-flex;margin:0 0 12px;padding:5px 9px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:12px;font-weight:800}
 @media(max-width:520px){.simple-operator-review .review-preview-grid .a4-page{zoom:.39}.a4-preview-dialog .simple-handout .a4-page{zoom:1}}
 @media(max-width:800px){.simple-operator-review .review-preview-grid .a4-topic{justify-items:center}}
-@media print{.simple-handout .a4-page{break-after:page;page-break-after:always}.simple-handout .a4-page:last-child{break-after:auto;page-break-after:auto}}
+@media print{.simple-handout .a4-page{height:275mm;break-before:page!important;page-break-before:always!important;break-after:auto!important;page-break-after:auto!important}}

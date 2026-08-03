@@ -286,13 +286,14 @@ function canPreviewTopic(topic){return Boolean(topic)&&(!topic.generatedConversa
   function renderSimpleHandout(t,leader=false){
     const one=t.session1,two=t.session2,a=two.activity;
     const story=`<section class="simple-section simple-story"><h2>${esc(one.story.heading)}</h2><div class="simple-story-copy"><p>${one.story.en.map(esc).join(" ")}</p><p lang="ko">${one.story.ko.map(esc).join(" ")}</p></div>${leader?simpleLeader(t.leader.story):""}</section>`;
-    const easy=`<section class="simple-section"><h2>EASY TALK</h2>${simpleQuestions(one.easyTalk)}${leader?simpleLeader(t.leader.easyTalk):""}</section>`;
-    const real=`<section class="simple-section"><h2>REAL TALK</h2>${simpleQuestions(one.realTalk)}${leader?simpleLeader(t.leader.realTalk):""}</section>`;
+    const easy=`<section class="simple-section"><h2>EASY TALK</h2>${simpleQuestions(one.easyTalk)}${leader?simpleLeader(`${t.leader.easyTalk} ${(t.leader.easyTalkFollowups||[]).join(" · ")}`):""}</section>`;
+    const real=`<section class="simple-section"><h2>REAL TALK</h2>${simpleQuestions(one.realTalk)}${leader?simpleLeader(`${t.leader.realTalk} ${(t.leader.realTalkFollowups||[]).join(" · ")}`):""}</section>`;
     const expressions=`<section class="simple-section simple-english"><h2>TODAY’S ENGLISH</h2><div>${one.expressions.map(item=>`<p><strong>${esc(item.en)}</strong><span>${esc(item.ko)}</span></p>`).join("")}</div></section>`;
     const reset=`<section class="simple-section simple-reset"><h2>RESET</h2><strong>${esc(two.reset.en)}</strong><span>${esc(two.reset.ko)}</span></section>`;
     const materials=`<div class="simple-materials">${a.materials.map((item,index)=>`<article><b>${index+1}</b><p>${esc(item.en)}</p><span>${esc(item.ko)}</span></article>`).join("")}</div>`;
     const roles=a.roles?.length?`<div class="simple-roles">${a.roles.map(item=>`<p><strong>${esc(item.en)}</strong><span>${esc(item.ko)}</span></p>`).join("")}</div>`:"";
-    const activity=`<section class="simple-section simple-activity"><h2>TODAY’S ACTIVITY</h2><h3>${esc(a.name)}</h3><p class="simple-instruction">${esc(a.instructionKo)}</p>${materials}${roles}<ol class="simple-steps">${a.stepsKo.map(step=>`<li>${esc(step)}</li>`).join("")}</ol><div class="simple-phrases">${a.phrases.map(line=>`<span>${esc(line)}</span>`).join("")}</div><p class="simple-participation">${esc(a.participationKo)}</p>${leader?simpleLeader(t.leader.activity):""}</section>`;
+    const support=t.leader.activitySupport,activityNote=support?`${t.leader.activity} 시범: ${support.demoKo} 조용한 참가자: ${support.quietKo} 긴 답변: ${support.longKo} 시간 부족: ${support.timeCutKo} 빠른 합의: ${support.fastAgreementKo}`:t.leader.activity;
+    const activity=`<section class="simple-section simple-activity"><h2>TODAY’S ACTIVITY</h2><h3>${esc(a.name)}</h3><p class="simple-instruction">${esc(a.instructionKo)}</p>${materials}${roles}<ol class="simple-steps">${a.stepsKo.map(step=>`<li>${esc(step)}</li>`).join("")}</ol><div class="simple-phrases">${a.phrases.map(line=>`<span>${esc(line)}</span>`).join("")}</div><p class="simple-participation">${esc(a.participationKo)}</p>${leader?simpleLeader(activityNote):""}</section>`;
     const result=`<section class="simple-section simple-result"><h2>GROUP RESULT</h2><strong>${esc(two.groupResult.en)}</strong><span>${esc(two.groupResult.ko)}</span><i></i></section>`;
     const final=`<section class="simple-section simple-final"><h2>FINAL QUESTION</h2><strong>${esc(two.finalQuestion.en)}</strong><span>${esc(two.finalQuestion.ko)}</span>${leader?simpleLeader(t.leader.final):""}</section>`;
     const emergency=leader?`<footer class="simple-emergency">${t.leader.emergency.map(line=>`<span>${esc(line)}</span>`).join("")}<b>${esc(t.leader.timeCutKo)}</b></footer>`:"";
@@ -489,7 +490,8 @@ function canPreviewTopic(topic){return Boolean(topic)&&(!topic.generatedConversa
     if(t.generationEngine===Simple.VERSION){
       const evaluation=Simple.evaluate(t,Object.values(topics)),state=evaluation.blockers.length?"생성 실패":evaluation.issues.length?"확인 필요":"사용 가능";
       const issues=evaluation.issues.map(item=>`<li class="${item.severity}"><strong>${esc(item.location)}</strong><span>${esc(item.message)}</span></li>`).join("");
-      return `${dailyNav(t,"admin")}<section class="simple-review-status ${evaluation.blockers.length?"has-errors":"is-ready"}"><p class="eyebrow">SIMPLE CONVERSATION</p><h2>${state}</h2>${issues?`<ul class="issue-list">${issues}</ul>`:"<p>학생용과 리더용 자료를 미리 본 뒤 승인하세요.</p>"}</section><section class="operator-review simple-operator-review"><div class="review-heading"><div><p class="eyebrow">승인 전 확인</p><h2>학생용 A4 1·2페이지</h2></div></div><button class="review-preview-grid" data-preview-modal aria-label="학생용 A4 두 페이지 크게 보기">${renderSimpleHandout(t)}</button></section><section class="review-actions simple-review-actions"><button class="button secondary" data-action="regenerate-v2">자동 생성</button><button class="button secondary" data-open="${t.date}:print" ${evaluation.blockers.length?"disabled":""}>미리보기</button><button class="button primary approve-button" data-action="approve-save" ${evaluation.blockers.length?"disabled aria-disabled=\"true\"":""}>승인하고 저장</button></section><dialog class="a4-preview-dialog"><button class="dialog-close" data-preview-close>닫기</button><div>${renderSimpleHandout(t)}</div></dialog><details class="advanced-editor"><summary>고급 QA 및 생성 데이터</summary><pre>${esc(JSON.stringify(t,null,2))}</pre></details>`;
+      const score=evaluation.quality||t.contentQuality,scoreRows=score?Object.entries(score.scores).map(([key,value])=>`<li><strong>${esc(key)}</strong><span>${value}</span></li>`).join(""):"";
+      return `${dailyNav(t,"admin")}<section class="simple-review-status ${evaluation.blockers.length?"has-errors":"is-ready"}"><p class="eyebrow">SIMPLE CONVERSATION</p><h2>${state}</h2>${issues?`<ul class="issue-list">${issues}</ul>`:"<p>학생용과 리더용 자료를 미리 본 뒤 승인하세요.</p>"}</section><section class="operator-review simple-operator-review"><div class="review-heading"><div><p class="eyebrow">승인 전 확인</p><h2>학생용 A4 1·2페이지</h2></div></div><button class="review-preview-grid" data-preview-modal aria-label="학생용 A4 두 페이지 크게 보기">${renderSimpleHandout(t)}</button></section><section class="review-actions simple-review-actions"><details class="regeneration-menu"><summary class="button secondary">부분 다시 생성 ▾</summary><div>${[["story","Story만 다시 만들기"],["easyTalk","Easy Talk만 다시 만들기"],["realTalk","Real Talk만 다시 만들기"],["expressions","Today’s English만 다시 만들기"],["activity","Activity만 다시 만들기"],["korean","한국어만 다시 확인하기"]].map(([key,label])=>`<button data-simple-regenerate="${key}">${label}</button>`).join("")}</div></details><button class="button secondary" data-action="regenerate-v2">전체 다시 생성</button><button class="button secondary" data-open="${t.date}:print" ${evaluation.blockers.length?"disabled":""}>미리보기</button><button class="button primary approve-button" data-action="approve-save" ${evaluation.blockers.length?"disabled aria-disabled=\"true\"":""}>승인하고 저장</button></section><dialog class="a4-preview-dialog"><button class="dialog-close" data-preview-close>닫기</button><div>${renderSimpleHandout(t)}</div></dialog><details class="advanced-editor"><summary>고급 QA 및 생성 데이터${score?` · ${score.total}/100`:""}</summary>${scoreRows?`<ul class="simple-score-list">${scoreRows}</ul>`:""}<pre>${esc(JSON.stringify(t,null,2))}</pre></details>`;
     }
     if(t.generationEngine===Generation.VERSION){
       const evaluation=Generation.evaluate(t,Object.values(topics)),printReady=t.operatorStatus?.printValidation?.status==="ready"&&["checked","printed"].includes(t.operatorStatus?.printStatus);
@@ -564,6 +566,7 @@ function canPreviewTopic(topic){return Boolean(topic)&&(!topic.generatedConversa
     document.querySelectorAll("[data-remove]").forEach(b=>b.onclick=()=>{const[k,i]=b.dataset.remove.split(":");current()[k].splice(Number(i),1);dirty=true;render()});
     document.querySelectorAll("[data-move]").forEach(b=>b.onclick=()=>{const[k,rawI,rawD]=b.dataset.move.split(":"),i=Number(rawI),to=i+Number(rawD),arr=current()[k];if(to<0||to>=arr.length)return;[arr[i],arr[to]]=[arr[to],arr[i]];dirty=true;render()});
     document.querySelectorAll("[data-regenerate]").forEach(b=>b.onclick=()=>regenerate(b.dataset.regenerate));
+    document.querySelectorAll("[data-simple-regenerate]").forEach(b=>b.onclick=()=>regenerateSimpleSection(b.dataset.simpleRegenerate));
     document.querySelectorAll("[data-feedback-form]").forEach(form=>form.onsubmit=event=>{
       event.preventDefault();
       const data=new FormData(form),records=loadRecord(KEYS.feedback);
@@ -641,8 +644,9 @@ function canPreviewTopic(topic){return Boolean(topic)&&(!topic.generatedConversa
       contract:"TheBox Talk Flow Simple Conversation v3. Page 1 contains one story or situation, EASY TALK 3, REAL TALK 3, and TODAY'S ENGLISH 4. Page 2 contains RESET, exactly one TODAY'S ACTIVITY, GROUP RESULT, and FINAL QUESTION. Return structured content through the declared tool only, never HTML.",
       fixedDesign:{styles:Simple.STYLES,activities:Simple.ACTIVITIES,hiddenQuestionAxes:Simple.AXES,session1Minutes:50,session2Minutes:40},
       languageExposure:{koreanRequired:["story summary","all six question translations","four expression meanings","activity instruction/materials/steps/participation","group result","final question"],koreanStyle:"Use concise conversational ~해요 style."},
-      generationRules:["Use six distinct internal question axes without printing their names.","Create exactly one activity with real information-gap or decision materials.","Include at least three speaking supports in activity.phrases.","Ensure every learner can speak and the group produces one visible result.","Do not expose START, ADD, GO FURTHER, CHOOSE, SAY, ASK, REACT, DECIDE, readiness, schema, or axis labels.","Never require standing, walking, moving around, switching seats, or crossing the room."],
-      topic:{date:request.date,weekday:weekday(request.date),keyword:request.keyword,mood:request.mood||"경험 중심",source:request.source||"",avoid:request.avoid||""},
+      generationRules:["Write a 55–90 word adult scene with a named person, concrete place or object, a number/time/price/condition, an expectation gap, a balanced conflict, and a final choice. Give story.id a stable value.","Easy Talk roles are recent experience with an alternative path, daily habit, and a balanced conditional A/B/C choice. Real Talk roles are personal example, evaluation criterion, and tradeoff/solution. Use at least five axes total, no axis more than twice, unique starters, and no repeated answer.","Every question supports a one-sentence answer, a reason, and an example or exception. Store one short starter only.","Each of four topic-specific expressions declares useIn and is usable in Story, Real Talk, or Activity; reject generic fillers.","Create exactly one 15–25 minute activity with real materials, disagreement, a listening step, every-person speech, and a concrete group result.","Set activity.sourceRef to story.id and reuse the same people, object, price, time, condition, reviews, messages, or schedule.","Include at least three speaking supports in activity.phrases.","Generate three Easy and three Real leader followups plus activity demo, quiet-speaker, long-speaker, time-cut, and fast-agreement support.","Do not expose START, ADD, GO FURTHER, CHOOSE, SAY, ASK, REACT, DECIDE, readiness, schema, or axis labels.","Never require standing, walking, moving around, switching seats, or external materials."],
+      topic:{date:request.date,weekday:weekday(request.date),keyword:request.keyword,mood:request.mood||"경험 중심",source:request.source||"",avoid:request.avoid||"",repairSection:request.repairSection||""},
+      monthlyDiversity:Object.values(topics).filter(item=>item?.date?.slice(0,7)===request.date.slice(0,7)&&item.generationEngine===Simple.VERSION).map(item=>({style:item.style,activity:item.session2?.activity?.name,storyOpening:item.session1?.story?.en?.[0],questionOpenings:[...(item.session1?.easyTalk||[]),...(item.session1?.realTalk||[])].map(question=>question.en.split(" ").slice(0,3).join(" ")),expressions:(item.session1?.expressions||[]).map(expression=>expression.en)})),
       approvedPlan:plan,
       previousValidationIssues:issues,
       previousCandidate,
@@ -651,7 +655,7 @@ function canPreviewTopic(topic){return Boolean(topic)&&(!topic.generatedConversa
   }
   async function requestGenerationStage(stage,request,plan=null){
     const tool=stage==="plan"?Simple.PLAN_TOOL:Simple.CONTENT_TOOL,validate=stage==="plan"?Simple.validatePlan:value=>{
-      const result=Simple.validateContent(value,plan,Object.values(topics));
+      const result=Simple.validateContent({...value,contentQualityVersion:"quality-v1"},plan,Object.values(topics),true);
       if(value?.date===request.date)return result;
       const mismatch={severity:"blocker",id:"B1",group:"structure",location:"date",message:"요청 날짜와 생성 날짜가 일치하지 않습니다."};
       return{...result,ok:false,issues:[...result.issues,mismatch],blockers:[...result.blockers,mismatch]};
@@ -677,7 +681,7 @@ function canPreviewTopic(topic){return Boolean(topic)&&(!topic.generatedConversa
     if(!settings.apiKey){const error=new Error("자동 생성 연결이 필요합니다.");error.stage="plan";throw error}
     const plan=await requestGenerationStage("plan",request);
     const content=await requestGenerationStage("content",request,plan);
-    const topic=Simple.buildTopic(request,plan,content);
+    const topic=Simple.buildTopic(request,plan,content,Object.values(topics));
     topic.generationRequest=clone(request);
     return topic;
   }
@@ -693,6 +697,21 @@ function canPreviewTopic(topic){return Boolean(topic)&&(!topic.generatedConversa
     const previous=current(),request=previous.generationRequest||{date:previous.date,keyword:previous.title?.ko||previous.title?.en||"새 대화 주제",mood:previous.category?.ko||previous.category||"경험 중심"};
     preserveVersion(previous);
     await generateAndStore({...request,date:previous.date},previous);
+  }
+  async function regenerateSimpleSection(section){
+    const previous=current();if(previous.generationEngine!==Simple.VERSION)return;
+    const request=previous.generationRequest||{date:previous.date,keyword:previous.title?.ko||previous.title?.en,mood:previous.category?.ko||"경험 중심"};preserveVersion(previous);notify(`${section} 부분을 다시 생성하고 있습니다.`);
+    try{
+      const fresh=await generateV2Topic({...request,date:previous.date,repairSection:section,source:JSON.stringify({story:previous.session1.story,activity:previous.session2.activity})}),next=clone(previous);
+      if(section==="story")next.session1.story=fresh.session1.story;
+      if(section==="easyTalk")next.session1.easyTalk=fresh.session1.easyTalk;
+      if(section==="realTalk")next.session1.realTalk=fresh.session1.realTalk;
+      if(section==="expressions")next.session1.expressions=fresh.session1.expressions;
+      if(section==="activity"){next.session2.activity=fresh.session2.activity;next.session2.activity.sourceRef=next.session1.story.id}
+      if(section==="korean"){const copyKo=(target,source)=>{if(Array.isArray(target))target.forEach((item,index)=>copyKo(item,source?.[index]));else if(target&&typeof target==="object")Object.keys(target).forEach(key=>{if(key==="ko"||key.endsWith("Ko"))target[key]=clone(source?.[key]);else copyKo(target[key],source?.[key])})};copyKo(next,fresh)}
+      if(section==="story")next.session2.activity.sourceRef=next.session1.story.id;
+      next.contentQualityVersion="quality-v1";const evaluation=Simple.evaluate(next,Object.values(topics));if(!evaluation.ready)throw Object.assign(new Error("부분 재생성 후 전체 연결성 검사를 통과하지 못했습니다."),{issues:evaluation.issues});next.contentQuality=evaluation.quality;next.quality={status:"review",score:evaluation.quality.total,issues:[]};next.operatorStatus={...next.operatorStatus,reviewStatus:"review",printStatus:"unchecked"};next.updatedAt=new Date().toISOString();topics[activeDate]=next;dirty=true;saveTopics("선택한 부분만 다시 생성하고 전체 연결성을 확인했습니다.");
+    }catch(error){notify(`부분 재생성 실패: ${error.message}`,true)}
   }
   async function autoCreateDate(date){
     if(topics[date]){notify("이 날짜에는 이미 토픽이 있습니다.",true);return}
@@ -725,7 +744,7 @@ function canPreviewTopic(topic){return Boolean(topic)&&(!topic.generatedConversa
     if(topic.generationEngine===Simple.VERSION){
       const evaluation=Simple.evaluate(topic,Object.values(topics));
       if(evaluation.blockers.length){notify(`BLOCKER ${evaluation.blockers.length}개를 해결해야 승인할 수 있습니다.`,true);return}
-      topic.quality={status:"approved",score:100,issues:[]};
+      topic.contentQuality=evaluation.quality;topic.quality={status:"approved",score:evaluation.quality?.total||100,issues:[]};
       topic.operatorStatus={...topic.operatorStatus,reviewStatus:"approved"};
       saveTopics("토픽을 이 컴퓨터에 승인 저장했습니다. Gist는 변경하지 않았습니다.");
       return;

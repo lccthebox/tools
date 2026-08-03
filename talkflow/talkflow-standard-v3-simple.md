@@ -21,6 +21,20 @@
 - `START`, `ADD`, `GO FURTHER`, `CHOOSE`, `SAY`, `ASK`, `REACT`, `DECIDE`, readiness 라벨은 학생 자료에 표시하지 않는다.
 - 온라인 리뷰 골든 샘플은 `Review Jury` 활동 하나만 사용한다.
 
+## 콘텐츠 품질 엔진
+
+- Story는 영어 55~90단어, 한국어 3~5문장으로 구성한다. 사람, 구체적인 물건·장소, 숫자·시간·가격·조건, 예상과 실제의 차이, 균형 있는 갈등, 마지막 선택이 모두 필요하다.
+- Easy Talk은 최근 경험, 평소 습관, 조건이 있는 빠른 선택으로 역할을 고정한다. Real Talk은 구체적인 사례, 판단 기준, 선택·해결·트레이드오프로 역할을 분리한다.
+- 여섯 질문은 최소 다섯 개 axis를 사용하고 동일 axis는 최대 두 번만 사용한다. 같은 답, 동일 문두 과다 반복, 동일 starter를 허용하지 않는다.
+- 각 질문은 한 문장, 선택과 이유, 사례 또는 예외로 확장할 수 있어야 한다. 학생용에는 짧은 starter 하나만 표시하고 리더용에는 질문별 후속 질문을 둔다.
+- Today’s English 네 개는 판단, 경험, 동의·반박, 후속 질문 기능을 담당하며 `useIn`으로 Story, Real Talk, Activity의 실제 사용 위치를 연결한다.
+- Activity는 `sourceRef`로 Story ID를 직접 참조한다. 15~25분 동안 실제 자료, 의견 차이, 다른 사람의 말을 듣는 단계, 전원 발화, 구체적인 Group Result를 포함한다.
+- 월간 검사에서는 동일 Activity 연속 사용, 동일 스타일 3회 연속, 동일 질문 문두 3회 초과, 동일 표현 2회 초과를 경고한다.
+
+품질 점수는 Story 15, Question Diversity 15, Answerability 15, Interest 10, Expression Usefulness 10, Activity Connection 15, Bilingual Quality 10, Print Readability 10으로 총 100점이다. 총점 85점 이상이며 각 영역 최소 기준을 충족하고 blocker가 없어야 승인할 수 있다. 숫자 점수는 관리자 고급 영역에서만 확인한다.
+
+부분 재생성은 Story, Easy Talk, Real Talk, Today’s English, Activity, 한국어 단위로 제공한다. 선택하지 않은 섹션은 보존하며, 변경 후 Story–Activity 연결과 전체 품질 게이트를 다시 검사한다.
+
 ## 분리된 게이트
 
 - Structure: 페이지별 섹션 수, 질문 수, 활동 수, 필수 필드와 시간.
