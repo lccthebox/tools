@@ -1,6 +1,6 @@
 # Simple Conversation 콘텐츠 검수 보고서
 
-생성 시각: 2026-08-03T09:27:31.091Z
+검증 세트: 8개 일반 토픽 · 학생 PDF 8개 · 리더 PDF 2개
 
 ## 1. Can We Trust Online Reviews? / 온라인 리뷰를 믿어도 될까요?
 
