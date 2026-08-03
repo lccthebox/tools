@@ -1678,9 +1678,8 @@ function toggleMemberFixed(id, fixed) {
 const PRESETS = {
   '월': {
     '오전': [
-      { name: 'JONGHA반', natives: ['JONGHA'] },
-      { name: 'MINGI반',  natives: ['MINGI'] },
-      { name: 'JEFF반',   natives: ['JEFF'] },
+      { name: 'HYOJU반', natives: ['HYOJU'] },
+      { name: 'JEFF반',  natives: ['JEFF'] },
     ],
     '오후': [
       { name: 'YUMIN반', natives: ['YUMIN'] },
@@ -1692,9 +1691,8 @@ const PRESETS = {
   },
   '수': {
     '오전': [
-      { name: 'JONGHA반', natives: ['JONGHA'] },
-      { name: 'MINGI반',  natives: ['MINGI'] },
-      { name: 'JEFF반',   natives: ['JEFF'] },
+      { name: 'HYOJU반', natives: ['HYOJU'] },
+      { name: 'JEFF반',  natives: ['JEFF'] },
     ],
     '오후': [
       { name: 'YUMIN반', natives: ['YUMIN'] },
@@ -1734,11 +1732,13 @@ const PRESETS = {
   },
   '토일': {
     '오후': [
-      { name: 'YURIM & AMELIE반', natives: ['YURIM', 'AMELIE'] },
-      { name: 'YEYEON반',         natives: ['YEYEON'] },
-      { name: 'JAY반',            natives: ['JAY'] },
-      { name: 'TYLER반',          natives: ['TYLER'] },
-      { name: 'MINGI반',          natives: ['MINGI'] },
+      { name: 'LUCY & AMELIE반', natives: ['LUCY', 'AMELIE'] },
+      { name: 'YURIM반',         natives: ['YURIM'] },
+      { name: 'YEYEON반',        natives: ['YEYEON'] },
+      { name: 'JAY반',           natives: ['JAY'] },
+      { name: 'TYLER반',         natives: ['TYLER'] },
+      { name: 'NINA반',          natives: ['NINA'] },
+      { name: 'MINGI반',         natives: ['MINGI'] },
     ],
   },
 };
@@ -1783,20 +1783,95 @@ function updatePresetPreview() {
   ).join('');
 }
 
+function getSelectedHoldingSlotKey() {
+  return H_SLOTS.find(s => s.pday === presetDay && s.ptime === presetTime)?.key || null;
+}
+
+function holdingImportName(person) {
+  return String(typeof person === 'string' ? person : (person?.name || '')).trim();
+}
+
+function holdingImportPerson(person, isTeacher, existing=null) {
+  const name = holdingImportName(person);
+  if (!name) return null;
+  const source = person && typeof person === 'object' ? person : {};
+  return {
+    id: existing?.id || uid(),
+    name,
+    isTeacher: !!isTeacher,
+    isNew: !!source.isNew,
+    isReturn: !!source.isReturn,
+    newDay: source.newDay || 0
+  };
+}
+
+function getHoldingImportContext() {
+  const slotKey = getSelectedHoldingSlotKey();
+  const slot = H_SLOTS.find(s => s.key === slotKey);
+  if (!slotKey || !slot) return null;
+  holdingData[slotKey] = normalizeHoldingClasses(slot, holdingData[slotKey] || []);
+  return { slotKey, classes: holdingData[slotKey] };
+}
+
+function syncHoldingDataToGroups(options={}) {
+  const ctx = getHoldingImportContext();
+  if (!ctx) return { ok:false, reason:'no-slot', imported:0, changed:0, matched:0 };
+  const replace = !!options.replace;
+  const allExistingNames = new Set(groups.flatMap(g => (g.koreans || []).map(k => k.name)));
+  let imported = 0;
+  let changed = 0;
+  let matched = 0;
+
+  ctx.classes.forEach(hCls => {
+    const g = groups.find(g => g.name === hCls.className || g.name === hCls.className+'(합)');
+    if (!g) return;
+    matched++;
+
+    if (replace) {
+      const previousByName = new Map((g.koreans || []).map(k => [k.name, k]));
+      const seen = new Set();
+      const next = [];
+      const add = (m, isTeacher) => {
+        const name = holdingImportName(m);
+        if (!name || seen.has(name)) return;
+        seen.add(name);
+        const person = holdingImportPerson(m, isTeacher, previousByName.get(name));
+        if (person) next.push(person);
+      };
+      (hCls.korMembers || []).forEach(m => add(m, false));
+      (hCls.korTeachers || []).forEach(m => add(m, true));
+      const before = JSON.stringify((g.koreans || []).map(k => ({
+        name:k.name, isTeacher:!!k.isTeacher, isNew:!!k.isNew, isReturn:!!k.isReturn, newDay:k.newDay||0
+      })));
+      const after = JSON.stringify(next.map(k => ({
+        name:k.name, isTeacher:!!k.isTeacher, isNew:!!k.isNew, isReturn:!!k.isReturn, newDay:k.newDay||0
+      })));
+      g.koreans = next;
+      imported += next.length;
+      if (before !== after) changed++;
+      return;
+    }
+
+    const addKor = (m, isTeacher) => {
+      const name = holdingImportName(m);
+      if (!name || allExistingNames.has(name)) return;
+      const person = holdingImportPerson(m, isTeacher);
+      if (!person) return;
+      g.koreans.push(person);
+      allExistingNames.add(name);
+      imported++;
+      changed++;
+    };
+    (hCls.korMembers || []).forEach(m => addKor(m, false));
+    (hCls.korTeachers || []).forEach(m => addKor(m, true));
+  });
+
+  return { ok:true, slotKey:ctx.slotKey, imported, changed, matched };
+}
+
 /* ── 홀딩 데이터 → 반 편성으로 가져오기 ── */
 function importFromHolding() {
   if (!presetDay || !presetTime) { alert('먼저 요일과 시간대를 선택해주세요.'); return; }
-
-  // 홀딩 슬롯 키 찾기
-  const slotKey = H_SLOTS.find(s => {
-    if (presetDay==='월' || presetDay==='수') return s.key==='월수'+(presetTime==='오전'?'오전':'오후');
-    if (presetDay==='화' || presetDay==='목') return s.key==='화목'+(presetTime==='오전'?'오전':'오후');
-    if (presetDay==='토일') return s.key==='주말오후';
-    return false;
-  })?.key;
-  if (!slotKey || !holdingData[slotKey]) { alert('해당 요일/시간대의 홀딩 데이터가 없습니다.'); return; }
-
-  const hClasses = holdingData[slotKey];
 
   // 반이 없으면 먼저 프리셋 로드
   if (!groups.length) {
@@ -1807,39 +1882,14 @@ function importFromHolding() {
     pushUndo('홀딩 데이터 가져오기');
   }
 
-  let imported = 0;
-  hClasses.forEach(hCls => {
-    // 같은 이름의 반 찾기 (반 이름 앞부분 매칭)
-    const g = groups.find(g => g.name === hCls.className || g.name === hCls.className+'(합)');
-    if (!g) return;
+  const result = syncHoldingDataToGroups({ replace:true });
+  if (!result.ok) { alert('해당 요일/시간대의 홀딩 데이터가 없습니다.'); return; }
 
-    // 한국인 멤버 파싱 후 추가 (기존 중복 제외)
-    const existingNames = new Set(g.koreans.map(k=>k.name));
-    if (hCls.korMembers && hCls.korMembers.length) {
-      hCls.korMembers.forEach(m => {
-        const name = typeof m==='string' ? m : m.name;
-        if (!existingNames.has(name)) {
-          g.koreans.push({ id:uid(), name, isTeacher:false, isNew: m.isNew||false, isReturn: m.isReturn||false, newDay: m.newDay||0 });
-          existingNames.add(name); imported++;
-        }
-      });
-    }
-    if (hCls.korTeachers && hCls.korTeachers.length) {
-      hCls.korTeachers.forEach(m => {
-        const name = typeof m==='string' ? m : m.name;
-        if (!existingNames.has(name)) {
-          g.koreans.push({ id:uid(), name, isTeacher:true, isNew: m.isNew||false, isReturn: m.isReturn||false, newDay: m.newDay||0 });
-          existingNames.add(name); imported++;
-        }
-      });
-    }
-  });
-
-  if (imported > 0) {
+  if (result.changed > 0) {
     renderAll();
-    alert(`${imported}명의 한국인 멤버·쌤을 반 편성에 추가했습니다.`);
+    alert(`한국인 멤버·쌤 목록을 인원 체크 기준으로 반영했습니다. (${result.imported}명)`);
   } else {
-    alert('인원 체크에 입력된 한국인 멤버·쌤·추가 참여자가 없거나 이미 모두 추가되어 있습니다.');
+    alert(result.matched ? '인원 체크와 반 편성의 한국인 멤버·쌤 목록이 이미 같습니다.' : '선택한 반 편성과 일치하는 인원 체크 반이 없습니다.');
   }
 }
 
@@ -1848,43 +1898,14 @@ function mergeFromHolding() {
   if (!presetDay || !presetTime) { alert('먼저 요일과 시간대를 선택해주세요.'); return; }
   if (!groups.length) { alert('먼저 반 편성을 불러온 뒤 사용해주세요.'); return; }
 
-  const slotKey = H_SLOTS.find(s => {
-    if (presetDay==='월' || presetDay==='수') return s.key==='월수'+(presetTime==='오전'?'오전':'오후');
-    if (presetDay==='화' || presetDay==='목') return s.key==='화목'+(presetTime==='오전'?'오전':'오후');
-    if (presetDay==='토일') return s.key==='주말오후';
-    return false;
-  })?.key;
-  if (!slotKey || !holdingData[slotKey]) { alert('해당 요일/시간대의 홀딩 데이터가 없습니다.'); return; }
-
-  const hClasses = holdingData[slotKey];
   pushUndo('추가 인원 불러오기');
 
-  // 현재 반 편성 전체에 있는 이름 수집
-  const allExistingNames = new Set(
-    groups.flatMap(g => g.koreans.map(k => k.name))
-  );
+  const result = syncHoldingDataToGroups({ replace:false });
+  if (!result.ok) { alert('해당 요일/시간대의 홀딩 데이터가 없습니다.'); return; }
 
-  let imported = 0;
-  hClasses.forEach(hCls => {
-    const g = groups.find(g => g.name === hCls.className || g.name === hCls.className+'(합)');
-    if (!g) return;
-
-    // 전체 편성에 없는 새 인원만 추가
-    const addKor = (m, isTeacher) => {
-      const name = typeof m==='string' ? m : m.name;
-      if (!allExistingNames.has(name)) {
-        g.koreans.push({ id:uid(), name, isTeacher, isNew: m.isNew||false, isReturn: m.isReturn||false, newDay: m.newDay||0 });
-        allExistingNames.add(name);
-        imported++;
-      }
-    };
-    (hCls.korMembers||[]).forEach(m => addKor(m, false));
-    (hCls.korTeachers||[]).forEach(m => addKor(m, true));
-  });
-
-  if (imported > 0) {
+  if (result.imported > 0) {
     renderAll();
-    showToast(`➕ 새로운 ${imported}명을 추가했습니다.`);
+    showToast(`➕ 새로운 ${result.imported}명을 추가했습니다.`);
   } else {
     showToast('추가할 새 인원이 없습니다. (이미 모두 편성됨)');
   }
@@ -1911,6 +1932,11 @@ function loadPreset() {
   if (!confirmGroupingReset('반을 다시 불러오면')) return;
   pushUndo('반 불러오기');
   applyPreset();
+  const result = syncHoldingDataToGroups({ replace:true });
+  if (result.ok && result.changed > 0) {
+    renderAll();
+    showToast(`↺ 반을 다시 불러오고 인원 체크 목록을 반영했습니다. (${result.imported}명)`);
+  }
 }
 
 function mergePreset() {
