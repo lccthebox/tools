@@ -7,6 +7,7 @@
   const BAD_ENGLISH=["say the truth","different with","go spontaneous","star point","if nobody would know"];
   const SENSITIVE=["big secret","income","salary","work mistake","dating conflict","family problem","disease","political view","religion","appearance","trauma","큰 비밀","소득","연봉","직장 실수","연애 갈등","가족 문제","질병","정치 성향","종교","외모","트라우마"];
   const Generation=window.TalkFlowGeneration;
+  const Simple=window.TalkFlowSimpleGeneration;
   const $=s=>document.querySelector(s);
   const esc=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const koTitle=value=>esc(value).replace(/ (?=\S+$)/,"&nbsp;");
@@ -49,7 +50,7 @@
   function monthPrefix(){return `${cursor.getFullYear()}-${String(cursor.getMonth()+1).padStart(2,"0")}`}
   function monthFile(kind="json"){return `thebox-talkflow-${monthPrefix()}${kind==="viewer"?"-viewer.html":".json"}`}
   function current(){return topics[activeDate]}
-  function canPreviewTopic(topic){return Boolean(topic)&&(!topic.generatedConversation||topic.generationEngine===Generation.VERSION&&Generation.evaluate(topic,Object.values(topics)).ready)&&topic.operatorStatus?.generationStatus!=="failed"}
+function canPreviewTopic(topic){return Boolean(topic)&&(!topic.generatedConversation||topic.generationEngine===Simple.VERSION&&Simple.evaluate(topic,Object.values(topics)).ready||topic.generationEngine===Generation.VERSION&&Generation.evaluate(topic,Object.values(topics)).ready)&&topic.operatorStatus?.generationStatus!=="failed"}
   function operationConfig(){
     const knownHolidays=["2026-08-15","2026-08-17","2026-09-24","2026-09-25","2026-09-26","2026-10-03","2026-10-05","2026-10-09"];
     return{weekdays:settings.operatingWeekdays||[1,4],included:settings.additionalDates||[],excluded:[...(settings.excludedDates||[]),...(settings.excludePublicHolidays?knownHolidays:[])]}
@@ -61,7 +62,7 @@
   function lifecycleState(topic){
     if(!topic)return{key:"empty",label:"토픽 미작성",action:"자동 생성"};
     if(topic.operatorStatus?.generationStatus==="failed")return{key:"generation-failed",label:"GENERATION FAILED",action:"문제 확인"};
-    if(Generation.isLegacyOrInvalidDraft(topic))return{key:"invalid",label:"LEGACY OR INVALID DRAFT",action:"문제 확인"};
+    if(topic.generationEngine!==Simple.VERSION&&Generation.isLegacyOrInvalidDraft(topic))return{key:"invalid",label:"LEGACY OR INVALID DRAFT",action:"문제 확인"};
     if(topic.operatorStatus?.used)return{key:"completed",label:"사용 완료",action:"학생용 PDF"};
     if(topic.quality?.status==="approved"&&["checked","printed"].includes(topic.operatorStatus?.printStatus)&&topic.operatorStatus?.printValidation?.status==="ready")return{key:"print-ready",label:"인쇄 준비 완료",action:"학생용 PDF"};
     if(topic.quality?.status==="approved")return{key:"approved",label:"승인 완료",action:"PDF 확인"};
@@ -73,6 +74,10 @@
   function validateTopic(topic,allTopics=topics){
     const issues=[];
     if(!topic||typeof topic!=="object")return{status:"regenerate",score:0,issues:["토픽 데이터가 객체가 아닙니다."]};
+    if(topic.generationEngine===Simple.VERSION){
+      const evaluation=Simple.evaluate(topic,Object.values(allTopics)),messages=evaluation.issues.map(item=>`${item.id} · ${item.location}: ${item.message}`);
+      return{status:evaluation.ready?"approved":"regenerate",score:evaluation.ready?100:Math.max(0,100-messages.length*10),issues:messages,evaluation};
+    }
     if(topic.generationEngine===Generation.VERSION){
       const evaluation=Generation.evaluate(topic,Object.values(allTopics)),messages=evaluation.issues.map(item=>`${item.id} · ${item.location}: ${item.message}`);
       return{status:evaluation.ready?"approved":"regenerate",score:evaluation.ready?100:Math.max(0,100-messages.length*10),issues:messages,evaluation};
@@ -182,7 +187,8 @@
     const issues=[];
     if(!/^\d{4}-\d{2}-\d{2}$/.test(t?.date||""))issues.push("날짜");
     if(!t?.title?.en||!t?.title?.ko)issues.push("제목");
-    if(t?.generationEngine===Generation.VERSION){
+    if(t?.generationEngine===Simple.VERSION){const evaluation=Simple.evaluate(t,Object.values(topics));if(!evaluation.ready)issues.push(...evaluation.blockers.map(item=>`${item.id} · ${item.location}: ${item.message}`));}
+    else if(t?.generationEngine===Generation.VERSION){
       const evaluation=Generation.evaluate(t,Object.values(topics));if(!evaluation.ready)issues.push(...evaluation.blockers.map(item=>`${item.id} · ${item.location}: ${item.message}`));
     }else if(t?.generatedConversation)issues.push("구형 v1 fallback");
     else if(t?.conversationFlow)issues.push(...window.TalkFlowConversation.issues(t.conversationFlow));
@@ -192,26 +198,34 @@
       if(!t?.midGame?.options?.length)issues.push("Mid-game");
       if(!t?.finalRound?.questionEn)issues.push("Final Round");
     }
-    if((t?.conversationFlow||t?.generationEngine===Generation.VERSION)&&(t.standardVersion!==STANDARD.version||t.templateVersion!=="4"))issues.push("v2/v4 연결");
+    if(t?.generationEngine===Simple.VERSION&&(t.standardVersion!==Simple.STANDARD_VERSION||t.templateVersion!==Simple.TEMPLATE_VERSION))issues.push("v3-simple 연결");
+    else if((t?.conversationFlow||t?.generationEngine===Generation.VERSION)&&(t.standardVersion!==STANDARD.version||t.templateVersion!=="4"))issues.push("v2/v4 연결");
     if(t?.quality?.status!=="approved"||t?.hidden)issues.push("승인");
     return issues.length?{status:"review",label:"PRINT REVIEW REQUIRED",issues}:{status:"ready",label:"PRINT READY",issues:[]};
   }
   function evaluateRenderedPrint(t){
-    const handout=document.querySelector(`.v4-handout[data-print-topic="${CSS.escape(t.date)}"],.fc-handout[data-print-topic="${CSS.escape(t.date)}"]`);
+    const handout=document.querySelector(`.simple-handout[data-print-topic="${CSS.escape(t.date)}"],.v4-handout[data-print-topic="${CSS.escape(t.date)}"],.fc-handout[data-print-topic="${CSS.escape(t.date)}"]`);
     if(!handout)return {status:"review",issues:["v4 인쇄물이 화면에 없습니다."]};
     const pages=[...handout.querySelectorAll(".a4-page")],issues=[];
     if(pages.length!==2)issues.push(`A4 페이지가 ${pages.length}개입니다.`);
     if(pages.some(page=>page.scrollHeight-page.clientHeight>1||page.scrollWidth-page.clientWidth>1))issues.push("A4 페이지에 넘치는 내용이 있습니다.");
     const pointSize=node=>Math.round(Number.parseFloat(getComputedStyle(node).fontSize)*72/96*100)/100;
     const minimum=selector=>{const values=[...handout.querySelectorAll(selector)].map(pointSize);return values.length?Math.min(...values):0};
-    const type={
+    const type=t.generationEngine===Simple.VERSION?{
+      title:minimum(".simple-title h1"),
+      question:minimum(".simple-questions strong,.simple-final>strong"),
+      englishInstruction:minimum(".simple-story-copy p:first-child,.simple-english strong,.simple-materials p"),
+      koreanGuidance:minimum(".simple-questions>li>span,.simple-instruction,.simple-steps,.simple-participation,.simple-result>span,.simple-final>span"),
+      meta:minimum(".simple-header,.simple-help,.simple-options,.simple-leader-note")
+    }:{
       title:minimum(".handout-title h1,.bound-title h1"),
       question:minimum(".start-card>strong,.story-card>strong,.round-card>strong,.timed-round>strong,.main-activity>strong,.group-decision>strong,.bound-question-main>strong,.bound-section>header h3"),
       englishInstruction:minimum(".timed-round>p,.bilingual-steps b,.assigned-opposition>p,.assigned-role-briefs span,.bound-starter,.bound-followup,.bound-rule,.bound-expression b"),
       koreanGuidance:minimum(".timed-round>small,.timed-round>p small,.start-card>small,.story-card>small,.round-card>small,.session-reset small,.main-activity>small,.assigned-opposition>small,.assigned-opposition>p small,.group-decision>small,.everyone-rule small,.material-card small,.leader-inline span,.bound-why p,.bound-pop-item p,.bound-bingo-rule,.bound-bingo span,.bound-rule span,.bound-situation p,.bound-situation div span,.bound-expression span"),
       meta:minimum(".session-banner span,.turn-rule,.material-card b,.evidence-choice,.section-hint,.bound-section>header span,.bound-session span,.bound-qtag")
     };
-    if(type.title<18||type.question<10.5||type.englishInstruction<9||type.koreanGuidance<8.5||type.meta<7.5)issues.push("인쇄 글자 크기 최소 기준을 충족하지 않습니다.");
+    const minimums=t.generationEngine===Simple.VERSION?{title:20,question:11,englishInstruction:9,koreanGuidance:9,meta:8}:{title:18,question:10.5,englishInstruction:9,koreanGuidance:8.5,meta:7.5};
+    if(Object.entries(minimums).some(([key,value])=>type[key]<value))issues.push("인쇄 글자 크기 최소 기준을 충족하지 않습니다.");
     return {status:issues.length?"review":"ready",issues,pages:pages.length,type,checkedAt:new Date().toISOString()};
   }
   function printHeader(t,page,leader=false){
@@ -266,7 +280,27 @@
     const page=(number,minutes,sections,leaderNotes)=>`<section class="a4-page">${generatedHeader(t,leader,number)}<div class="bound-body">${generatedTitle(t)}<div class="bound-session"><b>SESSION ${number} · ${minutes} MINUTES</b><span>${number===1?`POP QUIZ 10분 · ${timeline} · BINGO 상시`:`GAME ${game.minutes}분 · DISCUSSION 15분 · EXPRESSIONS 5분`}</span></div>${sections}${leaderNotes}</div>${generatedFooter(t,number)}</section>`;
     return `<article class="a4-topic fc-handout bound-handout${leader?" bound-leader-handout":""}" data-print-topic="${esc(t.date)}" data-generation-engine="${Generation.VERSION}">${page(1,s1.minutes,pageOne,pageOneLeader)}${page(2,s2.minutes,pageTwo,pageTwoLeader)}</article>`;
   }
+  function simpleHeader(t,leader,page){return `<header class="simple-header"><b>THEBOX TALK FLOW</b><span>${esc(t.date)} · ${esc(t.category.en)} / ${esc(t.category.ko)}</span><em>${leader?"LEADER":"STUDENT"} ${page} / 2</em></header><div class="simple-title"><h1>${esc(t.title.en)}</h1><p>${esc(t.title.ko)}</p></div>`}
+  function simpleLeader(note){return `<aside class="simple-leader-note"><b>LEADER</b><span>${esc(note)}</span></aside>`}
+  function simpleQuestions(items){return `<ol class="simple-questions">${items.map(item=>`<li><strong>${esc(item.en)}</strong><span>${esc(item.ko)}</span>${item.options?.length?`<p class="simple-options">${item.options.map(option=>`□ ${esc(option)}`).join(" · ")}</p>`:""}${item.example?`<p class="simple-help">${esc(item.example)}</p>`:""}</li>`).join("")}</ol>`}
+  function renderSimpleHandout(t,leader=false){
+    const one=t.session1,two=t.session2,a=two.activity;
+    const story=`<section class="simple-section simple-story"><h2>${esc(one.story.heading)}</h2><div class="simple-story-copy"><p>${one.story.en.map(esc).join(" ")}</p><p lang="ko">${one.story.ko.map(esc).join(" ")}</p></div>${leader?simpleLeader(t.leader.story):""}</section>`;
+    const easy=`<section class="simple-section"><h2>EASY TALK</h2>${simpleQuestions(one.easyTalk)}${leader?simpleLeader(t.leader.easyTalk):""}</section>`;
+    const real=`<section class="simple-section"><h2>REAL TALK</h2>${simpleQuestions(one.realTalk)}${leader?simpleLeader(t.leader.realTalk):""}</section>`;
+    const expressions=`<section class="simple-section simple-english"><h2>TODAY’S ENGLISH</h2><div>${one.expressions.map(item=>`<p><strong>${esc(item.en)}</strong><span>${esc(item.ko)}</span></p>`).join("")}</div></section>`;
+    const reset=`<section class="simple-section simple-reset"><h2>RESET</h2><strong>${esc(two.reset.en)}</strong><span>${esc(two.reset.ko)}</span></section>`;
+    const materials=`<div class="simple-materials">${a.materials.map((item,index)=>`<article><b>${index+1}</b><p>${esc(item.en)}</p><span>${esc(item.ko)}</span></article>`).join("")}</div>`;
+    const roles=a.roles?.length?`<div class="simple-roles">${a.roles.map(item=>`<p><strong>${esc(item.en)}</strong><span>${esc(item.ko)}</span></p>`).join("")}</div>`:"";
+    const activity=`<section class="simple-section simple-activity"><h2>TODAY’S ACTIVITY</h2><h3>${esc(a.name)}</h3><p class="simple-instruction">${esc(a.instructionKo)}</p>${materials}${roles}<ol class="simple-steps">${a.stepsKo.map(step=>`<li>${esc(step)}</li>`).join("")}</ol><div class="simple-phrases">${a.phrases.map(line=>`<span>${esc(line)}</span>`).join("")}</div><p class="simple-participation">${esc(a.participationKo)}</p>${leader?simpleLeader(t.leader.activity):""}</section>`;
+    const result=`<section class="simple-section simple-result"><h2>GROUP RESULT</h2><strong>${esc(two.groupResult.en)}</strong><span>${esc(two.groupResult.ko)}</span><i></i></section>`;
+    const final=`<section class="simple-section simple-final"><h2>FINAL QUESTION</h2><strong>${esc(two.finalQuestion.en)}</strong><span>${esc(two.finalQuestion.ko)}</span>${leader?simpleLeader(t.leader.final):""}</section>`;
+    const emergency=leader?`<footer class="simple-emergency">${t.leader.emergency.map(line=>`<span>${esc(line)}</span>`).join("")}<b>${esc(t.leader.timeCutKo)}</b></footer>`:"";
+    const page=(number,body)=>`<section class="a4-page">${simpleHeader(t,leader,number)}<main class="simple-body simple-page-${number}">${body}</main>${emergency}</section>`;
+    return `<article class="a4-topic simple-handout${leader?" simple-leader-handout":""}" data-print-topic="${esc(t.date)}" data-generation-engine="${Simple.VERSION}" data-template-version="${Simple.TEMPLATE_VERSION}">${page(1,story+easy+real+expressions)}${page(2,reset+activity+result+final)}</article>`;
+  }
   function renderHandout(t,leader=false){
+    if(t.generationEngine===Simple.VERSION)return renderSimpleHandout(t,leader);
     if(t.generationEngine===Generation.VERSION)return renderGeneratedHandout(t,leader);
     if(t.conversationFlow)return renderConversationHandout(t,leader);
     return `<article class="a4-topic" data-print-topic="${t.date}">
@@ -363,7 +397,7 @@
   function dailyNav(t,mode){
     const dates=Object.keys(topics).sort(),index=dates.indexOf(t.date);
     const printActions=canPreviewTopic(t)?`<button data-open="${t.date}:print">학생용 A4</button><button data-print-leader="${t.date}">리더용 A4</button>`:"";
-    return `<div class="daily-nav"><button data-action="calendar">← 월 목록</button><div><strong>${t.date} · ${weekday(t.date)}</strong><span>${lifecycleState(t).label} · 마지막 저장 ${new Date(t.updatedAt||t.createdAt).toLocaleString("ko-KR")}</span></div><button data-prev-next="${dates[index-1]||""}" ${index<=0?"disabled":""}>이전 날짜</button><button data-prev-next="${dates[index+1]||""}" ${index<0||index>=dates.length-1?"disabled":""}>다음 날짜</button>${printActions}${mode!=="admin"?`<button data-open="${t.date}:admin">토픽 수정</button>`:""}</div>`;
+    return `<div class="daily-nav"><button data-action="calendar">← 월 목록</button><div><strong>${t.date} · ${weekday(t.date)}</strong><span>${lifecycleState(t).label} · 마지막 저장 ${new Date(t.updatedAt||t.createdAt).toLocaleString("ko-KR")}</span>${t.generatedConversation&&t.generationEngine!==Simple.VERSION?'<small class="legacy-format-badge">이전 형식</small>':""}</div><button data-prev-next="${dates[index-1]||""}" ${index<=0?"disabled":""}>이전 날짜</button><button data-prev-next="${dates[index+1]||""}" ${index<0||index>=dates.length-1?"disabled":""}>다음 날짜</button>${printActions}${mode!=="admin"?`<button data-open="${t.date}:admin">토픽 수정</button>`:""}</div>`;
   }
   function bilingual(en,ko){return `<div class="bilingual"><div class="en">${esc(en)}</div><div class="ko" lang="ko">${esc(ko)}</div></div>`}
   function questions(items,mode="easy",leader=false){
@@ -379,9 +413,13 @@
   function renderGeneratedScreen(t,leader=false){
     return `<header class="generated-topic-hero"><p class="eyebrow">${esc(t.date)} · ${leader?"LEADER GUIDE":"STUDENT"}</p><h1>${esc(t.title.en)}</h1><p lang="ko">${esc(t.title.ko)}</p></header><div class="generated-screen">${renderGeneratedHandout(t,leader)}</div>`;
   }
+  function renderSimpleScreen(t,leader=false){
+    return `<header class="generated-topic-hero"><p class="eyebrow">${esc(t.date)} · SIMPLE CONVERSATION · ${leader?"LEADER":"STUDENT"}</p><h1>${esc(t.title.en)}</h1><p lang="ko">${esc(t.title.ko)}</p></header><div class="generated-screen">${renderSimpleHandout(t,leader)}</div>`;
+  }
   function renderStudent(t){
     if(!t)return empty();
     if(!canPreviewTopic(t))return dailyNav(t,"student")+generationBlocked(t);
+    if(t.generationEngine===Simple.VERSION)return dailyNav(t,"student")+renderSimpleScreen(t);
     if(t.generationEngine===Generation.VERSION)return dailyNav(t,"student")+renderGeneratedScreen(t);
     if(t.conversationFlow)return dailyNav(t,"student")+renderConversationScreen(t);
     return dailyNav(t,"student")+hero(t)+progress()+
@@ -407,6 +445,7 @@
   function renderLeader(t){
     if(!t)return empty();
     if(!canPreviewTopic(t))return dailyNav(t,"leader")+generationBlocked(t);
+    if(t.generationEngine===Simple.VERSION)return `${dailyNav(t,"leader")}<div class="leader-toolbar"><div class="timer" id="timer-display">${formatTime(timerSeconds)}</div><button data-action="timer-start">시작/일시정지</button><button data-action="timer-reset">초기화</button><button data-print-leader="${t.date}">리더용 A4</button></div>${renderSimpleScreen(t,true)}${renderFeedback(t)}`;
     if(t.generationEngine===Generation.VERSION)return dailyNav(t,"leader")+renderGeneratedScreen(t,true);
     if(t.conversationFlow){
       const guide=t.conversationFlow.leaderGuide;
@@ -446,14 +485,19 @@
 
   function renderAdmin(t){
     if(!t)return empty();
-    if(t.operatorStatus?.generationStatus==="failed"||t.generatedConversation&&t.generationEngine!==Generation.VERSION)return dailyNav(t,"admin")+generationBlocked(t);
+    if(t.operatorStatus?.generationStatus==="failed"||t.generatedConversation&&![Simple.VERSION,Generation.VERSION].includes(t.generationEngine))return dailyNav(t,"admin")+generationBlocked(t);
+    if(t.generationEngine===Simple.VERSION){
+      const evaluation=Simple.evaluate(t,Object.values(topics)),state=evaluation.blockers.length?"생성 실패":evaluation.issues.length?"확인 필요":"사용 가능";
+      const issues=evaluation.issues.map(item=>`<li class="${item.severity}"><strong>${esc(item.location)}</strong><span>${esc(item.message)}</span></li>`).join("");
+      return `${dailyNav(t,"admin")}<section class="simple-review-status ${evaluation.blockers.length?"has-errors":"is-ready"}"><p class="eyebrow">SIMPLE CONVERSATION</p><h2>${state}</h2>${issues?`<ul class="issue-list">${issues}</ul>`:"<p>학생용과 리더용 자료를 미리 본 뒤 승인하세요.</p>"}</section><section class="operator-review simple-operator-review"><div class="review-heading"><div><p class="eyebrow">승인 전 확인</p><h2>학생용 A4 1·2페이지</h2></div></div><button class="review-preview-grid" data-preview-modal aria-label="학생용 A4 두 페이지 크게 보기">${renderSimpleHandout(t)}</button></section><section class="review-actions simple-review-actions"><button class="button secondary" data-action="regenerate-v2">자동 생성</button><button class="button secondary" data-open="${t.date}:print" ${evaluation.blockers.length?"disabled":""}>미리보기</button><button class="button primary approve-button" data-action="approve-save" ${evaluation.blockers.length?"disabled aria-disabled=\"true\"":""}>승인하고 저장</button></section><dialog class="a4-preview-dialog"><button class="dialog-close" data-preview-close>닫기</button><div>${renderSimpleHandout(t)}</div></dialog><details class="advanced-editor"><summary>고급 QA 및 생성 데이터</summary><pre>${esc(JSON.stringify(t,null,2))}</pre></details>`;
+    }
     if(t.generationEngine===Generation.VERSION){
       const evaluation=Generation.evaluate(t,Object.values(topics)),printReady=t.operatorStatus?.printValidation?.status==="ready"&&["checked","printed"].includes(t.operatorStatus?.printStatus);
       const gateClass=evaluation.blockers.length?"draft":evaluation.warnings.length?"warning":"approved";
       const gateLabel=evaluation.blockers.length?`승인 차단 · BLOCKER ${evaluation.blockers.length}개`:evaluation.warnings.length?`경고 ${evaluation.warnings.length}개 · 승인 가능`:"승인 가능 · 검사 통과";
       const renderSafe=!evaluation.blockers.some(item=>item.id==="B1");
       const issueItems=evaluation.issues.map(item=>`<li class="${item.severity==="blocker"?"critical":"warning"}"><strong>${esc(item.id)} · ${esc(item.location)}</strong><span>${esc(item.message)}</span></li>`).join("");
-      return `${dailyNav(t,"admin")}<section class="quality-panel ${gateClass}"><h2>${gateLabel}</h2><div class="readiness-split"><span class="${evaluation.blockers.length?"":"ready"}">BLOCKER ${evaluation.blockers.length}</span><span class="${evaluation.warnings.length?"warning":"ready"}">WARNING ${evaluation.warnings.length}</span><span class="${printReady?"ready":""}">PRINT ${printReady?"READY":"REVIEW"}</span></div>${issueItems?`<ul class="issue-list">${issueItems}</ul>`:`<p lang="ko">B1~B11과 W1~W12 검사를 모두 통과했습니다.</p>`}</section><section class="operator-review"><div class="review-heading"><div><p class="eyebrow">BOUND-FIELD APPROVAL GATE · 승인 전 확인</p><h2>학생용 A4 1·2페이지</h2></div><span>${evaluation.issues.length}개 확인 항목</span></div>${renderSafe?`<button class="review-preview-grid" data-preview-modal aria-label="학생용 A4 두 페이지 크게 보기">${renderGeneratedHandout(t)}</button>`:`<p class="approval-warning">필수 섹션 누락으로 미리보기를 만들 수 없습니다.</p>`}</section><section class="review-actions">${evaluation.blockers.length?`<button class="button secondary" data-action="regenerate-v2">자동 수정 시도</button>`:`<button class="button secondary" data-action="regenerate-v2">전체 다시 생성</button>`}${evaluation.ready?`<button class="button secondary" data-open="${t.date}:print">학생용 A4 미리보기</button>`:""}<button class="button primary approve-button" data-action="approve-save" ${evaluation.blockers.length?"disabled aria-disabled=\"true\"":""}>승인하고 저장</button><button class="button danger" data-action="delete">삭제</button></section>${renderSafe?`<dialog class="a4-preview-dialog"><button class="dialog-close" data-preview-close>닫기</button><div>${renderGeneratedHandout(t)}</div></dialog>`:""}<details class="advanced-editor"><summary>생성 데이터 및 원문 보기</summary><pre>${esc(JSON.stringify(t,null,2))}</pre></details>`;
+      return `${dailyNav(t,"admin")}<section class="quality-panel ${gateClass}"><h2>${gateLabel}</h2><div class="readiness-split"><span class="${evaluation.blockers.length?"":"ready"}">BLOCKER ${evaluation.blockers.length}</span><span class="${evaluation.warnings.length?"warning":"ready"}">WARNING ${evaluation.warnings.length}</span><span class="${printReady?"ready":""}">PRINT ${printReady?"READY":"REVIEW"}</span></div>${issueItems?`<ul class="issue-list">${issueItems}</ul>`:`<p lang="ko">B1~B11과 W1~W12 검사를 모두 통과했습니다.</p>`}</section><section class="operator-review"><div class="review-heading"><div><p class="eyebrow">BOUND-FIELD APPROVAL GATE · 승인 전 확인</p><h2>학생용 A4 1·2페이지</h2></div><span>${evaluation.issues.length}개 확인 항목</span></div>${renderSafe?`<button class="review-preview-grid" data-preview-modal aria-label="학생용 A4 두 페이지 크게 보기">${renderGeneratedHandout(t)}</button>`:`<p class="approval-warning">필수 섹션 누락으로 미리보기를 만들 수 없습니다.</p>`}</section><section class="review-actions"><button class="button secondary" data-action="regenerate-v2">새 형식으로 다시 생성</button>${evaluation.ready?`<button class="button secondary" data-open="${t.date}:print">학생용 A4 미리보기</button>`:""}<button class="button primary approve-button" data-action="approve-save" ${evaluation.blockers.length?"disabled aria-disabled=\"true\"":""}>승인하고 저장</button><button class="button danger" data-action="delete">삭제</button></section>${renderSafe?`<dialog class="a4-preview-dialog"><button class="dialog-close" data-preview-close>닫기</button><div>${renderGeneratedHandout(t)}</div></dialog>`:""}<details class="advanced-editor"><summary>생성 데이터 및 원문 보기</summary><pre>${esc(JSON.stringify(t,null,2))}</pre></details>`;
     }
     const result=validateTopic(t),qStatus=result.status==="approved"?"approved":result.status==="review"?"review":"draft";
     const conversation=t.conversationFlow?window.TalkFlowConversation.evaluate(t.conversationFlow):null;
@@ -589,15 +633,15 @@
   }
   function pendingGeneration(request,originalDraft=null){
     const createdAt=new Date().toISOString();
-    return{id:`talkflow-${request.date}-${crypto.randomUUID()}`,date:request.date,weekday:weekday(request.date),category:{en:"",ko:request.mood||"경험 중심"},title:{en:"",ko:request.keyword},generatedConversation:true,generationEngine:Generation.VERSION,generationRequest:clone(request),originalDraft:originalDraft?clone(originalDraft):undefined,quality:{status:"draft",score:0,issues:[]},operatorStatus:{generationStatus:"running",reviewStatus:"review",printStatus:"unchecked",used:false},hidden:false,createdAt,updatedAt:createdAt};
+    return{id:`talkflow-${request.date}-${crypto.randomUUID()}`,date:request.date,weekday:weekday(request.date),category:{en:"",ko:request.mood||"경험 중심"},title:{en:"",ko:request.keyword},generatedConversation:true,generationEngine:Simple.VERSION,generationRequest:clone(request),originalDraft:originalDraft?clone(originalDraft):undefined,quality:{status:"draft",score:0,issues:[]},operatorStatus:{generationStatus:"running",reviewStatus:"review",printStatus:"unchecked",used:false},hidden:false,createdAt,updatedAt:createdAt};
   }
   function generationMessages(stage,request,plan=null,issues=[],previousCandidate=null){
     return [{role:"user",content:JSON.stringify({
       stage,
-      contract:"TheBox Talk Flow bound-field contract. Return exactly WHY THIS TOPIC, POP QUIZ, ICEBREAKER QUESTIONS, SPARK WORDS BINGO, one immutable GAME with HOW TO PLAY, SITUATION, DISCUSSION, and USEFUL EXPRESSIONS through the declared tool schema. Every rendered string must come from its own object field; never use a fallback or flat stem array.",
-      fixedSkeleton:Generation.SKELETON,
-      languageExposure:{koreanRequired:["why","popQuiz.why_ko","bingo meanings and rule","game rules","situation","expressions","operating rules"],englishOnly:["icebreaker questions/options/starter/followup/ladder","discussion questions/starter/followup"],koreanStyle:"Use consistent conversational ~해요 style."},
-      generationRules:["Create three real Korean-learner error pairs for Pop Quiz.","Create three icebreakers with unique starters and unique follow-ups.","Create nine part-of-speech-correct bingo words.","Create exactly one game; do not modify its fields after generation.","Situation includes a number and a conflict and supplies facts shared by game and discussion.","Create exactly six expressions with six distinct functions and varied lengths.","Never require standing, walking, moving around, switching seats, or crossing the room."],
+      contract:"TheBox Talk Flow Simple Conversation v3. Page 1 contains one story or situation, EASY TALK 3, REAL TALK 3, and TODAY'S ENGLISH 4. Page 2 contains RESET, exactly one TODAY'S ACTIVITY, GROUP RESULT, and FINAL QUESTION. Return structured content through the declared tool only, never HTML.",
+      fixedDesign:{styles:Simple.STYLES,activities:Simple.ACTIVITIES,hiddenQuestionAxes:Simple.AXES,session1Minutes:50,session2Minutes:40},
+      languageExposure:{koreanRequired:["story summary","all six question translations","four expression meanings","activity instruction/materials/steps/participation","group result","final question"],koreanStyle:"Use concise conversational ~해요 style."},
+      generationRules:["Use six distinct internal question axes without printing their names.","Create exactly one activity with real information-gap or decision materials.","Include at least three speaking supports in activity.phrases.","Ensure every learner can speak and the group produces one visible result.","Do not expose START, ADD, GO FURTHER, CHOOSE, SAY, ASK, REACT, DECIDE, readiness, schema, or axis labels.","Never require standing, walking, moving around, switching seats, or crossing the room."],
       topic:{date:request.date,weekday:weekday(request.date),keyword:request.keyword,mood:request.mood||"경험 중심",source:request.source||"",avoid:request.avoid||""},
       approvedPlan:plan,
       previousValidationIssues:issues,
@@ -606,8 +650,8 @@
     })}];
   }
   async function requestGenerationStage(stage,request,plan=null){
-    const tool=stage==="plan"?Generation.PLAN_TOOL:Generation.CONTENT_TOOL,validate=stage==="plan"?Generation.validatePlan:value=>{
-      const result=Generation.validateContent(value,plan);
+    const tool=stage==="plan"?Simple.PLAN_TOOL:Simple.CONTENT_TOOL,validate=stage==="plan"?Simple.validatePlan:value=>{
+      const result=Simple.validateContent(value,plan,Object.values(topics));
       if(value?.date===request.date)return result;
       const mismatch={severity:"blocker",id:"B1",group:"structure",location:"date",message:"요청 날짜와 생성 날짜가 일치하지 않습니다."};
       return{...result,ok:false,issues:[...result.issues,mismatch],blockers:[...result.blockers,mismatch]};
@@ -633,14 +677,14 @@
     if(!settings.apiKey){const error=new Error("자동 생성 연결이 필요합니다.");error.stage="plan";throw error}
     const plan=await requestGenerationStage("plan",request);
     const content=await requestGenerationStage("content",request,plan);
-    const topic=Generation.buildTopic(request,plan,content);
+    const topic=Simple.buildTopic(request,plan,content);
     topic.generationRequest=clone(request);
     return topic;
   }
   async function generateAndStore(request,originalDraft=null){
     const pending=pendingGeneration(request,originalDraft);topics[request.date]=pending;activeDate=request.date;dirty=true;view="admin";saveTopics("Topic Plan 생성을 시작했습니다.");
     try{
-      const topic=await generateV2Topic(request);topics[request.date]=topic;dirty=true;saveTopics("새 8섹션 토픽 생성과 승인 게이트 검사를 완료했습니다.");return topic;
+      const topic=await generateV2Topic(request);topics[request.date]=topic;dirty=true;saveTopics("새 Simple Conversation 토픽 생성과 승인 게이트 검사를 완료했습니다.");return topic;
     }catch(error){
       pending.operatorStatus.generationStatus="failed";pending.generationFailure={stage:error.stage||"plan",message:error.message,issues:error.issues||[]};pending.quality={status:"review",score:0,issues:[error.message]};pending.updatedAt=new Date().toISOString();topics[request.date]=pending;dirty=true;saveTopics("토픽 내용을 완성하지 못했습니다. 작성된 초안은 보존했습니다. 문제가 있는 부분만 다시 생성하세요.");return null;
     }
@@ -678,6 +722,14 @@
   }
   async function approveAndSave(){
     const topic=current(),result=validateTopic(topic);
+    if(topic.generationEngine===Simple.VERSION){
+      const evaluation=Simple.evaluate(topic,Object.values(topics));
+      if(evaluation.blockers.length){notify(`BLOCKER ${evaluation.blockers.length}개를 해결해야 승인할 수 있습니다.`,true);return}
+      topic.quality={status:"approved",score:100,issues:[]};
+      topic.operatorStatus={...topic.operatorStatus,reviewStatus:"approved"};
+      saveTopics("토픽을 이 컴퓨터에 승인 저장했습니다. Gist는 변경하지 않았습니다.");
+      return;
+    }
     if(topic.generationEngine===Generation.VERSION){
       const evaluation=Generation.evaluate(topic,Object.values(topics));
       if(evaluation.blockers.length){notify(`BLOCKER ${evaluation.blockers.length}개를 해결해야 승인할 수 있습니다.`,true);return}
@@ -753,7 +805,7 @@ Create or repair TheBox Talk Flow ${scope} as strict JSON for one mixed-confiden
   function viewerHtml(data){
     const safe=JSON.stringify(data).replace(/</g,"\\u003c");
     const css=`*{box-sizing:border-box}body{margin:0;background:#fbfcf8;color:#17211b;font:16px/1.55 Arial,sans-serif}.topbar{padding:18px 5vw;border-bottom:1px solid #dde5dc;background:#fff}.brand{display:flex;gap:10px;align-items:center}.brand-mark{display:grid;place-items:center;width:38px;height:38px;border-radius:11px;background:#286644;color:#fff;font-weight:800}.brand small{display:block;color:#66746a;font-size:10px}main{max-width:920px;margin:auto;padding:32px 18px 70px}.topic-hero{padding:36px;border-radius:24px;background:linear-gradient(135deg,#e4f2e8,#f8f2d7);margin:20px 0}.topic-hero h1{font-size:clamp(30px,6vw,50px);line-height:1.08;margin:0}.ko-title{display:block;font-size:.45em;color:#56705f;margin-top:10px}.eyebrow{font-size:11px;color:#286644;font-weight:800}.flow-card{background:#fff;border:1px solid #dde5dc;border-radius:18px;padding:clamp(20px,4vw,32px);margin:12px 0}.question-list{display:grid;gap:12px;counter-reset:q}.question{counter-increment:q;position:relative;padding:18px 18px 18px 50px;background:#f7f9f6;border-radius:13px}.question:before{content:counter(q);position:absolute;left:16px;top:18px;background:#286644;color:#fff;padding:3px 8px;border-radius:8px;font-size:11px}.en{font-weight:600}.ko{color:#66746a;font-size:13px;word-break:keep-all}.starter{margin-top:10px;padding:10px;border-left:3px solid #f4c95d;background:#fffaf0;font-size:12px}.followups{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}.followup{padding:10px;border:1px dashed #cdd7cd;border-radius:8px;font-size:11px}.followup b{display:block;color:#286644;font-size:9px}@media(max-width:520px){main{padding:16px 12px 50px}.topic-hero{padding:24px}.followups{grid-template-columns:1fr}.question{padding-left:45px}}`;
-    return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TheBox Talk Flow</title><style>${css}</style></head><body><header class="topbar"><div class="brand"><span class="brand-mark">T</span><span><strong>TheBox Talk Flow</strong><small>One Topic. Better Conversation.</small></span></div></header><main id="main"></main><script>const topics=${safe};const esc=v=>String(v??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));const q=(a,m)=>'<div class="question-list">'+a.map((x,i)=>'<article class="question"><div class="en">'+esc(x.questionEn)+'</div><div class="ko">'+esc(x.questionKo)+'</div><div class="starter"><b>STARTER</b> '+esc(x.starter)+'</div>'+(m?'<div class="followups"><div class="followup"><b>KEEP IT GOING</b>'+esc(x.exampleFollowUp)+'</div><div class="followup"><b>GO DEEPER</b>'+esc(x.deeperFollowUp)+'</div></div>':'')+'</article>').join('')+'</div>';const cards=t=>'<header class="topic-hero"><p class="eyebrow">'+t.date+'</p><h1>'+esc(t.title.en)+'<span class="ko-title">'+esc(t.title.ko)+'</span></h1></header><section class="flow-card"><h2>Topic Hook</h2><p class="en">'+esc(t.hook.en)+'</p><p class="ko">'+esc(t.hook.ko)+'</p></section><section class="flow-card"><h2>Small Talk</h2>'+q(t.smallTalk,false)+'</section><section class="flow-card"><h2>Easy Entry</h2>'+q(t.easyEntry,false)+'</section><section class="flow-card"><h2>Main Discussion</h2>'+q(t.mainDiscussion,true)+'</section><section class="flow-card"><h2>Final Round</h2><p class="en">'+esc(t.finalRound.questionEn)+'</p></section>';document.getElementById("main").innerHTML=Object.values(topics).map(cards).join("");<\/script></body></html>`;
+    return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>TheBox Talk Flow</title><style>${css}</style></head><body><header class="topbar"><div class="brand"><span class="brand-mark">T</span><span><strong>TheBox Talk Flow</strong><small>One Topic. Better Conversation.</small></span></div></header><main id="main"></main><script>const topics=${safe};const esc=v=>String(v??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));const q=(a,m)=>'<div class="question-list">'+a.map((x,i)=>'<article class="question"><div class="en">'+esc(x.questionEn)+'</div><div class="ko">'+esc(x.questionKo)+'</div><div class="starter"><b>STARTER</b> '+esc(x.starter)+'</div>'+(m?'<div class="followups"><div class="followup"><b>KEEP IT GOING</b>'+esc(x.exampleFollowUp)+'</div><div class="followup"><b>GO DEEPER</b>'+esc(x.deeperFollowUp)+'</div></div>':'')+'</article>').join('')+'</div>';const simpleQ=a=>'<div class="question-list">'+a.map(x=>'<article class="question"><div class="en">'+esc(x.en)+'</div><div class="ko">'+esc(x.ko)+'</div></article>').join('')+'</div>';const simple=t=>'<header class="topic-hero"><p class="eyebrow">'+esc(t.date)+' · SIMPLE CONVERSATION</p><h1>'+esc(t.title.en)+'<span class="ko-title">'+esc(t.title.ko)+'</span></h1></header><section class="flow-card"><h2>'+esc(t.session1.story.heading)+'</h2><p class="en">'+t.session1.story.en.map(esc).join(' ')+'</p><p class="ko">'+t.session1.story.ko.map(esc).join(' ')+'</p></section><section class="flow-card"><h2>EASY TALK</h2>'+simpleQ(t.session1.easyTalk)+'</section><section class="flow-card"><h2>REAL TALK</h2>'+simpleQ(t.session1.realTalk)+'</section><section class="flow-card"><h2>TODAY’S ENGLISH</h2>'+t.session1.expressions.map(x=>'<p><b>'+esc(x.en)+'</b><br><span class="ko">'+esc(x.ko)+'</span></p>').join('')+'</section><section class="flow-card"><h2>TODAY’S ACTIVITY · '+esc(t.session2.activity.name)+'</h2><p class="ko">'+esc(t.session2.activity.instructionKo)+'</p>'+t.session2.activity.materials.map(x=>'<p><b>'+esc(x.en)+'</b><br><span class="ko">'+esc(x.ko)+'</span></p>').join('')+'<h3>GROUP RESULT</h3><p>'+esc(t.session2.groupResult.en)+'</p><p class="ko">'+esc(t.session2.groupResult.ko)+'</p><h3>FINAL QUESTION</h3><p>'+esc(t.session2.finalQuestion.en)+'</p><p class="ko">'+esc(t.session2.finalQuestion.ko)+'</p></section>';const cards=t=>t.generationEngine==="v3-simple"?simple(t):'<header class="topic-hero"><p class="eyebrow">'+t.date+'</p><h1>'+esc(t.title.en)+'<span class="ko-title">'+esc(t.title.ko)+'</span></h1></header><section class="flow-card"><h2>Topic Hook</h2><p class="en">'+esc(t.hook.en)+'</p><p class="ko">'+esc(t.hook.ko)+'</p></section><section class="flow-card"><h2>Small Talk</h2>'+q(t.smallTalk,false)+'</section><section class="flow-card"><h2>Easy Entry</h2>'+q(t.easyEntry,false)+'</section><section class="flow-card"><h2>Main Discussion</h2>'+q(t.mainDiscussion,true)+'</section><section class="flow-card"><h2>Final Round</h2><p class="en">'+esc(t.finalRound.questionEn)+'</p></section>';document.getElementById("main").innerHTML=Object.values(topics).map(cards).join("");<\/script></body></html>`;
   }
   function shareStudent(){
     if(!settings.lastShareUrl){notify("설정에서 Gist 저장 후 생성되는 공개 링크를 사용하세요.",true);return}
@@ -822,6 +874,6 @@ Create or repair TheBox Talk Flow ${scope} as strict JSON for one mixed-confiden
   window.addEventListener("beforeunload",event=>{if(dirty){event.preventDefault();event.returnValue=""}});
   window.addEventListener("error",event=>notify(`오류: ${event.message}`,true));
   const params=new URLSearchParams(location.search);if(params.get("date")&&topics[params.get("date")])activeDate=params.get("date");if(["calendar","student","leader","admin","print"].includes(params.get("view")))view=params.get("view");if(view==="print")printDates.add(activeDate);
-  window.TalkFlow={KEYS,STANDARD,validateTopic,validateAll,validatePrint,evaluateRenderedPrint,getTopics:()=>clone(topics),approvedMonth,monthFile,viewerHtml,lifecycle:topic=>clone(lifecycleState(topic)),conversation:window.TalkFlowConversation,sessions:window.TalkFlowSessions,generation:Generation,generateForTest:request=>generateV2Topic(request),canPreviewTopic,getVersions:()=>loadRecord(KEYS.versions),getFeedback:()=>loadRecord(KEYS.feedback)};
+  window.TalkFlow={KEYS,STANDARD,validateTopic,validateAll,validatePrint,evaluateRenderedPrint,getTopics:()=>clone(topics),approvedMonth,monthFile,viewerHtml,lifecycle:topic=>clone(lifecycleState(topic)),conversation:window.TalkFlowConversation,sessions:window.TalkFlowSessions,generation:Simple,legacyGeneration:Generation,generateForTest:request=>generateV2Topic(request),renderForTest:(topic,leader=false)=>renderSimpleHandout(topic,leader),canPreviewTopic,getVersions:()=>loadRecord(KEYS.versions),getFeedback:()=>loadRecord(KEYS.feedback)};
   render();
 })();

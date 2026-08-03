@@ -1,5 +1,18 @@
 # TheBox Talk Flow Design Contract
 
+## Active direction: Simple Conversation v3
+
+New topics use the `simple-v1` two-page editorial system. Existing saved topics and `/topics/` retain their previous renderer and are never converted automatically.
+
+- White A4, charcoal copy, deep-green accents, generous whitespace, and thin rules.
+- Page 1: title, one story/situation, EASY TALK ×3, REAL TALK ×3, TODAY'S ENGLISH ×4.
+- Page 2: RESET, one activity with real materials, GROUP RESULT, FINAL QUESTION.
+- Leader copies retain the hierarchy and add short near-section notes plus bottom emergency phrases.
+- No full-width dark bands, nested card decoration, or visible generation labels.
+- Print floors: title 20pt; question 11pt; Korean guidance, activity, and materials 9pt; helper 8pt; leader note 8.5pt.
+
+The previous bound-field direction below is retained only for compatibility with existing topics.
+
 ## 1. Product and users
 
 Talk Flow is an operational tool for a non-technical study coordinator, a discussion leader, and mixed-confidence adult English learners. The primary job is to move from date selection to a printable conversation guide without exposing storage or API mechanics.
