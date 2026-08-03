@@ -4,602 +4,326 @@
   const VERSION = "v2-fail-closed";
   const STANDARD_VERSION = "2";
   const TEMPLATE_VERSION = "4";
-  const AXES = [
-    "habit",
-    "recentExperience",
-    "evaluation",
-    "comparison",
-    "problemSolving",
-    "decision",
-    "prediction",
-    "systemOpinion"
-  ];
-  const MECHANISMS = [
-    "informationGap",
-    "personalArtifact",
-    "timedTurn",
-    "assignedOpposition",
-    "openEndedDecision"
-  ];
-  const PLACEHOLDER = /^(?:option\s*[a-d]|ask and react\.?|use this evidence\.?|add details\.?|tbd|example|placeholder)$/i;
+  const AXES = ["habit", "recentExperience", "evaluation", "comparison", "problemSolving", "decision", "prediction", "systemOpinion"];
+  const MECHANISMS = ["informationGap", "personalArtifact", "timedTurn", "assignedOpposition", "openEndedDecision"];
+  const EXPRESSION_FUNCTIONS = ["REASON", "SOFT_DISAGREE", "CONDITION", "COMPARE", "EXCEPTION", "CONNECT", "REACT", "FOLLOW_UP"];
   const SKELETON = Object.freeze({
-    sessionOne: Object.freeze([
-      { id: "quickStart", labelEn: "Quick Start", labelKo: "빠른 시작", minutes: 10 },
-      { id: "personalExperience", labelEn: "Personal / Experience Round", labelKo: "개인 경험 라운드", minutes: 15 },
-      { id: "evidenceDecision", labelEn: "Evidence / Decision Round", labelKo: "근거와 판단 라운드", minutes: 20 },
-      { id: "shortWrapUp", labelEn: "Short Wrap-up", labelKo: "짧은 마무리", minutes: 5 }
+    session1: Object.freeze([
+      { id: "why", label: "WHY THIS TOPIC", minutes: 0 },
+      { id: "popQuiz", label: "POP QUIZ — DOES THIS SOUND NATURAL?", minutes: 10 },
+      { id: "icebreakers", label: "ICEBREAKER QUESTIONS", minutes: 30 },
+      { id: "bingo", label: "SPARK WORDS BINGO", minutes: 0 }
     ]),
-    sessionTwo: Object.freeze([
-      { id: "reset", labelEn: "Reset", labelKo: "리셋", minutes: 5 },
-      { id: "mainActivity", labelEn: "Main Activity", labelKo: "본 활동", minutes: 20 },
-      { id: "roleChallenge", labelEn: "Role / Challenge", labelKo: "역할과 도전", minutes: 10 },
-      { id: "finalDecision", labelEn: "Final Decision", labelKo: "최종 결정", minutes: 5 }
+    session2: Object.freeze([
+      { id: "game", label: "GAME + HOW TO PLAY", minutes: 20 },
+      { id: "situation", label: "SITUATION", minutes: 0 },
+      { id: "discussion", label: "DISCUSSION", minutes: 15 },
+      { id: "expressions", label: "USEFUL EXPRESSIONS", minutes: 5 }
     ])
   });
 
-  const textSchema = { type: "string", minLength: 1 };
-  const bilingualSchema = {
-    type: "object",
-    additionalProperties: false,
-    required: ["en", "ko"],
-    properties: { en: textSchema, ko: textSchema }
-  };
-  const speakingHelpSchema = {
-    type: "array",
-    minItems: 2,
-    maxItems: 3,
-    items: bilingualSchema
-  };
-  const questionSchema = {
-    type: "object",
-    additionalProperties: false,
-    required: ["axis", "questionEn", "questionKo", "speakingHelp"],
-    properties: {
-      axis: { type: "string", enum: AXES },
-      questionEn: textSchema,
-      questionKo: textSchema,
-      speakingHelp: speakingHelpSchema
+  const text = { type: "string", minLength: 1 };
+  const integer = { type: "integer" };
+  const object = (required, properties) => ({ type: "object", additionalProperties: false, required, properties });
+  const list = (items, minItems, maxItems) => ({ type: "array", items, ...(minItems === undefined ? {} : { minItems }), ...(maxItems === undefined ? {} : { maxItems }) });
+  const bilingual = object(["en", "ko"], { en: text, ko: text });
+  const planSchema = object(
+    ["centralTopic", "questionAxes", "materialType", "sessionTwoActivity", "speakingMechanisms", "finalGroupResult"],
+    {
+      centralTopic: bilingual,
+      questionAxes: { type: "array", minItems: 3, maxItems: 6, uniqueItems: true, items: { type: "string", enum: AXES } },
+      materialType: { type: "string", enum: ["reviews", "messages", "priceConditions", "scenarioCards", "roleInformation", "schedule", "statistics", "cases"] },
+      sessionTwoActivity: { type: "string", enum: ["informationGap", "blindRanking", "assignedRoleDebate", "openDecisionChallenge", "writeTheFake"] },
+      speakingMechanisms: { type: "array", minItems: 3, uniqueItems: true, items: { type: "string", enum: MECHANISMS } },
+      finalGroupResult: bilingual
     }
-  };
-  const planSchema = {
-    type: "object",
-    additionalProperties: false,
-    required: [
-      "centralTopic",
-      "questionAxes",
-      "materialType",
-      "sessionTwoActivity",
-      "speakingMechanisms",
-      "finalGroupResult"
-    ],
-    properties: {
-      centralTopic: bilingualSchema,
-      questionAxes: {
-        type: "array",
-        minItems: 3,
-        maxItems: 6,
-        uniqueItems: true,
-        items: { type: "string", enum: AXES }
-      },
-      materialType: {
-        type: "string",
-        enum: ["reviews", "messages", "priceConditions", "scenarioCards", "roleInformation", "schedule", "statistics", "cases"]
-      },
-      sessionTwoActivity: {
-        type: "string",
-        enum: ["informationGap", "blindRanking", "assignedRoleDebate", "openDecisionChallenge", "writeTheFake"]
-      },
-      speakingMechanisms: {
-        type: "array",
-        minItems: 3,
-        uniqueItems: true,
-        items: { type: "string", enum: MECHANISMS }
-      },
-      finalGroupResult: bilingualSchema
-    }
-  };
-  const contentSchema = {
-    type: "object",
-    additionalProperties: false,
-    required: [
-      "title",
-      "quickStart",
-      "personalExperience",
-      "evidenceDecision",
-      "shortWrapUp",
-      "conversationMaterials",
-      "reset",
-      "mainActivity",
-      "roleChallenge",
-      "finalDecision",
-      "speakingFrames",
-      "leaderGuide",
-      "bilingualInstructions"
-    ],
-    properties: {
-      title: bilingualSchema,
-      quickStart: questionSchema,
-      personalExperience: {
-        ...questionSchema,
-        required: [...questionSchema.required, "alternativeEn", "alternativeKo"],
-        properties: {
-          ...questionSchema.properties,
-          alternativeEn: textSchema,
-          alternativeKo: textSchema
-        }
-      },
-      evidenceDecision: questionSchema,
-      shortWrapUp: questionSchema,
-      conversationMaterials: {
-        type: "array",
-        minItems: 1,
-        items: {
-          type: "object",
-          additionalProperties: false,
-          required: ["type", "title", "items", "decisionPrompt"],
-          properties: {
-            type: textSchema,
-            title: bilingualSchema,
-            items: { type: "array", minItems: 3, items: bilingualSchema },
-            decisionPrompt: bilingualSchema
-          }
-        }
-      },
-      reset: {
-        type: "object",
-        additionalProperties: false,
-        required: ["titleEn", "titleKo", "instructionEn", "instructionKo"],
-        properties: {
-          titleEn: textSchema,
-          titleKo: textSchema,
-          instructionEn: textSchema,
-          instructionKo: textSchema
-        }
-      },
-      mainActivity: {
-        type: "object",
-        additionalProperties: false,
-        required: ["titleEn", "titleKo", "goalEn", "goalKo", "steps", "participantOutput"],
-        properties: {
-          titleEn: textSchema,
-          titleKo: textSchema,
-          goalEn: textSchema,
-          goalKo: textSchema,
-          steps: { type: "array", minItems: 3, items: bilingualSchema },
-          participantOutput: bilingualSchema
-        }
-      },
-      roleChallenge: {
-        type: "object",
-        additionalProperties: false,
-        required: ["titleEn", "titleKo", "ruleEn", "ruleKo", "roles"],
-        properties: {
-          titleEn: textSchema,
-          titleKo: textSchema,
-          ruleEn: textSchema,
-          ruleKo: textSchema,
-          roles: {
-            type: "array",
-            minItems: 2,
-            items: {
-              type: "object",
-              additionalProperties: false,
-              required: ["nameEn", "nameKo", "briefEn", "briefKo"],
-              properties: {
-                nameEn: textSchema,
-                nameKo: textSchema,
-                briefEn: textSchema,
-                briefKo: textSchema
-              }
-            }
-          }
-        }
-      },
-      finalDecision: {
-        type: "object",
-        additionalProperties: false,
-        required: [
-          "promptEn",
-          "promptKo",
-          "everyoneSpeaksRuleEn",
-          "everyoneSpeaksRuleKo",
-          "resultLabelEn",
-          "resultLabelKo"
-        ],
-        properties: {
-          promptEn: textSchema,
-          promptKo: textSchema,
-          everyoneSpeaksRuleEn: textSchema,
-          everyoneSpeaksRuleKo: textSchema,
-          resultLabelEn: textSchema,
-          resultLabelKo: textSchema
-        }
-      },
-      speakingFrames: {
-        type: "array",
-        minItems: 3,
-        items: {
-          type: "object",
-          additionalProperties: false,
-          required: ["purpose", "en", "ko"],
-          properties: { purpose: textSchema, en: textSchema, ko: textSchema }
-        }
-      },
-      leaderGuide: {
-        type: "object",
-        additionalProperties: false,
-        required: ["timingEn", "timingKo", "supportEn", "supportKo"],
-        properties: {
-          timingEn: textSchema,
-          timingKo: textSchema,
-          supportEn: textSchema,
-          supportKo: textSchema
-        }
-      },
-      bilingualInstructions: {
-        type: "object",
-        additionalProperties: false,
-        required: [
-          "orderEn",
-          "orderKo",
-          "rolesEn",
-          "rolesKo",
-          "timeEn",
-          "timeKo",
-          "finalResultEn",
-          "finalResultKo",
-          "alternativeParticipationEn",
-          "alternativeParticipationKo"
-        ],
-        properties: Object.fromEntries([
-          "orderEn",
-          "orderKo",
-          "rolesEn",
-          "rolesKo",
-          "timeEn",
-          "timeKo",
-          "finalResultEn",
-          "finalResultKo",
-          "alternativeParticipationEn",
-          "alternativeParticipationKo"
-        ].map((key) => [key, textSchema]))
-      }
-    }
-  };
+  );
+  const popQuizItem = object(["wrong", "right", "why_ko"], { wrong: text, right: text, why_ko: text });
+  const ladder = object(["basic", "plus"], { basic: text, plus: text });
+  const icebreaker = object(["en", "type", "minutes", "starter", "followup", "ladder"], {
+    en: text,
+    type: { type: "string", enum: ["quick_choice", "recent_experience", "light_opinion"] },
+    minutes: integer,
+    options: list(text, 2, 3),
+    escape: text,
+    starter: text,
+    followup: text,
+    ladder
+  });
+  const bingoWord = object(["en", "pos", "ko"], { en: text, pos: { type: "string", enum: ["n.", "v.", "adj.", "phr."] }, ko: text });
+  const gameRule = object(["en", "ko"], { en: text, ko: text });
+  const gameOption = object(["label", "ko"], { label: text, ko: text });
+  const gameRole = object(["name", "task_en", "task_ko"], { name: text, task_en: text, task_ko: text });
+  const gameInput = object(["label", "lines"], { label: text, lines: integer });
+  const game = object(["type", "name", "minutes", "minFloor", "rules"], {
+    type: bilingual,
+    name: text,
+    minutes: integer,
+    minFloor: integer,
+    rules: list(gameRule, 4, 6),
+    options: list(gameOption, 1),
+    roles: list(gameRole, 1),
+    inputs: list(gameInput, 1),
+    starters: list(text, 1)
+  });
+  const situation = object(["en", "ko", "facts"], { en: text, ko: text, facts: list(bilingual, 1) });
+  const discussion = object(["en", "starter", "followup"], { en: text, starter: text, followup: text });
+  const expression = object(["fn", "en", "ko"], { fn: { type: "string", enum: EXPRESSION_FUNCTIONS }, en: text, ko: text });
+  const leader = object(["s1_notes", "s2_notes", "timeCut"], {
+    s1_notes: list(text, 1),
+    s2_notes: list(text, 1),
+    timeCut: list(object(["block", "from", "to"], { block: text, from: integer, to: integer }), 1)
+  });
+  const contentSchema = object(["date", "weekday", "category", "title", "session1", "session2", "leader"], {
+    date: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" },
+    weekday: text,
+    category: bilingual,
+    title: bilingual,
+    session1: object(["minutes", "why", "popQuiz", "icebreakers", "bingo"], {
+      minutes: integer,
+      why: bilingual,
+      popQuiz: list(popQuizItem, 3, 3),
+      icebreakers: list(icebreaker, 3, 3),
+      bingo: object(["rule_ko", "words"], { rule_ko: text, words: list(bingoWord, 9, 9) })
+    }),
+    session2: object(["minutes", "game", "situation", "discussion", "expressions"], {
+      minutes: integer,
+      game,
+      situation,
+      discussion: list(discussion, 3, 3),
+      expressions: list(expression)
+    }),
+    leader
+  });
 
   const GENERATED_TOPIC_SCHEMA = {
     $schema: "https://json-schema.org/draft/2020-12/schema",
     $id: "https://thebox.example/talkflow/generated-topic-v2.schema.json",
-    title: "TheBox Talk Flow Generated Topic v2",
-    type: "object",
-    additionalProperties: false,
-    required: [
-      "title",
-      "sessionOne",
-      "sessionTwo",
-      "conversationMaterials",
-      "speakingFrames",
-      "leaderGuide",
-      "bilingualInstructions"
-    ],
+    title: "TheBox Talk Flow Bound-Field Topic",
+    ...contentSchema,
+    required: [...contentSchema.required, "generationEngine", "generatedConversation", "standardVersion", "templateVersion"],
     properties: {
-      id: textSchema,
-      date: textSchema,
-      category: textSchema,
-      title: bilingualSchema,
+      ...contentSchema.properties,
+      id: text,
       generationEngine: { const: VERSION },
       generatedConversation: { const: true },
       standardVersion: { const: STANDARD_VERSION },
       templateVersion: { const: TEMPLATE_VERSION },
       generationRequest: { type: "object" },
       topicPlan: planSchema,
-      promptAxes: { type: "array", minItems: 3, items: { type: "string", enum: AXES } },
-      speakingMechanisms: { type: "object" },
-      sessionOne: {
-        type: "object",
-        required: ["minutes", "sections"],
-        properties: {
-          minutes: { const: 50 },
-          sections: { type: "array", minItems: 4, maxItems: 4 }
-        }
-      },
-      sessionTwo: {
-        type: "object",
-        required: ["minutes", "sections"],
-        properties: {
-          minutes: { const: 40 },
-          sections: { type: "array", minItems: 4, maxItems: 4 }
-        }
-      },
-      conversationMaterials: contentSchema.properties.conversationMaterials,
-      speakingFrames: contentSchema.properties.speakingFrames,
-      leaderGuide: contentSchema.properties.leaderGuide,
-      bilingualInstructions: contentSchema.properties.bilingualInstructions,
       quality: { type: "object" },
       operatorStatus: { type: "object" },
       hidden: { type: "boolean" },
-      createdAt: textSchema,
-      updatedAt: textSchema
+      createdAt: text,
+      updatedAt: text
     }
   };
+  const PLAN_TOOL = Object.freeze({ name: "submit_topic_plan", description: "Submit only the constrained Talk Flow topic plan.", input_schema: planSchema });
+  const CONTENT_TOOL = Object.freeze({ name: "submit_content_fill", description: "Return one complete bound-field Talk Flow topic. Never use a fallback field.", input_schema: contentSchema });
 
-  const PLAN_TOOL = Object.freeze({
-    name: "submit_topic_plan",
-    description: "Submit only the constrained Talk Flow topic plan.",
-    input_schema: planSchema
-  });
-  const CONTENT_TOOL = Object.freeze({
-    name: "submit_content_fill",
-    description: "Fill only the approved fixed Talk Flow content fields.",
-    input_schema: contentSchema
-  });
-
-  const issue = (group, location, message) => ({ group, location, message });
-  const hasText = (value) => typeof value === "string" && value.trim().length > 0;
+  const clone = (value) => JSON.parse(JSON.stringify(value));
+  const normalize = (value) => String(value || "").toLowerCase().replace(/[^a-z0-9가-힣]+/g, " ").trim();
   const hasHangul = (value) => /[가-힣]/.test(String(value || ""));
-  const hasLatin = (value) => /[A-Za-z]/.test(String(value || ""));
-  const normalize = (value) => String(value || "").toLowerCase().replace(/[^a-z0-9가-힣]/g, "");
-  const isPlaceholder = (value) => hasText(value) && PLACEHOLDER.test(value.trim());
-  const QUESTION_STOP_WORDS = new Set(["a", "an", "the", "do", "does", "did", "is", "are", "was", "were", "what", "which", "when", "where", "who", "why", "how", "you", "your", "for", "to", "of", "now"]);
-  const meaningTokens = (value) => new Set(String(value || "").toLowerCase().match(/[a-z0-9]+/g)?.filter((word) => !QUESTION_STOP_WORDS.has(word)) || []);
-  function repeatsMeaning(left, right) {
-    const a = meaningTokens(left), b = meaningTokens(right);
-    if (a.size < 2 || b.size < 2) return false;
-    const overlap = [...a].filter((token) => b.has(token)).length;
-    return overlap / Math.min(a.size, b.size) >= 0.75;
-  }
+  const asciiRatio = (value) => {
+    const chars = [...String(value || "").replace(/\s/g, "")];
+    return chars.length ? chars.filter((char) => char.codePointAt(0) <= 127).length / chars.length : 0;
+  };
+  const issue = (severity, id, group, location, message) => ({ severity, id, group, location, message });
+  const blocker = (id, group, location, message) => issue("blocker", id, group, location, message);
+  const warning = (id, group, location, message) => issue("warning", id, group, location, message);
+  const dedupe = (items) => {
+    const seen = new Set();
+    return items.filter((item) => {
+      const key = `${item.severity}|${item.id}|${item.location}|${item.message}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
 
   function validateSchema(value, schema, path, issues) {
+    if (schema.const !== undefined && value !== schema.const) issues.push(blocker("B1", "structure", path, `고정값 ${schema.const}와 일치하지 않습니다.`));
     if (schema.type === "object") {
       if (!value || typeof value !== "object" || Array.isArray(value)) {
-        issues.push(issue("structure", path, "JSON Schema 객체 형식이 필요합니다."));
+        issues.push(blocker("B1", "structure", path, "필수 객체가 없습니다."));
         return;
       }
-      (schema.required || []).forEach((key) => {
-        if (!(key in value)) issues.push(issue("structure", `${path}.${key}`, "JSON Schema 필수 필드가 없습니다."));
-      });
+      for (const key of schema.required || []) if (!(key in value)) issues.push(blocker("B1", "structure", `${path}.${key}`, "필수 섹션 또는 필드가 없습니다."));
       if (schema.additionalProperties === false) {
-        Object.keys(value).filter((key) => !(key in (schema.properties || {}))).forEach((key) => {
-          issues.push(issue("structure", `${path}.${key}`, "JSON Schema에 없는 필드는 사용할 수 없습니다."));
-        });
+        for (const key of Object.keys(value)) if (!(key in (schema.properties || {}))) issues.push(blocker("B1", "structure", `${path}.${key}`, "스키마에 없는 필드입니다."));
       }
-      Object.entries(schema.properties || {}).forEach(([key, child]) => {
-        if (key in value) validateSchema(value[key], child, `${path}.${key}`, issues);
-      });
+      for (const [key, child] of Object.entries(schema.properties || {})) if (key in value) validateSchema(value[key], child, `${path}.${key}`, issues);
       return;
     }
     if (schema.type === "array") {
       if (!Array.isArray(value)) {
-        issues.push(issue("structure", path, "JSON Schema 배열 형식이 필요합니다."));
+        issues.push(blocker("B1", "structure", path, "필수 배열이 없습니다."));
         return;
       }
-      if (schema.minItems && value.length < schema.minItems) issues.push(issue("structure", path, `JSON Schema 최소 ${schema.minItems}개 항목이 필요합니다.`));
-      if (schema.maxItems && value.length > schema.maxItems) issues.push(issue("structure", path, `JSON Schema 최대 ${schema.maxItems}개 항목만 허용합니다.`));
-      if (schema.uniqueItems && new Set(value.map((item) => JSON.stringify(item))).size !== value.length) issues.push(issue("structure", path, "JSON Schema 중복 배열 항목은 허용되지 않습니다."));
+      if (schema.minItems !== undefined && value.length < schema.minItems) issues.push(blocker("B1", "structure", path, `최소 ${schema.minItems}개가 필요합니다.`));
+      if (schema.maxItems !== undefined && value.length > schema.maxItems) issues.push(blocker("B1", "structure", path, `최대 ${schema.maxItems}개만 허용합니다.`));
+      if (schema.uniqueItems && new Set(value.map((entry) => JSON.stringify(entry))).size !== value.length) issues.push(blocker("B1", "structure", path, "중복 항목은 허용하지 않습니다."));
       value.forEach((entry, index) => validateSchema(entry, schema.items || {}, `${path}[${index}]`, issues));
       return;
     }
     if (schema.type === "string") {
-      if (typeof value !== "string") issues.push(issue("structure", path, "JSON Schema 문자열 형식이 필요합니다."));
-      else if (schema.minLength && value.length < schema.minLength) issues.push(issue("content", path, "필수 내용이 비어 있습니다."));
+      if (typeof value !== "string") issues.push(blocker("B1", "content", path, "문자열이 필요합니다."));
+      else {
+        if (schema.minLength && !value.trim()) issues.push(blocker("B1", "content", path, "필수 내용이 비어 있습니다."));
+        if (schema.pattern && !(new RegExp(schema.pattern)).test(value)) issues.push(blocker("B1", "structure", path, "형식이 올바르지 않습니다."));
+      }
     }
-    if (schema.enum && !schema.enum.includes(value)) issues.push(issue("structure", path, "JSON Schema 허용값이 아닙니다."));
+    if (schema.type === "integer" && !Number.isInteger(value)) issues.push(blocker("B1", "structure", path, "정수가 필요합니다."));
+    if (schema.enum && !schema.enum.includes(value)) issues.push(blocker("B1", "structure", path, "허용된 값이 아닙니다."));
   }
 
-  function findInvalidText(value, path = "content", results = []) {
-    if (typeof value === "string") {
-      if (!value.trim()) results.push(issue("content", path, "필수 내용이 비어 있습니다."));
-      else if (isPlaceholder(value)) results.push(issue("content", path, `금지된 placeholder "${value}"가 있습니다.`));
-      return results;
-    }
-    if (Array.isArray(value)) {
-      value.forEach((entry, index) => findInvalidText(entry, `${path}[${index}]`, results));
-    } else if (value && typeof value === "object") {
-      Object.entries(value).forEach(([key, entry]) => findInvalidText(entry, `${path}.${key}`, results));
-    }
-    return results;
+  function strings(value, path = "topic", result = []) {
+    if (typeof value === "string") result.push({ path, value });
+    else if (Array.isArray(value)) value.forEach((entry, index) => strings(entry, `${path}[${index}]`, result));
+    else if (value && typeof value === "object") Object.entries(value).forEach(([key, entry]) => strings(entry, `${path}.${key}`, result));
+    return result;
   }
-
-  function requiredObject(object, keys, path, group, issues) {
-    if (!object || typeof object !== "object" || Array.isArray(object)) {
-      issues.push(issue(group, path, "필수 객체가 없습니다."));
-      return false;
-    }
-    keys.forEach((key) => {
-      if (!(key in object)) issues.push(issue(group, `${path}.${key}`, "필수 필드가 없습니다."));
-    });
-    return true;
+  function duplicateValues(entries) {
+    const counts = new Map(entries.map((entry) => [normalize(entry), 0]));
+    entries.forEach((entry) => counts.set(normalize(entry), (counts.get(normalize(entry)) || 0) + 1));
+    return [...counts.entries()].filter(([key, count]) => key && count > 1).map(([key]) => key);
+  }
+  const words = (value) => String(value || "").toLowerCase().match(/[a-z0-9]+/g) || [];
+  function overlap(left, right) {
+    const a = new Set(words(left).filter((word) => !["a", "an", "the", "do", "does", "is", "are", "what", "which", "when", "where", "who", "why", "how", "you", "your", "to", "of"].includes(word)));
+    const b = new Set(words(right).filter((word) => !["a", "an", "the", "do", "does", "is", "are", "what", "which", "when", "where", "who", "why", "how", "you", "your", "to", "of"].includes(word)));
+    if (!a.size || !b.size) return 0;
+    return [...a].filter((word) => b.has(word)).length / Math.min(a.size, b.size);
+  }
+  function standardDeviation(values) {
+    if (!values.length) return 0;
+    const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
+    return Math.sqrt(values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / values.length);
   }
 
   function validatePlan(plan) {
     const issues = [];
     validateSchema(plan, planSchema, "plan", issues);
-    if (!requiredObject(plan, planSchema.required, "plan", "structure", issues)) return { ok: false, issues };
-    if (!hasText(plan.centralTopic?.en) || !hasLatin(plan.centralTopic?.en) || hasHangul(plan.centralTopic?.en)) {
-      issues.push(issue("content", "plan.centralTopic.en", "영문 중심 주제가 필요합니다."));
-    }
-    if (!hasText(plan.centralTopic?.ko) || !hasHangul(plan.centralTopic?.ko)) {
-      issues.push(issue("content", "plan.centralTopic.ko", "한국어 중심 주제가 필요합니다."));
-    }
-    const axes = Array.isArray(plan.questionAxes) ? plan.questionAxes : [];
-    const counts = axes.reduce((map, axis) => map.set(axis, (map.get(axis) || 0) + 1), new Map());
-    if (new Set(axes).size < 3) issues.push(issue("structure", "plan.questionAxes", "서로 다른 질문 축이 최소 3개 필요합니다."));
-    if ([...counts.values()].some((count) => count > 2)) issues.push(issue("structure", "plan.questionAxes", "같은 질문 축은 최대 2개만 사용할 수 있습니다."));
-    if (axes.some((axis) => !AXES.includes(axis))) issues.push(issue("structure", "plan.questionAxes", "허용되지 않은 질문 축이 있습니다."));
-    const mechanisms = Array.isArray(plan.speakingMechanisms) ? plan.speakingMechanisms : [];
-    if (new Set(mechanisms).size < 3) issues.push(issue("speaking", "plan.speakingMechanisms", "발화 강제 장치가 최소 3개 필요합니다."));
-    if (mechanisms.some((item) => !MECHANISMS.includes(item))) issues.push(issue("speaking", "plan.speakingMechanisms", "허용되지 않은 발화 장치가 있습니다."));
-    if (!hasText(plan.sessionTwoActivity)) issues.push(issue("structure", "plan.sessionTwoActivity", "Session 2 활동이 필요합니다."));
-    if (!hasText(plan.finalGroupResult?.en) || !hasText(plan.finalGroupResult?.ko)) {
-      issues.push(issue("content", "plan.finalGroupResult", "영어·한국어 최종 그룹 결과가 필요합니다."));
-    }
-    return { ok: issues.length === 0, issues };
+    if (new Set(plan?.questionAxes || []).size < 3) issues.push(blocker("B1", "structure", "plan.questionAxes", "서로 다른 질문 축이 최소 3개 필요합니다."));
+    if (new Set(plan?.speakingMechanisms || []).size < 3) issues.push(blocker("B1", "speaking", "plan.speakingMechanisms", "발화 장치가 최소 3개 필요합니다."));
+    return { ok: !issues.some((item) => item.severity === "blocker"), issues: dedupe(issues) };
   }
 
-  function validateQuestion(question, path, issues) {
-    if (!requiredObject(question, questionSchema.required, path, "content", issues)) return;
-    if (!AXES.includes(question.axis)) issues.push(issue("structure", `${path}.axis`, "허용된 질문 축이 필요합니다."));
-    if (!hasText(question.questionEn) || !hasLatin(question.questionEn) || hasHangul(question.questionEn)) issues.push(issue("content", `${path}.questionEn`, "영어 질문이 필요합니다."));
-    if (!hasText(question.questionKo) || !hasHangul(question.questionKo)) issues.push(issue("content", `${path}.questionKo`, "한국어 질문이 필요합니다."));
-    if (!Array.isArray(question.speakingHelp) || question.speakingHelp.length < 2 || question.speakingHelp.length > 3) {
-      issues.push(issue("speaking", `${path}.speakingHelp`, "말하기 도움은 2~3줄이어야 합니다."));
-    }
-  }
-
-  function validateContent(content, plan) {
+  function validateContent(topic, plan, allTopics = []) {
     const issues = [];
-    validateSchema(content, contentSchema, "content", issues);
-    if (!requiredObject(content, contentSchema.required, "content", "structure", issues)) return { ok: false, issues };
-    issues.push(...findInvalidText(content));
-    if (!hasText(content.title?.en) || !hasLatin(content.title?.en) || hasHangul(content.title?.en)) issues.push(issue("content", "title.en", "영문 제목은 영어로 작성해야 합니다."));
-    if (!hasText(content.title?.ko) || !hasHangul(content.title?.ko)) issues.push(issue("content", "title.ko", "한국어 제목은 한국어로 작성해야 합니다."));
-    if (normalize(content.title?.en) === normalize(content.title?.ko)) issues.push(issue("content", "title", "영문·한국어 제목이 중복되었습니다."));
+    validateSchema(topic, contentSchema, "topic", issues);
+    if (!topic || typeof topic !== "object") return result(issues);
 
-    const questions = [
-      ["quickStart", content.quickStart],
-      ["personalExperience", content.personalExperience],
-      ["evidenceDecision", content.evidenceDecision],
-      ["shortWrapUp", content.shortWrapUp]
+    const s1 = topic.session1 || {}, s2 = topic.session2 || {}, gameValue = s2.game || {};
+    if (Array.isArray(gameValue) && gameValue.length > 1 || Array.isArray(s2.games) && s2.games.length > 1) issues.push(blocker("B2", "structure", "session2.game", "Session 2 게임은 정확히 1개여야 합니다."));
+
+    const starters = [...(s1.icebreakers || []), ...(s2.discussion || [])].map((item) => item?.starter).filter(Boolean);
+    if (duplicateValues(starters).length) issues.push(blocker("B3", "content", "questions.starter", "같은 starter가 문서 안에서 반복됩니다."));
+
+    const koLists = [
+      ["session2.game.rules", (gameValue.rules || []).map((item) => item.ko)],
+      ["session2.game.options", (gameValue.options || []).map((item) => item.ko)],
+      ["session2.game.roles", (gameValue.roles || []).map((item) => item.task_ko)],
+      ["session2.situation.facts", (s2.situation?.facts || []).map((item) => item.ko)],
+      ["session2.expressions", (s2.expressions || []).map((item) => item.ko)]
     ];
-    questions.forEach(([path, value]) => validateQuestion(value, path, issues));
-    if (!hasText(content.personalExperience?.alternativeEn) || !hasText(content.personalExperience?.alternativeKo)) {
-      issues.push(issue("content", "personalExperience.alternative", "영어·한국어 대체 참여 방법이 필요합니다."));
-    }
-    const axisCounts = questions.reduce((map, [, value]) => map.set(value?.axis, (map.get(value?.axis) || 0) + 1), new Map());
-    if (new Set(questions.map(([, value]) => value?.axis).filter(Boolean)).size < 3) issues.push(issue("structure", "questions.axis", "질문 축이 최소 3개 필요합니다."));
-    if ([...axisCounts.values()].some((count) => count > 2)) issues.push(issue("structure", "questions.axis", "같은 질문 축은 최대 2개만 사용할 수 있습니다."));
-    const normalizedQuestions = questions.map(([, value]) => normalize(value?.questionEn)).filter(Boolean);
-    if (new Set(normalizedQuestions).size !== normalizedQuestions.length) issues.push(issue("content", "questions", "같은 질문 또는 표현만 바꾼 질문이 반복됩니다."));
-    for (let left = 0; left < questions.length; left++) {
-      for (let right = left + 1; right < questions.length; right++) {
-        if (repeatsMeaning(questions[left][1]?.questionEn, questions[right][1]?.questionEn)) {
-          issues.push(issue("content", `questions.${questions[left][0]}+${questions[right][0]}`, "포함관계이거나 표현만 바꾼 질문이 반복됩니다."));
-        }
-      }
-    }
-    const starters = questions.flatMap(([, value]) => value?.speakingHelp || []).map((frame) => normalize(frame.en)).filter(Boolean);
-    if (new Set(starters).size !== starters.length) issues.push(issue("speaking", "speakingHelp", "같은 Starter 또는 말하기 도움이 반복됩니다."));
+    for (const [path, values] of koLists) if (duplicateValues(values.filter(Boolean)).length) issues.push(blocker("B4", "content", path, "같은 리스트 안에서 한국어가 중복됩니다."));
+    if ((gameValue.rules || []).some((item) => normalize(item.ko) === normalize(gameValue.type?.ko))) issues.push(blocker("B4", "content", "session2.game.rules", "게임 유형 번역과 규칙 번역이 중복됩니다."));
 
-    if (!Array.isArray(content.conversationMaterials) || content.conversationMaterials.length < 1) {
-      issues.push(issue("content", "conversationMaterials", "실제로 읽고 판단할 자료가 최소 1세트 필요합니다."));
-    } else {
-      content.conversationMaterials.forEach((material, materialIndex) => {
-        const path = `conversationMaterials[${materialIndex}]`;
-        if (!Array.isArray(material.items) || material.items.length < 3) issues.push(issue("content", `${path}.items`, "판단 자료는 완전한 항목 3개 이상이어야 합니다."));
-        (material.items || []).forEach((item, itemIndex) => {
-          if (!hasText(item.en) || !hasText(item.ko)) issues.push(issue("content", `${path}.items[${itemIndex}]`, "자료의 영어·한국어 내용이 비어 있습니다."));
-        });
-        if (!hasText(material.decisionPrompt?.en) || !hasText(material.decisionPrompt?.ko)) issues.push(issue("content", `${path}.decisionPrompt`, "자료를 사용하는 판단 질문이 필요합니다."));
-      });
-    }
-
-    if (!Array.isArray(content.mainActivity?.steps) || content.mainActivity.steps.length < 3) {
-      issues.push(issue("structure", "sessionTwo.mainActivity.steps", "Session 2 활동 순서가 3단계 이상 필요합니다."));
-    }
-    if (!hasText(content.mainActivity?.participantOutput?.en) || !hasText(content.mainActivity?.participantOutput?.ko)) {
-      issues.push(issue("speaking", "sessionTwo.mainActivity.participantOutput", "Session 2 참가자 산출물이 필요합니다."));
-    }
-    if (!Array.isArray(content.roleChallenge?.roles) || content.roleChallenge.roles.length < 2) {
-      issues.push(issue("speaking", "sessionTwo.roleChallenge.roles", "서로 다른 역할이 최소 2개 필요합니다."));
-    }
-    if (!hasText(content.finalDecision?.everyoneSpeaksRuleEn) || !hasText(content.finalDecision?.everyoneSpeaksRuleKo)) {
-      issues.push(issue("speaking", "sessionTwo.finalDecision.everyoneSpeaksRule", "전원 발화 규칙이 영어·한국어로 필요합니다."));
-    }
-    if (!hasText(content.finalDecision?.resultLabelEn) || !hasText(content.finalDecision?.resultLabelKo)) {
-      issues.push(issue("content", "sessionTwo.finalDecision.resultLabel", "최종 그룹 결과가 영어·한국어로 필요합니다."));
-    }
-    if (!Array.isArray(content.speakingFrames) || new Set((content.speakingFrames || []).map((frame) => frame.purpose)).size < 3) {
-      issues.push(issue("speaking", "speakingFrames", "용도가 다른 말하기 장치가 최소 3개 필요합니다."));
-    }
-    const requiredKorean = [
-      ["reset.instructionKo", content.reset?.instructionKo],
-      ["mainActivity.goalKo", content.mainActivity?.goalKo],
-      ["roleChallenge.ruleKo", content.roleChallenge?.ruleKo],
-      ["finalDecision.promptKo", content.finalDecision?.promptKo],
-      ["bilingualInstructions.orderKo", content.bilingualInstructions?.orderKo],
-      ["bilingualInstructions.rolesKo", content.bilingualInstructions?.rolesKo],
-      ["bilingualInstructions.timeKo", content.bilingualInstructions?.timeKo],
-      ["bilingualInstructions.finalResultKo", content.bilingualInstructions?.finalResultKo],
-      ["bilingualInstructions.alternativeParticipationKo", content.bilingualInstructions?.alternativeParticipationKo]
+    if (asciiRatio(topic.title?.en) < 0.8) issues.push(blocker("B5", "content", "title.en", "영문 제목의 ASCII 비율이 80% 미만입니다."));
+    const labels = [
+      ...(gameValue.options || []).map((item, index) => [`session2.game.options[${index}].label`, item.label]),
+      ...(gameValue.roles || []).map((item, index) => [`session2.game.roles[${index}].name`, item.name]),
+      ...(gameValue.inputs || []).map((item, index) => [`session2.game.inputs[${index}].label`, item.label])
     ];
-    requiredKorean.forEach(([path, value]) => {
-      if (!hasText(value) || !hasHangul(value)) issues.push(issue("content", path, "필수 한국어 활동 안내가 필요합니다."));
-    });
-    const planResult = validatePlan(plan);
-    issues.push(...planResult.issues);
-    return { ok: issues.length === 0, issues: dedupe(issues) };
+    const placeholder = /^(?:option\s*[a-z]|tbd|_+|placeholder)?$/i;
+    for (const [path, value] of labels) if (placeholder.test(String(value || "").trim())) issues.push(blocker("B6", "content", path, "빈 라벨 또는 placeholder 라벨입니다."));
+
+    const allowedBlocks = new Set(["Pop Quiz", "Icebreaker", "Spark Words Bingo", gameValue.name, "Discussion", "Useful Expressions"]);
+    for (const [index, cut] of (topic.leader?.timeCut || []).entries()) if (!allowedBlocks.has(cut.block)) issues.push(blocker("B7", "content", `leader.timeCut[${index}].block`, "현재 토픽에 없는 액티비티 이름입니다."));
+    const notesText = [...(topic.leader?.s1_notes || []), ...(topic.leader?.s2_notes || [])].join(" ");
+    for (const foreign of ["Write the Fake", "Star Fight", "Reset Vote", "Final Decision"]) {
+      if (foreign !== gameValue.name && notesText.includes(foreign)) issues.push(blocker("B7", "content", "leader.notes", `현재 토픽에 없는 액티비티 ${foreign}가 노출됩니다.`));
+    }
+
+    const subject = `${topic.title?.en || ""} ${s2.situation?.en || ""}`.toLowerCase();
+    if (/\b(?:jacket|coat|shirt|clothes|shoe|bag)\b/.test(subject) && /\b(?:froze|restarted|crashed|rebooted)\b/.test(subject)) issues.push(blocker("B8", "content", "session2.situation", "제목·상황의 대상과 동작이 일치하지 않습니다."));
+
+    const instructionText = [
+      ...(gameValue.rules || []).flatMap((item) => [item.en, item.ko]),
+      s1.bingo?.rule_ko,
+      ...(topic.leader?.s1_notes || []),
+      ...(topic.leader?.s2_notes || [])
+    ].filter(Boolean).join(" ");
+    if (/\b(?:USE A DIFFERENT REACT|EVIDENCE ROUND|GO FURTHER|FINAL DECISION)\b/i.test(instructionText)) issues.push(blocker("B9", "content", "instructions", "시트에 없는 섹션을 참조합니다."));
+
+    const allText = strings(topic);
+    if (allText.some((entry) => /\b(?:TRUE|FAKE)\s+sentence\s*:/i.test(entry.value))) issues.push(blocker("B10", "content", "session2.game", "추리 게임의 정답 라벨이 인쇄 데이터에 노출됩니다."));
+    const physical = /\b(?:stand|move around|walk|switch seats|find a partner across the room)\b/i;
+    for (const entry of allText) if (physical.test(entry.value)) issues.push(blocker("B11", "content", entry.path, "착석 환경에서 실행하기 어려운 물리 지시가 있습니다."));
+
+    const followups = [...(s1.icebreakers || []), ...(s2.discussion || [])].map((item) => item.followup).filter(Boolean);
+    if (duplicateValues(followups).length) issues.push(warning("W1", "content", "questions.followup", "후속 질문이 중복됩니다."));
+    if ((s2.expressions || []).length !== 6) issues.push(warning("W2", "content", "session2.expressions", "Useful Expressions는 6개여야 합니다."));
+    if (new Set((s2.expressions || []).map((item) => item.fn)).size < 6) issues.push(warning("W3", "content", "session2.expressions.fn", "표현 기능이 6가지보다 적습니다."));
+    if (standardDeviation((s2.expressions || []).map((item) => words(item.en).length)) < 2) issues.push(warning("W4", "content", "session2.expressions.en", "표현 길이의 분산이 작습니다."));
+
+    for (const entry of allText.filter((item) => /\.ko(?:\]|$)|why_ko|rule_ko/.test(item.path))) {
+      if (/(?:습니다|합니다|하세요)/.test(entry.value) && /(?:해요|예요|돼요|이에요)/.test(entry.value)) issues.push(warning("W5", "content", entry.path, "같은 블록에서 한국어 종결어미가 혼용됩니다."));
+    }
+    for (const [index, item] of (s1.bingo?.words || []).entries()) {
+      if (item.pos === "v." && !/(?:하다|되다|주다|받다|끄다|놓다|보내다)$/.test(item.ko)) issues.push(warning("W6", "content", `session1.bingo.words[${index}]`, "동사 품사와 한국어 번역이 일치하지 않습니다."));
+      if (item.pos === "adj." && !/(?:한|운|있는|없는|스러운)$/.test(item.ko)) issues.push(warning("W6", "content", `session1.bingo.words[${index}]`, "형용사 품사와 한국어 번역이 일치하지 않습니다."));
+      if (item.pos === "n." && /다$/.test(item.ko)) issues.push(warning("W6", "content", `session1.bingo.words[${index}]`, "명사 품사와 한국어 번역이 일치하지 않습니다."));
+    }
+    const posCounts = (s1.bingo?.words || []).reduce((counts, item) => ({ ...counts, [item.pos]: (counts[item.pos] || 0) + 1 }), {});
+    if (!(posCounts["n."] >= 3 && posCounts["n."] <= 5 && posCounts["v."] >= 2 && posCounts["v."] <= 3 && posCounts["adj."] >= 1 && posCounts["adj."] <= 2 && (posCounts["phr."] || 0) <= 1)) issues.push(warning("W7", "content", "session1.bingo.words", "품사 배분 범위를 벗어났습니다."));
+    if (s1.minutes !== 50 || s2.minutes !== 40 || (s1.icebreakers || []).reduce((sum, item) => sum + Number(item.minutes || 0), 0) !== 30 || gameValue.minutes + 15 + 5 !== 40) issues.push(warning("W8", "structure", "minutes", "Session 1 또는 Session 2 시간 합계가 맞지 않습니다."));
+
+    const questions = [...(s1.icebreakers || []), ...(s2.discussion || [])];
+    for (let left = 0; left < questions.length; left++) for (let right = left + 1; right < questions.length; right++) if (overlap(questions[left].en, questions[right].en) >= 0.7) issues.push(warning("W9", "content", `questions[${left}]+questions[${right}]`, "질문의 핵심 명사·동사가 70% 이상 겹칩니다."));
+    const englishOnly = [
+      ...(s1.icebreakers || []).flatMap((item) => [item.en, item.starter, item.followup, item.ladder?.basic, item.ladder?.plus, ...(item.options || [])]),
+      ...(s2.discussion || []).flatMap((item) => [item.en, item.starter, item.followup])
+    ].filter(Boolean);
+    if (englishOnly.some(hasHangul)) issues.push(warning("W10", "content", "questions", "질문·starter·followup·ladder에 한국어가 노출됩니다."));
+    if (allText.some((entry) => /(?:What would make me.+is|Whether .+ is .+ depends on|For me, the best approach is)/i.test(entry.value))) issues.push(warning("W11", "content", "copy", "AI 문체 패턴이 감지됩니다."));
+
+    const month = topic.date?.slice(0, 7);
+    const monthly = (allTopics || []).filter((entry) => entry?.date?.startsWith(month));
+    if (monthly.length >= 3) {
+      const openings = monthly.flatMap((entry) => [...(entry.session1?.icebreakers || []), ...(entry.session2?.discussion || [])].map((item) => words(item.en).slice(0, 3).join(" "))).filter(Boolean);
+      if ([...new Set(openings)].some((opening) => openings.filter((item) => item === opening).length >= 3)) issues.push(warning("W12", "content", "month.questions", "같은 달 안에서 동일 문두가 3회 이상 반복됩니다."));
+    }
+
+    if (plan) issues.push(...validatePlan(plan).issues);
+    return result(issues);
   }
 
-  function dedupe(items) {
-    const seen = new Set();
-    return items.filter((item) => {
-      const key = `${item.group}|${item.location}|${item.message}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-  }
-
-  const clone = (value) => JSON.parse(JSON.stringify(value));
-  function section(meta, content) {
-    return { ...meta, content: clone(content) };
+  function result(rawIssues) {
+    const issues = dedupe(rawIssues), blockers = issues.filter((item) => item.severity === "blocker"), warnings = issues.filter((item) => item.severity === "warning");
+    return { ok: blockers.length === 0, issues, blockers, warnings };
   }
 
   function buildTopic(request, plan, content) {
-    const planResult = validatePlan(plan);
-    const contentResult = validateContent(content, plan);
-    if (!planResult.ok || !contentResult.ok) {
+    const planResult = validatePlan(plan), contentResult = validateContent(content, plan);
+    const extra = content?.date !== request.date ? [blocker("B1", "structure", "date", "요청 날짜와 생성 날짜가 일치하지 않습니다.")] : [];
+    if (!planResult.ok || !contentResult.ok || extra.length) {
       const error = new Error("Validated Topic Plan and Content Fill are required.");
-      error.issues = dedupe([...planResult.issues, ...contentResult.issues]);
+      error.issues = dedupe([...planResult.issues, ...contentResult.issues, ...extra]);
       throw error;
     }
     const createdAt = new Date().toISOString();
     return {
+      ...clone(content),
       id: `talkflow-${request.date}-${typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)}`,
-      date: request.date,
-      category: request.mood || "경험 중심",
-      title: clone(content.title),
       generationEngine: VERSION,
       generatedConversation: true,
       standardVersion: STANDARD_VERSION,
       templateVersion: TEMPLATE_VERSION,
       topicPlan: clone(plan),
-      promptAxes: [...new Set([
-        content.quickStart.axis,
-        content.personalExperience.axis,
-        content.evidenceDecision.axis,
-        content.shortWrapUp.axis
-      ])],
-      speakingMechanisms: Object.fromEntries(MECHANISMS.map((name) => [name, plan.speakingMechanisms.includes(name)])),
-      sessionOne: {
-        minutes: 50,
-        sections: [
-          section(SKELETON.sessionOne[0], content.quickStart),
-          section(SKELETON.sessionOne[1], content.personalExperience),
-          section(SKELETON.sessionOne[2], content.evidenceDecision),
-          section(SKELETON.sessionOne[3], content.shortWrapUp)
-        ]
-      },
-      sessionTwo: {
-        minutes: 40,
-        sections: [
-          section(SKELETON.sessionTwo[0], content.reset),
-          section(SKELETON.sessionTwo[1], content.mainActivity),
-          section(SKELETON.sessionTwo[2], content.roleChallenge),
-          section(SKELETON.sessionTwo[3], content.finalDecision)
-        ]
-      },
-      conversationMaterials: clone(content.conversationMaterials),
-      speakingFrames: clone(content.speakingFrames),
-      leaderGuide: clone(content.leaderGuide),
-      bilingualInstructions: clone(content.bilingualInstructions),
       quality: { status: "review", score: 0, issues: [] },
-      operatorStatus: {
-        generationStatus: "complete",
-        reviewStatus: "review",
-        printStatus: "unchecked",
-        used: false
-      },
+      operatorStatus: { generationStatus: "complete", reviewStatus: "review", printStatus: "unchecked", used: false },
       hidden: false,
       createdAt,
       updatedAt: createdAt
@@ -607,54 +331,21 @@
   }
 
   function contentFromTopic(topic) {
-    const one = Object.fromEntries((topic.sessionOne?.sections || []).map((item) => [item.id, item.content]));
-    const two = Object.fromEntries((topic.sessionTwo?.sections || []).map((item) => [item.id, item.content]));
-    return {
-      title: topic.title,
-      quickStart: one.quickStart,
-      personalExperience: one.personalExperience,
-      evidenceDecision: one.evidenceDecision,
-      shortWrapUp: one.shortWrapUp,
-      conversationMaterials: topic.conversationMaterials,
-      reset: two.reset,
-      mainActivity: two.mainActivity,
-      roleChallenge: two.roleChallenge,
-      finalDecision: two.finalDecision,
-      speakingFrames: topic.speakingFrames,
-      leaderGuide: topic.leaderGuide,
-      bilingualInstructions: topic.bilingualInstructions
-    };
+    return Object.fromEntries(["date", "weekday", "category", "title", "session1", "session2", "leader"].map((key) => [key, clone(topic[key])]));
   }
-
-  function evaluate(topic) {
-    const issues = [];
+  function evaluate(topic, allTopics = []) {
     if (!topic || topic.generationEngine !== VERSION) {
-      issues.push(issue("structure", "generationEngine", "구형 v1 fallback 또는 지원하지 않는 생성 구조입니다."));
-    } else {
-      const oneIds = (topic.sessionOne?.sections || []).map((item) => item.id);
-      const twoIds = (topic.sessionTwo?.sections || []).map((item) => item.id);
-      if (JSON.stringify(oneIds) !== JSON.stringify(SKELETON.sessionOne.map((item) => item.id)) || topic.sessionOne?.minutes !== 50) {
-        issues.push(issue("structure", "sessionOne", "Session 1 고정 Skeleton과 50분 구성이 일치하지 않습니다."));
-      }
-      if (JSON.stringify(twoIds) !== JSON.stringify(SKELETON.sessionTwo.map((item) => item.id)) || topic.sessionTwo?.minutes !== 40) {
-        issues.push(issue("structure", "sessionTwo", "Session 2 고정 Skeleton과 40분 구성이 일치하지 않습니다."));
-      }
-      const result = validateContent(contentFromTopic(topic), topic.topicPlan);
-      issues.push(...result.issues);
+      const issues = [blocker("B1", "structure", "generationEngine", "구형 또는 지원하지 않는 자동 생성 구조입니다.")];
+      return { ready: false, ok: false, blockers: issues, warnings: [], issues, statuses: { structure: "fail", content: "ready", speaking: "ready" } };
     }
-    const unique = dedupe(issues);
+    const evaluation = validateContent(contentFromTopic(topic), topic.topicPlan, Array.isArray(allTopics) ? allTopics : Object.values(allTopics || {}));
     const statuses = {
-      structure: unique.some((entry) => entry.group === "structure") ? "fail" : "ready",
-      content: unique.some((entry) => entry.group === "content") ? "fail" : "ready",
-      speaking: unique.some((entry) => entry.group === "speaking") ? "fail" : "ready"
+      structure: evaluation.blockers.some((item) => item.group === "structure") ? "fail" : "ready",
+      content: evaluation.blockers.some((item) => item.group === "content") ? "fail" : "ready",
+      speaking: evaluation.blockers.some((item) => item.group === "speaking") ? "fail" : "ready"
     };
-    return {
-      ready: Object.values(statuses).every((status) => status === "ready"),
-      statuses,
-      issues: unique
-    };
+    return { ...evaluation, ready: evaluation.ok, statuses };
   }
-
   function isLegacyOrInvalidDraft(topic) {
     if (!topic) return false;
     if (topic.operatorStatus?.generationStatus === "failed") return true;
@@ -663,20 +354,8 @@
   }
 
   root.TalkFlowGeneration = Object.freeze({
-    VERSION,
-    STANDARD_VERSION,
-    TEMPLATE_VERSION,
-    AXES,
-    MECHANISMS,
-    SKELETON,
-    PLAN_TOOL,
-    CONTENT_TOOL,
-    GENERATED_TOPIC_SCHEMA,
-    validatePlan,
-    validateContent,
-    buildTopic,
-    evaluate,
-    isLegacyOrInvalidDraft,
-    contentFromTopic
+    VERSION, STANDARD_VERSION, TEMPLATE_VERSION, AXES, MECHANISMS, EXPRESSION_FUNCTIONS, SKELETON,
+    PLAN_TOOL, CONTENT_TOOL, GENERATED_TOPIC_SCHEMA, validatePlan, validateContent, buildTopic, evaluate,
+    isLegacyOrInvalidDraft, contentFromTopic
   });
 })(typeof window === "undefined" ? globalThis : window);

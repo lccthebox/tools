@@ -49,7 +49,7 @@
   function monthPrefix(){return `${cursor.getFullYear()}-${String(cursor.getMonth()+1).padStart(2,"0")}`}
   function monthFile(kind="json"){return `thebox-talkflow-${monthPrefix()}${kind==="viewer"?"-viewer.html":".json"}`}
   function current(){return topics[activeDate]}
-  function canPreviewTopic(topic){return Boolean(topic)&&(!topic.generatedConversation||topic.generationEngine===Generation.VERSION&&Generation.evaluate(topic).ready)&&topic.operatorStatus?.generationStatus!=="failed"}
+  function canPreviewTopic(topic){return Boolean(topic)&&(!topic.generatedConversation||topic.generationEngine===Generation.VERSION&&Generation.evaluate(topic,Object.values(topics)).ready)&&topic.operatorStatus?.generationStatus!=="failed"}
   function operationConfig(){
     const knownHolidays=["2026-08-15","2026-08-17","2026-09-24","2026-09-25","2026-09-26","2026-10-03","2026-10-05","2026-10-09"];
     return{weekdays:settings.operatingWeekdays||[1,4],included:settings.additionalDates||[],excluded:[...(settings.excludedDates||[]),...(settings.excludePublicHolidays?knownHolidays:[])]}
@@ -74,7 +74,7 @@
     const issues=[];
     if(!topic||typeof topic!=="object")return{status:"regenerate",score:0,issues:["토픽 데이터가 객체가 아닙니다."]};
     if(topic.generationEngine===Generation.VERSION){
-      const evaluation=Generation.evaluate(topic),messages=evaluation.issues.map(item=>`${item.location}: ${item.message}`);
+      const evaluation=Generation.evaluate(topic,Object.values(allTopics)),messages=evaluation.issues.map(item=>`${item.id} · ${item.location}: ${item.message}`);
       return{status:evaluation.ready?"approved":"regenerate",score:evaluation.ready?100:Math.max(0,100-messages.length*10),issues:messages,evaluation};
     }
     if(topic.generatedConversation){
@@ -183,7 +183,7 @@
     if(!/^\d{4}-\d{2}-\d{2}$/.test(t?.date||""))issues.push("날짜");
     if(!t?.title?.en||!t?.title?.ko)issues.push("제목");
     if(t?.generationEngine===Generation.VERSION){
-      const evaluation=Generation.evaluate(t);if(!evaluation.ready)issues.push(...evaluation.issues.map(item=>`${item.location}: ${item.message}`));
+      const evaluation=Generation.evaluate(t,Object.values(topics));if(!evaluation.ready)issues.push(...evaluation.blockers.map(item=>`${item.id} · ${item.location}: ${item.message}`));
     }else if(t?.generatedConversation)issues.push("구형 v1 fallback");
     else if(t?.conversationFlow)issues.push(...window.TalkFlowConversation.issues(t.conversationFlow));
     else{
@@ -205,11 +205,11 @@
     const pointSize=node=>Math.round(Number.parseFloat(getComputedStyle(node).fontSize)*72/96*100)/100;
     const minimum=selector=>{const values=[...handout.querySelectorAll(selector)].map(pointSize);return values.length?Math.min(...values):0};
     const type={
-      title:minimum(".handout-title h1"),
-      question:minimum(".start-card>strong,.story-card>strong,.round-card>strong,.timed-round>strong,.main-activity>strong,.group-decision>strong,.fc-question>strong,.fc-activity>p>b,.fc-decision h3"),
-      englishInstruction:minimum(".timed-round>p,.bilingual-steps b,.assigned-opposition>p,.assigned-role-briefs span,.fc-speaking-help b,.fc-activity li b,.fc-roles p"),
-      koreanGuidance:minimum(".timed-round>small,.timed-round>p small,.start-card>small,.story-card>small,.round-card>small,.session-reset small,.main-activity>small,.assigned-opposition>small,.assigned-opposition>p small,.group-decision>small,.everyone-rule small,.material-card small,.leader-inline span,.fc-handout [lang=ko]"),
-      meta:minimum(".session-banner span,.turn-rule,.material-card b,.evidence-choice,.section-hint,.fc-section>header span,.fc-session span")
+      title:minimum(".handout-title h1,.bound-title h1"),
+      question:minimum(".start-card>strong,.story-card>strong,.round-card>strong,.timed-round>strong,.main-activity>strong,.group-decision>strong,.bound-question-main>strong,.bound-section>header h3"),
+      englishInstruction:minimum(".timed-round>p,.bilingual-steps b,.assigned-opposition>p,.assigned-role-briefs span,.bound-starter,.bound-followup,.bound-rule,.bound-expression b"),
+      koreanGuidance:minimum(".timed-round>small,.timed-round>p small,.start-card>small,.story-card>small,.round-card>small,.session-reset small,.main-activity>small,.assigned-opposition>small,.assigned-opposition>p small,.group-decision>small,.everyone-rule small,.material-card small,.leader-inline span,.bound-why p,.bound-pop-item p,.bound-bingo-rule,.bound-bingo span,.bound-rule span,.bound-situation p,.bound-situation div span,.bound-expression span"),
+      meta:minimum(".session-banner span,.turn-rule,.material-card b,.evidence-choice,.section-hint,.bound-section>header span,.bound-session span,.bound-qtag")
     };
     if(type.title<18||type.question<10.5||type.englishInstruction<9||type.koreanGuidance<8.5||type.meta<7.5)issues.push("인쇄 글자 크기 최소 기준을 충족하지 않습니다.");
     return {status:issues.length?"review":"ready",issues,pages:pages.length,type,checkedAt:new Date().toISOString()};
@@ -222,33 +222,49 @@
     return `<ol class="handout-questions">${items.map(q=>`<li><strong>${esc(q.questionEn)}</strong><span>${esc(q.questionKo)}</span>${q.starter?`<p><b>STARTER</b> ${esc(q.starter)}</p>`:""}${follow&&q.followUp?`<p><b>FOLLOW-UP</b> ${esc(q.followUp)}</p>`:""}${deep?`<div class="handout-follow"><p><b>EXAMPLE</b> ${esc(q.exampleFollowUp)}</p><p><b>DEEPER</b> ${esc(q.deeperFollowUp)}</p></div>`:""}</li>`).join("")}</ol>`;
   }
   function handoutActivity(a){return `<div class="handout-activity"><strong>${esc(a.titleEn)} <small>${esc(a.titleKo)}</small></strong><p>${esc(a.instructionEn)}</p><span>${esc(a.instructionKo)}</span><div>${a.options.map(o=>`<i>${esc(o)}</i>`).join("")}</div></div>`}
-  function generatedQuestion(content){
-    return `<div class="fc-question"><strong>${esc(content.questionEn)}</strong><p lang="ko">${esc(content.questionKo)}</p><div class="fc-speaking-help">${(content.speakingHelp||[]).map(frame=>`<span><b>${esc(frame.en)}</b><small lang="ko">${esc(frame.ko)}</small></span>`).join("")}</div></div>`;
+  const GENERATED_QTAG={quick_choice:"QUICK CHOICE",recent_experience:"RECENT EXPERIENCE",light_opinion:"LIGHT OPINION"};
+  function generatedHeader(t,leader,page){return `<header class="bound-header"><div class="bound-brand"><b>THEBOX</b><span>TALK FLOW</span></div><div class="bound-meta">${esc(t.date)} · ${esc(t.weekday)} <em>|</em> ${esc(t.category.en)} · ${esc(t.category.ko)}</div><div class="bound-role">${leader?"LEADER":"STUDENT"} · ${page} / 2</div></header>`}
+  function generatedFooter(t,page){return `<footer class="bound-footer"><b>${esc(t.title.en)}</b><span>${esc(t.title.ko)} · Page ${page} / 2</span></footer>`}
+  function generatedTitle(t){return `<div class="bound-title"><h1>${esc(t.title.en)}</h1><p>${esc(t.title.ko)}</p></div>`}
+  function generatedLeaderBox(label,notes){return `<aside class="bound-leader"><b>${esc(label)}</b>${notes.map(note=>`<p>${esc(note)}</p>`).join("")}</aside>`}
+  function generatedSection(id,title,time,body){return `<section class="fc-section bound-section" data-section="${esc(id)}"><header><h3>${esc(title)}</h3>${time?`<span>${esc(time)}</span>`:""}</header>${body}</section>`}
+  function generatedQuestion(question,index){return `<div class="bound-question"><div class="bound-number">${index+1}</div><div class="bound-question-main"><div class="bound-qtag">${GENERATED_QTAG[question.type]} · ${question.minutes} MIN</div><strong>${esc(question.en)}</strong>${question.options?`<div class="bound-options">${question.options.map(option=>`<span><i></i>${esc(option)}</span>`).join("")}</div>`:""}${question.escape?`<div class="bound-escape">${esc(question.escape)}</div>`:""}<div class="bound-starter">${esc(question.starter)}</div><div class="bound-followup">↳ ${esc(question.followup)}</div><div class="bound-ladder"><p><b>BASIC</b>${esc(question.ladder.basic)}</p><p><b>PLUS</b>${esc(question.ladder.plus)}</p></div></div></div>`}
+  function generatedGameMaterials(game){
+    const options=game.options?`<div class="bound-game-options">${game.options.map(item=>`<div><b><i></i>${esc(item.label)}</b><span>${esc(item.ko)}</span></div>`).join("")}</div>`:"";
+    const roles=game.roles?`<div class="bound-game-roles">${game.roles.map(item=>`<div><b>${esc(item.name)}</b><span>${esc(item.task_en)}</span><small>${esc(item.task_ko)}</small></div>`).join("")}</div>`:"";
+    const inputs=game.inputs?`<div class="bound-game-inputs">${game.inputs.map(item=>`<label>${esc(item.label)}${Array.from({length:item.lines},()=>"<i></i>").join("")}</label>`).join("")}</div>`:"";
+    const starters=game.starters?`<div class="bound-game-starters">${game.starters.map(item=>`<span>${esc(item)}</span>`).join("")}</div>`:"";
+    return options+roles+inputs+starters;
   }
-  function generatedMaterials(materials){
-    return (materials||[]).map(material=>`<div class="fc-material"><h3>${esc(material.title.en)} <small lang="ko">${esc(material.title.ko)}</small></h3><ol>${material.items.map(item=>`<li><b>${esc(item.en)}</b><span lang="ko">${esc(item.ko)}</span></li>`).join("")}</ol><p><b>${esc(material.decisionPrompt.en)}</b><span lang="ko">${esc(material.decisionPrompt.ko)}</span></p></div>`).join("");
-  }
-  function generatedSection(meta,body){return `<section class="fc-section" data-section="${esc(meta.id)}"><header><h2>${esc(meta.labelEn)}</h2><span>${meta.minutes} MIN</span><small lang="ko">${esc(meta.labelKo)}</small></header>${body}</section>`}
   function renderGeneratedHandout(t,leader=false){
-    const one=Object.fromEntries(t.sessionOne.sections.map(item=>[item.id,item])),two=Object.fromEntries(t.sessionTwo.sections.map(item=>[item.id,item]));
-    const personal=one.personalExperience.content,evidence=one.evidenceDecision.content,reset=two.reset.content,activity=two.mainActivity.content,role=two.roleChallenge.content,decision=two.finalDecision.content;
+    const s1=t.session1,s2=t.session2,game=s2.game;
+    const timeline=s1.icebreakers.map((question,index)=>`Q${index+1} ${question.minutes}분`).join(" · ");
+    const popQuiz=s1.popQuiz.map((item,index)=>`<div class="bound-pop-item"><b>${index+1}</b><div><del>${esc(item.wrong)}</del><strong><i>✓</i>${esc(item.right)}</strong><p>${esc(item.why_ko)}</p></div></div>`).join("");
+    const icebreakers=s1.icebreakers.map(generatedQuestion).join("");
+    const bingoRows=[0,3,6].map(start=>`<tr>${s1.bingo.words.slice(start,start+3).map(word=>`<td><b>${esc(word.en)}</b><em>${esc(word.pos)}</em><span>${esc(word.ko)}</span></td>`).join("")}</tr>`).join("");
+    const bingoTable=`<table class="bound-bingo">${bingoRows}</table>`;
+    const bingoBody=`<p class="bound-bingo-rule">${esc(s1.bingo.rule_ko)}</p>${leader?`<div class="bound-bingo-leader">${bingoTable}${generatedLeaderBox("LEADER · SESSION 1",t.leader.s1_notes)}</div>`:bingoTable}`;
     const pageOne=[
-      generatedSection(one.quickStart,generatedQuestion(one.quickStart.content)),
-      generatedSection(one.personalExperience,`${generatedQuestion(personal)}<p class="fc-alternative"><b>${esc(personal.alternativeEn)}</b><span lang="ko">${esc(personal.alternativeKo)}</span></p>`),
-      generatedSection(one.evidenceDecision,`${generatedQuestion(evidence)}${generatedMaterials(t.conversationMaterials)}`),
-      generatedSection(one.shortWrapUp,generatedQuestion(one.shortWrapUp.content))
+      generatedSection("why","WHY THIS TOPIC","",`<div class="bound-why"><p>${esc(s1.why.ko)}</p><span>${esc(s1.why.en)}</span></div>`),
+      generatedSection("popQuiz","POP QUIZ — DOES THIS SOUND NATURAL?","10 MIN",`<div class="bound-pop-grid">${popQuiz}</div>`),
+      generatedSection("icebreakers","ICEBREAKER QUESTIONS","한 명씩 순서대로 · 다음 사람이 ↳ 질문을 읽어요",icebreakers),
+      generatedSection("bingo","SPARK WORDS BINGO","상시 진행",bingoBody)
     ].join("");
+    const rules=game.rules.map((rule,index)=>`<div class="bound-rule"><b>${index+1}</b>${esc(rule.en)}<span>${esc(rule.ko)}</span></div>`).join("");
+    const factsEn=s2.situation.facts.map(item=>esc(item.en)).join(" · "),factsKo=s2.situation.facts.map(item=>esc(item.ko)).join(" · ");
+    const discussion=s2.discussion.map((item,index)=>`<div class="bound-question bound-discussion"><div class="bound-number">${index+1}</div><div class="bound-question-main"><strong>${esc(item.en)}</strong><div class="bound-starter">${esc(item.starter)}</div><div class="bound-followup">↳ ${esc(item.followup)}</div></div></div>`).join("");
+    const expressions=s2.expressions.map(item=>`<div class="bound-expression"><em>${esc(item.fn.replace(/_/g," "))}</em><b>${esc(item.en)}</b><span>${esc(item.ko)}</span></div>`).join("");
     const pageTwo=[
-      generatedSection(two.reset,`<div class="fc-activity"><h3>${esc(reset.titleEn)} <small lang="ko">${esc(reset.titleKo)}</small></h3><p><b>${esc(reset.instructionEn)}</b><span lang="ko">${esc(reset.instructionKo)}</span></p></div>`),
-      generatedSection(two.mainActivity,`<div class="fc-activity"><h3>${esc(activity.titleEn)} <small lang="ko">${esc(activity.titleKo)}</small></h3><p><b>${esc(activity.goalEn)}</b><span lang="ko">${esc(activity.goalKo)}</span></p><ol>${activity.steps.map(step=>`<li><b>${esc(step.en)}</b><span lang="ko">${esc(step.ko)}</span></li>`).join("")}</ol><p class="fc-output"><b>${esc(activity.participantOutput.en)}</b><span lang="ko">${esc(activity.participantOutput.ko)}</span></p></div>`),
-      generatedSection(two.roleChallenge,`<div class="fc-activity"><h3>${esc(role.titleEn)} <small lang="ko">${esc(role.titleKo)}</small></h3><p><b>${esc(role.ruleEn)}</b><span lang="ko">${esc(role.ruleKo)}</span></p><div class="fc-roles">${role.roles.map(item=>`<article><b>${esc(item.nameEn)}</b><small lang="ko">${esc(item.nameKo)}</small><p>${esc(item.briefEn)}</p><span lang="ko">${esc(item.briefKo)}</span></article>`).join("")}</div></div>`),
-      generatedSection(two.finalDecision,`<div class="fc-decision"><h3>${esc(decision.promptEn)}</h3><p lang="ko">${esc(decision.promptKo)}</p><strong>${esc(decision.everyoneSpeaksRuleEn)}</strong><span lang="ko">${esc(decision.everyoneSpeaksRuleKo)}</span><label>${esc(decision.resultLabelEn)}<small lang="ko">${esc(decision.resultLabelKo)}</small></label></div>`)
+      generatedSection("game",`${game.type.en} · ${game.type.ko}`,"", `<div class="bound-game-name">${esc(game.name)}</div><div class="bound-how-to"><h4>HOW TO PLAY</h4><span>${game.minutes} MIN</span></div><div class="bound-rules">${rules}</div>${generatedGameMaterials(game)}`),
+      generatedSection("situation","SITUATION","게임과 DISCUSSION이 함께 사용해요",`<div class="bound-situation"><b>${esc(s2.situation.en)}</b><p>${esc(s2.situation.ko)}</p><div>${factsEn}<span>${factsKo}</span></div></div>`),
+      generatedSection("discussion","DISCUSSION","15 MIN · 답이 끝나면 다음 사람이 ↳ 질문",discussion),
+      generatedSection("expressions","USEFUL EXPRESSIONS","5 MIN · 오늘 써 볼 여섯 문장",`<div class="bound-expressions">${expressions}</div>`)
     ].join("");
-    const leaderNote=leader?`<aside class="fc-leader"><b>LEADER</b><span>${esc(t.leaderGuide.supportEn)}</span><small lang="ko">${esc(t.leaderGuide.supportKo)}</small></aside>`:"";
-    return `<article class="a4-topic fc-handout" data-print-topic="${esc(t.date)}" data-generation-engine="${Generation.VERSION}">
-      <section class="a4-page">${printHeader(t,1,leader)}<div class="fc-page"><div class="fc-session"><b>SESSION 1</b><span>50 MIN</span></div>${pageOne}${leaderNote}</div><footer>${esc(t.title.en)}<span>1 / 2</span></footer></section>
-      <section class="a4-page">${printHeader(t,2,leader)}<div class="fc-page"><div class="fc-session"><b>SESSION 2</b><span>40 MIN</span></div>${pageTwo}${leaderNote}</div><footer>${esc(t.title.en)}<span>2 / 2</span></footer></section>
-    </article>`;
+    const timeCut=t.leader.timeCut.map(item=>`${item.block} ${item.from}→${item.to}분`).join(" · ");
+    const pageOneLeader="";
+    const pageTwoLeader=leader?generatedLeaderBox("LEADER · SESSION 2",[...t.leader.s2_notes,`시간 부족 시 — ${timeCut}. ${game.name}은 최소 ${game.minFloor}분을 유지하세요.`]):"";
+    const page=(number,minutes,sections,leaderNotes)=>`<section class="a4-page">${generatedHeader(t,leader,number)}<div class="bound-body">${generatedTitle(t)}<div class="bound-session"><b>SESSION ${number} · ${minutes} MINUTES</b><span>${number===1?`POP QUIZ 10분 · ${timeline} · BINGO 상시`:`GAME ${game.minutes}분 · DISCUSSION 15분 · EXPRESSIONS 5분`}</span></div>${sections}${leaderNotes}</div>${generatedFooter(t,number)}</section>`;
+    return `<article class="a4-topic fc-handout bound-handout${leader?" bound-leader-handout":""}" data-print-topic="${esc(t.date)}" data-generation-engine="${Generation.VERSION}">${page(1,s1.minutes,pageOne,pageOneLeader)}${page(2,s2.minutes,pageTwo,pageTwoLeader)}</article>`;
   }
   function renderHandout(t,leader=false){
     if(t.generationEngine===Generation.VERSION)return renderGeneratedHandout(t,leader);
@@ -361,7 +377,7 @@
     return `<section class="generation-blocked"><p class="eyebrow">${title}</p><h1>${failed?"토픽 내용을 완성하지 못했습니다.":"구형 또는 불완전한 자동 생성 초안입니다."}</h1><p>${failed?"작성된 초안은 보존했습니다.<br>문제가 있는 부분만 다시 생성하세요.":"이 초안은 자동 승인·미리보기·PDF 대상이 아닙니다."}</p><div class="button-row"><button class="button primary" data-action="regenerate-v2">v2 구조로 다시 생성</button><button class="button danger" data-action="delete">기존 초안 삭제</button></div><details><summary>원문 보기</summary><pre>${esc(JSON.stringify(source,null,2))}</pre></details></section>`;
   }
   function renderGeneratedScreen(t,leader=false){
-    return `<header class="generated-topic-hero"><p class="eyebrow">${esc(t.date)} · ${leader?"LEADER GUIDE":"STUDENT"}</p><h1>${esc(t.title.en)}</h1><p lang="ko">${esc(t.title.ko)}</p></header><div class="generated-screen">${renderGeneratedHandout(t,leader)}</div>${leader?`<section class="leader-support"><h2>Leader Guide</h2><p><b>${esc(t.leaderGuide.timingEn)}</b><span lang="ko">${esc(t.leaderGuide.timingKo)}</span></p><p><b>${esc(t.leaderGuide.supportEn)}</b><span lang="ko">${esc(t.leaderGuide.supportKo)}</span></p></section>`:""}`;
+    return `<header class="generated-topic-hero"><p class="eyebrow">${esc(t.date)} · ${leader?"LEADER GUIDE":"STUDENT"}</p><h1>${esc(t.title.en)}</h1><p lang="ko">${esc(t.title.ko)}</p></header><div class="generated-screen">${renderGeneratedHandout(t,leader)}</div>`;
   }
   function renderStudent(t){
     if(!t)return empty();
@@ -432,10 +448,12 @@
     if(!t)return empty();
     if(t.operatorStatus?.generationStatus==="failed"||t.generatedConversation&&t.generationEngine!==Generation.VERSION)return dailyNav(t,"admin")+generationBlocked(t);
     if(t.generationEngine===Generation.VERSION){
-      const evaluation=Generation.evaluate(t),printReady=t.operatorStatus?.printValidation?.status==="ready"&&["checked","printed"].includes(t.operatorStatus?.printStatus);
-      const badges=[["STRUCTURE",evaluation.statuses.structure],["CONTENT",evaluation.statuses.content],["SPEAKING",evaluation.statuses.speaking],["PRINT",printReady?"ready":"fail"]];
-      const finalLabel=evaluation.ready&&printReady?"CONVERSATION READY":evaluation.statuses.structure==="fail"?"STRUCTURE FAIL":evaluation.statuses.content==="fail"?"CONTENT FAIL":evaluation.statuses.speaking==="fail"?"SPEAKING FAIL":"PRINT FAIL";
-      return `${dailyNav(t,"admin")}<section class="quality-panel ${evaluation.ready?"approved":"draft"}"><h2>${finalLabel}</h2><div class="readiness-split">${badges.map(([label,status])=>`<span class="${status==="ready"?"ready":""}">${label} ${status==="ready"?"READY":"FAIL"}</span>`).join("")}</div>${evaluation.issues.length?`<ul class="issue-list">${evaluation.issues.map(item=>`<li class="critical"><strong>${esc(item.location)}</strong><span>${esc(item.message)}</span></li>`).join("")}</ul>`:`<p lang="ko">고정 구조, 콘텐츠, 발화 조건을 모두 통과했습니다.</p>`}</section><section class="operator-review"><div class="review-heading"><div><p class="eyebrow">V2 FAIL-CLOSED · 승인 전 확인</p><h2>학생용 A4 1·2페이지</h2></div><span>${evaluation.issues.length}개 확인 항목</span></div>${evaluation.ready?`<button class="review-preview-grid" data-preview-modal aria-label="학생용 A4 두 페이지 크게 보기">${renderGeneratedHandout(t)}</button>`:`<p class="approval-warning">실패 항목을 해결하기 전에는 미리보기·승인·PDF를 사용할 수 없습니다.</p>`}</section><section class="review-actions"><button class="button secondary" data-action="regenerate-v2">v2 구조로 다시 생성</button>${evaluation.ready?`<button class="button secondary" data-open="${t.date}:print">학생용 A4 미리보기</button><button class="button primary" data-action="approve-save">승인하고 저장</button>`:""}<button class="button danger" data-action="delete">삭제</button></section>${evaluation.ready?`<dialog class="a4-preview-dialog"><button class="dialog-close" data-preview-close>닫기</button><div>${renderGeneratedHandout(t)}</div></dialog>`:""}<details class="advanced-editor"><summary>생성 데이터 및 원문 보기</summary><pre>${esc(JSON.stringify(t,null,2))}</pre></details>`;
+      const evaluation=Generation.evaluate(t,Object.values(topics)),printReady=t.operatorStatus?.printValidation?.status==="ready"&&["checked","printed"].includes(t.operatorStatus?.printStatus);
+      const gateClass=evaluation.blockers.length?"draft":evaluation.warnings.length?"warning":"approved";
+      const gateLabel=evaluation.blockers.length?`승인 차단 · BLOCKER ${evaluation.blockers.length}개`:evaluation.warnings.length?`경고 ${evaluation.warnings.length}개 · 승인 가능`:"승인 가능 · 검사 통과";
+      const renderSafe=!evaluation.blockers.some(item=>item.id==="B1");
+      const issueItems=evaluation.issues.map(item=>`<li class="${item.severity==="blocker"?"critical":"warning"}"><strong>${esc(item.id)} · ${esc(item.location)}</strong><span>${esc(item.message)}</span></li>`).join("");
+      return `${dailyNav(t,"admin")}<section class="quality-panel ${gateClass}"><h2>${gateLabel}</h2><div class="readiness-split"><span class="${evaluation.blockers.length?"":"ready"}">BLOCKER ${evaluation.blockers.length}</span><span class="${evaluation.warnings.length?"warning":"ready"}">WARNING ${evaluation.warnings.length}</span><span class="${printReady?"ready":""}">PRINT ${printReady?"READY":"REVIEW"}</span></div>${issueItems?`<ul class="issue-list">${issueItems}</ul>`:`<p lang="ko">B1~B11과 W1~W12 검사를 모두 통과했습니다.</p>`}</section><section class="operator-review"><div class="review-heading"><div><p class="eyebrow">BOUND-FIELD APPROVAL GATE · 승인 전 확인</p><h2>학생용 A4 1·2페이지</h2></div><span>${evaluation.issues.length}개 확인 항목</span></div>${renderSafe?`<button class="review-preview-grid" data-preview-modal aria-label="학생용 A4 두 페이지 크게 보기">${renderGeneratedHandout(t)}</button>`:`<p class="approval-warning">필수 섹션 누락으로 미리보기를 만들 수 없습니다.</p>`}</section><section class="review-actions">${evaluation.blockers.length?`<button class="button secondary" data-action="regenerate-v2">자동 수정 시도</button>`:`<button class="button secondary" data-action="regenerate-v2">전체 다시 생성</button>`}${evaluation.ready?`<button class="button secondary" data-open="${t.date}:print">학생용 A4 미리보기</button>`:""}<button class="button primary approve-button" data-action="approve-save" ${evaluation.blockers.length?"disabled aria-disabled=\"true\"":""}>승인하고 저장</button><button class="button danger" data-action="delete">삭제</button></section>${renderSafe?`<dialog class="a4-preview-dialog"><button class="dialog-close" data-preview-close>닫기</button><div>${renderGeneratedHandout(t)}</div></dialog>`:""}<details class="advanced-editor"><summary>생성 데이터 및 원문 보기</summary><pre>${esc(JSON.stringify(t,null,2))}</pre></details>`;
     }
     const result=validateTopic(t),qStatus=result.status==="approved"?"approved":result.status==="review"?"review":"draft";
     const conversation=t.conversationFlow?window.TalkFlowConversation.evaluate(t.conversationFlow):null;
@@ -571,14 +589,16 @@
   }
   function pendingGeneration(request,originalDraft=null){
     const createdAt=new Date().toISOString();
-    return{id:`talkflow-${request.date}-${crypto.randomUUID()}`,date:request.date,category:request.mood||"경험 중심",title:{en:"",ko:request.keyword},generatedConversation:true,generationEngine:Generation.VERSION,generationRequest:clone(request),originalDraft:originalDraft?clone(originalDraft):undefined,quality:{status:"draft",score:0,issues:[]},operatorStatus:{generationStatus:"running",reviewStatus:"review",printStatus:"unchecked",used:false},hidden:false,createdAt,updatedAt:createdAt};
+    return{id:`talkflow-${request.date}-${crypto.randomUUID()}`,date:request.date,weekday:weekday(request.date),category:{en:"",ko:request.mood||"경험 중심"},title:{en:"",ko:request.keyword},generatedConversation:true,generationEngine:Generation.VERSION,generationRequest:clone(request),originalDraft:originalDraft?clone(originalDraft):undefined,quality:{status:"draft",score:0,issues:[]},operatorStatus:{generationStatus:"running",reviewStatus:"review",printStatus:"unchecked",used:false},hidden:false,createdAt,updatedAt:createdAt};
   }
   function generationMessages(stage,request,plan=null,issues=[],previousCandidate=null){
     return [{role:"user",content:JSON.stringify({
       stage,
-      contract:"TheBox Talk Flow v2 fixed skeleton. Fill only the declared schema fields. Return the required tool call.",
+      contract:"TheBox Talk Flow bound-field contract. Return exactly WHY THIS TOPIC, POP QUIZ, ICEBREAKER QUESTIONS, SPARK WORDS BINGO, one immutable GAME with HOW TO PLAY, SITUATION, DISCUSSION, and USEFUL EXPRESSIONS through the declared tool schema. Every rendered string must come from its own object field; never use a fallback or flat stem array.",
       fixedSkeleton:Generation.SKELETON,
-      topic:{keyword:request.keyword,mood:request.mood||"경험 중심",source:request.source||"",avoid:request.avoid||""},
+      languageExposure:{koreanRequired:["why","popQuiz.why_ko","bingo meanings and rule","game rules","situation","expressions","operating rules"],englishOnly:["icebreaker questions/options/starter/followup/ladder","discussion questions/starter/followup"],koreanStyle:"Use consistent conversational ~해요 style."},
+      generationRules:["Create three real Korean-learner error pairs for Pop Quiz.","Create three icebreakers with unique starters and unique follow-ups.","Create nine part-of-speech-correct bingo words.","Create exactly one game; do not modify its fields after generation.","Situation includes a number and a conflict and supplies facts shared by game and discussion.","Create exactly six expressions with six distinct functions and varied lengths.","Never require standing, walking, moving around, switching seats, or crossing the room."],
+      topic:{date:request.date,weekday:weekday(request.date),keyword:request.keyword,mood:request.mood||"경험 중심",source:request.source||"",avoid:request.avoid||""},
       approvedPlan:plan,
       previousValidationIssues:issues,
       previousCandidate,
@@ -586,7 +606,12 @@
     })}];
   }
   async function requestGenerationStage(stage,request,plan=null){
-    const tool=stage==="plan"?Generation.PLAN_TOOL:Generation.CONTENT_TOOL,validate=stage==="plan"?Generation.validatePlan:value=>Generation.validateContent(value,plan);
+    const tool=stage==="plan"?Generation.PLAN_TOOL:Generation.CONTENT_TOOL,validate=stage==="plan"?Generation.validatePlan:value=>{
+      const result=Generation.validateContent(value,plan);
+      if(value?.date===request.date)return result;
+      const mismatch={severity:"blocker",id:"B1",group:"structure",location:"date",message:"요청 날짜와 생성 날짜가 일치하지 않습니다."};
+      return{...result,ok:false,issues:[...result.issues,mismatch],blockers:[...result.blockers,mismatch]};
+    };
     let lastError=null,lastIssues=[],previousCandidate=null;
     for(let attempt=0;attempt<2;attempt++){
       try{
@@ -615,13 +640,13 @@
   async function generateAndStore(request,originalDraft=null){
     const pending=pendingGeneration(request,originalDraft);topics[request.date]=pending;activeDate=request.date;dirty=true;view="admin";saveTopics("Topic Plan 생성을 시작했습니다.");
     try{
-      const topic=await generateV2Topic(request);topics[request.date]=topic;dirty=true;saveTopics("v2 토픽 생성과 Fail-Closed 검사를 완료했습니다.");return topic;
+      const topic=await generateV2Topic(request);topics[request.date]=topic;dirty=true;saveTopics("새 8섹션 토픽 생성과 승인 게이트 검사를 완료했습니다.");return topic;
     }catch(error){
       pending.operatorStatus.generationStatus="failed";pending.generationFailure={stage:error.stage||"plan",message:error.message,issues:error.issues||[]};pending.quality={status:"review",score:0,issues:[error.message]};pending.updatedAt=new Date().toISOString();topics[request.date]=pending;dirty=true;saveTopics("토픽 내용을 완성하지 못했습니다. 작성된 초안은 보존했습니다. 문제가 있는 부분만 다시 생성하세요.");return null;
     }
   }
   async function regenerateV2(){
-    const previous=current(),request=previous.generationRequest||{date:previous.date,keyword:previous.title?.ko||previous.title?.en||"새 대화 주제",mood:previous.category||"경험 중심"};
+    const previous=current(),request=previous.generationRequest||{date:previous.date,keyword:previous.title?.ko||previous.title?.en||"새 대화 주제",mood:previous.category?.ko||previous.category||"경험 중심"};
     preserveVersion(previous);
     await generateAndStore({...request,date:previous.date},previous);
   }
@@ -654,8 +679,8 @@
   async function approveAndSave(){
     const topic=current(),result=validateTopic(topic);
     if(topic.generationEngine===Generation.VERSION){
-      const evaluation=Generation.evaluate(topic);
-      if(!evaluation.ready){notify("STRUCTURE, CONTENT, SPEAKING 검사를 모두 통과해야 승인할 수 있습니다.",true);return}
+      const evaluation=Generation.evaluate(topic,Object.values(topics));
+      if(evaluation.blockers.length){notify(`BLOCKER ${evaluation.blockers.length}개를 해결해야 승인할 수 있습니다.`,true);return}
       topic.quality={status:"approved",score:100,issues:[]};
       topic.operatorStatus={...topic.operatorStatus,reviewStatus:"approved"};
       saveTopics("토픽을 이 컴퓨터에 승인 저장했습니다. Gist는 변경하지 않았습니다.");

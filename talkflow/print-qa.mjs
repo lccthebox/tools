@@ -1,6 +1,7 @@
 import { createRequire } from "node:module";
 import { createServer } from "node:http";
 import { readFile, mkdir, writeFile, readdir, unlink } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
 import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
@@ -38,7 +39,8 @@ const server = createServer(async (request, response) => {
 });
 await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
 const port = server.address().port;
-const browser = await chromium.launch({ headless: true });
+const systemChrome = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+const browser = await chromium.launch({ headless: true, ...(existsSync(systemChrome) ? { executablePath: systemChrome } : {}) });
 const report = [];
 let onlineColorText = "";
 try {

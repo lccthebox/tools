@@ -1,6 +1,7 @@
 import { createRequire } from "node:module";
 import { createServer } from "node:http";
 import { readFile, mkdir, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
 import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
@@ -24,7 +25,8 @@ const server=createServer(async(request,response)=>{
   }catch{response.statusCode=404;response.end("Not found")}
 });
 await new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));
-const port=server.address().port,browser=await chromium.launch({headless:true});
+const systemChrome="C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+const port=server.address().port,browser=await chromium.launch({headless:true,...(existsSync(systemChrome)?{executablePath:systemChrome}:{})});
 const checks=[],check=(name,pass,detail="")=>{checks.push({name,pass:Boolean(pass),detail});if(!pass)throw new Error(`${name}: ${detail}`)};
 try{
   const context=await browser.newContext(),page=await context.newPage(),errors=[];
@@ -111,9 +113,12 @@ try{
   await legacyContext.addInitScript(()=>localStorage.setItem("tb_talkflow_settings_v1",JSON.stringify({apiKey:"qa-intercept-key",gistToken:"test-token"})));
   const legacyPage=await legacyContext.newPage(),generationCalls=[];
   await legacyPage.route("https://api.anthropic.com/v1/messages",async route=>{
-    const body=route.request().postDataJSON(),tool=body.tools?.[0]?.name;generationCalls.push(tool);
+    const body=route.request().postDataJSON(),tool=body.tools?.[0]?.name,requestData=JSON.parse(body.messages[0].content);generationCalls.push(tool);
     const plan=validPlan(),content=validContent();
     plan.centralTopic={en:"Weekend Plans",ko:"주말 계획"};
+    content.date=requestData.topic.date;
+    content.weekday="월";
+    content.category={en:"LIFE",ko:"생활"};
     content.title={en:"How Should We Plan the Weekend?",ko:"이번 주말, 어떻게 계획할까?"};
     await route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({content:[{type:"tool_use",name:tool,input:tool==="submit_topic_plan"?plan:content}]})});
   });
@@ -136,9 +141,14 @@ try{
     return topic.generatedConversation===true&&topic.generationEngine==="v2-fail-closed"&&topic.standardVersion==="2"&&topic.templateVersion==="4"&&!topic.conversationFlow;
   }));
   check("new general topic passes structure content and speaking validators",await legacyPage.evaluate(()=>TalkFlow.generation.evaluate(TalkFlow.getTopics()["2026-08-31"]).ready));
-  check("new general topic Session 2 remains an activity with roles and decision",await legacyPage.evaluate(()=>{
-    const two=TalkFlow.getTopics()["2026-08-31"].sessionTwo;
-    return JSON.stringify(two.sections.map(item=>item.id))===JSON.stringify(["reset","mainActivity","roleChallenge","finalDecision"])&&!JSON.stringify(two).includes("MAIN DISCUSSION");
+  check("new general topic uses the fixed eight bound-field sections",await legacyPage.evaluate(()=>{
+    const topic=TalkFlow.getTopics()["2026-08-31"],one=topic.session1,two=topic.session2;
+    return Boolean(one.why)&&one.popQuiz.length===3&&one.icebreakers.length===3&&one.bingo.words.length===9&&
+      Boolean(two.game)&&Boolean(two.situation)&&two.discussion.length===3&&two.expressions.length===6;
+  }));
+  check("new general topic Session 2 remains one immutable activity",await legacyPage.evaluate(()=>{
+    const two=TalkFlow.getTopics()["2026-08-31"].session2;
+    return two.game.rules.length>=4&&two.game.rules.length<=6&&!two.games&&!JSON.stringify(two).includes("MAIN DISCUSSION");
   }));
   const statusBeforePreview=await legacyPage.evaluate(()=>TalkFlow.getTopics()["2026-08-31"].quality.status);
   const printStatusBeforePreview=await legacyPage.evaluate(()=>TalkFlow.getTopics()["2026-08-31"].operatorStatus.printStatus);

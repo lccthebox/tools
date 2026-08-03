@@ -1,0 +1,120 @@
+{
+  "date": "2026-08-10",
+  "weekday": "월",
+  "category": { "en": "WORK", "ko": "업무" },
+  "title": { "en": "Ping, Seen, No Reply", "ko": "메시지는 읽었는데 답장이 없다" },
+  "session1": {
+    "minutes": 50,
+    "why": {
+      "ko": "읽음 표시는 떴는데 답이 없을 때, 그 몇 시간이 참 애매하죠. 재촉하자니 눈치 보이고, 가만히 있자니 일이 안 굴러가고요. 저도 답장 미뤄놓고 까먹은 적 많아서 남 얘기가 아니에요. 오늘은 누가 예의 없나를 따지는 게 아니라, 각자 어떤 메시지에 빨리 답하고 어떤 건 미루는지 그 기준을 영어로 풀어봐요.",
+      "en": "You send a message. It gets read. Nothing comes back. Today we talk about which messages we answer fast, which ones we let sit, and why."
+    },
+    "popQuiz": [
+      { "wrong": "I confirmed your message.", "right": "I saw your message.", "why_ko": "'확인했어요'를 그대로 confirm으로 옮기면 계약이나 예약을 확정한 느낌이 나요. 그냥 봤다는 뜻이면 saw나 got을 써요." },
+      { "wrong": "Sorry for late reply.", "right": "Sorry for the late reply.", "why_ko": "late reply는 셀 수 있는 명사라 the가 필요해요. 짧게 쓸 때는 Sorry for the delay도 자주 써요." },
+      { "wrong": "I will check and answer you.", "right": "I'll check and get back to you.", "why_ko": "answer you는 질문에 대답한다는 느낌이라 딱딱해요. 나중에 다시 연락하겠다는 뜻이면 get back to you가 자연스러워요." }
+    ],
+    "icebreakers": [
+      {
+        "en": "Do you reply right away, or let it sit for a while?", "type": "quick_choice", "minutes": 8,
+        "options": ["Right away", "Within an hour", "Whenever I feel like it"],
+        "starter": "I usually…", "followup": "Does that change at night?",
+        "ladder": { "basic": "Right away. I hate the red dot.", "plus": "Right away for work, but friends can wait until evening." }
+      },
+      {
+        "en": "What's the last message you left on read?", "type": "recent_experience", "minutes": 12,
+        "escape": "If you can't think of one, talk about a message you keep meaning to answer.",
+        "starter": "I remember one…", "followup": "Did you ever reply, or did it just die?",
+        "ladder": { "basic": "A group chat message. I forgot about it.", "plus": "A group chat about a birthday dinner. I didn't want to pick the place, so I waited for someone else to." }
+      },
+      {
+        "en": "Someone reads your message and doesn't reply for a day. Is that rude?", "type": "light_opinion", "minutes": 10,
+        "options": ["Yes", "No", "It depends"],
+        "starter": "Honestly, it depends…", "followup": "Would your answer change if it was a coworker instead of a close friend?",
+        "ladder": { "basic": "No. People are busy.", "plus": "No, although it becomes a problem when I'm the one waiting to finish something." }
+      }
+    ],
+    "bingo": {
+      "rule_ko": "단어만 말하면 무효예요. 자기 경험을 한 마디 붙여야 칸이 채워집니다. 한 줄 완성하면 BINGO.",
+      "words": [
+        { "en": "read receipt", "pos": "n.", "ko": "읽음 표시" },
+        { "en": "leave on read", "pos": "phr.", "ko": "읽고 답 안 하다" },
+        { "en": "follow up", "pos": "v.", "ko": "다시 연락하다" },
+        { "en": "vague", "pos": "adj.", "ko": "모호한" },
+        { "en": "double-text", "pos": "v.", "ko": "연달아 보내다" },
+        { "en": "urgent", "pos": "adj.", "ko": "급한" },
+        { "en": "group chat", "pos": "n.", "ko": "단톡방" },
+        { "en": "mute", "pos": "v.", "ko": "알림을 끄다" },
+        { "en": "reply", "pos": "n.", "ko": "답장" }
+      ]
+    }
+  },
+  "session2": {
+    "minutes": 40,
+    "game": {
+      "type": { "en": "CHOICE DEBATE", "ko": "선택 토론 게임" },
+      "name": "Advice Lab", "minutes": 20, "minFloor": 15,
+      "rules": [
+        { "en": "Choose one facilitator.", "ko": "진행자를 한 명 정해요." },
+        { "en": "Use every option or role.", "ko": "준비된 선택지를 빠짐없이 다뤄요." },
+        { "en": "Give each person one turn.", "ko": "한 사람도 빠지지 않게 한 번씩 말해요." },
+        { "en": "Compare reasons before deciding.", "ko": "결정하기 전에 근거를 비교해요." }
+      ],
+      "options": [
+        { "label": "Ask for the deadline", "ko": "마감 시간을 물어본다" },
+        { "label": "Confirm the owner", "ko": "누가 담당인지 확인한다" },
+        { "label": "Summarize the request", "ko": "요청 내용을 한 줄로 정리해 되묻는다" },
+        { "label": "Move the issue to a call", "ko": "전화로 넘긴다" },
+        { "label": "Wait for more context", "ko": "정보가 더 올 때까지 기다린다" },
+        { "label": "Send a short acknowledgement", "ko": "일단 봤다는 짧은 답만 보낸다" }
+      ],
+      "starters": ["I would choose… because…", "I see one problem with…", "Can you change my mind?", "I still disagree because…"]
+    },
+    "situation": {
+      "en": "It's 1:50 p.m. Your manager sent this at 11 a.m., and you just opened it: \"Could you update the client deck today? I need the numbers checked before the 3 p.m. call, but Mina may have the latest file.\" You don't have the latest file. Mina hasn't answered. The call is in 70 minutes.",
+      "ko": "지금 오후 1시 50분이에요. 오전 11시에 매니저가 보낸 메시지를 방금 열었어요. \"오늘 고객 발표 자료 수정해 줄 수 있어요? 3시 통화 전에 수치를 확인해야 하는데, 최신 파일은 미나에게 있을 거예요.\" 최신 파일은 없고, 미나는 답이 없고, 통화까지 70분 남았어요.",
+      "facts": [
+        { "en": "sent at 11 a.m., opened at 1:50 p.m.", "ko": "오전 11시 발송, 오후 1시 50분 확인" },
+        { "en": "70 minutes until the call", "ko": "통화까지 70분" },
+        { "en": "no latest file", "ko": "최신 파일 없음" },
+        { "en": "Mina has not replied", "ko": "미나 응답 없음" },
+        { "en": "two tasks in one message", "ko": "메시지 하나에 요청이 두 개" }
+      ]
+    },
+    "discussion": [
+      { "en": "What makes a work message easy to answer fast?", "starter": "The ones I answer fastest are…", "followup": "What's the first thing you look for?" },
+      { "en": "When is it fine to leave a message until tomorrow?", "starter": "I'd probably say…", "followup": "Does the sender's tone change that?" },
+      { "en": "Look at the message above. Which option would you pick, and what would you actually write?", "starter": "For this one, I'd go with…", "followup": "Would you send it right now, or wait?" }
+    ],
+    "expressions": [
+      { "fn": "REASON", "en": "The thing is, I didn't have the file yet.", "ko": "문제는 저한테 아직 파일이 없었다는 거예요." },
+      { "fn": "SOFT_DISAGREE", "en": "I get that, but I'd still just call.", "ko": "무슨 말인지 알겠는데, 저라면 그냥 전화할 것 같아요." },
+      { "fn": "CONDITION", "en": "If it's not urgent, honestly, I'd leave it until the morning.", "ko": "급한 게 아니면 솔직히 아침까지 두겠어요." },
+      { "fn": "EXCEPTION", "en": "It becomes a problem when nobody says who's actually doing it.", "ko": "누가 할지 아무도 안 정하면 그때부터 문제가 돼요." },
+      { "fn": "CONNECT", "en": "That happened to me last week.", "ko": "저도 지난주에 똑같은 일 있었어요." },
+      { "fn": "FOLLOW_UP", "en": "What would you have written instead?", "ko": "그럼 대신 뭐라고 썼을 것 같아요?" }
+    ]
+  },
+  "leader": {
+    "s1_notes": [
+      "Pop Quiz는 정답을 먼저 말하지 말고 어느 쪽이 자연스러운지 손을 들게 하세요. 틀린 쪽에 손이 많이 가도 그냥 넘어갑니다.",
+      "Icebreaker는 시계 방향 한 바퀴. 답이 끝나면 다음 사람이 시트의 ↳ 질문을 그대로 읽습니다. 리더가 질문을 만들지 않아도 됩니다.",
+      "초급은 ladder의 basic 한 줄이면 통과입니다. 중급에게는 plus 줄을 가리키며 한 번 더 받으세요.",
+      "빙고는 따로 시간을 쓰지 않습니다. 리더가 단어를 의도적으로 섞어 쓰고, 학생이 경험을 붙여 말하면 칸을 인정합니다.",
+      "침묵이 길어지면: \"Let's hear from someone new.\" / \"You have 20 seconds left.\""
+    ],
+    "s2_notes": [
+      "SITUATION을 소리 내어 한 번 읽고 시작하세요. 숫자 세 개(11시, 1시 50분, 70분)를 짚어 주면 편이 갈립니다.",
+      "선택지 6개는 전부 한 번씩 언급되어야 합니다. 아무도 안 고른 선택지가 있으면 리더가 대신 변호하세요.",
+      "결정은 전원이 한 번 이상 말한 뒤에만 합니다.",
+      "마지막 5분에 각자 오늘 실제로 쓴 표현 하나를 말하게 하세요.",
+      "반복해서 막힌 표현은 메모해 다음 주 토픽 요청에 반영합니다."
+    ],
+    "timeCut": [
+      { "block": "Pop Quiz", "from": 10, "to": 6 },
+      { "block": "Icebreaker", "from": 30, "to": 22 },
+      { "block": "Advice Lab", "from": 20, "to": 15 },
+      { "block": "Discussion", "from": 15, "to": 10 }
+    ]
+  }
+}

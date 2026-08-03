@@ -8,12 +8,13 @@ Talk Flow is an operational tool for a non-technical study coordinator, a discus
 
 - Warm paper canvas, white work surfaces, deep evergreen ink, mint and restrained yellow accents.
 - DM Sans leads English hierarchy; Noto Sans KR supports concise Korean guidance.
-- Screen surfaces may use modest radii and shadows. Printed v4 surfaces use a charcoal header and footer, neutral rules, no decorative shadows, and restrained evergreen activity accents.
-- The learner progression is `START / ADD / GO FURTHER`; interaction rules still require choosing, speaking, asking, reacting, and deciding.
+- Screen surfaces may use modest radii and shadows. Bound-field print surfaces use a charcoal header and footer, neutral rules, no decorative shadows, and restrained evergreen activity accents.
+- The printable flow is the fixed eight-section reference contract: WHY THIS TOPIC, POP QUIZ, ICEBREAKER QUESTIONS, SPARK WORDS BINGO, GAME + HOW TO PLAY, SITUATION, DISCUSSION, and USEFUL EXPRESSIONS.
 
 ## 3. Tokens
 
 - Color: `--ink`, `--muted`, `--paper`, `--surface`, `--line`, `--green`, `--green-2`, `--yellow`, `--yellow-2`, `--red`, `--red-2`, `--blue`.
+- Bound-field print aliases: charcoal ink/header `#111614`, secondary ink `#5c6560`, evergreen accent `#1f5c40`, soft evergreen `#eef4f0`, warning ochre `#8a6a12`, warm warning surface `#fbf5e6`, and neutral rule `#dce0dd`.
 - Spacing follows 4px increments; dense print spacing may use millimetres.
 - Screen type: 11–50px existing scale. Print minimums: title 18pt, core question 11pt, action line 9.5pt, Korean support 8.5pt.
 - Radius: 7, 9, 12, 15, 18, and 24px existing component scale.
@@ -23,9 +24,9 @@ Talk Flow is an operational tool for a non-technical study coordinator, a discus
 - App shell keeps the top bar and document flow. The calendar view owns document scroll; the A4 review frame owns only its internal page preview scroll.
 - Desktop calendar uses a seven-column month grid with weekday headers. At 800px and below it becomes a single-column chronological operating-date list.
 - The default operator path is calendar → date action → draft generation → two-page review → approval → PDF. Technical controls remain outside that path.
-- Student print remains exactly two portrait A4 pages with 10mm × 11mm physical margins.
+- Student and leader print remain exactly two portrait A4 pages. The page body uses 10mm top, 13mm side, and 5mm bottom padding between shared header and footer bars.
 - Mobile preview scales the paper as one intact A4 composition; the internal print layout never reflows to phone dimensions.
-- Page one is Session 1, a 50-minute conversation surface. Page two is Session 2, a 40-minute reset, activity, decision, and final-round surface.
+- Page one is Session 1: topic rationale, three-item natural-English quiz, three bound icebreakers, and 3×3 spark-word bingo. Page two is Session 2: one immutable game, one shared situation, three discussion prompts, and six useful expressions.
 
 ## 5. Reusable primitives and states
 
@@ -46,6 +47,13 @@ Talk Flow is an operational tool for a non-technical study coordinator, a discus
 - `group-decision`: compact result control plus the everyone-speaks rule.
 - `speaking-readiness`: five plain-language checks for material, axis diversity, turns, opposition, and open-ended decision; states are ready, review, and regenerate.
 - `conversation-material`: a complete review, message, statistic, scenario, schedule, or option set that gives learners evidence to judge; never a label-only chip.
+- `bound-question`: one question owns its starter, unique follow-up, optional choices/escape, and BASIC/PLUS ladder; renderers never access a flat stem array.
+- `pop-quiz-item`: incorrect English, corrected English, and a concise Korean nuance explanation.
+- `spark-bingo`: a fixed 3×3 vocabulary grid with part-of-speech-correct Korean meanings and one experience-required rule.
+- `immutable-game`: exactly one Session 2 game whose type, name, rules, roles, options, inputs, and numbers are copied and rendered without post-processing.
+- `shared-situation`: bilingual background plus concrete facts shared by the game and discussion.
+- `useful-expression`: one of six distinct conversational functions, rendered in a two-column list.
+- `approval-gate`: green when clear, yellow for warnings with approval enabled, red for blockers with approval disabled and automatic repair exposed.
 - `timed-round`: a named round with visible minutes, per-person time, follow-up requirement, and a no-advance-until-everyone-speaks rule.
 - `assigned-opposition`: two contrasting role briefs that let adults disagree without exposing their personal view.
 - `information-gap`: participant-created or sequentially revealed information that cannot be completed silently.
@@ -72,19 +80,14 @@ Talk Flow is an operational tool for a non-technical study coordinator, a discus
 ## 7. Content rules
 
 - English is visually primary.
-- Korean appears for every activity rule needed to complete the task without translating the English; English remains the spoken-output language.
+- Korean appears for rationale, quiz explanation, vocabulary meaning/rule, situation background, game rules, useful-expression meaning, and operating rules. It does not appear beside icebreaker/discussion questions, choices, starters, follow-ups, or ladder examples.
 - Student activity instructions use `~하세요`; original review examples use consistent `~해요`.
-- Core flow: CHOOSE → SAY → ADD → ASK → REACT → DECIDE.
+- Core flow: notice natural English → answer quickly → expand from experience → use shared facts → play one game → discuss → reuse spoken expressions.
 - A prompt must permit a short first answer and a longer voluntary expansion.
 - Quick Start questions and options share one answer axis; experience prompts do not force choices.
-- Page one exposes four topic-specific `SAY THIS` phrases; page two requires one immediate response from `USE ONE NOW`.
-- Every topic uses at least three speaking mechanisms, at least three prompt axes, one complete conversation material, and one open-ended group decision.
-- Page one uses at least two speaking mechanisms. Page two uses at least two and always includes a timed turn or assigned opposition.
-- The same REACT phrase appears at most twice; each sheet includes surprise/follow-up, agreement, different experience, opposition, and reason-request language.
-- `STRUCTURE READY`, `SPEAKING READY`, and `PRINT READY` are independent. Only all three may produce `CONVERSATION READY`.
-- Everyday topics begin immediately without a brief. Context topics include a source-backed `60-SECOND BRIEF` that remains usable without opening the optional link or QR.
-- Every Session 1 core prompt exposes `START / ADD / GO FURTHER`; the last cue activates a follow-up and reaction.
-- Session 2 is an activity, not another question list: RESET → MAIN ACTIVITY → GROUP DECISION → FINAL ROUND.
+- Every icebreaker and discussion prompt has a unique topic-specific follow-up; generic START/ADD/GO FURTHER scaffolding is prohibited.
+- Approval is driven by B1–B11 blockers and W1–W12 warnings. Any blocker disables approval; warnings stay visible but do not prevent approval.
+- Student and leader modes share one renderer; leader mode only appends leader-note blocks and a data-derived TIME CUT line.
 - Automatic generation saves a review draft and never approves it. Existing or approved dates are never overwritten.
 - Printed sections use a shared white-surface, deep-green left rule, charcoal body, neutral bordered phrase-chip system, and remain separable in grayscale.
 

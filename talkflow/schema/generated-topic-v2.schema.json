@@ -1,154 +1,195 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://thebox.example/talkflow/generated-topic-v2.schema.json",
-  "title": "TheBox Talk Flow Generated Topic v2",
+  "title": "TheBox Talk Flow Bound-Field Topic",
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "title",
-    "sessionOne",
-    "sessionTwo",
-    "conversationMaterials",
-    "speakingFrames",
-    "leaderGuide",
-    "bilingualInstructions"
+    "date", "weekday", "category", "title", "session1", "session2", "leader",
+    "generationEngine", "generatedConversation", "standardVersion", "templateVersion"
   ],
   "properties": {
-    "id": { "type": "string", "minLength": 1 },
+    "id": { "$ref": "#/$defs/text" },
     "date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
-    "category": { "type": "string", "minLength": 1 },
+    "weekday": { "$ref": "#/$defs/text" },
+    "category": { "$ref": "#/$defs/bilingual" },
     "title": { "$ref": "#/$defs/bilingual" },
+    "session1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["minutes", "why", "popQuiz", "icebreakers", "bingo"],
+      "properties": {
+        "minutes": { "type": "integer" },
+        "why": { "$ref": "#/$defs/bilingual" },
+        "popQuiz": {
+          "type": "array", "minItems": 3, "maxItems": 3,
+          "items": { "$ref": "#/$defs/popQuiz" }
+        },
+        "icebreakers": {
+          "type": "array", "minItems": 3, "maxItems": 3,
+          "items": { "$ref": "#/$defs/icebreaker" }
+        },
+        "bingo": {
+          "type": "object", "additionalProperties": false,
+          "required": ["rule_ko", "words"],
+          "properties": {
+            "rule_ko": { "$ref": "#/$defs/text" },
+            "words": { "type": "array", "minItems": 9, "maxItems": 9, "items": { "$ref": "#/$defs/bingoWord" } }
+          }
+        }
+      }
+    },
+    "session2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["minutes", "game", "situation", "discussion", "expressions"],
+      "properties": {
+        "minutes": { "type": "integer" },
+        "game": { "$ref": "#/$defs/game" },
+        "situation": { "$ref": "#/$defs/situation" },
+        "discussion": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "$ref": "#/$defs/discussion" } },
+        "expressions": { "type": "array", "items": { "$ref": "#/$defs/expression" } }
+      }
+    },
+    "leader": {
+      "type": "object", "additionalProperties": false,
+      "required": ["s1_notes", "s2_notes", "timeCut"],
+      "properties": {
+        "s1_notes": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/text" } },
+        "s2_notes": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/text" } },
+        "timeCut": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/timeCut" } }
+      }
+    },
     "generationEngine": { "const": "v2-fail-closed" },
     "generatedConversation": { "const": true },
     "standardVersion": { "const": "2" },
     "templateVersion": { "const": "4" },
     "generationRequest": { "type": "object" },
     "topicPlan": { "type": "object" },
-    "promptAxes": { "type": "array", "minItems": 3, "items": { "type": "string" } },
-    "speakingMechanisms": { "type": "object" },
-    "sessionOne": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["minutes", "sections"],
-      "properties": {
-        "minutes": { "const": 50 },
-        "sections": {
-          "type": "array",
-          "minItems": 4,
-          "maxItems": 4,
-          "prefixItems": [
-            { "$ref": "#/$defs/quickStart" },
-            { "$ref": "#/$defs/personalExperience" },
-            { "$ref": "#/$defs/evidenceDecision" },
-            { "$ref": "#/$defs/shortWrapUp" }
-          ],
-          "items": false
-        }
-      }
-    },
-    "sessionTwo": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["minutes", "sections"],
-      "properties": {
-        "minutes": { "const": 40 },
-        "sections": {
-          "type": "array",
-          "minItems": 4,
-          "maxItems": 4,
-          "prefixItems": [
-            { "$ref": "#/$defs/reset" },
-            { "$ref": "#/$defs/mainActivity" },
-            { "$ref": "#/$defs/roleChallenge" },
-            { "$ref": "#/$defs/finalDecision" }
-          ],
-          "items": false
-        }
-      }
-    },
-    "conversationMaterials": {
-      "type": "array",
-      "minItems": 1,
-      "items": {
-        "type": "object",
-        "required": ["type", "title", "items", "decisionPrompt"],
-        "properties": {
-          "type": { "type": "string", "minLength": 1 },
-          "title": { "$ref": "#/$defs/bilingual" },
-          "items": {
-            "type": "array",
-            "minItems": 3,
-            "items": { "$ref": "#/$defs/bilingual" }
-          },
-          "decisionPrompt": { "$ref": "#/$defs/bilingual" }
-        }
-      }
-    },
-    "speakingFrames": {
-      "type": "array",
-      "minItems": 3,
-      "items": {
-        "type": "object",
-        "required": ["purpose", "en", "ko"],
-        "properties": {
-          "purpose": { "type": "string", "minLength": 1 },
-          "en": { "type": "string", "minLength": 1 },
-          "ko": { "type": "string", "minLength": 1 }
-        }
-      }
-    },
-    "leaderGuide": {
-      "type": "object",
-      "required": ["timingEn", "timingKo", "supportEn", "supportKo"],
-      "properties": {
-        "timingEn": { "type": "string", "minLength": 1 },
-        "timingKo": { "type": "string", "minLength": 1 },
-        "supportEn": { "type": "string", "minLength": 1 },
-        "supportKo": { "type": "string", "minLength": 1 }
-      }
-    },
-    "bilingualInstructions": {
-      "type": "object",
-      "required": [
-        "orderEn",
-        "orderKo",
-        "rolesEn",
-        "rolesKo",
-        "timeEn",
-        "timeKo",
-        "finalResultEn",
-        "finalResultKo",
-        "alternativeParticipationEn",
-        "alternativeParticipationKo"
-      ]
-    },
     "quality": { "type": "object" },
     "operatorStatus": { "type": "object" },
     "hidden": { "type": "boolean" },
-    "createdAt": { "type": "string", "minLength": 1 },
-    "updatedAt": { "type": "string", "minLength": 1 }
+    "createdAt": { "$ref": "#/$defs/text" },
+    "updatedAt": { "$ref": "#/$defs/text" }
   },
   "$defs": {
+    "text": { "type": "string", "minLength": 1 },
     "bilingual": {
-      "type": "object",
-      "additionalProperties": false,
+      "type": "object", "additionalProperties": false,
       "required": ["en", "ko"],
+      "properties": { "en": { "$ref": "#/$defs/text" }, "ko": { "$ref": "#/$defs/text" } }
+    },
+    "popQuiz": {
+      "type": "object", "additionalProperties": false,
+      "required": ["wrong", "right", "why_ko"],
       "properties": {
-        "en": { "type": "string", "minLength": 1 },
-        "ko": { "type": "string", "minLength": 1 }
+        "wrong": { "$ref": "#/$defs/text" },
+        "right": { "$ref": "#/$defs/text" },
+        "why_ko": { "$ref": "#/$defs/text" }
       }
     },
-    "section": {
-      "type": "object",
-      "required": ["id", "labelEn", "labelKo", "minutes", "content"]
+    "ladder": {
+      "type": "object", "additionalProperties": false,
+      "required": ["basic", "plus"],
+      "properties": { "basic": { "$ref": "#/$defs/text" }, "plus": { "$ref": "#/$defs/text" } }
     },
-    "quickStart": { "$ref": "#/$defs/section" },
-    "personalExperience": { "$ref": "#/$defs/section" },
-    "evidenceDecision": { "$ref": "#/$defs/section" },
-    "shortWrapUp": { "$ref": "#/$defs/section" },
-    "reset": { "$ref": "#/$defs/section" },
-    "mainActivity": { "$ref": "#/$defs/section" },
-    "roleChallenge": { "$ref": "#/$defs/section" },
-    "finalDecision": { "$ref": "#/$defs/section" }
+    "icebreaker": {
+      "type": "object", "additionalProperties": false,
+      "required": ["en", "type", "minutes", "starter", "followup", "ladder"],
+      "properties": {
+        "en": { "$ref": "#/$defs/text" },
+        "type": { "enum": ["quick_choice", "recent_experience", "light_opinion"] },
+        "minutes": { "type": "integer" },
+        "options": { "type": "array", "minItems": 2, "maxItems": 3, "items": { "$ref": "#/$defs/text" } },
+        "escape": { "$ref": "#/$defs/text" },
+        "starter": { "$ref": "#/$defs/text" },
+        "followup": { "$ref": "#/$defs/text" },
+        "ladder": { "$ref": "#/$defs/ladder" }
+      }
+    },
+    "bingoWord": {
+      "type": "object", "additionalProperties": false,
+      "required": ["en", "pos", "ko"],
+      "properties": {
+        "en": { "$ref": "#/$defs/text" },
+        "pos": { "enum": ["n.", "v.", "adj.", "phr."] },
+        "ko": { "$ref": "#/$defs/text" }
+      }
+    },
+    "gameRule": {
+      "type": "object", "additionalProperties": false,
+      "required": ["en", "ko"],
+      "properties": { "en": { "$ref": "#/$defs/text" }, "ko": { "$ref": "#/$defs/text" } }
+    },
+    "gameOption": {
+      "type": "object", "additionalProperties": false,
+      "required": ["label", "ko"],
+      "properties": { "label": { "$ref": "#/$defs/text" }, "ko": { "$ref": "#/$defs/text" } }
+    },
+    "gameRole": {
+      "type": "object", "additionalProperties": false,
+      "required": ["name", "task_en", "task_ko"],
+      "properties": {
+        "name": { "$ref": "#/$defs/text" },
+        "task_en": { "$ref": "#/$defs/text" },
+        "task_ko": { "$ref": "#/$defs/text" }
+      }
+    },
+    "gameInput": {
+      "type": "object", "additionalProperties": false,
+      "required": ["label", "lines"],
+      "properties": { "label": { "$ref": "#/$defs/text" }, "lines": { "type": "integer" } }
+    },
+    "game": {
+      "type": "object", "additionalProperties": false,
+      "required": ["type", "name", "minutes", "minFloor", "rules"],
+      "properties": {
+        "type": { "$ref": "#/$defs/bilingual" },
+        "name": { "$ref": "#/$defs/text" },
+        "minutes": { "type": "integer" },
+        "minFloor": { "type": "integer" },
+        "rules": { "type": "array", "minItems": 4, "maxItems": 6, "items": { "$ref": "#/$defs/gameRule" } },
+        "options": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/gameOption" } },
+        "roles": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/gameRole" } },
+        "inputs": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/gameInput" } },
+        "starters": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/text" } }
+      }
+    },
+    "situation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["en", "ko", "facts"],
+      "properties": {
+        "en": { "$ref": "#/$defs/text" },
+        "ko": { "$ref": "#/$defs/text" },
+        "facts": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/bilingual" } }
+      }
+    },
+    "discussion": {
+      "type": "object", "additionalProperties": false,
+      "required": ["en", "starter", "followup"],
+      "properties": {
+        "en": { "$ref": "#/$defs/text" },
+        "starter": { "$ref": "#/$defs/text" },
+        "followup": { "$ref": "#/$defs/text" }
+      }
+    },
+    "expression": {
+      "type": "object", "additionalProperties": false,
+      "required": ["fn", "en", "ko"],
+      "properties": {
+        "fn": { "enum": ["REASON", "SOFT_DISAGREE", "CONDITION", "COMPARE", "EXCEPTION", "CONNECT", "REACT", "FOLLOW_UP"] },
+        "en": { "$ref": "#/$defs/text" },
+        "ko": { "$ref": "#/$defs/text" }
+      }
+    },
+    "timeCut": {
+      "type": "object", "additionalProperties": false,
+      "required": ["block", "from", "to"],
+      "properties": {
+        "block": { "$ref": "#/$defs/text" },
+        "from": { "type": "integer" },
+        "to": { "type": "integer" }
+      }
+    }
   }
 }
