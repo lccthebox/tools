@@ -408,10 +408,13 @@ function canPreviewTopic(topic){return Boolean(topic)&&(!topic.generatedConversa
   }
   function activity(a){return `<div class="activity">${bilingual(a.titleEn,a.titleKo)}<p>${esc(a.instructionEn)}</p><p class="ko">${esc(a.instructionKo)}</p><div class="option-grid">${a.options.map(o=>`<div class="option">${esc(o)}</div>`).join("")}</div></div>`}
   function card(i,title,body){return `<section class="flow-card" id="section-${i}">${heading(i,title)}${body}</section>`}
-  function generationBlocked(t){
-    const failed=t.operatorStatus?.generationStatus==="failed",title=failed?"GENERATION FAILED":"LEGACY OR INVALID DRAFT";
-    const source=t.originalDraft||t;
-    return `<section class="generation-blocked"><p class="eyebrow">${title}</p><h1>${failed?"토픽 내용을 완성하지 못했습니다.":"구형 또는 불완전한 자동 생성 초안입니다."}</h1><p>${failed?"작성된 초안은 보존했습니다.<br>문제가 있는 부분만 다시 생성하세요.":"이 초안은 자동 승인·미리보기·PDF 대상이 아닙니다."}</p><div class="button-row"><button class="button primary" data-action="regenerate-v2">v2 구조로 다시 생성</button><button class="button danger" data-action="delete">기존 초안 삭제</button></div><details><summary>원문 보기</summary><pre>${esc(JSON.stringify(source,null,2))}</pre></details></section>`;
+  function failedSection(failure){const location=String(failure?.issues?.[0]?.location||failure?.issues?.[0]||failure?.stage||"content");if(location.includes("story"))return"story";if(location.includes("easyTalk"))return"easyTalk";if(location.includes("realTalk"))return"realTalk";if(location.includes("expressions"))return"expressions";if(location.includes("activity")||location.includes("groupResult")||location.includes("thinkHarder")||location.includes("finalQuestion"))return"activity";return failure?.stage==="plan"?"plan":"content"}
+  function generationBlocked(t,detailed=false){
+    const failed=t.operatorStatus?.generationStatus==="failed",title=failed?"GENERATION FAILED":"LEGACY OR INVALID DRAFT",failure=t.generationFailure||{},section=failedSection(failure),source=t.originalDraft||t,issues=(failure.issues||[]).map(item=>typeof item==="string"?{location:section,message:item}:item);
+    if(!detailed)return `<section class="generation-blocked"><p class="eyebrow">CONTENT UNAVAILABLE</p><h1>아직 준비 중인 토픽입니다.</h1><p>관리자가 내용을 확인한 뒤 공개할 예정입니다.</p></section>`;
+    const issueList=issues.length?`<ul class="issue-list">${issues.map(item=>`<li class="critical"><strong>${esc(item.location||section)}</strong><span>${esc(item.message||String(item))}</span></li>`).join("")}</ul>`:`<p class="approval-warning">${esc(failure.message||"생성 응답을 받지 못했습니다.")}</p>`;
+    const actions=failed?`<button class="button secondary" data-failed-regenerate="${esc(section)}">${esc(section)} 섹션만 다시 생성</button><button class="button primary" data-action="regenerate-v2">새 Conversation-First 구조로 다시 생성</button>`:`<button class="button primary" data-action="regenerate-v2">새 Conversation-First 구조로 다시 생성</button><button class="button danger" data-action="delete">기존 초안 삭제</button>`;
+    return `<section class="generation-blocked"><p class="eyebrow">${title}</p><h1>${failed?"토픽 내용을 완성하지 못했습니다.":"구형 또는 불완전한 자동 생성 초안입니다."}</h1><p>${failed?`실패한 섹션: <b>${esc(section)}</b><br>작성된 초안은 보존했습니다.`:"이 초안은 자동 승인·미리보기·PDF 대상이 아닙니다."}</p>${failed?issueList:""}<div class="button-row">${actions}</div><details><summary>${failed?"실패 이유와 생성 진단 보기":"원문 보기"}</summary><pre>${esc(JSON.stringify(failed?failure:source,null,2))}</pre></details></section>`;
   }
   function renderGeneratedScreen(t,leader=false){
     return `<header class="generated-topic-hero"><p class="eyebrow">${esc(t.date)} · ${leader?"LEADER GUIDE":"STUDENT"}</p><h1>${esc(t.title.en)}</h1><p lang="ko">${esc(t.title.ko)}</p></header><div class="generated-screen">${renderGeneratedHandout(t,leader)}</div>`;
@@ -488,7 +491,7 @@ function canPreviewTopic(topic){return Boolean(topic)&&(!topic.generatedConversa
 
   function renderAdmin(t){
     if(!t)return empty();
-    if(t.operatorStatus?.generationStatus==="failed"||t.generatedConversation&&![Simple.VERSION,Generation.VERSION].includes(t.generationEngine))return dailyNav(t,"admin")+generationBlocked(t);
+    if(t.operatorStatus?.generationStatus==="failed"||t.generatedConversation&&![Simple.VERSION,Generation.VERSION].includes(t.generationEngine))return dailyNav(t,"admin")+generationBlocked(t,true);
     if(t.generationEngine===Simple.VERSION){
       const evaluation=Simple.evaluate(t,Object.values(topics)),state=evaluation.blockers.length?"생성 실패":evaluation.issues.length?"확인 필요":"사용 가능";
       const issues=evaluation.issues.map(item=>`<li class="${item.severity}"><strong>${esc(item.location)}</strong><span>${esc(item.message)}</span></li>`).join("");
@@ -569,6 +572,7 @@ function canPreviewTopic(topic){return Boolean(topic)&&(!topic.generatedConversa
     document.querySelectorAll("[data-move]").forEach(b=>b.onclick=()=>{const[k,rawI,rawD]=b.dataset.move.split(":"),i=Number(rawI),to=i+Number(rawD),arr=current()[k];if(to<0||to>=arr.length)return;[arr[i],arr[to]]=[arr[to],arr[i]];dirty=true;render()});
     document.querySelectorAll("[data-regenerate]").forEach(b=>b.onclick=()=>regenerate(b.dataset.regenerate));
     document.querySelectorAll("[data-simple-regenerate]").forEach(b=>b.onclick=()=>regenerateSimpleSection(b.dataset.simpleRegenerate));
+    document.querySelectorAll("[data-failed-regenerate]").forEach(b=>b.onclick=()=>regenerateFailedSection(b.dataset.failedRegenerate));
     document.querySelectorAll("[data-feedback-form]").forEach(form=>form.onsubmit=event=>{
       event.preventDefault();
       const data=new FormData(form),records=loadRecord(KEYS.feedback);
@@ -643,7 +647,7 @@ function canPreviewTopic(topic){return Boolean(topic)&&(!topic.generatedConversa
   function generationMessages(stage,request,plan=null,issues=[],previousCandidate=null){
     return [{role:"user",content:JSON.stringify({
       stage,
-      contract:"TheBox Talk Flow Simple Conversation v3. Page 1 contains one story or situation, EASY TALK 3, REAL TALK 3, and TODAY'S ENGLISH 4. Page 2 contains RESET, exactly one TODAY'S ACTIVITY, GROUP RESULT, and FINAL QUESTION. Return structured content through the declared tool only, never HTML.",
+      contract:"TheBox Talk Flow Simple Conversation v3. Page 1 contains TODAY'S STORY or THE SITUATION, EASY TALK 3, REAL TALK 3, TODAY'S ENGLISH 4, and one actionable QUICK VOTE. Page 2 contains exactly one story-linked TODAY'S ACTIVITY with real judgment materials and four decision steps, GROUP RESULT, exactly one THINK HARDER, and FINAL QUESTION. Return every declared quality-v2 field through the tool only, never HTML. Do not create legacy learner labels.",
       fixedDesign:{styles:Simple.STYLES,activities:Simple.ACTIVITIES,hiddenQuestionAxes:Simple.AXES,session1Minutes:50,session2Minutes:40},
       languageExposure:{koreanRequired:["story summary","all six question translations","four expression meanings","activity instruction/materials/steps/participation","group result","final question"],koreanStyle:"Use concise conversational ~해요 style."},
       generationRules:["Write a 55–90 word adult scene with a named person, concrete place or object, a number/time/price/condition, an expectation gap, a balanced conflict, and a final choice. Give story.id a stable value and preserve every numeric fact in Korean.","Easy Talk roles are recent experience with an alternative path, daily habit, and a balanced conditional A/B/C choice. Real Talk roles are personal example, evaluation criterion, and tradeoff/solution. Use at least five axes total, no axis more than twice, unique starters, and no repeated answer.","Every question supports a one-sentence answer, a reason, and an example or exception. Store one short starter only.","Each of four topic-specific expressions declares useIn and is usable in Story, Real Talk, or Activity; reject generic fillers.","Create a Quick Vote with two or three concrete options, an initial-choice question, and Korean guidance to mark one choice without giving a reason.","Create exactly one 15–25 minute activity with real materials, disagreement, a listening step, every-person speech, and a concrete group result. Use exactly four steps: initial choice, evidence plus question, listening plus response, possible choice change plus final decision.","Set activity.sourceRef to story.id and reuse the same people, object, price, time, condition, reviews, messages, or schedule. Translate materials without evaluative hints that reveal the answer.","Generate exactly one bilingual Think Harder conflict question before the Final Question.","Include at least three speaking supports in activity.phrases.","Generate three Easy and three Real leader followups plus activity demo, quiet-speaker, long-speaker, time-cut, and fast-agreement support.","Do not expose START, ADD, GO FURTHER, CHOOSE, SAY, ASK, REACT, DECIDE, readiness, schema, or axis labels.","Never require standing, walking, moving around, switching seats, or external materials."],
@@ -656,34 +660,34 @@ function canPreviewTopic(topic){return Boolean(topic)&&(!topic.generatedConversa
     })}];
   }
   async function requestGenerationStage(stage,request,plan=null){
-    const tool=stage==="plan"?Simple.PLAN_TOOL:Simple.CONTENT_TOOL,validate=stage==="plan"?Simple.validatePlan:value=>{
-      const result=Simple.validateContent({...value,contentQualityVersion:"quality-v1"},plan,Object.values(topics),true);
+    const tool=stage==="plan"?Simple.PLAN_TOOL:Simple.CONTENT_TOOL,normalize=stage==="plan"?clone:Simple.normalizeContent,validate=stage==="plan"?Simple.validatePlan:value=>{
+      const result=Simple.validateContent(value,plan,Object.values(topics),true);
       if(value?.date===request.date)return result;
       const mismatch={severity:"blocker",id:"B1",group:"structure",location:"date",message:"요청 날짜와 생성 날짜가 일치하지 않습니다."};
       return{...result,ok:false,issues:[...result.issues,mismatch],blockers:[...result.blockers,mismatch]};
     };
-    let lastError=null,lastIssues=[],previousCandidate=null;
+    let lastError=null,lastIssues=[],previousCandidate=null,lastRaw=null,lastNormalized=null;
     for(let attempt=0;attempt<2;attempt++){
       try{
         const response=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"content-type":"application/json","x-api-key":settings.apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:6000,messages:generationMessages(stage,request,plan,lastIssues,previousCandidate),tools:[tool],tool_choice:{type:"tool",name:tool.name}})});
         const payload=await response.json();if(!response.ok)throw new Error(payload.error?.message||`HTTP ${response.status}`);
         const call=payload.content?.find(item=>item.type==="tool_use"&&item.name===tool.name);
         if(!call?.input)throw new Error(`${tool.name} tool result is missing.`);
-        previousCandidate=call.input;
-        const result=validate(call.input);
-        if(result.ok)return call.input;
-        lastIssues=result.issues.map(item=>`${item.location}: ${item.message}`);
-        lastError=new Error(lastIssues.join(" "));
+        lastRaw=clone(call.input);lastNormalized=normalize(lastRaw);previousCandidate=lastRaw;
+        const result=validate(lastNormalized);
+        if(result.ok)return lastNormalized;
+        lastIssues=result.issues.map(item=>clone(item));
+        lastError=new Error(lastIssues.map(item=>`${item.location}: ${item.message}`).join(" "));
       }catch(error){lastError=error}
     }
     const error=new Error(`${stage==="plan"?"Topic Plan":"Content Fill"} failed: ${lastError?.message||"unknown error"}`);
-    error.stage=stage;error.issues=lastIssues;throw error;
+    error.stage=stage;error.issues=lastIssues;error.diagnostics={raw:lastRaw,normalized:lastNormalized};throw error;
   }
   async function generateV2Topic(request){
     if(!settings.apiKey){const error=new Error("자동 생성 연결이 필요합니다.");error.stage="plan";throw error}
     const plan=await requestGenerationStage("plan",request);
     const content=await requestGenerationStage("content",request,plan);
-    const topic=Simple.buildTopic(request,plan,content,Object.values(topics));
+    let topic;try{topic=Simple.buildTopic(request,plan,content,Object.values(topics))}catch(error){error.stage="content";error.diagnostics={raw:content,normalized:Simple.normalizeContent(content)};throw error}
     topic.generationRequest=clone(request);
     return topic;
   }
@@ -692,7 +696,7 @@ function canPreviewTopic(topic){return Boolean(topic)&&(!topic.generatedConversa
     try{
       const topic=await generateV2Topic(request);topics[request.date]=topic;dirty=true;saveTopics("새 Simple Conversation 토픽 생성과 승인 게이트 검사를 완료했습니다.");return topic;
     }catch(error){
-      pending.operatorStatus.generationStatus="failed";pending.generationFailure={stage:error.stage||"plan",message:error.message,issues:error.issues||[]};pending.quality={status:"review",score:0,issues:[error.message]};pending.updatedAt=new Date().toISOString();topics[request.date]=pending;dirty=true;saveTopics("토픽 내용을 완성하지 못했습니다. 작성된 초안은 보존했습니다. 문제가 있는 부분만 다시 생성하세요.");return null;
+      pending.operatorStatus.generationStatus="failed";pending.generationFailure={stage:error.stage||"content",section:failedSection(error),message:error.message,issues:error.issues||[],diagnostics:error.diagnostics||null};pending.quality={status:"review",score:0,issues:[error.message]};pending.updatedAt=new Date().toISOString();topics[request.date]=pending;dirty=true;saveTopics("토픽 내용을 완성하지 못했습니다. 작성된 초안은 보존했습니다. 실패 이유를 확인하거나 해당 섹션만 다시 생성하세요.");return null;
     }
   }
   async function regenerateV2(){
@@ -700,6 +704,7 @@ function canPreviewTopic(topic){return Boolean(topic)&&(!topic.generatedConversa
     preserveVersion(previous);
     await generateAndStore({...request,date:previous.date},previous);
   }
+  async function regenerateFailedSection(section){const previous=current();if(previous?.operatorStatus?.generationStatus!=="failed")return;const request=previous.generationRequest||{date:previous.date,keyword:previous.title?.ko||"새 대화 주제",mood:previous.category?.ko||"경험 중심"};preserveVersion(previous);await generateAndStore({...request,date:previous.date,repairSection:section},previous)}
   async function regenerateSimpleSection(section){
     const previous=current();if(previous.generationEngine!==Simple.VERSION)return;
     const request=previous.generationRequest||{date:previous.date,keyword:previous.title?.ko||previous.title?.en,mood:previous.category?.ko||"경험 중심"};preserveVersion(previous);notify(`${section} 부분을 다시 생성하고 있습니다.`);
