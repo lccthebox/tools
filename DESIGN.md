@@ -5,10 +5,11 @@
 New topics use the `simple-v1` two-page editorial system. Existing saved topics and `/topics/` retain their previous renderer and are never converted automatically.
 
 - White A4, charcoal copy, deep-green accents, generous whitespace, and thin rules.
-- Page 1: title, one story/situation, EASY TALK ×3, REAL TALK ×3, TODAY'S ENGLISH ×4.
-- Page 2: RESET, one activity with real materials, GROUP RESULT, FINAL QUESTION.
+- Page 1: serif title, one story/situation, EASY TALK ×3, REAL TALK ×3, TODAY'S ENGLISH ×4, and one actionable QUICK VOTE.
+- Page 2: one activity with real materials, a 2×2 four-step decision path, GROUP RESULT, one THINK HARDER question, and FINAL QUESTION.
 - Leader copies retain the hierarchy and add short near-section notes plus bottom emergency phrases.
 - No full-width dark bands, nested card decoration, or visible generation labels.
+- Korean uses `word-break: keep-all`. Material numbers use circular high-contrast badges that remain distinct in grayscale.
 - Print floors: title 20pt; question 11pt; Korean guidance, activity, and materials 9pt; helper 8pt; leader note 8.5pt.
 
 The previous bound-field direction below is retained only for compatibility with existing topics.
@@ -56,6 +57,8 @@ Talk Flow is an operational tool for a non-technical study coordinator, a discus
 - `common-brief`: three facts, one example, three keywords, source line, and optional QR link; capped at 15% of page one.
 - `session-header`: Session 1 exposes easy entry, experience, evidence, and interaction; Session 2 exposes activity, information gap, roles, and group decision.
 - `reset-activity`: compact 3–5 minute no-preparation warm reset.
+- `quick-vote`: initial choice only, with two or three visible options and an explicit no-reason-yet instruction.
+- `think-harder`: exactly one bilingual conflict question between Group Result and Final Question.
 - `main-activity`: goal, complete choices or roles, numbered procedure, useful English, and result.
 - `group-decision`: compact result control plus the everyone-speaks rule.
 - `speaking-readiness`: five plain-language checks for material, axis diversity, turns, opposition, and open-ended decision; states are ready, review, and regenerate.

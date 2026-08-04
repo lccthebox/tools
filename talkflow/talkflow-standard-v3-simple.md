@@ -7,10 +7,10 @@
 ## 수업 구조
 
 - Session 1, 50분: 쉬운 진입, 짧은 경험 공유, 판단 재료, 상호작용.
-- 1페이지: 제목, `TODAY’S STORY` 또는 `THE SITUATION`, `EASY TALK` 3문항, `REAL TALK` 3문항, `TODAY’S ENGLISH` 4개. 주요 섹션은 정확히 4개다.
+- 1페이지: 제목, `TODAY’S STORY` 또는 `THE SITUATION`, `EASY TALK` 3문항, `REAL TALK` 3문항, `TODAY’S ENGLISH` 4개, 이유를 말하기 전 최초 선택을 표시하는 `QUICK VOTE`다.
 - Session 2, 40분: 정보 격차가 있는 활동, 역할 또는 조건, 그룹 결정.
-- 2페이지: `RESET`, 정확히 한 개의 `TODAY’S ACTIVITY`, `GROUP RESULT`, `FINAL QUESTION`.
-- 활동에는 한국어 안내, 실제 판단 자료, 한국어 진행 순서 3~5개, 전원 발화 규칙, 발화 지원 문장 최소 3개가 필요하다.
+- 2페이지: 정확히 한 개의 `TODAY’S ACTIVITY`, `GROUP RESULT`, 학생용 갈등 질문 `THINK HARDER` 한 개, `FINAL QUESTION`이다.
+- 활동에는 한국어 안내, 실제 판단 자료, 2×2로 표시하는 진행 순서 네 개, 전원 발화 규칙, 발화 지원 문장 최소 3개가 필요하다. 순서는 최초 선택 → 근거와 질문 → 다른 근거 청취와 반응 → 선택 변경 가능성과 최종 결정이다.
 - 활동 유형은 Review Jury, Choose and Defend, Rank and Negotiate, Advice Circle, Build a Plan, Problem Card, Truth or Bluff, Story Exchange, Best Option Challenge, Mini Role Play 중 하나다.
 
 ## 변주와 품질
@@ -29,6 +29,7 @@
 - 각 질문은 한 문장, 선택과 이유, 사례 또는 예외로 확장할 수 있어야 한다. 학생용에는 짧은 starter 하나만 표시하고 리더용에는 질문별 후속 질문을 둔다.
 - Today’s English 네 개는 판단, 경험, 동의·반박, 후속 질문 기능을 담당하며 `useIn`으로 Story, Real Talk, Activity의 실제 사용 위치를 연결한다.
 - Activity는 `sourceRef`로 Story ID를 직접 참조한다. 15~25분 동안 실제 자료, 의견 차이, 다른 사람의 말을 듣는 단계, 전원 발화, 구체적인 Group Result를 포함한다.
+- Story 영어에 있는 숫자·시간·가격 정보는 한국어에도 보존한다. 판단 자료의 한국어는 번역만 제공하고 정답을 유도하는 평가형 힌트를 넣지 않는다.
 - 월간 검사에서는 동일 Activity 연속 사용, 동일 스타일 3회 연속, 동일 질문 문두 3회 초과, 동일 표현 2회 초과를 경고한다.
 
 품질 점수는 Story 15, Question Diversity 15, Answerability 15, Interest 10, Expression Usefulness 10, Activity Connection 15, Bilingual Quality 10, Print Readability 10으로 총 100점이다. 총점 85점 이상이며 각 영역 최소 기준을 충족하고 blocker가 없어야 승인할 수 있다. 숫자 점수는 관리자 고급 영역에서만 확인한다.
@@ -43,4 +44,4 @@
 
 ## 디자인
 
-흰색 편집 지면, 차콜 본문, 딥 그린 강조, 넉넉한 여백과 가는 구분선을 사용한다. 검은 전체 폭 헤더·푸터와 중첩 카드, 장식용 박스 반복을 사용하지 않는다. 학생과 리더는 같은 구조를 쓰며 리더판은 해당 섹션 가까이에 짧은 진행 노트와 하단 비상 문장을 더한다.
+흰색 편집 지면, 세리프 영문 대제목, 차콜 본문, 딥 그린 강조, 넉넉한 여백과 가는 구분선을 사용한다. Story는 연한 배경과 좌측 초록선을 사용한다. 판단 자료 번호는 원형 고대비 배지로 표시하고, 활동 단계는 2×2로 배치하며, 한국어는 `word-break: keep-all`을 적용한다. 검은 전체 폭 헤더·푸터와 중첩 카드, 장식용 박스 반복을 사용하지 않는다. 학생과 리더는 같은 구조를 쓰며 리더판은 해당 섹션 가까이에 짧은 진행 노트와 하단 비상 문장을 더한다.
