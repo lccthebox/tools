@@ -16,6 +16,7 @@
   let topics=loadTopics(),settings=loadSettings(),activeDate=Object.keys(topics).sort()[0]||today(),cursor=new Date("2026-08-01T12:00:00"),view="calendar",dirty=false;
   let printDates=new Set(),printLeader=false;
   let timerSeconds=0,timerHandle=null;
+  let connectionTestController=null,connectionTestPromise=null;
 
   function today(){return new Date().toISOString().slice(0,10)}
   function loadTopics(){
@@ -41,18 +42,18 @@
   function selectedModelLabel(id=settings.anthropicModel){const model=modelById(id);return model?.displayName||id||"선택 안 됨"}
   function safeDiagnostics(value){if(!value)return null;return{httpStatus:value.httpStatus||null,type:value.type||"unknown_error",message:value.message||"",requestId:value.requestId||"",modelId:value.modelId||"",stage:value.stage||""}}
   function providerError(response,payload,stage,modelId){const error=new Error(payload?.error?.message||`HTTP ${response.status}`);error.httpStatus=response.status;error.type=payload?.error?.type||"http_error";error.requestId=payload?.request_id||response.headers.get("request-id")||"";error.modelId=modelId;error.stage=stage;error.payload=payload;error.stopRetry=response.status===404&&error.type==="not_found_error"&&/model/i.test(error.message);return error}
-  async function fetchAvailableModels({persist=true}={}){
+  async function fetchAvailableModels({persist=true,signal}={}){
     if(!settings.apiKey){const error=new Error("Anthropic API 키를 먼저 입력하세요.");error.stage="models";error.type="missing_api_key";throw error}
-    let response,payload;try{response=await fetch("https://api.anthropic.com/v1/models",{headers:anthropicHeaders()});payload=await response.json()}catch(cause){const error=new Error("Models API 네트워크 연결에 실패했습니다.");error.stage="models";error.type="network_error";error.cause=cause;throw error}
+    let response,payload;try{response=await fetch("https://api.anthropic.com/v1/models",{headers:anthropicHeaders(),signal});payload=await response.json()}catch(cause){const aborted=cause?.name==="AbortError"||signal?.aborted,error=new Error(aborted?"Models API 요청이 취소되었습니다.":"Models API 네트워크 연결에 실패했습니다.");error.stage="models";error.type=aborted?"request_aborted":"network_error";error.cause=cause;throw error}
     if(!response.ok)throw providerError(response,payload,"models",settings.anthropicModel||"");
     let models;try{models=AnthropicModels.parseModels(payload)}catch(cause){cause.stage="models";cause.type="response_format_error";throw cause}
     const previous=settings.anthropicModel||"",selection=AnthropicModels.chooseModel(models,previous);
     settings={...settings,availableModels:models,anthropicModel:selection.modelId,modelsCheckedAt:new Date().toISOString(),modelFallback:selection.fallback?{from:previous,to:selection.modelId}:null};
     if(persist)saveSettings();return models;
   }
-  async function preflightModel(){
+  async function preflightModel({signal}={}){
     if(!settings.apiKey){const error=new Error("자동 생성 연결이 필요합니다.");error.stage="plan";error.type="missing_api_key";throw error}
-    await fetchAvailableModels();const modelId=settings.anthropicModel;
+    await fetchAvailableModels({signal});const modelId=settings.anthropicModel;
     if(!modelId||AnthropicModels.isRetired(modelId)||!modelById(modelId)){const error=new Error("선택된 AI 모델을 현재 사용할 수 없습니다. 고급 설정에서 사용 가능한 모델을 다시 선택하세요.");error.stage="plan";error.type="model_unavailable";error.modelId=modelId;throw error}
     return modelId;
   }
@@ -71,7 +72,7 @@
   function monthPrefix(){return `${cursor.getFullYear()}-${String(cursor.getMonth()+1).padStart(2,"0")}`}
   function monthFile(kind="json"){return `thebox-talkflow-${monthPrefix()}${kind==="viewer"?"-viewer.html":".json"}`}
   function current(){return topics[activeDate]}
-function canPreviewTopic(topic){return Boolean(topic)&&(!topic.generatedConversation||topic.generationEngine===Simple.VERSION&&Simple.evaluate(topic,Object.values(topics)).ready||topic.generationEngine===Generation.VERSION&&Generation.evaluate(topic,Object.values(topics)).ready)&&topic.operatorStatus?.generationStatus!=="failed"}
+function canPreviewTopic(topic){if(!topic||["running","failed"].includes(topic.operatorStatus?.generationStatus))return false;return!topic.generatedConversation||topic.generationEngine===Simple.VERSION&&Simple.evaluate(topic,Object.values(topics)).ready||topic.generationEngine===Generation.VERSION&&Generation.evaluate(topic,Object.values(topics)).ready}
   function operationConfig(){
     const knownHolidays=["2026-08-15","2026-08-17","2026-09-24","2026-09-25","2026-09-26","2026-10-03","2026-10-05","2026-10-09"];
     return{weekdays:settings.operatingWeekdays||[1,4],included:settings.additionalDates||[],excluded:[...(settings.excludedDates||[]),...(settings.excludePublicHolidays?knownHolidays:[])]}
@@ -513,6 +514,7 @@ function canPreviewTopic(topic){return Boolean(topic)&&(!topic.generatedConversa
 
   function renderAdmin(t){
     if(!t)return empty();
+    if(t.operatorStatus?.generationStatus==="running")return `${dailyNav(t,"admin")}<section class="generation-blocked"><p class="eyebrow">GENERATION IN PROGRESS</p><h1>Conversation-First 토픽을 생성하고 있습니다.</h1><p>Topic Plan과 Content Fill을 순서대로 처리합니다. 이 화면을 닫았다가 다시 열어 진행이 중단됐다면 아래 버튼으로 같은 요청을 다시 시작하세요.</p><div class="button-row"><button class="button primary" data-action="regenerate-v2">생성 다시 시작</button></div></section>`;
     if(t.operatorStatus?.generationStatus==="failed"||t.generatedConversation&&![Simple.VERSION,Generation.VERSION].includes(t.generationEngine))return dailyNav(t,"admin")+generationBlocked(t,true);
     if(t.generationEngine===Simple.VERSION){
       const evaluation=Simple.evaluate(t,Object.values(topics)),state=evaluation.blockers.length?"생성 실패":evaluation.issues.length?"확인 필요":"사용 가능";
@@ -672,7 +674,7 @@ function canPreviewTopic(topic){return Boolean(topic)&&(!topic.generatedConversa
       contract:"TheBox Talk Flow Simple Conversation v3. Page 1 contains TODAY'S STORY or THE SITUATION, EASY TALK 3, REAL TALK 3, TODAY'S ENGLISH 4, and one actionable QUICK VOTE. Page 2 contains exactly one story-linked TODAY'S ACTIVITY with real judgment materials and four decision steps, GROUP RESULT, exactly one THINK HARDER, and FINAL QUESTION. Return every declared quality-v2 field through the tool only, never HTML. Do not create legacy learner labels.",
       fixedDesign:{styles:Simple.STYLES,activities:Simple.ACTIVITIES,hiddenQuestionAxes:Simple.AXES,session1Minutes:50,session2Minutes:40},
       languageExposure:{koreanRequired:["story summary","all six question translations","four expression meanings","activity instruction/materials/steps/participation","group result","final question"],koreanStyle:"Use concise conversational ~해요 style."},
-      generationRules:["Write a 55–90 word adult scene with a named person, concrete place or object, a number/time/price/condition, an expectation gap, a balanced conflict, and a final choice. Give story.id a stable value and preserve every numeric fact in Korean.","Easy Talk roles are recent experience with an alternative path, daily habit, and a balanced conditional A/B/C choice. Real Talk roles are personal example, evaluation criterion, and tradeoff/solution. Use at least five axes total, no axis more than twice, unique starters, and no repeated answer.","Every question supports a one-sentence answer, a reason, and an example or exception. Store one short starter only.","Each of four topic-specific expressions declares useIn and is usable in Story, Real Talk, or Activity; reject generic fillers.","Create a Quick Vote with two or three concrete options, an initial-choice question, and Korean guidance to mark one choice without giving a reason.","Create exactly one 15–25 minute activity with real materials, disagreement, a listening step, every-person speech, and a concrete group result. Use exactly four steps: initial choice, evidence plus question, listening plus response, possible choice change plus final decision.","Set activity.sourceRef to story.id and reuse the same people, object, price, time, condition, reviews, messages, or schedule. Translate materials without evaluative hints that reveal the answer.","Generate exactly one bilingual Think Harder conflict question before the Final Question.","Include at least three speaking supports in activity.phrases.","Generate three Easy and three Real leader followups plus activity demo, quiet-speaker, long-speaker, time-cut, and fast-agreement support.","Do not expose START, ADD, GO FURTHER, CHOOSE, SAY, ASK, REACT, DECIDE, readiness, schema, or axis labels.","Never require standing, walking, moving around, switching seats, or external materials."],
+      generationRules:["Write a 55–90 word adult scene with a named person, concrete place or object, a number/time/price/condition, an expectation gap, a balanced conflict, and a final choice. Give story.id a stable value and preserve every numeric fact in Korean.","Easy Talk roles are recent experience with an alternative path, daily habit, and a balanced conditional A/B/C choice. Real Talk roles are personal example, evaluation criterion, and tradeoff/solution. Use at least five axes total, no axis more than twice, unique starters, and no repeated answer.","Every question supports a one-sentence answer, a reason, and an example or exception. Store one short starter only.","Each of four topic-specific expressions declares useIn. At least one expression must include activity in useIn, and its expression.en must appear character-for-character in activity.phrases.","Create a Quick Vote with two or three concrete options, an initial-choice question, and Korean guidance to mark one choice without giving a reason.","Create exactly one 15–25 minute activity with real materials, disagreement, a listening step, every-person speech, and a concrete group result. Use exactly four steps; the fourth step must contain the exact Korean phrase '선택을 바꿀지' and record the final decision.","Copy story.id character-for-character into activity.sourceRef. Copy one complete story.en sentence character-for-character into the first activity.materials.en. Reuse the same people, object, price, time, condition, reviews, messages, or schedule, and translate without evaluative hints.","Generate exactly one bilingual Think Harder conflict question before the Final Question.","Include three or four speaking supports in activity.phrases, including the exact activity-linked Today’s English expression.","Generate three Easy and three Real leader followups plus activity demo, quiet-speaker, long-speaker, time-cut, and fast-agreement support.","Do not expose START, ADD, GO FURTHER, CHOOSE, SAY, ASK, REACT, DECIDE, readiness, schema, or axis labels.","Never require standing, walking, moving around, switching seats, or external materials."],
       topic:{date:request.date,weekday:weekday(request.date),keyword:request.keyword,mood:request.mood||"경험 중심",source:request.source||"",avoid:request.avoid||"",repairSection:request.repairSection||""},
       monthlyDiversity:Object.values(topics).filter(item=>item?.date?.slice(0,7)===request.date.slice(0,7)&&item.generationEngine===Simple.VERSION).map(item=>({style:item.style,activity:item.session2?.activity?.name,storyOpening:item.session1?.story?.en?.[0],questionOpenings:[...(item.session1?.easyTalk||[]),...(item.session1?.realTalk||[])].map(question=>question.en.split(" ").slice(0,3).join(" ")),expressions:(item.session1?.expressions||[]).map(expression=>expression.en)})),
       approvedPlan:plan,
@@ -882,18 +884,28 @@ Create or repair TheBox Talk Flow ${scope} as strict JSON for one mixed-confiden
   function renderModelControls(){
     const select=$("#anthropic-model"),models=settings.availableModels||[],selected=settings.anthropicModel||"";
     select.innerHTML=models.length?models.map(model=>`<option value="${esc(model.id)}" ${model.id===selected?"selected":""}>${esc(model.displayName)} · ${esc(model.id)}</option>`).join(""):`<option value="">모델 목록을 새로고침하세요</option>`;select.disabled=!models.length;
-    const retired=AnthropicModels.isRetired(selected),status=$("#ai-connection-status");status.textContent=retired?"사용 종료된 모델":models.some(model=>model.id===selected)?"AI 모델 선택됨":"AI 연결 확인 전";
-    $("#model-last-checked").textContent=`마지막 확인: ${settings.modelsCheckedAt?new Date(settings.modelsCheckedAt).toLocaleString("ko-KR"):"없음"}`;
+    const retired=AnthropicModels.isRetired(selected),status=$("#ai-connection-status"),connectionValid=settings.connectionStatus==="success"&&settings.connectionModelId===selected;
+    status.textContent=connectionValid?`AI 연결 정상 · ${selectedModelLabel(selected)}`:retired?"사용 종료된 모델":models.some(model=>model.id===selected)?"AI 모델 선택됨":"AI 연결 확인 전";
+    const checkedAt=connectionValid?settings.connectionCheckedAt:settings.modelsCheckedAt;$("#model-last-checked").textContent=`확인 시각: ${checkedAt?new Date(checkedAt).toLocaleString("ko-KR"):"없음"}`;
     const notice=$("#model-fallback-notice");if(settings.modelFallback?.to){notice.hidden=false;notice.textContent=`기존 모델${AnthropicModels.isRetired(settings.modelFallback.from)?"(사용 종료됨)":""}을 사용할 수 없어 ${selectedModelLabel(settings.modelFallback.to)}으로 변경했습니다.`}else{notice.hidden=true;notice.textContent=""}
   }
   function showModelDiagnostic(error){const details=$("#model-diagnostics"),safe=safeDiagnostics(error);details.hidden=false;details.querySelector("pre").textContent=JSON.stringify(safe,null,2)}
   async function refreshModelsFromSettings(){
-    settings={...settings,apiKey:$("#api-key").value.trim()};try{await fetchAvailableModels();renderModelControls();$("#ai-connection-status").textContent="사용 가능한 모델을 확인했습니다.";$("#model-diagnostics").hidden=true}catch(error){$("#ai-connection-status").textContent="모델 목록 연결 실패";showModelDiagnostic(error)}
+    settings={...settings,apiKey:$("#api-key").value.trim(),connectionStatus:"unchecked"};try{await fetchAvailableModels();renderModelControls();$("#ai-connection-status").textContent="사용 가능한 모델을 확인했습니다.";$("#model-diagnostics").hidden=true}catch(error){$("#ai-connection-status").textContent=`모델 목록 연결 실패${error.httpStatus?` · HTTP ${error.httpStatus}`:""} · ${error.type||"unknown_error"}`;showModelDiagnostic(error)}
   }
   async function testAiConnection(){
-    settings={...settings,apiKey:$("#api-key").value.trim(),anthropicModel:$("#anthropic-model").value||settings.anthropicModel};
-    try{const modelId=await preflightModel(),response=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:anthropicHeaders(),body:JSON.stringify({model:modelId,max_tokens:8,messages:[{role:"user",content:"Reply with OK."}]})}),payload=await response.json();if(!response.ok)throw providerError(response,payload,"connection",modelId);if(!Array.isArray(payload.content))throw Object.assign(new Error("응답 형식 오류"),{type:"response_format_error",stage:"connection",modelId});settings.connectionCheckedAt=new Date().toISOString();saveSettings();$("#ai-connection-status").textContent=`AI 연결 정상 · 사용 모델: ${selectedModelLabel(modelId)}`;$("#model-diagnostics").hidden=true;renderModelControls()}catch(error){const message=error.httpStatus===401?"인증 오류":error.httpStatus===404?"모델 사용 불가":error.httpStatus===429?"크레딧 또는 사용 한도":error.type==="response_format_error"?"응답 형식 오류":"네트워크 오류";$("#ai-connection-status").textContent=message;showModelDiagnostic(error)}
+    connectionTestController?.abort();const controller=new AbortController(),button=$("#test-ai-connection"),timeout=setTimeout(()=>controller.abort(),30000);connectionTestController=controller;
+    button.disabled=true;button.setAttribute("aria-busy","true");button.textContent="연결 확인 중…";
+    settings={...settings,apiKey:$("#api-key").value.trim(),anthropicModel:$("#anthropic-model").value||settings.anthropicModel,connectionStatus:"checking"};
+    try{
+      const modelId=await preflightModel({signal:controller.signal}),response=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:anthropicHeaders(),signal:controller.signal,body:JSON.stringify({model:modelId,max_tokens:8,stream:false,messages:[{role:"user",content:"Reply with OK."}]})}),text=await response.text();
+      let payload;try{payload=text?JSON.parse(text):{}}catch{throw Object.assign(new Error("응답 형식 오류"),{type:"response_format_error",stage:"connection",modelId,httpStatus:response.status})}
+      if(!response.ok)throw providerError(response,payload,"connection",modelId);if(!Array.isArray(payload.content))throw Object.assign(new Error("응답 형식 오류"),{type:"response_format_error",stage:"connection",modelId,httpStatus:response.status});
+      settings={...settings,connectionStatus:"success",connectionModelId:modelId,connectionCheckedAt:new Date().toISOString()};saveSettings();$("#model-diagnostics").hidden=true;renderModelControls();
+    }catch(error){if(controller.signal.aborted&&!error.type)error.type="request_aborted";settings={...settings,connectionStatus:"failed"};saveSettings();$("#ai-connection-status").textContent=`연결 실패${error.httpStatus?` · HTTP ${error.httpStatus}`:""} · ${error.type||"unknown_error"}`;showModelDiagnostic(error)
+    }finally{clearTimeout(timeout);if(connectionTestController===controller){connectionTestController=null;connectionTestPromise=null}button.disabled=false;button.removeAttribute("aria-busy");button.textContent="연결 테스트"}
   }
+  function startConnectionTest(){if(connectionTestPromise)return;connectionTestPromise=testAiConnection()}
 
   document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{if(confirmDirty()){view=b.dataset.view;render()}});
   $("#prev-month").onclick=()=>{cursor=new Date(cursor.getFullYear(),cursor.getMonth()-1,1,12);render()};
@@ -918,7 +930,7 @@ Create or repair TheBox Talk Flow ${scope} as strict JSON for one mixed-confiden
     settings={...settings,apiKey:$("#api-key").value.trim(),anthropicModel:$("#anthropic-model").value||settings.anthropicModel||AnthropicModels.DEFAULT_MODEL,gistToken:$("#gist-token").value.trim(),gistId:$("#gist-id").value.trim(),operatingWeekdays,excludedDates,additionalDates,excludePublicHolidays,lastSchedule:{operatingWeekdays,excludedDates,additionalDates,excludePublicHolidays}};
     saveSettings();notify("Talk Flow 전용 설정을 저장했습니다.");render()
   });
-  $("#refresh-models").onclick=refreshModelsFromSettings;$("#test-ai-connection").onclick=testAiConnection;$("#anthropic-model").onchange=event=>{settings={...settings,anthropicModel:event.target.value,modelFallback:null};saveSettings();renderModelControls()};
+  $("#refresh-models").onclick=refreshModelsFromSettings;$("#test-ai-connection").onclick=startConnectionTest;$("#anthropic-model").onchange=event=>{settings={...settings,anthropicModel:event.target.value,modelFallback:null,connectionStatus:"unchecked"};saveSettings();renderModelControls()};
   $("#copy-schedule").onclick=()=>{
     const previous=settings.lastSchedule;
     if(!previous){notify("복사할 이전 운영 설정이 없습니다.",true);return}
