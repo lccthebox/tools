@@ -61,6 +61,13 @@
       </div>
       <label>Anthropic API key<input id="api-key" type="password" autocomplete="off" placeholder="sk-ant-…"></label>
       <p class="field-help">키는 Talk Flow 전용 설정 키에만 저장되며 생성 요청 외에는 전송하지 않습니다.</p>
+      <section class="model-settings" aria-label="AI 모델 연결 설정">
+        <div class="model-status"><strong id="ai-connection-status">AI 연결 확인 전</strong><span id="model-last-checked">마지막 확인: 없음</span></div>
+        <label>현재 선택 모델<select id="anthropic-model" disabled><option value="">모델 목록을 새로고침하세요</option></select></label>
+        <div class="button-row model-actions"><button type="button" id="refresh-models" class="button secondary">모델 목록 새로고침</button><button type="button" id="test-ai-connection" class="button secondary">연결 테스트</button></div>
+        <p id="model-fallback-notice" class="field-help" hidden></p>
+        <details id="model-diagnostics" hidden><summary>기술 상세 진단</summary><pre></pre></details>
+      </section>
       <label>GitHub Gist token<input id="gist-token" type="password" autocomplete="off" placeholder="gist 권한 토큰"></label>
       <label>Talk Flow Gist ID<input id="gist-id" autocomplete="off" placeholder="최초 저장 시 자동 생성"></label>
       <fieldset class="settings-group"><legend>운영 요일</legend>
@@ -98,6 +105,7 @@
 
   <input id="json-import" type="file" accept="application/json,.json" hidden>
   <script src="./sample-topics.js"></script>
+  <script src="./anthropic-models.js"></script>
   <script src="./session-workflow.js"></script>
   <script src="./conversation-fixtures.js"></script>
   <script src="./generation-engine.js"></script>

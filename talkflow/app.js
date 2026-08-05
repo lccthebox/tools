@@ -8,6 +8,7 @@
   const SENSITIVE=["big secret","income","salary","work mistake","dating conflict","family problem","disease","political view","religion","appearance","trauma","큰 비밀","소득","연봉","직장 실수","연애 갈등","가족 문제","질병","정치 성향","종교","외모","트라우마"];
   const Generation=window.TalkFlowGeneration;
   const Simple=window.TalkFlowSimpleGeneration;
+  const AnthropicModels=window.TalkFlowAnthropicModels;
   const $=s=>document.querySelector(s);
   const esc=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const koTitle=value=>esc(value).replace(/ (?=\S+$)/,"&nbsp;");
@@ -35,6 +36,26 @@
     }catch(error){setTimeout(()=>notify(`저장 데이터 복원 실패: ${error.message}`,true));return clone(window.TALKFLOW_SAMPLE_TOPICS||{})}
   }
   function loadSettings(){try{return JSON.parse(localStorage.getItem(KEYS.settings)||"{}")}catch{return{}}}
+  function anthropicHeaders(apiKey=settings.apiKey){return{"content-type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true","accept":"application/json"}}
+  function modelById(id){return(settings.availableModels||[]).find(model=>model.id===id)}
+  function selectedModelLabel(id=settings.anthropicModel){const model=modelById(id);return model?.displayName||id||"선택 안 됨"}
+  function safeDiagnostics(value){if(!value)return null;return{httpStatus:value.httpStatus||null,type:value.type||"unknown_error",message:value.message||"",requestId:value.requestId||"",modelId:value.modelId||"",stage:value.stage||""}}
+  function providerError(response,payload,stage,modelId){const error=new Error(payload?.error?.message||`HTTP ${response.status}`);error.httpStatus=response.status;error.type=payload?.error?.type||"http_error";error.requestId=payload?.request_id||response.headers.get("request-id")||"";error.modelId=modelId;error.stage=stage;error.payload=payload;error.stopRetry=response.status===404&&error.type==="not_found_error"&&/model/i.test(error.message);return error}
+  async function fetchAvailableModels({persist=true}={}){
+    if(!settings.apiKey){const error=new Error("Anthropic API 키를 먼저 입력하세요.");error.stage="models";error.type="missing_api_key";throw error}
+    let response,payload;try{response=await fetch("https://api.anthropic.com/v1/models",{headers:anthropicHeaders()});payload=await response.json()}catch(cause){const error=new Error("Models API 네트워크 연결에 실패했습니다.");error.stage="models";error.type="network_error";error.cause=cause;throw error}
+    if(!response.ok)throw providerError(response,payload,"models",settings.anthropicModel||"");
+    let models;try{models=AnthropicModels.parseModels(payload)}catch(cause){cause.stage="models";cause.type="response_format_error";throw cause}
+    const previous=settings.anthropicModel||"",selection=AnthropicModels.chooseModel(models,previous);
+    settings={...settings,availableModels:models,anthropicModel:selection.modelId,modelsCheckedAt:new Date().toISOString(),modelFallback:selection.fallback?{from:previous,to:selection.modelId}:null};
+    if(persist)saveSettings();return models;
+  }
+  async function preflightModel(){
+    if(!settings.apiKey){const error=new Error("자동 생성 연결이 필요합니다.");error.stage="plan";error.type="missing_api_key";throw error}
+    await fetchAvailableModels();const modelId=settings.anthropicModel;
+    if(!modelId||AnthropicModels.isRetired(modelId)||!modelById(modelId)){const error=new Error("선택된 AI 모델을 현재 사용할 수 없습니다. 고급 설정에서 사용 가능한 모델을 다시 선택하세요.");error.stage="plan";error.type="model_unavailable";error.modelId=modelId;throw error}
+    return modelId;
+  }
   function saveTopics(message="저장했습니다."){
     try{localStorage.setItem(KEYS.data,JSON.stringify(topics));dirty=false;localStorage.removeItem(KEYS.drafts);notify(message);render()}
     catch(error){notify(`저장 실패: ${error.message}`,true)}
@@ -413,8 +434,9 @@ function canPreviewTopic(topic){return Boolean(topic)&&(!topic.generatedConversa
     const failed=t.operatorStatus?.generationStatus==="failed",title=failed?"GENERATION FAILED":"LEGACY OR INVALID DRAFT",failure=t.generationFailure||{},section=failedSection(failure),source=t.originalDraft||t,issues=(failure.issues||[]).map(item=>typeof item==="string"?{location:section,message:item}:item);
     if(!detailed)return `<section class="generation-blocked"><p class="eyebrow">CONTENT UNAVAILABLE</p><h1>아직 준비 중인 토픽입니다.</h1><p>관리자가 내용을 확인한 뒤 공개할 예정입니다.</p></section>`;
     const issueList=issues.length?`<ul class="issue-list">${issues.map(item=>`<li class="critical"><strong>${esc(item.location||section)}</strong><span>${esc(item.message||String(item))}</span></li>`).join("")}</ul>`:`<p class="approval-warning">${esc(failure.message||"생성 응답을 받지 못했습니다.")}</p>`;
-    const actions=failed?`<button class="button secondary" data-failed-regenerate="${esc(section)}">${esc(section)} 섹션만 다시 생성</button><button class="button primary" data-action="regenerate-v2">새 Conversation-First 구조로 다시 생성</button>`:`<button class="button primary" data-action="regenerate-v2">새 Conversation-First 구조로 다시 생성</button><button class="button danger" data-action="delete">기존 초안 삭제</button>`;
-    return `<section class="generation-blocked"><p class="eyebrow">${title}</p><h1>${failed?"토픽 내용을 완성하지 못했습니다.":"구형 또는 불완전한 자동 생성 초안입니다."}</h1><p>${failed?`실패한 섹션: <b>${esc(section)}</b><br>작성된 초안은 보존했습니다.`:"이 초안은 자동 승인·미리보기·PDF 대상이 아닙니다."}</p>${failed?issueList:""}<div class="button-row">${actions}</div><details><summary>${failed?"실패 이유와 생성 진단 보기":"원문 보기"}</summary><pre>${esc(JSON.stringify(failed?failure:source,null,2))}</pre></details></section>`;
+    const error=failure.error||{},details=failed?`<dl class="failure-meta"><div><dt>실패 단계</dt><dd>${esc(error.stage||failure.stage||section)}</dd></div><div><dt>오류 유형</dt><dd>${esc(error.type||"generation_error")}</dd></div><div><dt>사용 모델</dt><dd>${esc(error.modelId||failure.modelId||"선택 안 됨")}</dd></div><div><dt>HTTP 상태</dt><dd>${esc(error.httpStatus||"-")}</dd></div><div><dt>마지막 시도</dt><dd>${esc(error.lastAttemptAt||t.updatedAt||"-")}</dd></div></dl>`:"";
+    const actions=failed?`<button class="button secondary" data-action="settings">모델 설정 확인</button><button class="button secondary" data-failed-regenerate="${esc(section)}">${esc(section)} 섹션만 다시 생성</button><button class="button primary" data-action="regenerate-v2">새 Conversation-First 구조로 다시 생성</button>`:`<button class="button primary" data-action="regenerate-v2">새 Conversation-First 구조로 다시 생성</button><button class="button danger" data-action="delete">기존 초안 삭제</button>`;
+    return `<section class="generation-blocked"><p class="eyebrow">${title}</p><h1>${failed?"토픽 내용을 완성하지 못했습니다.":"구형 또는 불완전한 자동 생성 초안입니다."}</h1><p>${failed?`실패한 섹션: <b>${esc(section)}</b><br>작성된 초안은 보존했습니다.`:"이 초안은 자동 승인·미리보기·PDF 대상이 아닙니다."}</p>${details}${failed?issueList:""}<div class="button-row">${actions}</div><details><summary>${failed?"실패 이유와 생성 진단 보기":"원문 보기"}</summary><pre>${esc(JSON.stringify(failed?safeDiagnostics(error):source,null,2))}</pre></details></section>`;
   }
   function renderGeneratedScreen(t,leader=false){
     return `<header class="generated-topic-hero"><p class="eyebrow">${esc(t.date)} · ${leader?"LEADER GUIDE":"STUDENT"}</p><h1>${esc(t.title.en)}</h1><p lang="ko">${esc(t.title.ko)}</p></header><div class="generated-screen">${renderGeneratedHandout(t,leader)}</div>`;
@@ -659,7 +681,7 @@ function canPreviewTopic(topic){return Boolean(topic)&&(!topic.generatedConversa
       retryRule:previousCandidate?"Keep valid fields unchanged and repair only the listed locations.":"Create every required content field once."
     })}];
   }
-  async function requestGenerationStage(stage,request,plan=null){
+  async function requestGenerationStage(stage,request,plan=null,modelId){
     const tool=stage==="plan"?Simple.PLAN_TOOL:Simple.CONTENT_TOOL,normalize=stage==="plan"?clone:Simple.normalizeContent,validate=stage==="plan"?Simple.validatePlan:value=>{
       const result=Simple.validateContent(value,plan,Object.values(topics),true);
       if(value?.date===request.date)return result;
@@ -669,8 +691,8 @@ function canPreviewTopic(topic){return Boolean(topic)&&(!topic.generatedConversa
     let lastError=null,lastIssues=[],previousCandidate=null,lastRaw=null,lastNormalized=null;
     for(let attempt=0;attempt<2;attempt++){
       try{
-        const response=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"content-type":"application/json","x-api-key":settings.apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:6000,messages:generationMessages(stage,request,plan,lastIssues,previousCandidate),tools:[tool],tool_choice:{type:"tool",name:tool.name}})});
-        const payload=await response.json();if(!response.ok)throw new Error(payload.error?.message||`HTTP ${response.status}`);
+        const response=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:anthropicHeaders(),body:JSON.stringify({model:modelId,max_tokens:6000,messages:generationMessages(stage,request,plan,lastIssues,previousCandidate),tools:[tool],tool_choice:{type:"tool",name:tool.name}})});
+        const payload=await response.json();if(!response.ok)throw providerError(response,payload,stage,modelId);
         const call=payload.content?.find(item=>item.type==="tool_use"&&item.name===tool.name);
         if(!call?.input)throw new Error(`${tool.name} tool result is missing.`);
         lastRaw=clone(call.input);lastNormalized=normalize(lastRaw);previousCandidate=lastRaw;
@@ -678,17 +700,19 @@ function canPreviewTopic(topic){return Boolean(topic)&&(!topic.generatedConversa
         if(result.ok)return lastNormalized;
         lastIssues=result.issues.map(item=>clone(item));
         lastError=new Error(lastIssues.map(item=>`${item.location}: ${item.message}`).join(" "));
-      }catch(error){lastError=error}
+      }catch(error){lastError=error;if(error.stopRetry)break}
     }
+    if(lastError?.stopRetry){try{await fetchAvailableModels()}catch{} }
     const error=new Error(`${stage==="plan"?"Topic Plan":"Content Fill"} failed: ${lastError?.message||"unknown error"}`);
-    error.stage=stage;error.issues=lastIssues;error.diagnostics={raw:lastRaw,normalized:lastNormalized};throw error;
+    error.stage=stage;error.issues=lastIssues;error.diagnostics={raw:lastRaw,normalized:lastNormalized};error.httpStatus=lastError?.httpStatus||null;error.type=lastError?.type||"generation_error";error.requestId=lastError?.requestId||"";error.modelId=modelId;error.payload=lastError?.payload;throw error;
   }
   async function generateV2Topic(request){
-    if(!settings.apiKey){const error=new Error("자동 생성 연결이 필요합니다.");error.stage="plan";throw error}
-    const plan=await requestGenerationStage("plan",request);
-    const content=await requestGenerationStage("content",request,plan);
+    const modelId=await preflightModel();
+    const plan=await requestGenerationStage("plan",request,null,modelId);
+    if(!plan)throw Object.assign(new Error("Topic Plan 결과가 없습니다."),{stage:"plan",type:"response_format_error",modelId});
+    const content=await requestGenerationStage("content",request,plan,modelId);
     let topic;try{topic=Simple.buildTopic(request,plan,content,Object.values(topics))}catch(error){error.stage="content";error.diagnostics={raw:content,normalized:Simple.normalizeContent(content)};throw error}
-    topic.generationRequest=clone(request);
+    topic.generationRequest=clone(request);topic.anthropicModel=modelId;
     return topic;
   }
   async function generateAndStore(request,originalDraft=null){
@@ -696,7 +720,7 @@ function canPreviewTopic(topic){return Boolean(topic)&&(!topic.generatedConversa
     try{
       const topic=await generateV2Topic(request);topics[request.date]=topic;dirty=true;saveTopics("새 Simple Conversation 토픽 생성과 승인 게이트 검사를 완료했습니다.");return topic;
     }catch(error){
-      pending.operatorStatus.generationStatus="failed";pending.generationFailure={stage:error.stage||"content",section:failedSection(error),message:error.message,issues:error.issues||[],diagnostics:error.diagnostics||null};pending.quality={status:"review",score:0,issues:[error.message]};pending.updatedAt=new Date().toISOString();topics[request.date]=pending;dirty=true;saveTopics("토픽 내용을 완성하지 못했습니다. 작성된 초안은 보존했습니다. 실패 이유를 확인하거나 해당 섹션만 다시 생성하세요.");return null;
+      const publicFailure=AnthropicModels.publicError(error,error.stage||"plan",error.modelId||settings.anthropicModel||"");pending.status="generation_failed";pending.failedSection=error.stage||"plan";pending.requestedTopic=request.keyword;pending.lastAttemptAt=publicFailure.lastAttemptAt;pending.operatorStatus.generationStatus="failed";pending.generationFailure={stage:publicFailure.stage,section:failedSection(error),message:publicFailure.message,modelId:publicFailure.modelId,issues:error.issues||[],error:publicFailure};pending.quality={status:"review",score:0,issues:[publicFailure.message]};pending.updatedAt=publicFailure.lastAttemptAt;topics[request.date]=pending;dirty=true;saveTopics("토픽 내용을 완성하지 못했습니다. 작성된 초안은 보존했습니다. 실패 이유를 확인하거나 해당 섹션만 다시 생성하세요.");return null;
     }
   }
   async function regenerateV2(){
@@ -801,8 +825,8 @@ Create or repair TheBox Talk Flow ${scope} as strict JSON for one mixed-confiden
 </talkflow-standard>`;
     try{
       preserveVersion(topic);
-      const response=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"content-type":"application/json","x-api-key":settings.apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:6000,messages:[{role:"user",content:prompt}]})});
-      const payload=await response.json();if(!response.ok)throw new Error(payload.error?.message||`HTTP ${response.status}`);
+      const modelId=await preflightModel(),response=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:anthropicHeaders(),body:JSON.stringify({model:modelId,max_tokens:6000,messages:[{role:"user",content:prompt}]})});
+      const payload=await response.json();if(!response.ok)throw providerError(response,payload,"content",modelId);
       const text=payload.content?.map(c=>c.text||"").join("")||"",match=text.match(/\{[\s\S]*\}|\[[\s\S]*\]/);if(!match)throw new Error("응답에서 JSON을 찾지 못했습니다.");
       const result=JSON.parse(match[0]);if(section==="all"){result.id=topic.id;result.date=topic.date;result.createdAt=topic.createdAt;result.updatedAt=new Date().toISOString();result.quality={status:"draft",score:0,issues:[]};result.standardVersion=STANDARD.version;result.templateVersion="4";topics[activeDate]=window.TalkFlowSessions.upgradeTopic(result)}else setPath(topic,section,result);
       dirty=true;const quality=validateTopic(current());current().quality={status:"review",score:quality.score,issues:quality.issues};current().operatorStatus={...current().operatorStatus,reviewStatus:"review",printStatus:"unchecked",used:false};saveTopics(`${scope} 생성과 품질검사를 완료했습니다.`);
@@ -855,6 +879,21 @@ Create or repair TheBox Talk Flow ${scope} as strict JSON for one mixed-confiden
     }catch(error){notify(`Gist 불러오기 실패: ${error.message}`,true)}
   }
   function saveSettings(){localStorage.setItem(KEYS.settings,JSON.stringify(settings))}
+  function renderModelControls(){
+    const select=$("#anthropic-model"),models=settings.availableModels||[],selected=settings.anthropicModel||"";
+    select.innerHTML=models.length?models.map(model=>`<option value="${esc(model.id)}" ${model.id===selected?"selected":""}>${esc(model.displayName)} · ${esc(model.id)}</option>`).join(""):`<option value="">모델 목록을 새로고침하세요</option>`;select.disabled=!models.length;
+    const retired=AnthropicModels.isRetired(selected),status=$("#ai-connection-status");status.textContent=retired?"사용 종료된 모델":models.some(model=>model.id===selected)?"AI 모델 선택됨":"AI 연결 확인 전";
+    $("#model-last-checked").textContent=`마지막 확인: ${settings.modelsCheckedAt?new Date(settings.modelsCheckedAt).toLocaleString("ko-KR"):"없음"}`;
+    const notice=$("#model-fallback-notice");if(settings.modelFallback?.to){notice.hidden=false;notice.textContent=`기존 모델${AnthropicModels.isRetired(settings.modelFallback.from)?"(사용 종료됨)":""}을 사용할 수 없어 ${selectedModelLabel(settings.modelFallback.to)}으로 변경했습니다.`}else{notice.hidden=true;notice.textContent=""}
+  }
+  function showModelDiagnostic(error){const details=$("#model-diagnostics"),safe=safeDiagnostics(error);details.hidden=false;details.querySelector("pre").textContent=JSON.stringify(safe,null,2)}
+  async function refreshModelsFromSettings(){
+    settings={...settings,apiKey:$("#api-key").value.trim()};try{await fetchAvailableModels();renderModelControls();$("#ai-connection-status").textContent="사용 가능한 모델을 확인했습니다.";$("#model-diagnostics").hidden=true}catch(error){$("#ai-connection-status").textContent="모델 목록 연결 실패";showModelDiagnostic(error)}
+  }
+  async function testAiConnection(){
+    settings={...settings,apiKey:$("#api-key").value.trim(),anthropicModel:$("#anthropic-model").value||settings.anthropicModel};
+    try{const modelId=await preflightModel(),response=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:anthropicHeaders(),body:JSON.stringify({model:modelId,max_tokens:8,messages:[{role:"user",content:"Reply with OK."}]})}),payload=await response.json();if(!response.ok)throw providerError(response,payload,"connection",modelId);if(!Array.isArray(payload.content))throw Object.assign(new Error("응답 형식 오류"),{type:"response_format_error",stage:"connection",modelId});settings.connectionCheckedAt=new Date().toISOString();saveSettings();$("#ai-connection-status").textContent=`AI 연결 정상 · 사용 모델: ${selectedModelLabel(modelId)}`;$("#model-diagnostics").hidden=true;renderModelControls()}catch(error){const message=error.httpStatus===401?"인증 오류":error.httpStatus===404?"모델 사용 불가":error.httpStatus===429?"크레딧 또는 사용 한도":error.type==="response_format_error"?"응답 형식 오류":"네트워크 오류";$("#ai-connection-status").textContent=message;showModelDiagnostic(error)}
+  }
 
   document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{if(confirmDirty()){view=b.dataset.view;render()}});
   $("#prev-month").onclick=()=>{cursor=new Date(cursor.getFullYear(),cursor.getMonth()-1,1,12);render()};
@@ -867,7 +906,7 @@ Create or repair TheBox Talk Flow ${scope} as strict JSON for one mixed-confiden
     document.querySelectorAll("[name='operating-day']").forEach(input=>input.checked=weekdays.includes(Number(input.value)));
     $("#excluded-dates").value=(settings.excludedDates||[]).join(", ");
     $("#additional-dates").value=(settings.additionalDates||[]).join(", ");
-    $("#exclude-public-holidays").checked=Boolean(settings.excludePublicHolidays);
+    $("#exclude-public-holidays").checked=Boolean(settings.excludePublicHolidays);renderModelControls();
     $("#settings-dialog").showModal()
   };
   $("#settings-form").addEventListener("submit",event=>{
@@ -876,9 +915,10 @@ Create or repair TheBox Talk Flow ${scope} as strict JSON for one mixed-confiden
     if(!operatingWeekdays.length){event.preventDefault();notify("운영 요일을 하나 이상 선택해 주세요.",true);return}
     const parseDates=id=>$(id).value.split(",").map(value=>value.trim()).filter(value=>/^\d{4}-\d{2}-\d{2}$/.test(value));
     const excludedDates=parseDates("#excluded-dates"),additionalDates=parseDates("#additional-dates"),excludePublicHolidays=$("#exclude-public-holidays").checked;
-    settings={...settings,apiKey:$("#api-key").value.trim(),gistToken:$("#gist-token").value.trim(),gistId:$("#gist-id").value.trim(),operatingWeekdays,excludedDates,additionalDates,excludePublicHolidays,lastSchedule:{operatingWeekdays,excludedDates,additionalDates,excludePublicHolidays}};
+    settings={...settings,apiKey:$("#api-key").value.trim(),anthropicModel:$("#anthropic-model").value||settings.anthropicModel||AnthropicModels.DEFAULT_MODEL,gistToken:$("#gist-token").value.trim(),gistId:$("#gist-id").value.trim(),operatingWeekdays,excludedDates,additionalDates,excludePublicHolidays,lastSchedule:{operatingWeekdays,excludedDates,additionalDates,excludePublicHolidays}};
     saveSettings();notify("Talk Flow 전용 설정을 저장했습니다.");render()
   });
+  $("#refresh-models").onclick=refreshModelsFromSettings;$("#test-ai-connection").onclick=testAiConnection;$("#anthropic-model").onchange=event=>{settings={...settings,anthropicModel:event.target.value,modelFallback:null};saveSettings();renderModelControls()};
   $("#copy-schedule").onclick=()=>{
     const previous=settings.lastSchedule;
     if(!previous){notify("복사할 이전 운영 설정이 없습니다.",true);return}
