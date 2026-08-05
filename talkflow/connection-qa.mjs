@@ -37,8 +37,9 @@ try{
   check("second test is not duplicated",requests.models===1&&requests.messages===1,JSON.stringify(requests));
   check("pending request zero",requests.pending===0,String(requests.pending));
   failMessages=true;expectedHttpFailure=true;await button.click();await page.waitForFunction(()=>document.querySelector("#test-ai-connection")?.disabled===false);expectedHttpFailure=false;
-  check("failure shows HTTP and error type",await page.getByText("연결 실패 · HTTP 401 · authentication_error",{exact:true}).count()===1);
+  check("failure shows redacted authentication guidance",await page.getByText("API 키를 확인할 수 없습니다.",{exact:true}).count()>=1&&await page.getByText("키가 만료되었거나 삭제됐을 수 있습니다. 새 API 키를 입력해 주세요.",{exact:true}).count()===1);
   await page.screenshot({path:join(evidence,"connection-failure.png"),fullPage:true});
+  failMessages=false;await button.click();await page.getByText("AI 연결 정상",{exact:false}).waitFor({timeout:3000});check("success clears stale 401 guidance",await page.locator("#api-key-guidance").isVisible()===false);
   check("console error zero",errors.length===0,errors.join(" | "));
   console.log(`connection-qa: PASS (${checks.length} checks)`);
 }finally{await browser.close();server.close()}

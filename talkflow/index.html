@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./styles.css?v=20260805-auth-fix">
   <link rel="stylesheet" href="./conversation.css">
 </head>
 <body>
@@ -59,10 +59,15 @@
         <div><p class="eyebrow">ADVANCED SETTINGS</p><h2>연결 및 기술 설정</h2></div>
         <button value="cancel" class="icon-button" aria-label="닫기">×</button>
       </div>
-      <label>Anthropic API key<input id="api-key" type="password" autocomplete="off" placeholder="sk-ant-…"></label>
-      <p class="field-help">키는 Talk Flow 전용 설정 키에만 저장되며 생성 요청 외에는 전송하지 않습니다.</p>
+      <section class="secret-setting" aria-labelledby="api-key-label">
+        <div class="secret-setting-heading"><strong id="api-key-label">Anthropic API key</strong><button type="button" id="change-api-key" class="button secondary">키 변경</button></div>
+        <p id="api-key-configured" class="field-help">API 키가 저장되어 있지 않습니다.</p>
+        <label id="api-key-editor" hidden>새 API 키<input id="api-key" type="password" autocomplete="new-password" placeholder="새 API 키 입력"></label>
+        <p class="field-help">실제 키는 화면에 다시 표시하지 않으며 생성 요청에만 사용합니다.</p>
+      </section>
       <section class="model-settings" aria-label="AI 모델 연결 설정">
         <div class="model-status"><strong id="ai-connection-status">AI 연결 확인 전</strong><span id="model-last-checked">마지막 확인: 없음</span></div>
+        <div id="api-key-guidance" class="authentication-guidance" hidden><strong>API 키를 확인할 수 없습니다.</strong><span>키가 만료되었거나 삭제됐을 수 있습니다. 새 API 키를 입력해 주세요.</span><button type="button" class="button primary" data-change-api-key>키 변경</button></div>
         <label>현재 선택 모델<select id="anthropic-model" disabled><option value="">모델 목록을 새로고침하세요</option></select></label>
         <div class="button-row model-actions"><button type="button" id="refresh-models" class="button secondary">모델 목록 새로고침</button><button type="button" id="test-ai-connection" class="button secondary">연결 테스트</button></div>
         <p id="model-fallback-notice" class="field-help" hidden></p>
@@ -110,6 +115,6 @@
   <script src="./conversation-fixtures.js"></script>
   <script src="./generation-engine.js"></script>
   <script src="./simple-generation.js?v=20260805-connection-fix-4"></script>
-  <script src="./app.js?v=20260805-connection-fix"></script>
+  <script src="./app.js?v=20260805-auth-fix"></script>
 </body>
 </html>

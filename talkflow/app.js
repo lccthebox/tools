@@ -13,10 +13,11 @@
   const esc=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const koTitle=value=>esc(value).replace(/ (?=\S+$)/,"&nbsp;");
   const clone=value=>JSON.parse(JSON.stringify(value));
+  let storedApiKey="",apiKeyConfigured=false,apiKeyDraft="",apiKeyEditing=false;
   let topics=loadTopics(),settings=loadSettings(),activeDate=Object.keys(topics).sort()[0]||today(),cursor=new Date("2026-08-01T12:00:00"),view="calendar",dirty=false;
   let printDates=new Set(),printLeader=false;
   let timerSeconds=0,timerHandle=null;
-  let connectionTestController=null,connectionTestPromise=null;
+  let connectionTestController=null,connectionTestPromise=null,modelsRefreshPromise=null;
 
   function today(){return new Date().toISOString().slice(0,10)}
   function loadTopics(){
@@ -36,14 +37,15 @@
       return clone(window.TALKFLOW_SAMPLE_TOPICS||{});
     }catch(error){setTimeout(()=>notify(`저장 데이터 복원 실패: ${error.message}`,true));return clone(window.TALKFLOW_SAMPLE_TOPICS||{})}
   }
-  function loadSettings(){try{return JSON.parse(localStorage.getItem(KEYS.settings)||"{}")}catch{return{}}}
-  function anthropicHeaders(apiKey=settings.apiKey){return{"content-type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true","accept":"application/json"}}
+  function loadSettings(){try{const value=JSON.parse(localStorage.getItem(KEYS.settings)||"{}"),key=typeof value.apiKey==="string"?value.apiKey.trim():"";storedApiKey=key;apiKeyConfigured=Boolean(key);delete value.apiKey;return value}catch{storedApiKey="";apiKeyConfigured=false;return{}}}
+  function getStoredAnthropicApiKey(){if(!storedApiKey){const error=new Error("Anthropic API 키를 먼저 입력하세요.");error.stage="models";error.type="missing_api_key";throw error}return storedApiKey}
+  function anthropicHeaders(){return{"content-type":"application/json","x-api-key":getStoredAnthropicApiKey(),"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true","accept":"application/json"}}
   function modelById(id){return(settings.availableModels||[]).find(model=>model.id===id)}
   function selectedModelLabel(id=settings.anthropicModel){const model=modelById(id);return model?.displayName||id||"선택 안 됨"}
   function safeDiagnostics(value){if(!value)return null;return{httpStatus:value.httpStatus||null,type:value.type||"unknown_error",message:value.message||"",requestId:value.requestId||"",modelId:value.modelId||"",stage:value.stage||""}}
   function providerError(response,payload,stage,modelId){const error=new Error(payload?.error?.message||`HTTP ${response.status}`);error.httpStatus=response.status;error.type=payload?.error?.type||"http_error";error.requestId=payload?.request_id||response.headers.get("request-id")||"";error.modelId=modelId;error.stage=stage;error.payload=payload;error.stopRetry=response.status===404&&error.type==="not_found_error"&&/model/i.test(error.message);return error}
   async function fetchAvailableModels({persist=true,signal}={}){
-    if(!settings.apiKey){const error=new Error("Anthropic API 키를 먼저 입력하세요.");error.stage="models";error.type="missing_api_key";throw error}
+    getStoredAnthropicApiKey();
     let response,payload;try{response=await fetch("https://api.anthropic.com/v1/models",{headers:anthropicHeaders(),signal});payload=await response.json()}catch(cause){const aborted=cause?.name==="AbortError"||signal?.aborted,error=new Error(aborted?"Models API 요청이 취소되었습니다.":"Models API 네트워크 연결에 실패했습니다.");error.stage="models";error.type=aborted?"request_aborted":"network_error";error.cause=cause;throw error}
     if(!response.ok)throw providerError(response,payload,"models",settings.anthropicModel||"");
     let models;try{models=AnthropicModels.parseModels(payload)}catch(cause){cause.stage="models";cause.type="response_format_error";throw cause}
@@ -52,7 +54,7 @@
     if(persist)saveSettings();return models;
   }
   async function preflightModel({signal}={}){
-    if(!settings.apiKey){const error=new Error("자동 생성 연결이 필요합니다.");error.stage="plan";error.type="missing_api_key";throw error}
+    try{getStoredAnthropicApiKey()}catch(error){error.message="자동 생성 연결이 필요합니다.";error.stage="plan";throw error}
     await fetchAvailableModels({signal});const modelId=settings.anthropicModel;
     if(!modelId||AnthropicModels.isRetired(modelId)||!modelById(modelId)){const error=new Error("선택된 AI 모델을 현재 사용할 수 없습니다. 고급 설정에서 사용 가능한 모델을 다시 선택하세요.");error.stage="plan";error.type="model_unavailable";error.modelId=modelId;throw error}
     return modelId;
@@ -817,7 +819,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed"].includes(topic.o
   function toggleTimer(){if(timerHandle){clearInterval(timerHandle);timerHandle=null}else timerHandle=setInterval(()=>{timerSeconds++;const el=$("#timer-display");if(el)el.textContent=formatTime(timerSeconds)},1000)}
 
   async function regenerate(section){
-    if(!settings.apiKey){notify("자동 생성 연결이 필요합니다. 작성된 내용은 그대로 보존했습니다.",true);return}
+    if(!apiKeyConfigured){notify("자동 생성 연결이 필요합니다. 작성된 내용은 그대로 보존했습니다.",true);return}
     const topic=current(),scope=section==="all"?"complete topic":section;
     notify("말하기 흐름을 만들고 있습니다.");
     const target=section.split(".").reduce((value,key)=>value?.[key],topic);
@@ -880,7 +882,7 @@ Create or repair TheBox Talk Flow ${scope} as strict JSON for one mixed-confiden
       const file=payload.files?.[monthFile()];if(!file)throw new Error(`${monthFile()} 파일이 없습니다.`);const parsed=JSON.parse(file.content);topics={...topics,...parsed.topics};settings.gistId=id;saveSettings();saveTopics("Talk Flow 전용 Gist에서 불러왔습니다.");
     }catch(error){notify(`Gist 불러오기 실패: ${error.message}`,true)}
   }
-  function saveSettings(){localStorage.setItem(KEYS.settings,JSON.stringify(settings))}
+  function saveSettings(){const persisted={...settings};if(storedApiKey)persisted.apiKey=storedApiKey;else delete persisted.apiKey;localStorage.setItem(KEYS.settings,JSON.stringify(persisted))}
   function renderModelControls(){
     const select=$("#anthropic-model"),models=settings.availableModels||[],selected=settings.anthropicModel||"";
     select.innerHTML=models.length?models.map(model=>`<option value="${esc(model.id)}" ${model.id===selected?"selected":""}>${esc(model.displayName)} · ${esc(model.id)}</option>`).join(""):`<option value="">모델 목록을 새로고침하세요</option>`;select.disabled=!models.length;
@@ -889,23 +891,30 @@ Create or repair TheBox Talk Flow ${scope} as strict JSON for one mixed-confiden
     const checkedAt=connectionValid?settings.connectionCheckedAt:settings.modelsCheckedAt;$("#model-last-checked").textContent=`확인 시각: ${checkedAt?new Date(checkedAt).toLocaleString("ko-KR"):"없음"}`;
     const notice=$("#model-fallback-notice");if(settings.modelFallback?.to){notice.hidden=false;notice.textContent=`기존 모델${AnthropicModels.isRetired(settings.modelFallback.from)?"(사용 종료됨)":""}을 사용할 수 없어 ${selectedModelLabel(settings.modelFallback.to)}으로 변경했습니다.`}else{notice.hidden=true;notice.textContent=""}
   }
-  function showModelDiagnostic(error){const details=$("#model-diagnostics"),safe=safeDiagnostics(error);details.hidden=false;details.querySelector("pre").textContent=JSON.stringify(safe,null,2)}
+  function showModelDiagnostic(error){const details=$("#model-diagnostics"),safe=error?.httpStatus===401?{httpStatus:401,type:"authentication_error"}:safeDiagnostics(error);details.hidden=false;details.querySelector("pre").textContent=JSON.stringify(safe)}
+  function showAuthenticationError(error){$("#ai-connection-status").textContent="API 키를 확인할 수 없습니다.";$("#api-key-guidance").hidden=false;showModelDiagnostic(error)}
   async function refreshModelsFromSettings(){
-    settings={...settings,apiKey:$("#api-key").value.trim(),connectionStatus:"unchecked"};try{await fetchAvailableModels();renderModelControls();$("#ai-connection-status").textContent="사용 가능한 모델을 확인했습니다.";$("#model-diagnostics").hidden=true}catch(error){$("#ai-connection-status").textContent=`모델 목록 연결 실패${error.httpStatus?` · HTTP ${error.httpStatus}`:""} · ${error.type||"unknown_error"}`;showModelDiagnostic(error)}
+    settings={...settings,connectionStatus:"unchecked"};try{await fetchAvailableModels();renderModelControls();$("#ai-connection-status").textContent="사용 가능한 모델을 확인했습니다.";$("#api-key-guidance").hidden=true;$("#model-diagnostics").hidden=true}catch(error){if(error.httpStatus===401)showAuthenticationError(error);else{$("#ai-connection-status").textContent=`모델 목록 연결 실패${error.httpStatus?` · HTTP ${error.httpStatus}`:""} · ${error.type||"unknown_error"}`;showModelDiagnostic(error)}}
   }
+  function startModelsRefresh(){if(modelsRefreshPromise)return;modelsRefreshPromise=refreshModelsFromSettings().finally(()=>{modelsRefreshPromise=null})}
   async function testAiConnection(){
     connectionTestController?.abort();const controller=new AbortController(),button=$("#test-ai-connection"),timeout=setTimeout(()=>controller.abort(),30000);connectionTestController=controller;
     button.disabled=true;button.setAttribute("aria-busy","true");button.textContent="연결 확인 중…";
-    settings={...settings,apiKey:$("#api-key").value.trim(),anthropicModel:$("#anthropic-model").value||settings.anthropicModel,connectionStatus:"checking"};
+    settings={...settings,anthropicModel:$("#anthropic-model").value||settings.anthropicModel,connectionStatus:"checking"};
     try{
       const modelId=await preflightModel({signal:controller.signal}),response=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:anthropicHeaders(),signal:controller.signal,body:JSON.stringify({model:modelId,max_tokens:8,stream:false,messages:[{role:"user",content:"Reply with OK."}]})}),text=await response.text();
       let payload;try{payload=text?JSON.parse(text):{}}catch{throw Object.assign(new Error("응답 형식 오류"),{type:"response_format_error",stage:"connection",modelId,httpStatus:response.status})}
       if(!response.ok)throw providerError(response,payload,"connection",modelId);if(!Array.isArray(payload.content))throw Object.assign(new Error("응답 형식 오류"),{type:"response_format_error",stage:"connection",modelId,httpStatus:response.status});
-      settings={...settings,connectionStatus:"success",connectionModelId:modelId,connectionCheckedAt:new Date().toISOString()};saveSettings();$("#model-diagnostics").hidden=true;renderModelControls();
-    }catch(error){if(controller.signal.aborted&&!error.type)error.type="request_aborted";settings={...settings,connectionStatus:"failed"};saveSettings();$("#ai-connection-status").textContent=`연결 실패${error.httpStatus?` · HTTP ${error.httpStatus}`:""} · ${error.type||"unknown_error"}`;showModelDiagnostic(error)
+      settings={...settings,connectionStatus:"success",connectionModelId:modelId,connectionCheckedAt:new Date().toISOString()};saveSettings();$("#api-key-guidance").hidden=true;$("#model-diagnostics").hidden=true;renderModelControls();
+    }catch(error){if(controller.signal.aborted&&!error.type)error.type="request_aborted";settings={...settings,connectionStatus:"failed"};saveSettings();if(error.httpStatus===401)showAuthenticationError(error);else{$("#ai-connection-status").textContent=`연결 실패${error.httpStatus?` · HTTP ${error.httpStatus}`:""} · ${error.type||"unknown_error"}`;showModelDiagnostic(error)}
     }finally{clearTimeout(timeout);if(connectionTestController===controller){connectionTestController=null;connectionTestPromise=null}button.disabled=false;button.removeAttribute("aria-busy");button.textContent="연결 테스트"}
   }
   function startConnectionTest(){if(connectionTestPromise)return;connectionTestPromise=testAiConnection()}
+  function isMaskedApiKey(value){const text=String(value||"").trim();return !text||/^[*•●·\s]+$/.test(text)||["sk-ant-…","sk-ant-...","새 API 키 입력"].includes(text)}
+  function renderApiKeyControls(){
+    $("#api-key").value="";$("#api-key-editor").hidden=!apiKeyEditing;$("#api-key-configured").textContent=apiKeyConfigured?"API 키가 저장되어 있습니다.":"API 키가 저장되어 있지 않습니다.";$("#change-api-key").textContent=apiKeyEditing?"변경 취소":"키 변경";
+  }
+  function toggleApiKeyEditor(){apiKeyEditing=!apiKeyEditing;apiKeyDraft="";renderApiKeyControls();if(apiKeyEditing)$("#api-key").focus()}
 
   document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{if(confirmDirty()){view=b.dataset.view;render()}});
   $("#prev-month").onclick=()=>{cursor=new Date(cursor.getFullYear(),cursor.getMonth()-1,1,12);render()};
@@ -913,7 +922,7 @@ Create or repair TheBox Talk Flow ${scope} as strict JSON for one mixed-confiden
   $("#month-label").onclick=()=>{cursor=new Date();render()};
   $("#new-topic").onclick=()=>{const date=prompt("새 토픽 날짜 (YYYY-MM-DD)",`${monthPrefix()}-01`);if(date&&/^\d{4}-\d{2}-\d{2}$/.test(date)){activeDate=date;createTopic(date)}};
   $("#settings-button").onclick=()=>{
-    $("#api-key").value=settings.apiKey||"";$("#gist-token").value=settings.gistToken||"";$("#gist-id").value=settings.gistId||"";
+    apiKeyEditing=false;apiKeyDraft="";renderApiKeyControls();$("#gist-token").value=settings.gistToken||"";$("#gist-id").value=settings.gistId||"";
     const weekdays=settings.operatingWeekdays||[1,4];
     document.querySelectorAll("[name='operating-day']").forEach(input=>input.checked=weekdays.includes(Number(input.value)));
     $("#excluded-dates").value=(settings.excludedDates||[]).join(", ");
@@ -927,10 +936,11 @@ Create or repair TheBox Talk Flow ${scope} as strict JSON for one mixed-confiden
     if(!operatingWeekdays.length){event.preventDefault();notify("운영 요일을 하나 이상 선택해 주세요.",true);return}
     const parseDates=id=>$(id).value.split(",").map(value=>value.trim()).filter(value=>/^\d{4}-\d{2}-\d{2}$/.test(value));
     const excludedDates=parseDates("#excluded-dates"),additionalDates=parseDates("#additional-dates"),excludePublicHolidays=$("#exclude-public-holidays").checked;
-    settings={...settings,apiKey:$("#api-key").value.trim(),anthropicModel:$("#anthropic-model").value||settings.anthropicModel||AnthropicModels.DEFAULT_MODEL,gistToken:$("#gist-token").value.trim(),gistId:$("#gist-id").value.trim(),operatingWeekdays,excludedDates,additionalDates,excludePublicHolidays,lastSchedule:{operatingWeekdays,excludedDates,additionalDates,excludePublicHolidays}};
-    saveSettings();notify("Talk Flow 전용 설정을 저장했습니다.");render()
+    apiKeyDraft=apiKeyEditing?$("#api-key").value.trim():"";const rejectedApiKey=apiKeyEditing&&Boolean(apiKeyDraft)&&isMaskedApiKey(apiKeyDraft);if(apiKeyEditing&&!isMaskedApiKey(apiKeyDraft)){storedApiKey=apiKeyDraft;apiKeyConfigured=true;settings={...settings,connectionStatus:"unchecked"};$("#api-key-guidance").hidden=true;$("#model-diagnostics").hidden=true}
+    apiKeyDraft="";apiKeyEditing=false;settings={...settings,anthropicModel:$("#anthropic-model").value||settings.anthropicModel||AnthropicModels.DEFAULT_MODEL,gistToken:$("#gist-token").value.trim(),gistId:$("#gist-id").value.trim(),operatingWeekdays,excludedDates,additionalDates,excludePublicHolidays,lastSchedule:{operatingWeekdays,excludedDates,additionalDates,excludePublicHolidays}};
+    saveSettings();notify(rejectedApiKey?"마스킹 또는 placeholder 문자열은 API 키로 저장할 수 없습니다.":"Talk Flow 전용 설정을 저장했습니다.",rejectedApiKey);render()
   });
-  $("#refresh-models").onclick=refreshModelsFromSettings;$("#test-ai-connection").onclick=startConnectionTest;$("#anthropic-model").onchange=event=>{settings={...settings,anthropicModel:event.target.value,modelFallback:null,connectionStatus:"unchecked"};saveSettings();renderModelControls()};
+  $("#change-api-key").onclick=toggleApiKeyEditor;$("[data-change-api-key]").onclick=()=>{if(!apiKeyEditing)toggleApiKeyEditor()};$("#refresh-models").onclick=startModelsRefresh;$("#test-ai-connection").onclick=startConnectionTest;$("#anthropic-model").onchange=event=>{settings={...settings,anthropicModel:event.target.value,modelFallback:null,connectionStatus:"unchecked"};saveSettings();renderModelControls()};
   $("#copy-schedule").onclick=()=>{
     const previous=settings.lastSchedule;
     if(!previous){notify("복사할 이전 운영 설정이 없습니다.",true);return}
