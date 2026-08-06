@@ -176,7 +176,7 @@ try{
   const overflows=await page.locator(".a4-page").evaluateAll(nodes=>nodes.map(node=>({x:node.scrollWidth-node.clientWidth,y:node.scrollHeight-node.clientHeight})));
   check("student A4 DOM has no overflow",overflows.every(item=>item.x<=1&&item.y<=1),JSON.stringify(overflows));
   await page.screenshot({path:join(evidence,"student-print-screen.png"),fullPage:true});
-  await page.getByRole("button",{name:"리더용 A4"}).click();
+  await page.goto(`http://127.0.0.1:${port}/?fixtures=conversation&section=print&date=2026-08-03&role=leader`,{waitUntil:"networkidle"});
   check("leader handout exactly two DOM pages",await page.locator(".a4-page").count()===2);
   check("leader renderer uses v4 contract",await page.locator(".v4-handout[data-talkflow-standard='v2'][data-template-version='leader-v4']").count()===1);
   check("leader handout has both guidance strips",await page.locator(".leader-strip").count()===2);

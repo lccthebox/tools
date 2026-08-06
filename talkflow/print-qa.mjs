@@ -99,18 +99,20 @@ try {
   await page.locator("[data-action='batch-print']").click();
   const batchPages = await page.locator(".a4-page").count();
   await page.pdf({ path: join(output, "batch-approved-topics.pdf"), format: "A4", printBackground: true, preferCSSPageSize: true, margin: { top: "0", right: "0", bottom: "0", left: "0" } });
-  await page.goto(`http://127.0.0.1:${port}/?fixtures=sessions&date=2026-08-03&view=leader`, { waitUntil: "networkidle" });
-  await page.locator("[data-print-leader]").first().click();
-  const leaderPages = await page.locator(".a4-page").count();
-  const leaderOverflow = await page.locator(".a4-page").evaluateAll(pages => pages.map(item => ({
-    vertical: item.scrollHeight - item.clientHeight,
-    horizontal: item.scrollWidth - item.clientWidth
-  })));
-  const leaderText=await page.locator(".a4-topic").innerText();
-  await page.pdf({ path: join(output, "2026-08-03_TheBox_TalkFlow_leader.pdf"), format: "A4", printBackground: true, preferCSSPageSize: true, margin: { top: "0", right: "0", bottom: "0", left: "0" } });
-  await page.addStyleTag({ content: ".topbar,.print-toolbar{display:none!important}.a4-page{box-shadow:none!important}" });
-  for (let index = 0; index < leaderPages; index += 1) {
-    await page.locator(".a4-page").nth(index).screenshot({ path: join(evidence, `2026-08-03-leader-${index + 1}.png`) });
+  const leaderReport=[];
+  let leaderText="";
+  for(const topic of Object.values(topics).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,5)){
+    await page.goto(`http://127.0.0.1:${port}/?fixtures=sessions&section=print&date=${topic.date}&role=leader`,{waitUntil:"networkidle"});
+    const leaderPages=await page.locator(".a4-page").count();
+    const leaderOverflow=await page.locator(".a4-page").evaluateAll(pages=>pages.map(item=>({vertical:item.scrollHeight-item.clientHeight,horizontal:item.scrollWidth-item.clientWidth})));
+    const text=await page.locator(".a4-topic").innerText();
+    if(topic.date==="2026-08-03")leaderText=text;
+    const leaderPdf=join(output,`${topic.date}_TheBox_TalkFlow_leader.pdf`);
+    await page.pdf({path:leaderPdf,format:"A4",printBackground:true,preferCSSPageSize:true,margin:{top:"0",right:"0",bottom:"0",left:"0"}});
+    const physicalPages=(await PDFDocument.load(await readFile(leaderPdf))).getPageCount();
+    await page.addStyleTag({content:".topbar,.print-toolbar{display:none!important}.a4-page{box-shadow:none!important}"});
+    for(let index=0;index<leaderPages;index+=1)await page.locator(".a4-page").nth(index).screenshot({path:join(evidence,`${topic.date}-leader-${index+1}.png`)});
+    leaderReport.push({date:topic.date,domPages:leaderPages,physicalPages,overflow:leaderOverflow});
   }
   await page.goto(`http://127.0.0.1:${port}/?fixtures=sessions&date=2026-08-03&view=print`, { waitUntil: "networkidle" });
   const grayscaleText=await page.locator(".a4-topic").innerText();
@@ -126,9 +128,9 @@ try {
   const grayscaleManifest=(await readdir(grayscaleEvidence)).filter(name=>name.endsWith(".png")).sort();
   const pass = report.every(item => item.domPages === 2 && item.physicalPages === 2 && item.overflow.every(value => value.vertical <= 1 && value.horizontal <= 1 && value.contentCollision <= 1) && Object.values(item.speakingContent).every(Boolean)
       && item.printType.title >= 18 && item.printType.question >= 11 && item.printType.englishInstruction >= 9.5 && item.printType.koreanGuidance >= 8.5 && item.printType.meta >= 7.5)
-    && report.length === 10 && pngManifest.length === 22 && grayscaleManifest.length === 2 && grayscalePages === 2 && grayscaleMatchesColor && batchPages === 16 && leaderPages === 2 && leaderOverflow.every(value => value.vertical <= 1 && value.horizontal <= 1)
+    && report.length === 10 && pngManifest.length === 30 && grayscaleManifest.length === 2 && grayscalePages === 2 && grayscaleMatchesColor && batchPages === 16 && leaderReport.length === 5 && leaderReport.every(item=>item.domPages===2&&item.physicalPages===2&&item.overflow.every(value=>value.vertical<=1&&value.horizontal<=1))
     && ["12 MIN","18 MIN","20 MIN","5 MIN","10 MIN","TIME CUT","LEADER TIME","Write the Fake는 최소 15분"].every(label=>leaderText.includes(label));
-  await writeFile(join(output, "generation-results.json"), `${JSON.stringify({ pass, topics: report, pngManifest, grayscaleManifest, grayscalePages, grayscaleMatchesColor, batchPages, leaderPages, leaderOverflow }, null, 2)}\n`, "utf8");
+  await writeFile(join(output, "generation-results.json"), `${JSON.stringify({ pass, topics: report, leaderTopics:leaderReport, pngManifest, grayscaleManifest, grayscalePages, grayscaleMatchesColor, batchPages }, null, 2)}\n`, "utf8");
   console.log(JSON.stringify(report, null, 2));
   if (!pass) process.exitCode = 1;
 } finally {
