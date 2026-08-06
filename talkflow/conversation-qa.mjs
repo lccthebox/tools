@@ -97,12 +97,12 @@ try{
   });
   check("speaking QA rejects material mismatch answer exposure broken reference and missing Korean",onlineMutants.every(status=>status==="fail"),JSON.stringify(onlineMutants));
   await sessionContext.close();
-  check("calendar is monthly seven-column default",await page.locator(".month-calendar").isVisible()&&await page.locator(".weekday-row span").count()===7);
-  check("month toolbar has one-click actions",await page.getByRole("button",{name:"이번 달 자동 구성"}).isVisible()&&await page.getByRole("button",{name:"고급 설정",exact:true}).isVisible());
-  check("written dates expose PDF and edit",await page.locator(".calendar-day [data-open$=':print']").count()===8&&await page.locator(".calendar-day [data-open$=':admin']").count()===8);
-  check("empty operating dates expose two generation paths",await page.locator("[data-auto-date]").count()>0&&await page.locator("[data-custom-date]").count()>0);
-  check("non-operating dates expose no generation action",await page.locator(".calendar-day.is-off [data-auto-date],.calendar-day.is-off [data-custom-date]").count()===0);
-  check("calendar cards expose exactly one lifecycle state",await page.locator(".calendar-day:not(.is-off)").evaluateAll(cards=>cards.every(card=>card.querySelectorAll(".status-pill").length===1)));
+  check("preparation list is the default workspace",await page.locator(".preparation-list").isVisible()&&await page.locator(".preparation-row").count()>0);
+  check("global navigation has exactly three destinations",await page.locator(".view-tabs .tab").allTextContents().then(items=>items.join("|")==="토픽 준비|일괄 인쇄|설정"));
+  check("each preparation row exposes one primary action",await page.locator(".preparation-row").evaluateAll(rows=>rows.every(row=>row.querySelectorAll(".row-primary button").length===1)));
+  await page.getByRole("button",{name:"달력",exact:true}).click();
+  check("secondary calendar has seven columns and no internal work actions",await page.locator(".simple-month-grid").isVisible()&&await page.locator(".weekday-row span").count()===7&&await page.locator(".simple-month-grid [data-action]").count()===0);
+  check("non-operating dates expose no generation action",await page.locator(".simple-calendar-cell.off[data-auto-date],.simple-calendar-cell.off[data-custom-date]").count()===0);
   const alignmentCritical=await page.evaluate(()=>{
     const flow=TalkFlow.getTopics()["2026-08-03"].conversationFlow;
     flow.quickStarts[0].options=["Reviewer history"];

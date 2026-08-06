@@ -14,7 +14,7 @@
   const koTitle=value=>esc(value).replace(/ (?=\S+$)/,"&nbsp;");
   const clone=value=>JSON.parse(JSON.stringify(value));
   let storedApiKey="",apiKeyConfigured=false,apiKeyDraft="",apiKeyEditing=false;
-  let topics=loadTopics(),settings=loadSettings(),activeDate=Object.keys(topics).sort()[0]||today(),cursor=new Date("2026-08-01T12:00:00"),view="calendar",dirty=false;
+  let topics=loadTopics(),settings=loadSettings(),activeDate=Object.keys(topics).sort()[0]||today(),cursor=new Date("2026-08-01T12:00:00"),view="prepare",prepareMode="list",drawerDate="",dirty=false;
   let printDates=new Set(),printLeader=false;
   let timerSeconds=0,timerHandle=null;
   let connectionTestController=null,connectionTestPromise=null,modelsRefreshPromise=null;
@@ -84,14 +84,13 @@ function canPreviewTopic(topic){if(!topic||["running","failed"].includes(topic.o
     return [...new Set([...scheduled,...config.included.filter(date=>date.startsWith(monthPrefix())&&!config.excluded.includes(date))])].sort()
   }
   function lifecycleState(topic){
-    if(!topic)return{key:"empty",label:"토픽 미작성",action:"자동 생성"};
-    if(topic.operatorStatus?.generationStatus==="failed")return{key:"generation-failed",label:"GENERATION FAILED",action:"문제 확인"};
-    if(topic.generationEngine!==Simple.VERSION&&Generation.isLegacyOrInvalidDraft(topic))return{key:"invalid",label:"LEGACY OR INVALID DRAFT",action:"문제 확인"};
-    if(topic.operatorStatus?.used)return{key:"completed",label:"사용 완료",action:"학생용 PDF"};
-    if(topic.quality?.status==="approved"&&["checked","printed"].includes(topic.operatorStatus?.printStatus)&&topic.operatorStatus?.printValidation?.status==="ready")return{key:"print-ready",label:"인쇄 준비 완료",action:"학생용 PDF"};
-    if(topic.quality?.status==="approved")return{key:"approved",label:"승인 완료",action:"PDF 확인"};
-    if(topic.operatorStatus?.generationStatus==="running"||topic.quality?.status==="draft")return{key:"draft",label:topic.operatorStatus?.generationStatus==="running"?"생성 중":"초안",action:"수정"};
-    return{key:"review",label:"확인 필요",action:"확인하기"};
+    if(!topic)return{key:"empty",label:"미작성",action:"토픽 만들기"};
+    if(topic.operatorStatus?.generationStatus==="failed")return{key:"generation-failed",label:"생성 실패",action:"실패 확인"};
+    if(topic.generationEngine!==Simple.VERSION&&Generation.isLegacyOrInvalidDraft(topic))return{key:"invalid",label:"이전 형식",action:"내용 보기"};
+    if(topic.operatorStatus?.generationStatus==="running")return{key:"draft",label:"생성 중",action:"진행 보기"};
+    if(topic.quality?.status==="approved")return{key:"approved",label:"승인 완료",action:"미리보기"};
+    if(canPreviewTopic(topic))return{key:"print-ready",label:"승인 가능",action:"검수하기"};
+    return{key:"review",label:"검수 필요",action:"검수하기"};
   }
   function workState(topic){const state=lifecycleState(topic);return[state.key,state.label]}
 
@@ -144,13 +143,13 @@ function canPreviewTopic(topic){if(!topic||["running","failed"].includes(topic.o
   function render(){
     $("#month-label").textContent=new Intl.DateTimeFormat("ko-KR",{year:"numeric",month:"long"}).format(cursor);
     renderList();
-    $(".app-shell").classList.toggle("wide-mode",view==="calendar"||view==="print");
-    $("#calendar-view").innerHTML=view==="calendar"?renderCalendar():"";
+    $(".app-shell").classList.toggle("wide-mode",view==="prepare"||view==="batch"||view==="print");
+    $("#calendar-view").innerHTML=view==="prepare"?renderPreparationWorkspace():view==="batch"?renderBatchWorkspace():"";
     $("#student-view").innerHTML=view==="student"?renderStudent(current()):"";
     $("#leader-view").innerHTML=view==="leader"?renderLeader(current()):"";
     $("#admin-view").innerHTML=view==="admin"?renderAdmin(current()):"";
     $("#print-view").innerHTML=view==="print"?renderPrintCollection():"";
-    $("#calendar-view").hidden=view!=="calendar";
+    $("#calendar-view").hidden=!['prepare','batch'].includes(view);
     $("#student-view").hidden=view!=="student";$("#leader-view").hidden=view!=="leader";$("#admin-view").hidden=view!=="admin";
     $("#print-view").hidden=view!=="print";
     document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("is-active",b.dataset.view===view));
@@ -160,7 +159,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed"].includes(topic.o
   function updateUrl(){
     const url=new URL(location.href);
     if(activeDate)url.searchParams.set("date",activeDate);else url.searchParams.delete("date");
-    if(view==="calendar")url.searchParams.delete("view");else url.searchParams.set("view",view);
+    if(view==="prepare")url.searchParams.delete("view");else url.searchParams.set("view",view);
     history.replaceState(null,"",url);
   }
   function renderList(){
@@ -171,6 +170,13 @@ function canPreviewTopic(topic){if(!topic||["running","failed"].includes(topic.o
     }).join(""):`<p class="ko">이 달에는 작성된 토픽이 없습니다.</p>`;
   }
   function weekday(date){return new Intl.DateTimeFormat("ko-KR",{weekday:"short",timeZone:"UTC"}).format(new Date(`${date}T12:00:00Z`))}
+  function preparationDates(){return [...new Set([...operatingDates(),...Object.keys(topics).filter(date=>date.startsWith(monthPrefix()))])].sort()}
+  function primaryAction(date,topic){const state=lifecycleState(topic);if(!topic)return `<button class="button primary" data-custom-date="${date}">${state.action}</button>`;const target=state.key==="generation-failed"?"admin":state.key==="approved"?"student":"admin";return `<button class="button ${state.key==="approved"?"secondary":"primary"}" data-open="${date}:${target}">${state.action}</button>`}
+  function renderPreparationList(){return `<section class="preparation-list" aria-label="운영일 토픽 목록">${preparationDates().map(date=>{const topic=topics[date],state=lifecycleState(topic);return `<article class="preparation-row ${state.key}" data-drawer-date="${date}" tabindex="0"><time><b>${date.slice(8)}일</b><span>${weekday(date)}</span></time><div class="preparation-topic"><strong>${topic?koTitle(topic.title?.ko||topic.title?.en):"토픽을 준비해 주세요"}</strong><span>${topic?esc(topic.title?.en||""):"주제를 정하고 새 대화를 생성합니다."}</span></div><span class="status-pill ${state.key}">${state.label}</span><div class="row-primary">${primaryAction(date,topic)}</div><details class="row-more"><summary aria-label="추가 작업">⋯</summary><div>${topic?`<button data-open="${date}:admin">내용 검수</button><button data-open="${date}:student">학생용</button><button data-open="${date}:leader">리더용</button>`:`<button data-auto-date="${date}">자동 생성</button>`}</div></details></article>`}).join("")}</section>`}
+  function renderCompactCalendar(){const days=new Date(cursor.getFullYear(),cursor.getMonth()+1,0).getDate(),prefix=monthPrefix(),operation=new Set(operatingDates()),offset=(new Date(`${prefix}-01T12:00:00`).getDay()+6)%7;return `<div class="weekday-row" aria-hidden="true">${["월","화","수","목","금","토","일"].map(day=>`<span>${day}</span>`).join("")}</div><section class="simple-month-grid">${Array.from({length:offset},()=>'<span></span>').join("")}${Array.from({length:days},(_,index)=>{const date=`${prefix}-${String(index+1).padStart(2,"0")}`,topic=topics[date],state=lifecycleState(topic),available=operation.has(date)||topic;return `<button class="simple-calendar-cell ${available?state.key:"off"}" ${available?`data-drawer-date="${date}"`:"disabled"}><time>${index+1}</time>${available?`<strong>${topic?koTitle(topic.title?.ko||topic.title?.en):"미작성"}</strong><span>${state.label}</span>`:""}</button>`}).join("")}</section>`}
+  function renderDateDrawer(){if(!drawerDate)return"";const topic=topics[drawerDate],state=lifecycleState(topic);return `<div class="drawer-backdrop" data-drawer-close></div><aside class="date-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title"><header><div><span>${drawerDate} · ${weekday(drawerDate)}</span><h2 id="drawer-title">${topic?koTitle(topic.title?.ko||topic.title?.en):"새 토픽 준비"}</h2></div><button class="icon-button" data-drawer-close aria-label="닫기">×</button></header><span class="status-pill ${state.key}">${state.label}</span>${topic?`<nav class="drawer-tabs" aria-label="토픽 화면"><button data-open="${drawerDate}:admin">내용 검수</button><button data-open="${drawerDate}:student" ${canPreviewTopic(topic)?"":"disabled"}>학생용</button><button data-open="${drawerDate}:leader" ${canPreviewTopic(topic)?"":"disabled"}>리더용</button></nav><section class="drawer-summary"><h3>작업 상태</h3><p>${state.key==="generation-failed"?"실패 이유를 확인하고 필요한 섹션만 다시 생성할 수 있습니다.":state.key==="approved"?"승인이 완료되었습니다. 학생용과 리더용을 확인하거나 인쇄하세요.":"내용과 두 페이지 구성을 확인해 주세요."}</p>${primaryAction(drawerDate,topic)}</section>`:`<section class="drawer-create"><p>주제를 직접 지정하거나 AI 추천으로 시작하세요.</p><button class="button primary" data-custom-date="${drawerDate}">주제 지정해서 만들기</button><button class="button secondary" data-auto-date="${drawerDate}">자동 추천으로 만들기</button></section>`}</aside>`}
+  function renderPreparationWorkspace(){const dates=preparationDates(),counts=dates.reduce((acc,date)=>{const key=lifecycleState(topics[date]).key;acc[key]=(acc[key]||0)+1;return acc},{});return `<header class="workspace-heading"><div><p class="eyebrow">TOPIC PREPARATION</p><h1>${cursor.getFullYear()}년 ${cursor.getMonth()+1}월 토픽 준비</h1><p>운영일별 준비 상태를 한눈에 보고 필요한 작업만 이어가세요.</p></div><div class="workspace-month"><button class="icon-button" data-action="previous-month" aria-label="이전 달">←</button><button class="button secondary" data-action="today">이번 달</button><button class="icon-button" data-action="next-month" aria-label="다음 달">→</button></div></header><section class="preparation-summary"><div><strong>${dates.length}</strong><span>운영일</span></div><div><strong>${counts.empty||0}</strong><span>미작성</span></div><div><strong>${(counts.review||0)+(counts['print-ready']||0)}</strong><span>검수 중</span></div><div><strong>${counts.approved||0}</strong><span>승인 완료</span></div></section><div class="workspace-controls"><div class="segmented"><button class="${prepareMode==="list"?"is-active":""}" data-prepare-mode="list">목록</button><button class="${prepareMode==="calendar"?"is-active":""}" data-prepare-mode="calendar">달력</button></div><button class="button primary" data-new-topic-date="${nextOpenDate()}">새 토픽 만들기</button></div>${prepareMode==="list"?renderPreparationList():renderCompactCalendar()}${renderDateDrawer()}`}
+  function renderBatchWorkspace(){const approved=Object.values(topics).filter(topic=>topic.date?.startsWith(monthPrefix())&&topic.quality?.status==="approved"&&!topic.hidden).sort((a,b)=>a.date.localeCompare(b.date));return `<header class="workspace-heading"><div><p class="eyebrow">BATCH PRINT</p><h1>일괄 인쇄</h1><p>승인된 토픽만 선택해 학생용 또는 리더용 PDF를 준비합니다.</p></div></header><section class="batch-workspace"><div class="batch-options"><fieldset><legend>인쇄 대상</legend><label><input type="radio" name="print-role" value="student" ${printLeader?"":"checked"}> 학생용</label><label><input type="radio" name="print-role" value="leader" ${printLeader?"checked":""}> 리더용</label></fieldset><strong>${printDates.size}개 토픽 · ${printDates.size*2}페이지</strong></div><div class="batch-list">${approved.length?approved.map(topic=>`<label><input type="checkbox" data-print-date="${topic.date}" ${printDates.has(topic.date)?"checked":""}><time>${topic.date.slice(5)} · ${weekday(topic.date)}</time><span>${koTitle(topic.title.ko||topic.title.en)}</span><i>승인 완료</i></label>`).join(""):`<p>이 달에는 승인 완료된 토픽이 없습니다.</p>`}</div><div class="batch-footer"><button class="button secondary" data-action="select-approved">전체 선택</button><button class="button primary" data-action="batch-print" ${printDates.size?"":"disabled"}>${printDates.size*2}페이지 미리보기</button></div></section>`}
   function renderCalendar(){
     const year=cursor.getFullYear(),month=cursor.getMonth(),days=new Date(year,month+1,0).getDate(),prefix=monthPrefix();
     const monthTopics=Object.values(topics).filter(t=>t.date?.startsWith(prefix));
@@ -315,7 +321,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed"].includes(topic.o
     const expressions=`<section class="simple-section simple-english"><h2>TODAY’S ENGLISH</h2><div>${one.expressions.map(item=>`<p><strong>${esc(item.en)}</strong><span>${esc(item.ko)}</span></p>`).join("")}</div></section>`;
     const quickVote=decisionFlow?`<section class="simple-section simple-reset"><h2>QUICK VOTE</h2><strong>${esc(one.quickVote.en)}</strong><span>${esc(one.quickVote.ko)}</span><div class="simple-vote-options">${one.quickVote.options.map(option=>`<b>□ ${esc(option)}</b>`).join("")}</div><small>${esc(one.quickVote.noReasonKo)}</small></section>`:"";
     const legacyReset=!decisionFlow?`<section class="simple-section simple-reset"><h2>RESET</h2><strong>${esc(two.reset.en)}</strong><span>${esc(two.reset.ko)}</span></section>`:"";
-    const materials=`<div class="simple-materials">${a.materials.map((item,index)=>`<article><b>${index+1}</b><p>${esc(item.en)}</p><span>${esc(item.ko)}</span></article>`).join("")}</div>`;
+    const sourceMaterial=a.materials[0],reviewMaterials=a.materials.slice(1,5),materials=`${sourceMaterial?`<article class="simple-source-material"><p>${esc(sourceMaterial.en)}</p><span>${esc(sourceMaterial.ko)}</span></article>`:""}<div class="simple-materials">${reviewMaterials.map((item,index)=>`<article><b>${index+1}</b><p>${esc(item.en)}</p><span>${esc(item.ko)}</span></article>`).join("")}</div>`;
     const roles=a.roles?.length?`<div class="simple-roles">${a.roles.map(item=>`<p><strong>${esc(item.en)}</strong><span>${esc(item.ko)}</span></p>`).join("")}</div>`:"";
     const support=t.leader.activitySupport,activityNote=support?`${t.leader.activity} 시범: ${support.demoKo} 조용한 참가자: ${support.quietKo} 긴 답변: ${support.longKo} 시간 부족: ${support.timeCutKo} 빠른 합의: ${support.fastAgreementKo}`:t.leader.activity;
     const activity=`<section class="simple-section simple-activity"><h2>TODAY’S ACTIVITY</h2><h3>${esc(a.name)}</h3><p class="simple-instruction">${esc(a.instructionKo)}</p>${materials}${roles}<ol class="simple-steps">${a.stepsKo.map(step=>`<li>${esc(step)}</li>`).join("")}</ol><div class="simple-phrases">${a.phrases.map(line=>`<span>${esc(line)}</span>`).join("")}</div><p class="simple-participation">${esc(a.participationKo)}</p>${leader?simpleLeader(activityNote):""}</section>`;
@@ -424,7 +430,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed"].includes(topic.o
   function dailyNav(t,mode){
     const dates=Object.keys(topics).sort(),index=dates.indexOf(t.date);
     const printActions=canPreviewTopic(t)?`<button data-open="${t.date}:print">학생용 A4</button><button data-print-leader="${t.date}">리더용 A4</button>`:"";
-    return `<div class="daily-nav"><button data-action="calendar">← 월 목록</button><div><strong>${t.date} · ${weekday(t.date)}</strong><span>${lifecycleState(t).label} · 마지막 저장 ${new Date(t.updatedAt||t.createdAt).toLocaleString("ko-KR")}</span>${t.generatedConversation&&t.generationEngine!==Simple.VERSION?'<small class="legacy-format-badge">이전 형식</small>':""}</div><button data-prev-next="${dates[index-1]||""}" ${index<=0?"disabled":""}>이전 날짜</button><button data-prev-next="${dates[index+1]||""}" ${index<0||index>=dates.length-1?"disabled":""}>다음 날짜</button>${printActions}${mode!=="admin"?`<button data-open="${t.date}:admin">토픽 수정</button>`:""}</div>`;
+    return `<div class="daily-nav"><button data-action="calendar">← 토픽 준비</button><div><strong>${t.date} · ${weekday(t.date)}</strong><span>${lifecycleState(t).label} · 마지막 저장 ${new Date(t.updatedAt||t.createdAt).toLocaleString("ko-KR")}</span>${t.generatedConversation&&t.generationEngine!==Simple.VERSION?'<small class="legacy-format-badge">이전 형식</small>':""}</div><nav class="topic-tabs" aria-label="선택한 토픽"><button class="${mode==="admin"?"is-active":""}" data-open="${t.date}:admin">내용 검수</button><button class="${mode==="student"?"is-active":""}" data-open="${t.date}:student" ${canPreviewTopic(t)?"":"disabled"}>학생용</button><button class="${mode==="leader"?"is-active":""}" data-open="${t.date}:leader" ${canPreviewTopic(t)?"":"disabled"}>리더용</button></nav><button data-prev-next="${dates[index-1]||""}" ${index<=0?"disabled":""} aria-label="이전 날짜">←</button><button data-prev-next="${dates[index+1]||""}" ${index<0||index>=dates.length-1?"disabled":""} aria-label="다음 날짜">→</button></div>`;
   }
   function bilingual(en,ko){return `<div class="bilingual"><div class="en">${esc(en)}</div><div class="ko" lang="ko">${esc(ko)}</div></div>`}
   function questions(items,mode="easy",leader=false){
@@ -445,7 +451,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed"].includes(topic.o
     return `<header class="generated-topic-hero"><p class="eyebrow">${esc(t.date)} · ${leader?"LEADER GUIDE":"STUDENT"}</p><h1>${esc(t.title.en)}</h1><p lang="ko">${esc(t.title.ko)}</p></header><div class="generated-screen">${renderGeneratedHandout(t,leader)}</div>`;
   }
   function renderSimpleScreen(t,leader=false){
-    return `<header class="generated-topic-hero"><p class="eyebrow">${esc(t.date)} · SIMPLE CONVERSATION · ${leader?"LEADER":"STUDENT"}</p><h1>${esc(t.title.en)}</h1><p lang="ko">${esc(t.title.ko)}</p></header><div class="generated-screen">${renderSimpleHandout(t,leader)}</div>`;
+    return `<header class="preview-toolbar"><div><strong>${leader?"리더용":"학생용"} A4 미리보기</strong><span>정확히 2페이지</span></div><div class="segmented"><button data-preview-page="1" class="is-active">1페이지</button><button data-preview-page="2">2페이지</button><button data-preview-page="all">전체</button></div><label>확대<select data-preview-zoom><option value="fit">맞춤</option><option value="75">75%</option><option value="100">100%</option></select></label><button class="button primary" ${leader?`data-print-leader="${t.date}"`:`data-open="${t.date}:print"`}>인쇄 준비</button></header><div class="generated-screen preview-surface">${renderSimpleHandout(t,leader)}</div>`;
   }
   function renderStudent(t){
     if(!t)return empty();
@@ -577,6 +583,12 @@ function canPreviewTopic(topic){if(!topic||["running","failed"].includes(topic.o
     document.querySelectorAll("[data-scroll]").forEach(b=>b.onclick=()=>document.getElementById(b.dataset.scroll)?.scrollIntoView({behavior:"smooth",block:"start"}));
     document.querySelectorAll("[data-path]").forEach(input=>input.oninput=()=>{setPath(current(),input.dataset.path,input.value);current().updatedAt=new Date().toISOString();dirty=true;saveDraft()});
     document.querySelectorAll("[data-action]").forEach(b=>b.onclick=()=>handleAction(b.dataset.action));
+    document.querySelectorAll("[data-prepare-mode]").forEach(button=>button.onclick=()=>{prepareMode=button.dataset.prepareMode;drawerDate="";render()});
+    document.querySelectorAll("[data-drawer-date]").forEach(element=>{const open=event=>{const control=event.target.closest("button,details,input");if(control&&control!==element)return;drawerDate=element.dataset.drawerDate;activeDate=drawerDate;render();setTimeout(()=>document.querySelector(".date-drawer [data-drawer-close]")?.focus())};element.onclick=open;element.onkeydown=event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();open(event)}}});
+    document.querySelectorAll("[data-drawer-close]").forEach(button=>button.onclick=()=>{drawerDate="";render()});
+    document.querySelectorAll("[data-preview-page]").forEach(button=>button.onclick=()=>{const surface=button.closest("section")?.querySelector(".preview-surface")||document.querySelector(".preview-surface"),value=button.dataset.previewPage;button.parentElement.querySelectorAll("button").forEach(item=>item.classList.toggle("is-active",item===button));surface?.classList.toggle("show-page-1",value==="1");surface?.classList.toggle("show-page-2",value==="2")});
+    document.querySelectorAll("[data-preview-zoom]").forEach(select=>select.onchange=()=>{const handout=document.querySelector(".preview-surface .simple-handout");if(handout)handout.style.setProperty("--preview-zoom",select.value==="fit"?"1":String(Number(select.value)/100))});
+    document.querySelectorAll("[name='print-role']").forEach(input=>input.onchange=()=>{printLeader=input.value==="leader";render()});
     const operatorTopic=$("#operator-topic"),operatorCreate=document.querySelector("[data-action='operator-create']");
     if(operatorTopic&&operatorCreate)operatorTopic.oninput=()=>{operatorCreate.disabled=!operatorTopic.value.trim()};
     document.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{const[date,target]=b.dataset.open.split(":");if(target==="print"&&!canPreviewTopic(topics[date])){notify("완성되지 않은 토픽은 미리보기·PDF를 사용할 수 없습니다.",true);return}activeDate=date;printDates.clear();if(target==="print")printDates.add(date);view=target;render()});
@@ -584,6 +596,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed"].includes(topic.o
     document.querySelectorAll("[data-create-date]").forEach(b=>b.onclick=()=>createTopic(b.dataset.createDate));
     document.querySelectorAll("[data-auto-date]").forEach(b=>b.onclick=()=>autoCreateDate(b.dataset.autoDate));
     document.querySelectorAll("[data-custom-date]").forEach(b=>b.onclick=()=>openCustomTopic(b.dataset.customDate));
+    document.querySelectorAll("[data-new-topic-date]").forEach(b=>b.onclick=()=>openCustomTopic(b.dataset.newTopicDate));
     document.querySelectorAll("[data-used]").forEach(b=>b.onclick=()=>{const topic=topics[b.dataset.used];topic.operatorStatus={...topic.operatorStatus,used:true};saveTopics("사용 완료로 표시했습니다.")});
     document.querySelectorAll("[data-preview-modal]").forEach(button=>button.onclick=()=>document.querySelector(".a4-preview-dialog")?.showModal());
     document.querySelectorAll("[data-preview-close]").forEach(button=>button.onclick=()=>button.closest("dialog")?.close());
@@ -620,7 +633,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed"].includes(topic.o
     if(action==="timer-start")toggleTimer();
     if(action==="timer-reset"){timerSeconds=0;clearInterval(timerHandle);timerHandle=null;render()}
     if(action==="generate-all")regenerate("all");
-    if(action==="calendar"){view="calendar";printDates.clear();document.title="TheBox Talk Flow";render()}
+    if(action==="calendar"){view="prepare";drawerDate="";printDates.clear();document.title="TheBox Talk Flow";render()}
     if(action==="today"){cursor=new Date();render()}
     if(action==="previous-month"){cursor=new Date(cursor.getFullYear(),cursor.getMonth()-1,1,12);render()}
     if(action==="next-month"){cursor=new Date(cursor.getFullYear(),cursor.getMonth()+1,1,12);render()}
@@ -916,7 +929,7 @@ Create or repair TheBox Talk Flow ${scope} as strict JSON for one mixed-confiden
   }
   function toggleApiKeyEditor(){apiKeyEditing=!apiKeyEditing;apiKeyDraft="";renderApiKeyControls();if(apiKeyEditing)$("#api-key").focus()}
 
-  document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{if(confirmDirty()){view=b.dataset.view;render()}});
+  document.querySelectorAll(".tab[data-view]").forEach(b=>b.onclick=()=>{if(confirmDirty()){view=b.dataset.view;drawerDate="";render()}});
   $("#prev-month").onclick=()=>{cursor=new Date(cursor.getFullYear(),cursor.getMonth()-1,1,12);render()};
   $("#next-month").onclick=()=>{cursor=new Date(cursor.getFullYear(),cursor.getMonth()+1,1,12);render()};
   $("#month-label").onclick=()=>{cursor=new Date();render()};
@@ -941,6 +954,7 @@ Create or repair TheBox Talk Flow ${scope} as strict JSON for one mixed-confiden
     saveSettings();notify(rejectedApiKey?"마스킹 또는 placeholder 문자열은 API 키로 저장할 수 없습니다.":"Talk Flow 전용 설정을 저장했습니다.",rejectedApiKey);render()
   });
   $("#change-api-key").onclick=toggleApiKeyEditor;$("[data-change-api-key]").onclick=()=>{if(!apiKeyEditing)toggleApiKeyEditor()};$("#refresh-models").onclick=startModelsRefresh;$("#test-ai-connection").onclick=startConnectionTest;$("#anthropic-model").onchange=event=>{settings={...settings,anthropicModel:event.target.value,modelFallback:null,connectionStatus:"unchecked"};saveSettings();renderModelControls()};
+  document.querySelectorAll("[data-settings-section]").forEach(button=>button.onclick=()=>{document.querySelectorAll("[data-settings-section]").forEach(item=>item.classList.toggle("is-active",item===button));document.querySelectorAll("[data-settings-panel]").forEach(panel=>panel.hidden=panel.dataset.settingsPanel!==button.dataset.settingsSection)});
   $("#copy-schedule").onclick=()=>{
     const previous=settings.lastSchedule;
     if(!previous){notify("복사할 이전 운영 설정이 없습니다.",true);return}
@@ -961,7 +975,8 @@ Create or repair TheBox Talk Flow ${scope} as strict JSON for one mixed-confiden
   $("#json-import").onchange=event=>{const file=event.target.files?.[0];if(file)importJson(file);event.target.value=""};
   window.addEventListener("beforeunload",event=>{if(dirty){event.preventDefault();event.returnValue=""}});
   window.addEventListener("error",event=>notify(`오류: ${event.message}`,true));
-  const params=new URLSearchParams(location.search);if(params.get("date")&&topics[params.get("date")])activeDate=params.get("date");if(["calendar","student","leader","admin","print"].includes(params.get("view")))view=params.get("view");if(view==="print")printDates.add(activeDate);
+  document.addEventListener("keydown",event=>{if(event.key==="Escape"&&drawerDate){drawerDate="";render()}});
+  const params=new URLSearchParams(location.search);if(params.get("date")&&topics[params.get("date")])activeDate=params.get("date");if(["prepare","batch","student","leader","admin","print"].includes(params.get("view")))view=params.get("view");if(view==="print")printDates.add(activeDate);
   window.TalkFlow={KEYS,STANDARD,validateTopic,validateAll,validatePrint,evaluateRenderedPrint,getTopics:()=>clone(topics),approvedMonth,monthFile,viewerHtml,lifecycle:topic=>clone(lifecycleState(topic)),conversation:window.TalkFlowConversation,sessions:window.TalkFlowSessions,generation:Simple,legacyGeneration:Generation,generateForTest:request=>generateV2Topic(request),renderForTest:(topic,leader=false)=>renderSimpleHandout(topic,leader),canPreviewTopic,getVersions:()=>loadRecord(KEYS.versions),getFeedback:()=>loadRecord(KEYS.feedback)};
   render();
 })();

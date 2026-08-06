@@ -18,17 +18,16 @@
       <span class="brand-mark" aria-hidden="true">T</span>
       <span><strong>TheBox Talk Flow</strong><small>One Topic. Better Conversation.</small></span>
     </a>
-    <nav class="view-tabs" aria-label="화면 선택">
-      <button class="tab is-active" data-view="calendar">일별 관리</button>
-      <button class="tab" data-view="student">학생</button>
-      <button class="tab" data-view="leader">리더</button>
-      <button class="tab" data-view="admin">관리</button>
+    <nav class="view-tabs" aria-label="주요 메뉴">
+      <button class="tab is-active" data-view="prepare">토픽 준비</button>
+      <button class="tab" data-view="batch">일괄 인쇄</button>
+      <button class="tab" data-action="settings">설정</button>
     </nav>
-    <button class="button secondary advanced-button" id="settings-button" aria-label="고급 설정 열기">고급 설정</button>
+    <button class="icon-button advanced-button" id="settings-button" aria-label="설정 열기">⚙</button>
   </header>
 
   <div class="app-shell">
-    <aside class="sidebar" aria-label="토픽 선택">
+    <aside class="sidebar legacy-sidebar" aria-label="토픽 선택">
       <div class="month-nav">
         <button id="prev-month" aria-label="이전 달">←</button>
         <button id="month-label" class="month-label" title="이번 달로 이동"></button>
@@ -56,16 +55,17 @@
   <dialog id="settings-dialog">
     <form method="dialog" class="dialog-card" id="settings-form">
       <div class="dialog-heading">
-        <div><p class="eyebrow">ADVANCED SETTINGS</p><h2>연결 및 기술 설정</h2></div>
+        <div><p class="eyebrow">SETTINGS</p><h2>Talk Flow 설정</h2></div>
         <button value="cancel" class="icon-button" aria-label="닫기">×</button>
       </div>
-      <section class="secret-setting" aria-labelledby="api-key-label">
+      <nav class="settings-nav" aria-label="설정 구역"><button type="button" class="is-active" data-settings-section="connection">AI 연결</button><button type="button" data-settings-section="schedule">운영 일정</button><button type="button" data-settings-section="data">데이터</button></nav>
+      <section class="secret-setting" data-settings-panel="connection" aria-labelledby="api-key-label">
         <div class="secret-setting-heading"><strong id="api-key-label">Anthropic API key</strong><button type="button" id="change-api-key" class="button secondary">키 변경</button></div>
         <p id="api-key-configured" class="field-help">API 키가 저장되어 있지 않습니다.</p>
         <label id="api-key-editor" hidden>새 API 키<input id="api-key" type="password" autocomplete="new-password" placeholder="새 API 키 입력"></label>
         <p class="field-help">실제 키는 화면에 다시 표시하지 않으며 생성 요청에만 사용합니다.</p>
       </section>
-      <section class="model-settings" aria-label="AI 모델 연결 설정">
+      <section class="model-settings" data-settings-panel="connection" aria-label="AI 모델 연결 설정">
         <div class="model-status"><strong id="ai-connection-status">AI 연결 확인 전</strong><span id="model-last-checked">마지막 확인: 없음</span></div>
         <div id="api-key-guidance" class="authentication-guidance" hidden><strong>API 키를 확인할 수 없습니다.</strong><span>키가 만료되었거나 삭제됐을 수 있습니다. 새 API 키를 입력해 주세요.</span><button type="button" class="button primary" data-change-api-key>키 변경</button></div>
         <label>현재 선택 모델<select id="anthropic-model" disabled><option value="">모델 목록을 새로고침하세요</option></select></label>
@@ -73,9 +73,9 @@
         <p id="model-fallback-notice" class="field-help" hidden></p>
         <details id="model-diagnostics" hidden><summary>기술 상세 진단</summary><pre></pre></details>
       </section>
-      <label>GitHub Gist token<input id="gist-token" type="password" autocomplete="off" placeholder="gist 권한 토큰"></label>
-      <label>Talk Flow Gist ID<input id="gist-id" autocomplete="off" placeholder="최초 저장 시 자동 생성"></label>
-      <fieldset class="settings-group"><legend>운영 요일</legend>
+      <label data-settings-panel="data" hidden>GitHub Gist token<input id="gist-token" type="password" autocomplete="off" placeholder="gist 권한 토큰"></label>
+      <label data-settings-panel="data" hidden>Talk Flow Gist ID<input id="gist-id" autocomplete="off" placeholder="최초 저장 시 자동 생성"></label>
+      <fieldset class="settings-group" data-settings-panel="schedule" hidden><legend>운영 요일</legend>
         <label><input type="checkbox" name="operating-day" value="1">월</label>
         <label><input type="checkbox" name="operating-day" value="2">화</label>
         <label><input type="checkbox" name="operating-day" value="3">수</label>
@@ -84,9 +84,9 @@
         <label><input type="checkbox" name="operating-day" value="6">토</label>
         <label><input type="checkbox" name="operating-day" value="0">일</label>
       </fieldset>
-      <label>추가 운영 날짜<input id="additional-dates" placeholder="2026-08-08, 2026-08-22"></label>
-      <label>제외 날짜<input id="excluded-dates" placeholder="2026-08-15, 2026-08-20"></label>
-      <label class="check-option"><input id="exclude-public-holidays" type="checkbox"> 알려진 공휴일을 운영일에서 제외</label>
+      <label data-settings-panel="schedule" hidden>추가 운영 날짜<input id="additional-dates" placeholder="2026-08-08, 2026-08-22"></label>
+      <label data-settings-panel="schedule" hidden>제외 날짜<input id="excluded-dates" placeholder="2026-08-15, 2026-08-20"></label>
+      <label class="check-option" data-settings-panel="schedule" hidden><input id="exclude-public-holidays" type="checkbox"> 알려진 공휴일을 운영일에서 제외</label>
       <div class="button-row">
         <button type="button" id="copy-schedule" class="button secondary">이전 설정 복사</button>
         <button type="button" id="gist-pull" class="button secondary">Gist 불러오기</button>

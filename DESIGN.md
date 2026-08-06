@@ -14,6 +14,18 @@ New topics use the `simple-v1` two-page editorial system. Existing saved topics 
 
 The previous bound-field direction below is retained only for compatibility with existing topics.
 
+## Active workspace direction: preparation first
+
+- The global navigation contains exactly three destinations: `토픽 준비`, `일괄 인쇄`, and `설정`. Topic review, student preview, and leader preview are contextual tabs inside a selected date, not global destinations.
+- `토픽 준비` opens as a chronological operating-date list. A compact month calendar is a secondary view of the same dates and never contains nested work buttons.
+- Each date row shows one lifecycle label and one primary action. Selecting the row opens a 460px right-side date drawer; at phone widths the drawer becomes a full-screen sheet.
+- The drawer preserves focus, closes with its close button, Escape, or backdrop, and restores focus to the selected row. Its contextual tabs are `내용 검수`, `학생용`, and `리더용`.
+- Lifecycle copy is limited to `미작성`, `생성 중`, `검수 필요`, `승인 가능`, `승인 완료`, `생성 실패`, and `이전 형식`. Internal storage and schema states are not exposed.
+- Student and leader previews share a quiet toolbar with page 1/page 2, zoom, and print controls. The paper remains an intact A4 composition and owns preview scrolling.
+- `일괄 인쇄` is a dedicated workspace with approved-date selection, student/leader role choice, exact page count, preview, and print.
+- `설정` uses a two-pane dialog: connection, operating schedule, and data sections on the left; one focused section on the right. Secret values never appear in the DOM.
+- Responsive checkpoints are 375, 768, 1280, and 1600px. The document or chronological list is the only page scroll owner; drawers and A4 preview surfaces own their local overflow.
+
 ## 1. Product and users
 
 Talk Flow is an operational tool for a non-technical study coordinator, a discussion leader, and mixed-confidence adult English learners. The primary job is to move from date selection to a printable conversation guide without exposing storage or API mechanics.
