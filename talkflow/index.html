@@ -8,7 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./styles.css?v=20260806-task-home-history">
+  <link rel="stylesheet" href="./conversation.css">
 </head>
 <body>
   <a class="skip-link" href="#main">본문으로 건너뛰기</a>
@@ -17,17 +18,16 @@
       <span class="brand-mark" aria-hidden="true">T</span>
       <span><strong>TheBox Talk Flow</strong><small>One Topic. Better Conversation.</small></span>
     </a>
-    <nav class="view-tabs" aria-label="화면 선택">
-      <button class="tab is-active" data-view="calendar">일별 관리</button>
-      <button class="tab" data-view="student">학생</button>
-      <button class="tab" data-view="leader">리더</button>
-      <button class="tab" data-view="admin">관리</button>
+    <nav class="view-tabs" aria-label="주요 메뉴">
+      <button class="tab is-active" data-view="prepare">토픽 준비</button>
+      <button class="tab" data-view="batch">일괄 인쇄</button>
+      <button class="tab" data-action="settings">설정</button>
     </nav>
-    <button class="icon-button" id="settings-button" aria-label="설정 열기" title="설정">⚙</button>
+    <button class="icon-button advanced-button" id="settings-button" aria-label="설정 열기">⚙</button>
   </header>
 
   <div class="app-shell">
-    <aside class="sidebar" aria-label="토픽 선택">
+    <aside class="sidebar legacy-sidebar" aria-label="토픽 선택">
       <div class="month-nav">
         <button id="prev-month" aria-label="이전 달">←</button>
         <button id="month-label" class="month-label" title="이번 달로 이동"></button>
@@ -55,23 +55,62 @@
   <dialog id="settings-dialog">
     <form method="dialog" class="dialog-card" id="settings-form">
       <div class="dialog-heading">
-        <div><p class="eyebrow">PRIVATE TO THIS BROWSER</p><h2>연결 및 생성 설정</h2></div>
+        <div><p class="eyebrow">SETTINGS</p><h2>Talk Flow 설정</h2></div>
         <button value="cancel" class="icon-button" aria-label="닫기">×</button>
       </div>
-      <label>Anthropic API key<input id="api-key" type="password" autocomplete="off" placeholder="sk-ant-…"></label>
-      <p class="field-help">키는 Talk Flow 전용 설정 키에만 저장되며 생성 요청 외에는 전송하지 않습니다.</p>
-      <label>GitHub Gist token<input id="gist-token" type="password" autocomplete="off" placeholder="gist 권한 토큰"></label>
-      <label>Talk Flow Gist ID<input id="gist-id" autocomplete="off" placeholder="최초 저장 시 자동 생성"></label>
-      <div class="button-row">
-        <button type="button" id="gist-pull" class="button secondary">Gist 불러오기</button>
-        <button type="button" id="gist-push" class="button secondary">Gist 저장</button>
-        <button value="save" class="button primary">설정 저장</button>
-      </div>
+      <nav class="settings-nav" aria-label="설정 구역"><button type="button" class="is-active" data-settings-section="ai">AI 연결</button><button type="button" data-settings-section="gist">Gist 동기화</button><button type="button" data-settings-section="schedule">운영 일정</button><button type="button" data-settings-section="print">인쇄</button><button type="button" data-settings-section="data">데이터 관리</button></nav>
+      <section class="secret-setting" data-settings-panel="ai" aria-labelledby="api-key-label">
+        <div class="secret-setting-heading"><strong id="api-key-label">Anthropic API key</strong><button type="button" id="change-api-key" class="button secondary">키 변경</button></div>
+        <p id="api-key-configured" class="field-help">API 키가 저장되어 있지 않습니다.</p>
+        <label id="api-key-editor" hidden>새 API 키<input id="api-key" type="password" autocomplete="new-password" placeholder="새 API 키 입력"></label>
+        <p class="field-help">실제 키는 화면에 다시 표시하지 않으며 생성 요청에만 사용합니다.</p>
+      </section>
+      <section class="model-settings" data-settings-panel="ai" aria-label="AI 모델 연결 설정">
+        <div class="model-status"><strong id="ai-connection-status">AI 연결 확인 전</strong><span id="model-last-checked">마지막 확인: 없음</span></div>
+        <div id="api-key-guidance" class="authentication-guidance" hidden><strong>API 키를 확인할 수 없습니다.</strong><span>키가 만료되었거나 삭제됐을 수 있습니다. 새 API 키를 입력해 주세요.</span><button type="button" class="button primary" data-change-api-key>키 변경</button></div>
+        <label>현재 선택 모델<select id="anthropic-model" disabled><option value="">모델 목록을 새로고침하세요</option></select></label>
+        <div class="button-row model-actions"><button type="button" id="refresh-models" class="button secondary">모델 목록 새로고침</button><button type="button" id="test-ai-connection" class="button secondary">연결 테스트</button></div>
+        <p id="model-fallback-notice" class="field-help" hidden></p>
+        <details id="model-diagnostics" hidden><summary>기술 상세 진단</summary><pre></pre></details>
+      </section>
+      <section class="settings-panel" data-settings-panel="gist" hidden><h3>Gist 동기화</h3><p class="field-help">승인 토픽을 전용 Gist 파일로 저장하거나 기존 파일을 불러옵니다.</p><label>GitHub Gist token<input id="gist-token" type="password" autocomplete="off" placeholder="gist 권한 토큰"></label><label>Talk Flow Gist ID<input id="gist-id" autocomplete="off" placeholder="최초 저장 시 자동 생성"></label><div class="button-row"><button type="button" id="gist-pull" class="button secondary">Gist 불러오기</button><button type="button" id="gist-push" class="button primary">Gist 저장</button></div></section>
+      <fieldset class="settings-group" data-settings-panel="schedule" hidden><legend>운영 요일</legend>
+        <label><input type="checkbox" name="operating-day" value="1">월</label>
+        <label><input type="checkbox" name="operating-day" value="2">화</label>
+        <label><input type="checkbox" name="operating-day" value="3">수</label>
+        <label><input type="checkbox" name="operating-day" value="4">목</label>
+        <label><input type="checkbox" name="operating-day" value="5">금</label>
+        <label><input type="checkbox" name="operating-day" value="6">토</label>
+        <label><input type="checkbox" name="operating-day" value="0">일</label>
+      </fieldset>
+      <label data-settings-panel="schedule" hidden>추가 운영 날짜<input id="additional-dates" placeholder="2026-08-08, 2026-08-22"></label>
+      <label data-settings-panel="schedule" hidden>제외 날짜<input id="excluded-dates" placeholder="2026-08-15, 2026-08-20"></label>
+      <label class="check-option" data-settings-panel="schedule" hidden><input id="exclude-public-holidays" type="checkbox"> 알려진 공휴일을 운영일에서 제외</label>
+      <section class="settings-panel" data-settings-panel="print" hidden><h3>인쇄 기본값</h3><label>기본 자료<select id="default-print-role"><option value="student">학생용</option><option value="leader">리더용</option><option value="combined">학생용 + 리더용</option></select></label><label class="check-option"><input id="print-backgrounds" type="checkbox" checked> 배경 그래픽 포함</label><p class="field-help">학생용과 리더용은 토픽당 각각 A4 두 페이지입니다.</p></section>
+      <section class="settings-panel" data-settings-panel="data" hidden><h3>데이터 관리</h3><p class="field-help">JSON에는 API 키와 Gist token이 포함되지 않습니다.</p><div class="button-row"><button type="button" id="settings-export" class="button secondary">월 JSON 내보내기</button><button type="button" id="settings-import" class="button secondary">JSON 가져오기</button></div></section>
+      <div class="button-row settings-save-row"><button type="button" id="copy-schedule" class="button secondary" data-settings-panel="schedule">이전 일정 복사</button><button value="save" class="button primary">설정 저장</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="custom-topic-dialog">
+    <form method="dialog" class="dialog-card" id="custom-topic-form">
+      <div class="dialog-heading"><div><p class="eyebrow">GUIDED GENERATION</p><h2>주제 지정해서 생성</h2></div><button value="cancel" class="icon-button" aria-label="닫기">×</button></div>
+      <input id="custom-date" type="hidden">
+      <label>주제 또는 키워드<input id="custom-keyword" required placeholder="예: 새로운 소비 트렌드"></label>
+      <label>참고 자료 URL 또는 텍스트<textarea id="custom-source" placeholder="https://... 또는 참고할 내용을 붙여넣으세요"></textarea></label>
+      <label>피하고 싶은 내용<input id="custom-avoid" placeholder="선택 입력"></label>
+      <details><summary>추가 옵션</summary><label>회화 방향<select id="custom-mood"><option>가볍고 편한 분위기</option><option selected>경험 중심</option><option>생각 확장</option><option>함께 해결하기</option></select></label></details>
+      <div class="button-row"><button value="cancel" class="button secondary">취소</button><button value="create" class="button primary">토픽 생성하기</button></div>
     </form>
   </dialog>
 
   <input id="json-import" type="file" accept="application/json,.json" hidden>
   <script src="./sample-topics.js"></script>
-  <script src="./app.js"></script>
+  <script src="./anthropic-models.js"></script>
+  <script src="./session-workflow.js"></script>
+  <script src="./conversation-fixtures.js"></script>
+  <script src="./generation-engine.js"></script>
+  <script src="./simple-generation.js?v=20260805-connection-fix-4"></script>
+  <script src="./app.js?v=20260806-final-autonomous"></script>
 </body>
 </html>
