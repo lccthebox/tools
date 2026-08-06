@@ -17,6 +17,8 @@
 - 375, 768, 1280, 1600px tasks·calendar·batch 화면에서 수평 overflow 0을 확인했습니다.
 - 실제 `127.0.0.1:8766` 화면에서 tasks, month drawer, 설정 5구역, 일괄 인쇄의 8개 토픽 32페이지 계산을 확인했습니다.
 
+재현 가능한 증거는 `talkflow/navigation-qa.mjs`, `talkflow/qa.mjs`, `talkflow/conversation-qa.mjs`, `talkflow/print-qa.mjs`에 고정되어 있습니다. 실행 시 브라우저 증거는 `.omo/evidence/task-home-history/final`, PDF 렌더 증거는 `.omo/evidence/talkflow-pdf-render`, 수치 보고서는 `talkflow/.qa-pdf/generation-results.json`에 생성됩니다. 이 결과물은 검수용이라 커밋하지 않습니다.
+
 ## Browser History
 
 tasks → month → review → student page 1 → page 2 이동과 뒤로가기·앞으로가기 역순 복원을 확인했습니다. 학생 2페이지 새로고침, 잘못된 route 정규화, drawer URL 정리, 목록 스크롤과 포커스 복원도 자동 브라우저 검사로 고정했습니다. popstate 과정에서 API 요청과 토픽 저장은 발생하지 않았습니다.

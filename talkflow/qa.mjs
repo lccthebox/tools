@@ -144,6 +144,8 @@ try {
   check("public viewer contains approved topics", await viewer.locator(".topic-hero").count() === 8);
   check("public viewer has no admin controls", await viewer.locator(".admin-toolbar,.leader-toolbar").count() === 0);
   check("public viewer no horizontal overflow", await viewer.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1));
+  const hostileViewerMarkup=await page.evaluate(()=>{const topic=structuredClone(Object.values(TalkFlow.approvedMonth())[0]);topic.date='<img src=x onerror="window.xssExecuted=true">';topic.title.en='<img src=x onerror="window.xssExecuted=true">';return TalkFlow.viewerHtml({"2026-08-03":topic})});
+  await viewer.addInitScript(()=>{window.xssExecuted=false});await viewer.setContent(hostileViewerMarkup,{waitUntil:"load"});check("public viewer escapes imported markup",await viewer.evaluate(()=>window.xssExecuted!==true)&&await viewer.locator("img[src='x']").count()===0);
   await viewer.screenshot({ path: join(evidence, "public-viewer-390.png"), fullPage: true });
   await viewer.close();
   await page.goto(`http://127.0.0.1:${port}/?section=print&date=2026-08-03&role=student`, { waitUntil: "networkidle" });
