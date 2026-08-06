@@ -9,13 +9,14 @@
   const Generation=window.TalkFlowGeneration;
   const Simple=window.TalkFlowSimpleGeneration;
   const AnthropicModels=window.TalkFlowAnthropicModels;
+  const directAiAllowed=location.protocol==="file:"||["localhost","127.0.0.1"].includes(location.hostname);
   const $=s=>document.querySelector(s);
   const esc=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const koTitle=value=>esc(value).replace(/ (?=\S+$)/,"&nbsp;");
   const clone=value=>JSON.parse(JSON.stringify(value));
   let storedApiKey="",apiKeyConfigured=false,apiKeyDraft="",apiKeyEditing=false;
   let topics=loadTopics(),settings=loadSettings(),activeDate=Object.keys(topics).sort()[0]||today(),cursor=new Date("2026-08-01T12:00:00"),view="prepare",prepareMode="tasks",prepareFilter="all",drawerDate="",drawerReturnFocusDate="",detailTab="review",previewPage="1",previewZoom="fit",settingsPanel="ai",historyIndex=0,isRestoringRoute=false,dirty=false;
-  let printDates=new Set(),printLeader=false;
+  let printDates=new Set(),printLeader=false,printCombined=false;
   let timerSeconds=0,timerHandle=null;
   let connectionTestController=null,connectionTestPromise=null,modelsRefreshPromise=null;
 
@@ -38,7 +39,7 @@
     }catch(error){setTimeout(()=>notify(`저장 데이터 복원 실패: ${error.message}`,true));return clone(window.TALKFLOW_SAMPLE_TOPICS||{})}
   }
   function loadSettings(){try{const value=JSON.parse(localStorage.getItem(KEYS.settings)||"{}"),key=typeof value.apiKey==="string"?value.apiKey.trim():"";storedApiKey=key;apiKeyConfigured=Boolean(key);delete value.apiKey;return value}catch{storedApiKey="";apiKeyConfigured=false;return{}}}
-  function getStoredAnthropicApiKey(){if(!storedApiKey){const error=new Error("Anthropic API 키를 먼저 입력하세요.");error.stage="models";error.type="missing_api_key";throw error}return storedApiKey}
+  function getStoredAnthropicApiKey(){if(!directAiAllowed){const error=new Error("공개 Preview에서는 AI 생성이 비활성화되어 있습니다.");error.stage="models";error.type="preview_ai_disabled";throw error}if(!storedApiKey){const error=new Error("Anthropic API 키를 먼저 입력하세요.");error.stage="models";error.type="missing_api_key";throw error}return storedApiKey}
   function anthropicHeaders(){return{"content-type":"application/json","x-api-key":getStoredAnthropicApiKey(),"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true","accept":"application/json"}}
   function modelById(id){return(settings.availableModels||[]).find(model=>model.id===id)}
   function selectedModelLabel(id=settings.anthropicModel){const model=modelById(id);return model?.displayName||id||"선택 안 됨"}
@@ -79,10 +80,8 @@ function canPreviewTopic(topic){if(!topic||["running","failed"].includes(topic.o
     const knownHolidays=["2026-08-15","2026-08-17","2026-09-24","2026-09-25","2026-09-26","2026-10-03","2026-10-05","2026-10-09"];
     return{weekdays:settings.operatingWeekdays||[1,4],included:settings.additionalDates||[],excluded:[...(settings.excludedDates||[]),...(settings.excludePublicHolidays?knownHolidays:[])]}
   }
-  function operatingDates(){
-    const config=operationConfig(),scheduled=window.TalkFlowSessions.operatingDates(monthPrefix(),config.weekdays,config.excluded);
-    return [...new Set([...scheduled,...config.included.filter(date=>date.startsWith(monthPrefix())&&!config.excluded.includes(date))])].sort()
-  }
+  function operatingDatesFor(prefix){const config=operationConfig(),scheduled=window.TalkFlowSessions.operatingDates(prefix,config.weekdays,config.excluded);return[...new Set([...scheduled,...config.included.filter(date=>date.startsWith(prefix)&&!config.excluded.includes(date))])].sort()}
+  function operatingDates(){return operatingDatesFor(monthPrefix())}
   function lifecycleState(topic){
     if(!topic)return{key:"empty",label:"미작성",action:"토픽 만들기"};
     if(topic.operatorStatus?.generationStatus==="failed")return{key:"generation-failed",label:"생성 실패",action:"실패 확인"};
@@ -169,10 +168,10 @@ function canPreviewTopic(topic){if(!topic||["running","failed"].includes(topic.o
   function normalizeRoute(input){
     const nowMonth=monthValue(),route={section:["topics","print","settings"].includes(input.section)?input.section:"topics"};
     if(route.section==="print"){if(input.date&&topics[input.date]){route.date=input.date;route.role=input.role==="leader"?"leader":"student"}return route}
-    if(route.section==="settings"){route.panel=["ai","schedule","data"].includes(input.panel)?input.panel:"ai";return route}
+    if(route.section==="settings"){route.panel=["ai","gist","schedule","print","data"].includes(input.panel)?input.panel:"ai";return route}
     const legacyView={prepare:"tasks",admin:"month",student:"month",leader:"month"}[input.view],validMonth=/^\d{4}-\d{2}$/.test(input.month||"")?input.month:nowMonth;
     route.view=["tasks","month","calendar"].includes(input.view)?input.view:legacyView||"tasks";route.month=validMonth;
-    const validDate=/^\d{4}-\d{2}-\d{2}$/.test(input.date||"")&&(topics[input.date]||input.date.startsWith(`${validMonth}-`));
+    const validDate=/^\d{4}-\d{2}-\d{2}$/.test(input.date||"")&&(topics[input.date]||operatingDatesFor(validMonth).includes(input.date));
     if(validDate){route.date=input.date;route.tab=["review","student","leader"].includes(input.tab)?input.tab:"review";if(["student","leader"].includes(route.tab))route.page=["1","2"].includes(String(input.page))?String(input.page):"1"}
     return route;
   }
@@ -182,19 +181,19 @@ function canPreviewTopic(topic){if(!topic||["running","failed"].includes(topic.o
     const normalized=normalizeRoute(route),previousDrawerDate=drawerDate;isRestoringRoute=true;
     if(normalized.section!=="settings"&&$("#settings-dialog")?.open)$("#settings-dialog").close();
     if(normalized.section==="topics"){
-      cursor=new Date(`${normalized.month}-01T12:00:00`);prepareMode=normalized.view;drawerDate="";detailTab=normalized.tab||"review";previewPage=normalized.page||"1";
+      cursor=new Date(`${normalized.month}-01T12:00:00`);prepareMode=normalized.view;prepareFilter=history.state?.ui?.filter||prepareFilter;previewZoom=history.state?.ui?.zoom||previewZoom;drawerDate="";detailTab=normalized.tab||"review";previewPage=normalized.page||"1";
       if(normalized.date){activeDate=normalized.date;if(normalized.tab==="student")view="student";else if(normalized.tab==="leader")view="leader";else{view="prepare";drawerDate=normalized.date}}
       else view="prepare";
     }else if(normalized.section==="print"){drawerDate="";if(normalized.date){activeDate=normalized.date;printDates=new Set([activeDate]);printLeader=normalized.role==="leader";view="print"}else view="batch"}else{settingsPanel=normalized.panel;view="prepare";drawerDate=""}
-    render();
+    render();document.body.classList.toggle("drawer-open",Boolean(drawerDate));
     if(normalized.section==="settings")openSettingsDialog(false);
     requestAnimationFrame(()=>{scrollTo(0,history.state?.scrollY||0);const focusDate=!normalized.date&&(drawerReturnFocusDate||previousDrawerDate);if(focusDate){document.querySelector(`[data-drawer-date="${focusDate}"]`)?.focus();drawerReturnFocusDate=""}isRestoringRoute=false});return normalized;
   }
   function navigateTo(input,mode="push"){
     const route=normalizeRoute(input),url=routeUrl(route),current=`${location.pathname}${location.search}`,next=`${url.pathname}${url.search}`;
-    history.replaceState({...history.state,talkflow:true,index:historyIndex,route:routeFromState(),scrollY:scrollY},"",location.href);
+    const ui={filter:prepareFilter,zoom:previewZoom};history.replaceState({...history.state,talkflow:true,index:historyIndex,route:routeFromState(),scrollY:scrollY,ui},"",location.href);
     if(next===current&&mode==="push")mode="replace";
-    if(mode==="push"){historyIndex+=1;history.pushState({talkflow:true,index:historyIndex,route,scrollY:0},"",url)}else history.replaceState({talkflow:true,index:historyIndex,route,scrollY:history.state?.scrollY||0},"",url);
+    if(mode==="push"){historyIndex+=1;history.pushState({talkflow:true,index:historyIndex,route,scrollY:0,ui},"",url)}else history.replaceState({...history.state,talkflow:true,index:historyIndex,route,scrollY:history.state?.scrollY||0,ui},"",url);
     applyRoute(route);notifyRoute(route);
   }
   function notifyRoute(route){const labels={tasks:"해야 할 일",month:"전체 월",calendar:"달력",student:"학생용",leader:"리더용",review:"내용 검수"};notify(route.section==="print"?"일괄 인쇄":route.section==="settings"?"설정":labels[route.tab]||labels[route.view]||"토픽 준비")}
@@ -219,7 +218,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed"].includes(topic.o
   function renderCompactCalendar(){const days=new Date(cursor.getFullYear(),cursor.getMonth()+1,0).getDate(),prefix=monthPrefix(),operation=new Set(operatingDates()),offset=(new Date(`${prefix}-01T12:00:00`).getDay()+6)%7;return `<div class="weekday-row" aria-hidden="true">${["월","화","수","목","금","토","일"].map(day=>`<span>${day}</span>`).join("")}</div><section class="simple-month-grid">${Array.from({length:offset},()=>'<span></span>').join("")}${Array.from({length:days},(_,index)=>{const date=`${prefix}-${String(index+1).padStart(2,"0")}`,topic=topics[date],state=lifecycleState(topic),available=operation.has(date),title=topic?topic.title?.ko||topic.title?.en:"미작성";return `<button class="simple-calendar-cell ${available?state.key:"off"}" ${available?`data-drawer-date="${date}" aria-label="${date} ${esc(title)} ${state.label}"`:"disabled"}><time>${index+1}</time>${available?`<i aria-hidden="true"></i><strong>${topic?koTitle(title):"＋"}</strong>`:""}</button>`}).join("")}</section>`}
   function renderDateDrawer(){if(!drawerDate)return"";const topic=topics[drawerDate],state=lifecycleState(topic);return `<div class="drawer-backdrop" data-drawer-close></div><aside class="date-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title"><header><button class="drawer-back" data-drawer-close>← ${cursor.getMonth()+1}월 전체 월</button><button class="icon-button" data-drawer-close aria-label="닫기">×</button></header><div class="drawer-title"><span>${drawerDate} · ${weekday(drawerDate)}</span><h2 id="drawer-title">${topic?koTitle(topic.title?.ko||topic.title?.en):"아직 토픽이 없습니다"}</h2><span class="status-pill ${state.key}">${state.label}</span></div>${topic?`<nav class="drawer-tabs" aria-label="토픽 화면"><button class="is-active" data-open="${drawerDate}:admin">내용 검수</button><button data-open="${drawerDate}:student" ${canPreviewTopic(topic)?"":"disabled"}>학생용</button><button data-open="${drawerDate}:leader" ${canPreviewTopic(topic)?"":"disabled"}>리더용</button></nav><section class="drawer-summary"><h3>${state.key==="generation-failed"?"생성 문제를 해결해 주세요":state.key==="approved"?"출력할 자료를 선택하세요":"내용을 확인해 주세요"}</h3><p>${state.key==="generation-failed"?"실패한 부분만 다시 생성하거나 AI 설정을 확인할 수 있습니다.":state.key==="approved"?"학생용과 리더용 모두 두 페이지로 준비되어 있습니다.":"확인 항목을 검토한 뒤 승인할 수 있습니다."}</p>${primaryAction(drawerDate,topic)}</section>`:`<section class="drawer-create"><label>주제<input data-drawer-topic placeholder="예: 온라인 리뷰"></label><button class="button primary" data-custom-date="${drawerDate}">토픽 만들기</button><button class="button secondary" data-auto-date="${drawerDate}">추천 주제</button></section>`}</aside>`}
   function renderPreparationWorkspace(){const dates=operatingDates(),counts=dates.reduce((acc,date)=>{const key=lifecycleState(topics[date]).key;acc[key]=(acc[key]||0)+1;return acc},{}),review=(counts.review||0)+(counts['print-ready']||0)+(counts.draft||0);return `<header class="workspace-heading compact-heading"><div class="month-title"><div><h1>${cursor.getFullYear()}년 ${cursor.getMonth()+1}월</h1><p>승인 ${counts.approved||0} · 검수 ${review} · 생성 실패 ${counts['generation-failed']||0} · 미작성 ${counts.empty||0}</p></div><div class="workspace-month"><button class="icon-button" data-action="previous-month" aria-label="이전 달">←</button><button class="text-action" data-action="today">이번 달</button><button class="icon-button" data-action="next-month" aria-label="다음 달">→</button></div></div><nav class="workspace-views" aria-label="토픽 준비 화면">${[["tasks","해야 할 일"],["month","전체 월"],["calendar","달력"]].map(([key,label])=>`<button class="${prepareMode===key?"is-active":""}" data-prepare-mode="${key}" aria-selected="${prepareMode===key}">${label}</button>`).join("")}</nav></div><button class="button primary" data-new-topic-date="${nextOpenDate()}">이번 달 토픽 만들기</button></header>${prepareMode==="tasks"?renderTaskHome():prepareMode==="month"?renderMonthList():renderCompactCalendar()}${renderDateDrawer()}`}
-  function renderBatchWorkspace(){const approved=Object.values(topics).filter(topic=>topic.date?.startsWith(monthPrefix())&&topic.quality?.status==="approved"&&!topic.hidden).sort((a,b)=>a.date.localeCompare(b.date));return `<header class="workspace-heading"><div><p class="eyebrow">BATCH PRINT</p><h1>일괄 인쇄</h1><p>승인된 토픽만 선택해 학생용 또는 리더용 PDF를 준비합니다.</p></div></header><section class="batch-workspace"><div class="batch-options"><fieldset><legend>인쇄 대상</legend><label><input type="radio" name="print-role" value="student" ${printLeader?"":"checked"}> 학생용</label><label><input type="radio" name="print-role" value="leader" ${printLeader?"checked":""}> 리더용</label></fieldset><strong>${printDates.size}개 토픽 · ${printDates.size*2}페이지</strong></div><div class="batch-list">${approved.length?approved.map(topic=>`<label><input type="checkbox" data-print-date="${topic.date}" ${printDates.has(topic.date)?"checked":""}><time>${topic.date.slice(5)} · ${weekday(topic.date)}</time><span>${koTitle(topic.title.ko||topic.title.en)}</span><i>승인 완료</i></label>`).join(""):`<p>이 달에는 승인 완료된 토픽이 없습니다.</p>`}</div><div class="batch-footer"><button class="button secondary" data-action="select-approved">전체 선택</button><button class="button primary" data-action="batch-print" ${printDates.size?"":"disabled"}>${printDates.size*2}페이지 미리보기</button></div></section>`}
+  function renderBatchWorkspace(){const approved=Object.values(topics).filter(topic=>topic.date?.startsWith(monthPrefix())&&topic.quality?.status==="approved"&&!topic.hidden).sort((a,b)=>a.date.localeCompare(b.date)),pagesPerTopic=printCombined?4:2;return `<header class="workspace-heading"><div><p class="eyebrow">BATCH PRINT</p><h1>일괄 인쇄</h1><p>승인된 토픽만 선택해 학생용·리더용 PDF를 준비합니다.</p></div></header><section class="batch-workspace"><div class="batch-options"><fieldset><legend>인쇄 대상</legend><label><input type="radio" name="print-role" value="student" ${!printLeader&&!printCombined?"checked":""}> 학생용</label><label><input type="radio" name="print-role" value="leader" ${printLeader&&!printCombined?"checked":""}> 리더용</label><label><input type="radio" name="print-role" value="combined" ${printCombined?"checked":""}> 학생용 + 리더용</label></fieldset><strong>${printDates.size}개 토픽 · ${printDates.size*pagesPerTopic}페이지</strong></div><div class="batch-list">${approved.length?approved.map(topic=>`<label><input type="checkbox" data-print-date="${topic.date}" ${printDates.has(topic.date)?"checked":""}><time>${topic.date.slice(5)} · ${weekday(topic.date)}</time><span>${koTitle(topic.title.ko||topic.title.en)}</span><small>학생 2 · 리더 2</small><i>승인 완료</i></label>`).join(""):`<p>이 달에는 승인 완료된 토픽이 없습니다.</p>`}</div><div class="batch-footer"><button class="button secondary" data-action="select-approved">전체 선택</button><button class="button primary" data-action="batch-print" ${printDates.size?"":"disabled"}>${printDates.size*pagesPerTopic}페이지 미리보기</button></div></section>`}
   function closeDateDrawer(){drawerReturnFocusDate=drawerDate;if(history.state?.talkflow&&historyIndex>0){history.back();return}navigateTo({section:"topics",view:prepareMode,month:monthValue()},"replace")}
   function renderCalendar(){
     const year=cursor.getFullYear(),month=cursor.getMonth(),days=new Date(year,month+1,0).getDate(),prefix=monthPrefix();
@@ -464,7 +463,9 @@ function canPreviewTopic(topic){if(!topic||["running","failed"].includes(topic.o
     if(blocked.length)return `<div class="generation-blocked"><p class="eyebrow">PRINT BLOCKED</p><h1>완성되지 않은 토픽은 PDF로 출력할 수 없습니다.</h1><p>${blocked.map(topic=>`${esc(topic.date)} · ${esc(lifecycleState(topic).label)}`).join("<br>")}</p><button class="button secondary" data-action="calendar">월 목록으로 돌아가기</button></div>`;
     document.title=items.length===1?`${items[0].date}_TheBox_TalkFlow_${safeFilename(items[0].title.ko)}`:`${monthPrefix()}_TheBox_TalkFlow_${items.length}topics`;
     const canConfirm=items.length===1&&items[0].quality?.status==="approved"&&!["checked","printed"].includes(items[0].operatorStatus?.printStatus);
-    return `<div class="print-toolbar"><button class="button secondary" data-action="calendar">← 월 목록으로</button><span>${items.length}개 토픽 · ${items.length*2}페이지</span><button class="button secondary" data-action="toggle-print-role">${printLeader?"학생용 A4":"리더용 A4"}</button>${canConfirm?`<button class="button secondary" data-action="confirm-print">A4 확인 완료</button>`:""}<button class="button primary" data-action="print-now">A4 PDF / 인쇄</button></div><div class="paper-stack">${items.map(t=>renderHandout(t,printLeader)).join("")}</div>`;
+    const pagesPerTopic=printCombined?4:2,roleLabel=printCombined?"학생용 + 리더용":printLeader?"리더용":"학생용";
+    const pages=items.map(topic=>printCombined?`${renderHandout(topic,false)}${renderHandout(topic,true)}`:renderHandout(topic,printLeader)).join("");
+    return `<div class="print-toolbar"><button class="button secondary" data-action="calendar">← 월 목록으로</button><span>${roleLabel} · ${items.length}개 토픽 · ${items.length*pagesPerTopic}페이지</span>${canConfirm?`<button class="button secondary" data-action="confirm-print">A4 확인 완료</button>`:""}<button class="button primary" data-action="print-now">PDF 저장 / 인쇄</button></div><div class="paper-stack">${pages}</div>`;
   }
   function safeFilename(value){return String(value||"topic").replace(/[\\/:*?"<>|]/g,"").replace(/\s+/g,"_")}
   function empty(){return `<div class="empty-state"><p class="eyebrow">OPEN A DATE</p><h1>선택한 날짜에 토픽이 없습니다.</h1><p>관리 화면에서 새 토픽을 만들거나 JSON을 가져와 시작하세요.</p><button class="button primary" data-action="create">새 토픽 만들기</button></div>`}
@@ -496,7 +497,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed"].includes(topic.o
     return `<header class="generated-topic-hero"><p class="eyebrow">${esc(t.date)} · ${leader?"LEADER GUIDE":"STUDENT"}</p><h1>${esc(t.title.en)}</h1><p lang="ko">${esc(t.title.ko)}</p></header><div class="generated-screen">${renderGeneratedHandout(t,leader)}</div>`;
   }
   function renderSimpleScreen(t,leader=false){
-    return `<header class="preview-toolbar"><div><strong>${leader?"리더용":"학생용"} A4 미리보기</strong><span>정확히 2페이지</span></div><div class="segmented"><button data-preview-page="1" class="${previewPage==="1"?"is-active":""}">1페이지</button><button data-preview-page="2" class="${previewPage==="2"?"is-active":""}">2페이지</button></div><label>확대<select data-preview-zoom><option value="fit">맞춤</option><option value="75">75%</option><option value="100">100%</option></select></label><button class="button primary" ${leader?`data-print-leader="${t.date}"`:`data-open="${t.date}:print"`}>인쇄 준비</button></header><div class="generated-screen preview-surface show-page-${previewPage}">${renderSimpleHandout(t,leader)}</div>`;
+    return `<header class="preview-toolbar"><div><strong>${leader?"리더용":"학생용"} A4 미리보기</strong><span>정확히 2페이지</span></div><div class="segmented"><button data-preview-page="1" class="${previewPage==="1"?"is-active":""}">1페이지</button><button data-preview-page="2" class="${previewPage==="2"?"is-active":""}">2페이지</button></div><label>확대<select data-preview-zoom><option value="fit" ${previewZoom==="fit"?"selected":""}>페이지 맞춤</option><option value="75" ${previewZoom==="75"?"selected":""}>75%</option><option value="100" ${previewZoom==="100"?"selected":""}>100%</option></select></label><button class="button primary" ${leader?`data-print-leader="${t.date}"`:`data-open="${t.date}:print"`}>PDF 저장 / 인쇄</button></header><div class="generated-screen preview-surface show-page-${previewPage}">${renderSimpleHandout(t,leader)}</div>`;
   }
   function renderStudent(t){
     if(!t)return empty();
@@ -634,8 +635,8 @@ function canPreviewTopic(topic){if(!topic||["running","failed"].includes(topic.o
     document.querySelectorAll("[data-drawer-date]").forEach(element=>{const open=event=>{const control=event.target.closest("button,details,input");if(control&&control!==element)return;drawerReturnFocusDate=element.dataset.drawerDate;navigateTo({section:"topics",view:prepareMode,month:monthValue(),date:element.dataset.drawerDate,tab:"review"});setTimeout(()=>document.querySelector(".date-drawer [data-drawer-close]")?.focus())};element.onclick=open;element.onkeydown=event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();open(event)}}});
     document.querySelectorAll("[data-drawer-close]").forEach(button=>button.onclick=closeDateDrawer);
     document.querySelectorAll("[data-preview-page]").forEach(button=>button.onclick=()=>navigateTo({section:"topics",view:prepareMode,month:monthValue(),date:activeDate,tab:view==="leader"?"leader":"student",page:button.dataset.previewPage==="all"?"1":button.dataset.previewPage}));
-    document.querySelectorAll("[data-preview-zoom]").forEach(select=>select.onchange=()=>{const handout=document.querySelector(".preview-surface .simple-handout");if(handout)handout.style.setProperty("--preview-zoom",select.value==="fit"?"1":String(Number(select.value)/100))});
-    document.querySelectorAll("[name='print-role']").forEach(input=>input.onchange=()=>{printLeader=input.value==="leader";render()});
+    document.querySelectorAll("[data-preview-zoom]").forEach(select=>select.onchange=()=>{previewZoom=select.value;const handout=document.querySelector(".preview-surface .simple-handout");if(handout)handout.style.setProperty("--preview-zoom",previewZoom==="fit"?"1":String(Number(previewZoom)/100));navigateTo(routeFromState(),"replace")});
+    document.querySelectorAll("[name='print-role']").forEach(input=>input.onchange=()=>{printCombined=input.value==="combined";printLeader=input.value==="leader";render()});
     const operatorTopic=$("#operator-topic"),operatorCreate=document.querySelector("[data-action='operator-create']");
     if(operatorTopic&&operatorCreate)operatorTopic.oninput=()=>{operatorCreate.disabled=!operatorTopic.value.trim()};
     document.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{const[date,target]=b.dataset.open.split(":");if(target==="print"&&!canPreviewTopic(topics[date])){notify("완성되지 않은 토픽은 미리보기·PDF를 사용할 수 없습니다.",true);return}activeDate=date;printDates.clear();if(target==="print"){navigateTo({section:"print",date,role:"student"});return}const reviewEditor=target==="admin";navigateTo({section:"topics",view:prepareMode,month:date.slice(0,7),date,tab:target==="student"?"student":target==="leader"?"leader":"review",page:["student","leader"].includes(target)?"1":undefined});if(reviewEditor){view="admin";drawerDate="";render()}});
@@ -983,12 +984,12 @@ Create or repair TheBox Talk Flow ${scope} as strict JSON for one mixed-confiden
   $("#new-topic").onclick=()=>{const date=prompt("새 토픽 날짜 (YYYY-MM-DD)",`${monthPrefix()}-01`);if(date&&/^\d{4}-\d{2}-\d{2}$/.test(date)){activeDate=date;createTopic(date)}};
   function openSettingsDialog(push=true){
     if(push){navigateTo({section:"settings",panel:settingsPanel});return}
-    apiKeyEditing=false;apiKeyDraft="";renderApiKeyControls();$("#gist-token").value="";$("#gist-token").placeholder=settings.gistToken?"Gist token이 저장되어 있습니다.":"gist 권한 토큰";$("#gist-id").value="";$("#gist-id").placeholder=settings.gistId?"Gist ID가 저장되어 있습니다.":"gist 파일 ID";
+    apiKeyEditing=false;apiKeyDraft="";renderApiKeyControls();$("#gist-token").value="";$("#gist-token").placeholder=settings.gistToken?"Gist token이 저장되어 있습니다.":"gist 권한 토큰";$("#gist-id").value="";$("#gist-id").placeholder=settings.gistId?"Gist ID가 저장되어 있습니다.":"gist 파일 ID";$("#default-print-role").value=settings.defaultPrintRole||"student";$("#print-backgrounds").checked=settings.printBackgrounds!==false;
     const weekdays=settings.operatingWeekdays||[1,4];
     document.querySelectorAll("[name='operating-day']").forEach(input=>input.checked=weekdays.includes(Number(input.value)));
     $("#excluded-dates").value=(settings.excludedDates||[]).join(", ");
     $("#additional-dates").value=(settings.additionalDates||[]).join(", ");
-    $("#exclude-public-holidays").checked=Boolean(settings.excludePublicHolidays);renderModelControls();
+    $("#exclude-public-holidays").checked=Boolean(settings.excludePublicHolidays);renderModelControls();if(!directAiAllowed){$("#change-api-key").disabled=true;$("#refresh-models").disabled=true;$("#test-ai-connection").disabled=true;$("#api-key-configured").textContent="공개 Preview에서는 AI 연결과 생성이 비활성화되어 있습니다."}
     document.querySelectorAll("[data-settings-section]").forEach(item=>item.classList.toggle("is-active",item.dataset.settingsSection===settingsPanel));document.querySelectorAll("[data-settings-panel]").forEach(panel=>panel.hidden=panel.dataset.settingsPanel!==settingsPanel);
     if(!$("#settings-dialog").open)$("#settings-dialog").showModal()
   }
@@ -1000,7 +1001,7 @@ Create or repair TheBox Talk Flow ${scope} as strict JSON for one mixed-confiden
     const parseDates=id=>$(id).value.split(",").map(value=>value.trim()).filter(value=>/^\d{4}-\d{2}-\d{2}$/.test(value));
     const excludedDates=parseDates("#excluded-dates"),additionalDates=parseDates("#additional-dates"),excludePublicHolidays=$("#exclude-public-holidays").checked;
     apiKeyDraft=apiKeyEditing?$("#api-key").value.trim():"";const rejectedApiKey=apiKeyEditing&&Boolean(apiKeyDraft)&&isMaskedApiKey(apiKeyDraft);if(apiKeyEditing&&!isMaskedApiKey(apiKeyDraft)){storedApiKey=apiKeyDraft;apiKeyConfigured=true;settings={...settings,connectionStatus:"unchecked"};$("#api-key-guidance").hidden=true;$("#model-diagnostics").hidden=true}
-    apiKeyDraft="";apiKeyEditing=false;settings={...settings,anthropicModel:$("#anthropic-model").value||settings.anthropicModel||AnthropicModels.DEFAULT_MODEL,gistToken:$("#gist-token").value.trim()||settings.gistToken||"",gistId:$("#gist-id").value.trim()||settings.gistId||"",operatingWeekdays,excludedDates,additionalDates,excludePublicHolidays,lastSchedule:{operatingWeekdays,excludedDates,additionalDates,excludePublicHolidays}};
+    apiKeyDraft="";apiKeyEditing=false;settings={...settings,anthropicModel:$("#anthropic-model").value||settings.anthropicModel||AnthropicModels.DEFAULT_MODEL,gistToken:$("#gist-token").value.trim()||settings.gistToken||"",gistId:$("#gist-id").value.trim()||settings.gistId||"",operatingWeekdays,excludedDates,additionalDates,excludePublicHolidays,defaultPrintRole:$("#default-print-role").value,printBackgrounds:$("#print-backgrounds").checked,lastSchedule:{operatingWeekdays,excludedDates,additionalDates,excludePublicHolidays}};
     saveSettings();notify(rejectedApiKey?"마스킹 또는 placeholder 문자열은 API 키로 저장할 수 없습니다.":"Talk Flow 전용 설정을 저장했습니다.",rejectedApiKey);render()
   });
   $("#change-api-key").onclick=toggleApiKeyEditor;$("[data-change-api-key]").onclick=()=>{if(!apiKeyEditing)toggleApiKeyEditor()};$("#refresh-models").onclick=startModelsRefresh;$("#test-ai-connection").onclick=startConnectionTest;$("#anthropic-model").onchange=event=>{settings={...settings,anthropicModel:event.target.value,modelFallback:null,connectionStatus:"unchecked"};saveSettings();renderModelControls()};
@@ -1021,13 +1022,13 @@ Create or repair TheBox Talk Flow ${scope} as strict JSON for one mixed-confiden
     await generateAndStore({date,keyword,mood,source,avoid:$("#custom-avoid").value.trim()});
     $("#custom-topic-dialog").close();
   });
-  $("#gist-push").onclick=gistPush;$("#gist-pull").onclick=gistPull;
+  $("#gist-push").onclick=gistPush;$("#gist-pull").onclick=gistPull;$("#settings-export").onclick=()=>handleAction("export");$("#settings-import").onclick=()=>$("#json-import").click();
   $("#json-import").onchange=event=>{const file=event.target.files?.[0];if(file)importJson(file);event.target.value=""};
   window.addEventListener("beforeunload",event=>{if(dirty){event.preventDefault();event.returnValue=""}});
   window.addEventListener("error",event=>notify(`오류: ${event.message}`,true));
   $("#settings-dialog").addEventListener("close",()=>{if(isRestoringRoute||parseRouteFromUrl().section!=="settings")return;if(history.state?.talkflow&&historyIndex>0)history.back();else navigateTo({section:"topics",view:"tasks",month:monthValue()},"replace")});
   document.addEventListener("keydown",event=>{if(!drawerDate)return;if(event.key==="Escape"){closeDateDrawer();return}if(event.key==="Tab"){const drawer=document.querySelector(".date-drawer"),focusable=[...drawer.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')];if(!focusable.length)return;const first=focusable[0],last=focusable.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus()}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus()}}});
   window.addEventListener("popstate",event=>{if(dirty&&!confirmDirty()){history.go(1);return}historyIndex=Number(event.state?.index||0);applyRoute(parseRouteFromUrl())});
-  const initialRoute=parseRouteFromUrl();historyIndex=Number(history.state?.index||0);history.replaceState({talkflow:true,index:historyIndex,route:initialRoute,scrollY:0},"",routeUrl(initialRoute));applyRoute(initialRoute);
+  const initialRoute=parseRouteFromUrl();historyIndex=Number(history.state?.index||0);history.replaceState({...history.state,talkflow:true,index:historyIndex,route:initialRoute,scrollY:history.state?.scrollY||0,ui:history.state?.ui||{filter:prepareFilter,zoom:previewZoom}},"",routeUrl(initialRoute));applyRoute(initialRoute);
   window.TalkFlow={KEYS,STANDARD,validateTopic,validateAll,validatePrint,evaluateRenderedPrint,getTopics:()=>clone(topics),approvedMonth,monthFile,viewerHtml,lifecycle:topic=>clone(lifecycleState(topic)),conversation:window.TalkFlowConversation,sessions:window.TalkFlowSessions,generation:Simple,legacyGeneration:Generation,generateForTest:request=>generateV2Topic(request),renderForTest:(topic,leader=false)=>renderSimpleHandout(topic,leader),canPreviewTopic,getVersions:()=>loadRecord(KEYS.versions),getFeedback:()=>loadRecord(KEYS.feedback)};
 })();

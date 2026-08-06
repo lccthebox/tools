@@ -58,7 +58,7 @@
         <div><p class="eyebrow">SETTINGS</p><h2>Talk Flow 설정</h2></div>
         <button value="cancel" class="icon-button" aria-label="닫기">×</button>
       </div>
-      <nav class="settings-nav" aria-label="설정 구역"><button type="button" class="is-active" data-settings-section="ai">AI 연결</button><button type="button" data-settings-section="schedule">운영 일정</button><button type="button" data-settings-section="data">데이터</button></nav>
+      <nav class="settings-nav" aria-label="설정 구역"><button type="button" class="is-active" data-settings-section="ai">AI 연결</button><button type="button" data-settings-section="gist">Gist 동기화</button><button type="button" data-settings-section="schedule">운영 일정</button><button type="button" data-settings-section="print">인쇄</button><button type="button" data-settings-section="data">데이터 관리</button></nav>
       <section class="secret-setting" data-settings-panel="ai" aria-labelledby="api-key-label">
         <div class="secret-setting-heading"><strong id="api-key-label">Anthropic API key</strong><button type="button" id="change-api-key" class="button secondary">키 변경</button></div>
         <p id="api-key-configured" class="field-help">API 키가 저장되어 있지 않습니다.</p>
@@ -73,8 +73,7 @@
         <p id="model-fallback-notice" class="field-help" hidden></p>
         <details id="model-diagnostics" hidden><summary>기술 상세 진단</summary><pre></pre></details>
       </section>
-      <label data-settings-panel="data" hidden>GitHub Gist token<input id="gist-token" type="password" autocomplete="off" placeholder="gist 권한 토큰"></label>
-      <label data-settings-panel="data" hidden>Talk Flow Gist ID<input id="gist-id" autocomplete="off" placeholder="최초 저장 시 자동 생성"></label>
+      <section class="settings-panel" data-settings-panel="gist" hidden><h3>Gist 동기화</h3><p class="field-help">승인 토픽을 전용 Gist 파일로 저장하거나 기존 파일을 불러옵니다.</p><label>GitHub Gist token<input id="gist-token" type="password" autocomplete="off" placeholder="gist 권한 토큰"></label><label>Talk Flow Gist ID<input id="gist-id" autocomplete="off" placeholder="최초 저장 시 자동 생성"></label><div class="button-row"><button type="button" id="gist-pull" class="button secondary">Gist 불러오기</button><button type="button" id="gist-push" class="button primary">Gist 저장</button></div></section>
       <fieldset class="settings-group" data-settings-panel="schedule" hidden><legend>운영 요일</legend>
         <label><input type="checkbox" name="operating-day" value="1">월</label>
         <label><input type="checkbox" name="operating-day" value="2">화</label>
@@ -87,12 +86,9 @@
       <label data-settings-panel="schedule" hidden>추가 운영 날짜<input id="additional-dates" placeholder="2026-08-08, 2026-08-22"></label>
       <label data-settings-panel="schedule" hidden>제외 날짜<input id="excluded-dates" placeholder="2026-08-15, 2026-08-20"></label>
       <label class="check-option" data-settings-panel="schedule" hidden><input id="exclude-public-holidays" type="checkbox"> 알려진 공휴일을 운영일에서 제외</label>
-      <div class="button-row">
-        <button type="button" id="copy-schedule" class="button secondary">이전 설정 복사</button>
-        <button type="button" id="gist-pull" class="button secondary">Gist 불러오기</button>
-        <button type="button" id="gist-push" class="button secondary">Gist 저장</button>
-        <button value="save" class="button primary">설정 저장</button>
-      </div>
+      <section class="settings-panel" data-settings-panel="print" hidden><h3>인쇄 기본값</h3><label>기본 자료<select id="default-print-role"><option value="student">학생용</option><option value="leader">리더용</option><option value="combined">학생용 + 리더용</option></select></label><label class="check-option"><input id="print-backgrounds" type="checkbox" checked> 배경 그래픽 포함</label><p class="field-help">학생용과 리더용은 토픽당 각각 A4 두 페이지입니다.</p></section>
+      <section class="settings-panel" data-settings-panel="data" hidden><h3>데이터 관리</h3><p class="field-help">JSON에는 API 키와 Gist token이 포함되지 않습니다.</p><div class="button-row"><button type="button" id="settings-export" class="button secondary">월 JSON 내보내기</button><button type="button" id="settings-import" class="button secondary">JSON 가져오기</button></div></section>
+      <div class="button-row settings-save-row"><button type="button" id="copy-schedule" class="button secondary" data-settings-panel="schedule">이전 일정 복사</button><button value="save" class="button primary">설정 저장</button></div>
     </form>
   </dialog>
 
@@ -115,6 +111,6 @@
   <script src="./conversation-fixtures.js"></script>
   <script src="./generation-engine.js"></script>
   <script src="./simple-generation.js?v=20260805-connection-fix-4"></script>
-  <script src="./app.js?v=20260806-task-home-history"></script>
+  <script src="./app.js?v=20260806-final-autonomous"></script>
 </body>
 </html>
