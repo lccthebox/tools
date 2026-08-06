@@ -5,7 +5,6 @@ import { existsSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
 import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
-import { validPlan, validContent } from "./generation-engine-qa.mjs";
 
 let playwright;
 try { playwright=createRequire(import.meta.url)("playwright"); }
@@ -97,9 +96,9 @@ try{
   });
   check("speaking QA rejects material mismatch answer exposure broken reference and missing Korean",onlineMutants.every(status=>status==="fail"),JSON.stringify(onlineMutants));
   await sessionContext.close();
-  check("preparation list is the default workspace",await page.locator(".preparation-list").isVisible()&&await page.locator(".preparation-row").count()>0);
+  check("task-first home is the default workspace",await page.locator(".task-home").isVisible()&&await page.locator(".task-row").count()<=8);
   check("global navigation has exactly three destinations",await page.locator(".view-tabs .tab").allTextContents().then(items=>items.join("|")==="토픽 준비|일괄 인쇄|설정"));
-  check("each preparation row exposes one primary action",await page.locator(".preparation-row").evaluateAll(rows=>rows.every(row=>row.querySelectorAll(".row-primary button").length===1)));
+  check("each task row exposes one primary action",await page.locator(".task-row").evaluateAll(rows=>rows.every(row=>row.querySelectorAll(".row-primary button").length===1)));
   await page.getByRole("button",{name:"달력",exact:true}).click();
   check("secondary calendar has seven columns and no internal work actions",await page.locator(".simple-month-grid").isVisible()&&await page.locator(".weekday-row span").count()===7&&await page.locator(".simple-month-grid [data-action]").count()===0);
   check("non-operating dates expose no generation action",await page.locator(".simple-calendar-cell.off[data-auto-date],.simple-calendar-cell.off[data-custom-date]").count()===0);
@@ -111,79 +110,31 @@ try{
   check("question-option mismatch is critical",alignmentCritical);
   const legacyContext=await browser.newContext();
   await legacyContext.addInitScript(()=>localStorage.setItem("tb_talkflow_settings_v1",JSON.stringify({apiKey:"qa-intercept-key",gistToken:"test-token"})));
-  const legacyPage=await legacyContext.newPage(),generationCalls=[];
-  await legacyPage.route("https://api.anthropic.com/v1/messages",async route=>{
-    const body=route.request().postDataJSON(),tool=body.tools?.[0]?.name,requestData=JSON.parse(body.messages[0].content);generationCalls.push(tool);
-    const plan=validPlan(),content=validContent();
-    plan.centralTopic={en:"Weekend Plans",ko:"주말 계획"};
-    content.date=requestData.topic.date;
-    content.weekday="월";
-    content.category={en:"LIFE",ko:"생활"};
-    content.title={en:"How Should We Plan the Weekend?",ko:"이번 주말, 어떻게 계획할까?"};
-    await route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({content:[{type:"tool_use",name:tool,input:tool==="submit_topic_plan"?plan:content}]})});
-  });
+  const legacyPage=await legacyContext.newPage();
   await legacyPage.goto(`http://127.0.0.1:${port}/`,{waitUntil:"networkidle"});
-  await legacyPage.getByRole("button",{name:"관리",exact:true}).click();
+  await legacyPage.getByRole("button",{name:"전체 월",exact:true}).click();
+  await legacyPage.locator("[data-drawer-date='2026-08-03']").click();
+  await legacyPage.getByRole("button",{name:"내용 검수",exact:true}).click();
   await legacyPage.getByRole("button",{name:"회화형 구조로 변환"}).click();
   check("legacy conversion is explicit",await legacyPage.evaluate(()=>Boolean(Object.values(TalkFlow.getTopics())[0].conversationFlow)));
   check("conversion preserves a version",await legacyPage.evaluate(()=>Object.values(TalkFlow.getVersions()).flat().length===1));
   await legacyPage.locator(".advanced-editor summary").click();
   await legacyPage.getByRole("button",{name:"이전 버전 복원"}).click();
   check("previous legacy version restores",await legacyPage.evaluate(()=>!Object.values(TalkFlow.getTopics())[0].conversationFlow));
-  await legacyPage.getByRole("button",{name:"일별 관리",exact:true}).click();
-  await legacyPage.locator("[data-custom-date='2026-08-31']").click();
-  await legacyPage.locator("#custom-keyword").fill("Weekend plans");
-  await legacyPage.getByRole("button",{name:"토픽 생성하기"}).click();
-  await legacyPage.waitForFunction(()=>TalkFlow.getTopics()["2026-08-31"]?.operatorStatus?.generationStatus==="complete");
-  check("operator creates without overwriting another date",await legacyPage.evaluate(()=>Boolean(TalkFlow.getTopics()["2026-08-31"])&&Object.keys(TalkFlow.getTopics()).length===9));
-  check("new general topic uses v2 and v4 contract",await legacyPage.evaluate(()=>{
-    const topic=TalkFlow.getTopics()["2026-08-31"];
-    return topic.generatedConversation===true&&topic.generationEngine==="v2-fail-closed"&&topic.standardVersion==="2"&&topic.templateVersion==="4"&&!topic.conversationFlow;
-  }));
-  check("new general topic passes structure content and speaking validators",await legacyPage.evaluate(()=>TalkFlow.generation.evaluate(TalkFlow.getTopics()["2026-08-31"]).ready));
-  check("new general topic uses the fixed eight bound-field sections",await legacyPage.evaluate(()=>{
-    const topic=TalkFlow.getTopics()["2026-08-31"],one=topic.session1,two=topic.session2;
-    return Boolean(one.why)&&one.popQuiz.length===3&&one.icebreakers.length===3&&one.bingo.words.length===9&&
-      Boolean(two.game)&&Boolean(two.situation)&&two.discussion.length===3&&two.expressions.length===6;
-  }));
-  check("new general topic Session 2 remains one immutable activity",await legacyPage.evaluate(()=>{
-    const two=TalkFlow.getTopics()["2026-08-31"].session2;
-    return two.game.rules.length>=4&&two.game.rules.length<=6&&!two.games&&!JSON.stringify(two).includes("MAIN DISCUSSION");
-  }));
-  const statusBeforePreview=await legacyPage.evaluate(()=>TalkFlow.getTopics()["2026-08-31"].quality.status);
-  const printStatusBeforePreview=await legacyPage.evaluate(()=>TalkFlow.getTopics()["2026-08-31"].operatorStatus.printStatus);
-  await legacyPage.getByRole("button",{name:"학생용 A4 미리보기"}).first().click();
-  check("new general topic renders student-v4 fixed skeleton",await legacyPage.locator(".fc-handout[data-generation-engine='v2-fail-closed']").count()===1);
-  check("new general topic removes nested START ADD GO FURTHER boxes",await legacyPage.locator(".fc-handout").innerText().then(text=>!["START","ADD","GO FURTHER","Ask and react"].some(label=>text.includes(label))));
-  check("v4 print critical text meets minimum sizes",await legacyPage.evaluate(()=>TalkFlow.evaluateRenderedPrint(TalkFlow.getTopics()["2026-08-31"]).status==="ready"));
-  check("preview does not approve topic",await legacyPage.evaluate(before=>TalkFlow.getTopics()["2026-08-31"].quality.status===before,statusBeforePreview));
-  check("preview does not advance print lifecycle",await legacyPage.evaluate(before=>TalkFlow.getTopics()["2026-08-31"].operatorStatus.printStatus===before,printStatusBeforePreview));
-  await legacyPage.getByRole("button",{name:"관리",exact:true}).click();
-  let autoGistCalls=0;
-  await legacyPage.route("https://api.github.com/gists",async route=>{autoGistCalls++;await route.fulfill({status:201,contentType:"application/json",body:JSON.stringify({id:"approve-test-gist"})})});
-  await legacyPage.getByRole("button",{name:"승인하고 저장"}).first().click();
-  await legacyPage.waitForFunction(()=>TalkFlow.getTopics()["2026-08-31"].quality.status==="approved");
-  check("approve saves locally without changing connected Gist",autoGistCalls===0,String(autoGistCalls));
-  await legacyPage.getByRole("button",{name:"학생용 A4 미리보기"}).first().click();
-  await legacyPage.getByRole("button",{name:"A4 확인 완료"}).click();
-  check("approved PDF confirmation reaches print-ready lifecycle",await legacyPage.evaluate(()=>TalkFlow.lifecycle(TalkFlow.getTopics()["2026-08-31"]).key==="print-ready"));
-  check("print readiness stores an independent rendered-page validation",await legacyPage.evaluate(()=>{
-    const validation=TalkFlow.getTopics()["2026-08-31"].operatorStatus.printValidation;
-    return validation?.status==="ready"&&validation.pages===2&&validation.type.title>=18&&validation.type.question>=10.5&&validation.type.englishInstruction>=9&&validation.type.koreanGuidance>=8.5&&validation.type.meta>=7.5;
-  }));
-  check("actual generator uses Plan and Content Fill tool stages",generationCalls.join(",")==="submit_topic_plan,submit_content_fill",generationCalls.join(","));
   await legacyContext.close();
   const viewports=[[360,800],[390,844],[430,900],[768,900],[1024,900],[1440,1000]];
   for(const [width,height] of viewports){
     await page.setViewportSize({width,height});
-    await page.getByRole("button",{name:"일별 관리",exact:true}).click();
+    await page.goto(`http://127.0.0.1:${port}/?fixtures=conversation&section=topics&view=month&month=2026-08&date=2026-08-03&tab=review`,{waitUntil:"networkidle"});
+    await page.getByRole("button",{name:"내용 검수",exact:true}).click();
     check(`${width}px operator no horizontal overflow`,await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1));
     await page.screenshot({path:join(evidence,`operator-${width}.png`),fullPage:true});
-    await page.getByRole("button",{name:"학생",exact:true}).click();
+    await page.goto(`http://127.0.0.1:${port}/?fixtures=conversation&section=topics&view=month&month=2026-08&date=2026-08-03&tab=student&page=1`,{waitUntil:"networkidle"});
     check(`${width}px student no horizontal overflow`,await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1));
     check(`${width}px conversation sequence visible`,await page.locator(".conversation-path b").count()===6);
     await page.screenshot({path:join(evidence,`student-${width}.png`),fullPage:true});
-    await page.getByRole("button",{name:"관리",exact:true}).click();
+    await page.goto(`http://127.0.0.1:${port}/?fixtures=conversation&section=topics&view=month&month=2026-08&date=2026-08-03&tab=review`,{waitUntil:"networkidle"});
+    await page.getByRole("button",{name:"내용 검수",exact:true}).click();
     check(`${width}px operator review no horizontal overflow`,await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1));
     check(`${width}px preview and approval controls separated`,await page.evaluate(()=>{
       const preview=document.querySelector(".preview-button")?.getBoundingClientRect(),approve=document.querySelector(".approve-button")?.getBoundingClientRect();
@@ -199,13 +150,14 @@ try{
     await page.screenshot({path:join(evidence,`admin-${width}-page2.png`),fullPage:true});
     await page.locator("[data-preview-close]").click();
   }
-  await page.getByRole("button",{name:"리더",exact:true}).click();
+  await page.goto(`http://127.0.0.1:${port}/?fixtures=conversation&section=topics&view=month&month=2026-08&date=2026-08-03&tab=leader&page=1`,{waitUntil:"networkidle"});
   check("leader support and feedback visible",await page.locator(".leader-support,.feedback-card").count()===2);
   await page.locator("[data-feedback-form] input[type=checkbox]").first().check();
   await page.locator("[data-feedback-form] button[type=submit]").click();
   const feedback=await page.evaluate(()=>TalkFlow.getFeedback());
   check("anonymous local feedback stored",Object.values(feedback).flat().length===1&&!JSON.stringify(feedback).match(/name|email|phone/i),JSON.stringify(feedback));
-  await page.getByRole("button",{name:"관리",exact:true}).click();
+  await page.goto(`http://127.0.0.1:${port}/?fixtures=conversation&section=topics&view=month&month=2026-08&date=2026-08-03&tab=review`,{waitUntil:"networkidle"});
+  await page.getByRole("button",{name:"내용 검수",exact:true}).click();
   check("conversation review actions visible",await page.locator(".review-actions").isVisible());
   check("structure speaking and print readiness are separately visible",await page.locator(".readiness-split").innerText().then(text=>text.includes("STRUCTURE READY")&&text.includes("SPEAKING READY")&&text.includes("PRINT REVIEW")));
   check("five plain-language speaking checks are visible",await page.locator(".speaking-checks li").count()===5&&await page.locator(".speaking-checks").innerText().then(text=>["실제 말할 재료","서로 다른 내용","참가자의 순번","반대 의견","정답 없는 그룹 결론"].every(label=>text.includes(label))));

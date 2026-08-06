@@ -94,6 +94,7 @@ try {
     report.push({ date: topic.date, title: topic.title.ko, filename, domPages: pageCount, physicalPages, overflow, speakingContent, printType });
   }
   await page.goto(`http://127.0.0.1:${port}/?fixtures=sessions`, { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: "일괄 인쇄", exact: true }).click();
   await page.locator("[data-action='select-approved']").click();
   await page.locator("[data-action='batch-print']").click();
   const batchPages = await page.locator(".a4-page").count();
