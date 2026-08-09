@@ -5,6 +5,7 @@ import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
 const security = require("../server/talkflow/security");
+const simple = require("./simple-generation");
 const login = require("../api/talkflow/login");
 const status = require("../api/talkflow/status");
 const models = require("../api/talkflow/models");
@@ -40,7 +41,17 @@ const connectionBody = { model: "claude-sonnet-4-6", max_tokens: 8, messages: [{
 result = await call(messages, mockRequest("POST", connectionBody, sessionHeader)); assert.equal(result.status, 200); assert.equal(result.body.internal, undefined);
 result = await call(messages, mockRequest("POST", { ...connectionBody, endpoint: "https://example.com" }, sessionHeader)); assert.equal(result.status, 400);
 result = await call(messages, mockRequest("POST", { ...connectionBody, model: "other-model" }, sessionHeader)); assert.equal(result.status, 400);
+const promptPayload = { stage: "plan", contract: "TheBox Talk Flow Simple Conversation v3. Fixed contract.", fixedDesign: { styles: ["story", "case", "trend"], activities: simple.ACTIVITIES }, languageExposure: {}, generationRules: Array.from({ length: 10 }, (_, index) => `rule ${index}`), topic: { date: "2026-08-09", keyword: "온라인 리뷰" }, monthlyDiversity: [], approvedPlan: null, previousValidationIssues: [], previousCandidate: null, retryRule: "Create every required content field once." };
+const generationBody = { model: "claude-sonnet-4-6", max_tokens: 6000, messages: [{ role: "user", content: JSON.stringify(promptPayload) }], tools: [simple.PLAN_TOOL], tool_choice: { type: "tool", name: simple.PLAN_TOOL.name } };
+result = await call(messages, mockRequest("POST", generationBody, sessionHeader)); assert.equal(result.status, 200);
+result = await call(messages, mockRequest("POST", { ...generationBody, tools: [{ ...simple.PLAN_TOOL, input_schema: { type: "object" } }] }, sessionHeader)); assert.equal(result.status, 400);
+result = await call(messages, mockRequest("POST", { ...generationBody, messages: [{ role: "user", content: "arbitrary prompt" }] }, sessionHeader)); assert.equal(result.status, 400);
+const legacyBody = { model: "claude-sonnet-4-6", max_tokens: 6000, messages: [{ role: "user", content: "Create or repair TheBox Talk Flow session1 as strict JSON.\n<talkflow-standard version=\"2\">\nReturn only replacement JSON.\n</talkflow-standard>" }] };
+result = await call(messages, mockRequest("POST", legacyBody, sessionHeader)); assert.equal(result.status, 200);
 result = await call(messages, mockRequest("POST", connectionBody)); assert.equal(result.status, 401);
-assert.equal(upstreamCalls, 2);
+const rateResponse = mockResponse();
+for (let index = 0; index < 31; index += 1) security.rateLimit(mockRequest("POST", null, { "x-vercel-forwarded-for": "203.0.113.9", "x-forwarded-for": `198.51.100.${index}` }), rateResponse.response, "spoof-check", 30, 60000);
+assert.equal(rateResponse.response.statusCode, 429);
+assert.equal(upstreamCalls, 4);
 assert.equal(JSON.stringify([result, security.ALLOWED_MODELS]).includes("qa-upstream-secret"), false);
 console.log("proxy-security-qa: PASS (authentication, validation, filtering, rate boundary)");

@@ -1,11 +1,12 @@
 "use strict";
 
 const crypto = require("node:crypto");
+const { PLAN_TOOL, CONTENT_TOOL } = require("../../talkflow/simple-generation");
 
 const SESSION_COOKIE = "__Host-talkflow_session";
 const SESSION_TTL_SECONDS = 8 * 60 * 60;
 const ALLOWED_MODELS = new Set(["claude-sonnet-4-6"]);
-const ALLOWED_TOOLS = new Set(["submit_simple_topic_plan", "submit_simple_content"]);
+const CANONICAL_TOOLS = new Map([[PLAN_TOOL.name, PLAN_TOOL], [CONTENT_TOOL.name, CONTENT_TOOL]]);
 const buckets = globalThis.__talkflowRateBuckets || (globalThis.__talkflowRateBuckets = new Map());
 
 function json(response, status, body, headers = {}) {
@@ -17,7 +18,7 @@ function json(response, status, body, headers = {}) {
 }
 
 function clientAddress(request) {
-  return String(request.headers["x-forwarded-for"] || request.socket?.remoteAddress || "unknown").split(",")[0].trim();
+  return String(request.headers["x-vercel-forwarded-for"] || request.headers["x-forwarded-for"] || request.socket?.remoteAddress || "unknown").split(",").at(-1).trim();
 }
 
 function rateLimit(request, response, scope, limit, windowMs) {
@@ -130,12 +131,30 @@ function validMessageBody(body) {
   if (!body.messages.every(message => message && ["user", "assistant"].includes(message.role) && typeof message.content === "string" && message.content.length >= 1 && message.content.length <= 100000 && Object.keys(message).every(key => ["role", "content"].includes(key)))) return false;
   if (body.tools === undefined) {
     if (body.tool_choice !== undefined || body.messages.length !== 1 || body.messages[0].role !== "user") return false;
-    return body.messages[0].content === "Reply with OK." && body.max_tokens <= 16 || body.messages[0].content.startsWith("Create or repair TheBox Talk Flow ") && body.max_tokens === 6000;
+    const content = body.messages[0].content;
+    return content === "Reply with OK." && body.max_tokens <= 16 || content.startsWith("Create or repair TheBox Talk Flow ") && content.includes("<talkflow-standard ") && content.endsWith("</talkflow-standard>") && body.max_tokens === 6000;
   }
   if (!Array.isArray(body.tools) || body.tools.length !== 1) return false;
   const tool = body.tools[0];
-  if (!tool || !ALLOWED_TOOLS.has(tool.name) || typeof tool.description !== "string" || !tool.input_schema || typeof tool.input_schema !== "object") return false;
+  const canonical = tool && CANONICAL_TOOLS.get(tool.name);
+  if (!canonical || JSON.stringify(tool) !== JSON.stringify(canonical)) return false;
+  if (body.messages.length !== 1 || body.messages[0].role !== "user" || !validGenerationPrompt(body.messages[0].content, tool.name)) return false;
   return body.tool_choice?.type === "tool" && body.tool_choice?.name === tool.name && Object.keys(body.tool_choice).every(key => ["type", "name"].includes(key));
+}
+
+function validGenerationPrompt(content, toolName) {
+  let payload;
+  try { payload = JSON.parse(content); } catch { return false; }
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return false;
+  const keys = ["stage", "contract", "fixedDesign", "languageExposure", "generationRules", "topic", "monthlyDiversity", "approvedPlan", "previousValidationIssues", "previousCandidate", "retryRule"];
+  if (Object.keys(payload).some(key => !keys.includes(key))) return false;
+  const expectedStage = toolName === PLAN_TOOL.name ? "plan" : "content";
+  if (payload.stage !== expectedStage || !String(payload.contract || "").startsWith("TheBox Talk Flow Simple Conversation v3.")) return false;
+  if (!payload.fixedDesign || JSON.stringify(payload.fixedDesign.styles) !== JSON.stringify(["story", "case", "trend"]) || !Array.isArray(payload.fixedDesign.activities)) return false;
+  if (!Array.isArray(payload.generationRules) || payload.generationRules.length !== 10 || payload.generationRules.some(rule => typeof rule !== "string" || !rule.trim())) return false;
+  if (!payload.topic || !/^\d{4}-\d{2}-\d{2}$/.test(payload.topic.date) || typeof payload.topic.keyword !== "string" || !payload.topic.keyword.trim()) return false;
+  if (!Array.isArray(payload.monthlyDiversity) || !Array.isArray(payload.previousValidationIssues)) return false;
+  return payload.retryRule === "Create every required content field once." || payload.retryRule === "Keep valid fields unchanged and repair only the listed locations.";
 }
 
 function upstreamError(status, payload, requestId = "") {
