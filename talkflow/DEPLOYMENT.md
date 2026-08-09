@@ -44,10 +44,10 @@ Vercel Dashboard 또는 `vercel env add`로 세 환경변수를 Preview/Producti
 1. status가 configured이고 비로그인 상태인지 확인
 2. 관리자 로그인 후 Secure HttpOnly session 확인
 3. Models 1회와 Messages 1회, pending 0 확인
-4. 신규 토픽 최소 3건 생성과 quality 검증
+4. Proxy 경로 변경 후 필요한 경우 신규 토픽 정확히 1건만 생성해 quality·저장·새로고침·History·학생용·리더용·PDF까지 검증
 5. 학생·리더 각 2페이지, PDF, History, reload 확인
 6. client `api.anthropic.com` 요청 0과 secret scan 확인
 
 ## Main 병합 기준
 
-UI, History, PDF, Proxy, 보안, Preview와 실제 AI 3건 생성 QA가 같은 SHA에서 모두 통과해야 합니다. 실제 Anthropic secret이 없는 Preview는 UI-only PASS일 뿐 production readiness PASS가 아닙니다. main 병합과 운영 Pages 반영은 별도 승인 전 실행하지 않습니다.
+UI, History, PDF, Proxy, 보안, Preview는 기존 토픽과 deterministic fixture/mock으로 검증합니다. 서버 secret이 준비된 경우에만 같은 SHA에서 연결 테스트 1회, Topic Plan 1회, Content Fill 1회, 신규 토픽 1건을 상한으로 라이브 QA합니다. 같은 목적의 반복 생성과 자동 재시도는 하지 않습니다. main 병합과 운영 Pages 반영은 별도 승인 전 실행하지 않습니다.

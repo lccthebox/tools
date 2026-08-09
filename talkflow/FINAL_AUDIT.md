@@ -16,7 +16,7 @@
 - server auth browser regression: 16 PASS
 - connection lifecycle: 11 PASS
 - model selection: 10 PASS
-- Simple 실제 앱 생성 경로: 121 PASS, 일반 토픽 8건
+- Simple 실제 앱 생성 경로: 121 PASS, deterministic fixture/mock 일반 토픽 8건 (Anthropic 호출 0)
 - Conversation: 107 PASS
 - core workspace: 53 PASS
 - navigation/History/settings/batch print: 39 PASS
@@ -37,4 +37,4 @@
 
 ## 배포 판정
 
-서버 secret이 없는 현재 Preview는 UI-only와 proxy 구조 QA까지 PASS입니다. 실제 Models/Messages 200과 신규 라이브 토픽 3건은 secret 설정 전에는 수행할 수 없으므로 전체 production readiness는 PARTIAL입니다. 필요한 사용자 작업은 전용 Vercel 프로젝트에 세 환경변수를 입력하는 것 한 가지이며, 그 후 라이브 AI QA와 최종 production 판정을 수행합니다.
+서버 secret이 없는 현재 Preview는 UI-only와 proxy 구조 QA까지 PASS입니다. 비용 통제 원칙에 따라 이번 QA의 실제 Models 호출, Messages 호출, 연결 테스트, Topic Plan, Content Fill, 신규 라이브 토픽, 자동 재시도는 모두 0회입니다. 서버 secret을 설정한 뒤에도 연결 테스트 1회 + Topic Plan 1회 + Content Fill 1회와 신규 토픽 정확히 1건만 허용하며, 같은 목적의 반복 생성은 금지합니다. 필요한 사용자 작업은 전용 Vercel 프로젝트에 세 환경변수를 입력하는 것 한 가지입니다.
