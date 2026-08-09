@@ -8,6 +8,7 @@ const SESSION_COOKIE = "__Host-talkflow_session";
 const SESSION_TTL_SECONDS = 8 * 60 * 60;
 const ALLOWED_MODELS = new Set(["claude-sonnet-4-6"]);
 const CANONICAL_TOOLS = new Map([[PLAN_TOOL.name, PLAN_TOOL], [CONTENT_TOOL.name, CONTENT_TOOL]]);
+const LEGACY_CONTEXT_KEYS = new Set(["activity", "activitySupport", "assignedOpposition", "axis", "category", "commonErrors", "conversationFlow", "conversationMaterial", "createdAt", "date", "deeperFollowUp", "demoKo", "easyEntry", "emergency", "en", "estimatedMinutes", "example", "exampleFollowUp", "final", "finalClose", "finalQuestion", "finalRound", "followUp", "goal", "groupResult", "hidden", "hook", "id", "instruction", "instructionEn", "instructionKo", "issues", "ko", "leader", "leaderNotes", "longKo", "mainActivity", "mainDiscussion", "material", "materials", "mechanism", "midGame", "minutes", "name", "openEndedDecision", "operatorStatus", "options", "optionsText", "output", "page", "participantOutput", "phrases", "prompt", "promptAxes", "quality", "question", "questionEn", "questionKo", "quickActivity", "quietKo", "reasonPrompt", "recommendedSkip", "reset", "roles", "score", "sensitiveWarning", "session1", "session2", "sessionOne", "sessionTwo", "smallTalk", "sourceRef", "speakingMechanisms", "starter", "status", "steps", "stepsKo", "target", "thinkHarder", "timeCutKo", "timedTurn", "title", "titleEn", "titleKo", "topicMode", "translation", "type", "updatedAt", "usage", "usefulPhrases", "whenConversationStops"]);
 const buckets = globalThis.__talkflowRateBuckets || (globalThis.__talkflowRateBuckets = new Map());
 
 function json(response, status, body, headers = {}) {
@@ -133,7 +134,7 @@ function messageBodyForUpstream(body) {
   if (body.operation === "legacy_repair") {
     if (Object.keys(body).some(key => !["operation", "model", "max_tokens", "scope", "topicContext", "prompt"].includes(key))) return null;
     if (!ALLOWED_MODELS.has(body.model) || body.max_tokens !== 6000 || !/^(?:complete topic|[a-zA-Z0-9_.]{1,80})$/.test(body.scope || "")) return null;
-    if (!body.topicContext || typeof body.topicContext !== "object" || Array.isArray(body.topicContext) || JSON.stringify(body.topicContext).length > 80000) return null;
+    if (!validLegacyContext(body.topicContext) || JSON.stringify(body.topicContext).length > 80000) return null;
     const prompt = LegacyRepairPrompt.build(body.scope, body.topicContext);
     if (body.prompt !== prompt) return null;
     return { model: body.model, max_tokens: 6000, messages: [{ role: "user", content: prompt }] };
@@ -199,11 +200,29 @@ function matchesSchemaShape(value, schema, allowMissing) {
     if (!allowMissing && (schema.required || []).some(key => !Object.hasOwn(value, key))) return false;
     return Object.entries(value).every(([key, entry]) => matchesSchemaShape(entry, properties[key], allowMissing));
   }
-  if (schema.type === "array") return Array.isArray(value) && value.length <= (schema.maxItems || 100) && value.every(entry => matchesSchemaShape(entry, schema.items, allowMissing));
+  if (schema.type === "array") return Array.isArray(value) && value.length >= (schema.minItems || 0) && value.length <= (schema.maxItems || 100) && value.every(entry => matchesSchemaShape(entry, schema.items, allowMissing));
   if (schema.type === "string") return typeof value === "string" && value.length <= 10000 && (!schema.enum || schema.enum.includes(value));
-  if (schema.type === "integer") return Number.isInteger(value);
+  if (schema.type === "integer") return Number.isInteger(value) && (schema.minimum === undefined || value >= schema.minimum) && (schema.maximum === undefined || value <= schema.maximum);
   if (schema.type === "boolean") return typeof value === "boolean";
   return false;
+}
+
+function validLegacyContext(context) {
+  if (!context || typeof context !== "object" || Array.isArray(context) || Object.keys(context).some(key => !["title", "category", "topicMode", "target"].includes(key))) return false;
+  if (!validBilingual(context.title) || !validBilingual(context.category) || !["general", "context"].includes(context.topicMode)) return false;
+  return validLegacyValue(context.target, 0);
+}
+
+function validBilingual(value) {
+  return value && typeof value === "object" && !Array.isArray(value) && !Object.keys(value).some(key => !["en", "ko"].includes(key)) && ["en", "ko"].every(key => typeof value[key] === "string" && value[key].length <= 10000);
+}
+
+function validLegacyValue(value, depth) {
+  if (depth > 12) return false;
+  if (value === null || typeof value === "boolean" || Number.isFinite(value)) return true;
+  if (typeof value === "string") return value.length <= 10000;
+  if (Array.isArray(value)) return value.length <= 100 && value.every(entry => validLegacyValue(entry, depth + 1));
+  return value && typeof value === "object" && Object.keys(value).length <= 100 && Object.keys(value).every(key => LEGACY_CONTEXT_KEYS.has(key)) && Object.values(value).every(entry => validLegacyValue(entry, depth + 1));
 }
 
 function upstreamError(status, payload, requestId = "") {
