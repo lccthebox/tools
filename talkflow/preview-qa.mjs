@@ -11,7 +11,7 @@ const check=(name,pass,detail="")=>{checks.push({name,pass:Boolean(pass),detail}
 const browser=await playwright.chromium.launch({headless:true});
 try{
   const context=await browser.newContext(),page=await context.newPage(),errors=[],failed=[],direct=[];
-  const visit=async url=>{try{await page.goto(url,{waitUntil:"domcontentloaded"})}catch(error){if(!String(error).includes("ERR_ABORTED"))throw error}await page.locator(".app-shell").waitFor({state:"visible"})};
+  const visit=async url=>{try{await page.goto(url,{waitUntil:"networkidle"})}catch(error){if(!String(error).includes("ERR_ABORTED"))throw error}await page.locator(".app-shell").waitFor({state:"visible"})};
   page.on("pageerror",error=>errors.push(error.message));page.on("console",message=>{if(message.type()==="error")errors.push(message.text())});page.on("requestfailed",request=>failed.push(`${request.method()} ${request.url()} ${request.failure()?.errorText||"failed"}`));page.on("request",request=>{if(request.url().startsWith("https://api.anthropic.com/"))direct.push(request.url())});
   for(const width of [375,768,1280,1600]){
     await page.setViewportSize({width,height:900});await visit(base);
