@@ -59,15 +59,16 @@
         <button value="cancel" class="icon-button" aria-label="닫기">×</button>
       </div>
       <nav class="settings-nav" aria-label="설정 구역"><button type="button" class="is-active" data-settings-section="ai">AI 연결</button><button type="button" data-settings-section="gist">Gist 동기화</button><button type="button" data-settings-section="schedule">운영 일정</button><button type="button" data-settings-section="print">인쇄</button><button type="button" data-settings-section="data">데이터 관리</button></nav>
-      <section class="secret-setting" data-settings-panel="ai" aria-labelledby="api-key-label">
-        <div class="secret-setting-heading"><strong id="api-key-label">Anthropic API key</strong><button type="button" id="change-api-key" class="button secondary">키 변경</button></div>
-        <p id="api-key-configured" class="field-help">API 키가 저장되어 있지 않습니다.</p>
-        <label id="api-key-editor" hidden>새 API 키<input id="api-key" type="password" autocomplete="new-password" placeholder="새 API 키 입력"></label>
-        <p class="field-help">실제 키는 화면에 다시 표시하지 않으며 생성 요청에만 사용합니다.</p>
+      <section class="secret-setting" data-settings-panel="ai" aria-labelledby="ai-server-label">
+        <div class="secret-setting-heading"><strong id="ai-server-label">AI 서버 연결</strong><span id="ai-server-badge" class="status-pill">확인 중</span></div>
+        <p id="ai-server-guidance" class="field-help">서버 연결 상태를 확인하고 있습니다.</p>
+        <div id="admin-login-form" class="server-login" hidden><label>관리자 비밀번호<input id="admin-password" type="password" autocomplete="current-password"></label><button type="button" id="admin-login" class="button primary">로그인</button></div>
+        <button type="button" id="admin-logout" class="button secondary" hidden>로그아웃</button>
+        <div id="legacy-key-migration" class="authentication-guidance"><strong>이 브라우저에 저장된 이전 API 키가 있습니다.</strong><span>서버 연결 방식에서는 필요하지 않습니다.</span><button type="button" id="remove-legacy-api-key" class="button secondary">안전하게 삭제</button></div>
       </section>
       <section class="model-settings" data-settings-panel="ai" aria-label="AI 모델 연결 설정">
         <div class="model-status"><strong id="ai-connection-status">AI 연결 확인 전</strong><span id="model-last-checked">마지막 확인: 없음</span></div>
-        <div id="api-key-guidance" class="authentication-guidance" hidden><strong>API 키를 확인할 수 없습니다.</strong><span>키가 만료되었거나 삭제됐을 수 있습니다. 새 API 키를 입력해 주세요.</span><button type="button" class="button primary" data-change-api-key>키 변경</button></div>
+        <div id="api-key-guidance" class="authentication-guidance" hidden><strong>AI 서버에 연결할 수 없습니다.</strong><span>잠시 후 다시 시도해 주세요.</span></div>
         <label>현재 선택 모델<select id="anthropic-model" disabled><option value="">모델 목록을 새로고침하세요</option></select></label>
         <div class="button-row model-actions"><button type="button" id="refresh-models" class="button secondary">모델 목록 새로고침</button><button type="button" id="test-ai-connection" class="button secondary">연결 테스트</button></div>
         <p id="model-fallback-notice" class="field-help" hidden></p>
@@ -107,6 +108,7 @@
   <input id="json-import" type="file" accept="application/json,.json" hidden>
   <script src="./sample-topics.js"></script>
   <script src="./anthropic-models.js"></script>
+  <script src="./talkflow-ai-client.js?v=20260809-server-proxy-1"></script>
   <script src="./session-workflow.js"></script>
   <script src="./conversation-fixtures.js"></script>
   <script src="./generation-engine.js"></script>
