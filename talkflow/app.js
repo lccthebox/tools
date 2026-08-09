@@ -728,16 +728,9 @@ function canPreviewTopic(topic){if(!topic||["running","failed"].includes(topic.o
     return{id:`talkflow-${request.date}-${crypto.randomUUID()}`,date:request.date,weekday:weekday(request.date),category:{en:"",ko:request.mood||"경험 중심"},title:{en:"",ko:request.keyword},generatedConversation:true,generationEngine:Simple.VERSION,generationRequest:clone(request),originalDraft:originalDraft?clone(originalDraft):undefined,quality:{status:"draft",score:0,issues:[]},operatorStatus:{generationStatus:"running",reviewStatus:"review",printStatus:"unchecked",used:false},hidden:false,createdAt,updatedAt:createdAt};
   }
   function generationMessages(stage,request,plan=null,issues=[],previousCandidate=null){
-    return [{role:"user",content:JSON.stringify({
-      stage,
-      ...Simple.PROMPT_PROFILE,
-      topic:{date:request.date,weekday:weekday(request.date),keyword:request.keyword,mood:request.mood||"경험 중심",source:request.source||"",avoid:request.avoid||"",repairSection:request.repairSection||""},
-      monthlyDiversity:Object.values(topics).filter(item=>item?.date?.slice(0,7)===request.date.slice(0,7)&&item.generationEngine===Simple.VERSION).map(item=>({style:item.style,activity:item.session2?.activity?.name,storyOpening:item.session1?.story?.en?.[0],questionOpenings:[...(item.session1?.easyTalk||[]),...(item.session1?.realTalk||[])].map(question=>question.en.split(" ").slice(0,3).join(" ")),expressions:(item.session1?.expressions||[]).map(expression=>expression.en)})),
-      approvedPlan:plan,
-      previousValidationIssues:issues,
-      previousCandidate,
-      retryRule:previousCandidate?"Keep valid fields unchanged and repair only the listed locations.":"Create every required content field once."
-    })}];
+    const topic={date:request.date,weekday:weekday(request.date),keyword:request.keyword,mood:request.mood||"경험 중심",source:request.source||"",avoid:request.avoid||"",repairSection:request.repairSection||""};
+    const monthlyDiversity=Object.values(topics).filter(item=>item?.date?.slice(0,7)===request.date.slice(0,7)&&item.generationEngine===Simple.VERSION).map(item=>({style:item.style,activity:item.session2?.activity?.name,storyOpening:item.session1?.story?.en?.[0],questionOpenings:[...(item.session1?.easyTalk||[]),...(item.session1?.realTalk||[])].map(question=>question.en.split(" ").slice(0,3).join(" ")),expressions:(item.session1?.expressions||[]).map(expression=>expression.en)}));
+    return [{role:"user",content:JSON.stringify(Simple.buildPromptPayload({stage,topic,monthlyDiversity,approvedPlan:plan,previousValidationIssues:issues,previousCandidate}))}];
   }
   async function requestGenerationStage(stage,request,plan=null,modelId){
     const tool=stage==="plan"?Simple.PLAN_TOOL:Simple.CONTENT_TOOL,normalize=stage==="plan"?clone:Simple.normalizeContent,validate=stage==="plan"?Simple.validatePlan:value=>{

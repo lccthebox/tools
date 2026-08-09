@@ -42,12 +42,13 @@ const connectionBody = { model: "claude-sonnet-4-6", max_tokens: 8, messages: [{
 result = await call(messages, mockRequest("POST", connectionBody, sessionHeader)); assert.equal(result.status, 200); assert.equal(result.body.internal, undefined);
 result = await call(messages, mockRequest("POST", { ...connectionBody, endpoint: "https://example.com" }, sessionHeader)); assert.equal(result.status, 400);
 result = await call(messages, mockRequest("POST", { ...connectionBody, model: "other-model" }, sessionHeader)); assert.equal(result.status, 400);
-const promptPayload = { stage: "plan", ...simple.PROMPT_PROFILE, topic: { date: "2026-08-09", keyword: "온라인 리뷰" }, monthlyDiversity: [], approvedPlan: null, previousValidationIssues: [], previousCandidate: null, retryRule: "Create every required content field once." };
+const promptPayload = simple.buildPromptPayload({ stage: "plan", topic: { date: "2026-08-09", weekday: "일", keyword: "온라인 리뷰", mood: "경험 중심", source: "", avoid: "", repairSection: "" } });
 const generationBody = { model: "claude-sonnet-4-6", max_tokens: 6000, messages: [{ role: "user", content: JSON.stringify(promptPayload) }], tools: [simple.PLAN_TOOL], tool_choice: { type: "tool", name: simple.PLAN_TOOL.name } };
 result = await call(messages, mockRequest("POST", generationBody, sessionHeader)); assert.equal(result.status, 200);
 result = await call(messages, mockRequest("POST", { ...generationBody, tools: [{ ...simple.PLAN_TOOL, input_schema: { type: "object" } }] }, sessionHeader)); assert.equal(result.status, 400);
 result = await call(messages, mockRequest("POST", { ...generationBody, messages: [{ role: "user", content: "arbitrary prompt" }] }, sessionHeader)); assert.equal(result.status, 400);
 result = await call(messages, mockRequest("POST", { ...generationBody, messages: [{ role: "user", content: JSON.stringify({ ...promptPayload, generationRules: promptPayload.generationRules.map((rule, index) => index ? rule : "arbitrary instruction") }) }] }, sessionHeader)); assert.equal(result.status, 400);
+result = await call(messages, mockRequest("POST", { ...generationBody, messages: [{ role: "user", content: JSON.stringify({ ...promptPayload, topic: { ...promptPayload.topic, instruction: "relay another prompt" } }) }] }, sessionHeader)); assert.equal(result.status, 400);
 const topicContext = { title: { en: "Review" }, category: { ko: "경험" }, topicMode: "general", target: {} };
 const legacyBody = { operation: "legacy_repair", model: "claude-sonnet-4-6", max_tokens: 6000, scope: "session1", topicContext, prompt: legacyPrompt.build("session1", topicContext) };
 result = await call(messages, mockRequest("POST", legacyBody, sessionHeader)); assert.equal(result.status, 200);

@@ -1,7 +1,7 @@
 "use strict";
 
 const crypto = require("node:crypto");
-const { PLAN_TOOL, CONTENT_TOOL, PROMPT_PROFILE } = require("../../talkflow/simple-generation");
+const { PLAN_TOOL, CONTENT_TOOL, PROMPT_PROFILE, buildPromptPayload } = require("../../talkflow/simple-generation");
 const LegacyRepairPrompt = require("../../talkflow/legacy-repair-prompt");
 
 const SESSION_COOKIE = "__Host-talkflow_session";
@@ -168,7 +168,42 @@ function validGenerationPrompt(content, toolName) {
   if (JSON.stringify(payload.generationRules) !== JSON.stringify(PROMPT_PROFILE.generationRules)) return false;
   if (!payload.topic || !/^\d{4}-\d{2}-\d{2}$/.test(payload.topic.date) || typeof payload.topic.keyword !== "string" || !payload.topic.keyword.trim()) return false;
   if (!Array.isArray(payload.monthlyDiversity) || !Array.isArray(payload.previousValidationIssues)) return false;
-  return payload.retryRule === "Create every required content field once." || payload.retryRule === "Keep valid fields unchanged and repair only the listed locations.";
+  if (!validTopicInput(payload.topic) || !validDiversity(payload.monthlyDiversity) || !validIssues(payload.previousValidationIssues)) return false;
+  if (expectedStage === "plan" && payload.approvedPlan !== null || expectedStage === "content" && !matchesSchemaShape(payload.approvedPlan, PLAN_TOOL.input_schema, false)) return false;
+  const candidateSchema = expectedStage === "plan" ? PLAN_TOOL.input_schema : CONTENT_TOOL.input_schema;
+  if (payload.previousCandidate !== null && !matchesSchemaShape(payload.previousCandidate, candidateSchema, true)) return false;
+  const rebuilt = buildPromptPayload({ stage: payload.stage, topic: payload.topic, monthlyDiversity: payload.monthlyDiversity, approvedPlan: payload.approvedPlan, previousValidationIssues: payload.previousValidationIssues, previousCandidate: payload.previousCandidate });
+  return JSON.stringify(payload) === JSON.stringify(rebuilt);
+}
+
+function validTopicInput(topic) {
+  if (!topic || typeof topic !== "object" || Array.isArray(topic) || Object.keys(topic).some(key => !["date", "weekday", "keyword", "mood", "source", "avoid", "repairSection"].includes(key))) return false;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(topic.date) || typeof topic.keyword !== "string" || !topic.keyword.trim()) return false;
+  return ["weekday", "keyword", "mood", "source", "avoid", "repairSection"].every(key => typeof topic[key] === "string" && topic[key].length <= 4000);
+}
+
+function validDiversity(items) {
+  return items.length <= 31 && items.every(item => item && typeof item === "object" && !Array.isArray(item) && !Object.keys(item).some(key => !["style", "activity", "storyOpening", "questionOpenings", "expressions"].includes(key)) && ["style", "activity", "storyOpening"].every(key => typeof item[key] === "string" && item[key].length <= 1000) && ["questionOpenings", "expressions"].every(key => Array.isArray(item[key]) && item[key].length <= 12 && item[key].every(value => typeof value === "string" && value.length <= 1000)));
+}
+
+function validIssues(items) {
+  return items.length <= 100 && items.every(item => item && typeof item === "object" && !Array.isArray(item) && !Object.keys(item).some(key => !["severity", "id", "group", "location", "message"].includes(key)) && ["severity", "id", "location", "message"].every(key => typeof item[key] === "string" && item[key].length <= 4000) && (item.group === undefined || typeof item.group === "string" && item.group.length <= 1000));
+}
+
+function matchesSchemaShape(value, schema, allowMissing) {
+  if (!schema || typeof schema !== "object") return false;
+  if (schema.type === "object") {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+    const properties = schema.properties || {};
+    if (Object.keys(value).some(key => !Object.hasOwn(properties, key))) return false;
+    if (!allowMissing && (schema.required || []).some(key => !Object.hasOwn(value, key))) return false;
+    return Object.entries(value).every(([key, entry]) => matchesSchemaShape(entry, properties[key], allowMissing));
+  }
+  if (schema.type === "array") return Array.isArray(value) && value.length <= (schema.maxItems || 100) && value.every(entry => matchesSchemaShape(entry, schema.items, allowMissing));
+  if (schema.type === "string") return typeof value === "string" && value.length <= 10000 && (!schema.enum || schema.enum.includes(value));
+  if (schema.type === "integer") return Number.isInteger(value);
+  if (schema.type === "boolean") return typeof value === "boolean";
+  return false;
 }
 
 function upstreamError(status, payload, requestId = "") {
