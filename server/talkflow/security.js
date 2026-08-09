@@ -1,7 +1,8 @@
 "use strict";
 
 const crypto = require("node:crypto");
-const { PLAN_TOOL, CONTENT_TOOL } = require("../../talkflow/simple-generation");
+const { PLAN_TOOL, CONTENT_TOOL, PROMPT_PROFILE } = require("../../talkflow/simple-generation");
+const LegacyRepairPrompt = require("../../talkflow/legacy-repair-prompt");
 
 const SESSION_COOKIE = "__Host-talkflow_session";
 const SESSION_TTL_SECONDS = 8 * 60 * 60;
@@ -124,7 +125,19 @@ async function readJson(request, response, maxBytes = 120000) {
 }
 
 function validMessageBody(body) {
+  return Boolean(messageBodyForUpstream(body));
+}
+
+function messageBodyForUpstream(body) {
   if (!body || typeof body !== "object" || Array.isArray(body)) return false;
+  if (body.operation === "legacy_repair") {
+    if (Object.keys(body).some(key => !["operation", "model", "max_tokens", "scope", "topicContext", "prompt"].includes(key))) return null;
+    if (!ALLOWED_MODELS.has(body.model) || body.max_tokens !== 6000 || !/^(?:complete topic|[a-zA-Z0-9_.]{1,80})$/.test(body.scope || "")) return null;
+    if (!body.topicContext || typeof body.topicContext !== "object" || Array.isArray(body.topicContext) || JSON.stringify(body.topicContext).length > 80000) return null;
+    const prompt = LegacyRepairPrompt.build(body.scope, body.topicContext);
+    if (body.prompt !== prompt) return null;
+    return { model: body.model, max_tokens: 6000, messages: [{ role: "user", content: prompt }] };
+  }
   if (Object.keys(body).some(key => !["model", "max_tokens", "messages", "tools", "tool_choice"].includes(key))) return false;
   if (!ALLOWED_MODELS.has(body.model) || !Number.isInteger(body.max_tokens) || body.max_tokens < 1 || body.max_tokens > 6000) return false;
   if (!Array.isArray(body.messages) || body.messages.length < 1 || body.messages.length > 8) return false;
@@ -132,14 +145,14 @@ function validMessageBody(body) {
   if (body.tools === undefined) {
     if (body.tool_choice !== undefined || body.messages.length !== 1 || body.messages[0].role !== "user") return false;
     const content = body.messages[0].content;
-    return content === "Reply with OK." && body.max_tokens <= 16 || content.startsWith("Create or repair TheBox Talk Flow ") && content.includes("<talkflow-standard ") && content.endsWith("</talkflow-standard>") && body.max_tokens === 6000;
+    return content === "Reply with OK." && body.max_tokens <= 16 ? body : null;
   }
   if (!Array.isArray(body.tools) || body.tools.length !== 1) return false;
   const tool = body.tools[0];
   const canonical = tool && CANONICAL_TOOLS.get(tool.name);
   if (!canonical || JSON.stringify(tool) !== JSON.stringify(canonical)) return false;
   if (body.messages.length !== 1 || body.messages[0].role !== "user" || !validGenerationPrompt(body.messages[0].content, tool.name)) return false;
-  return body.tool_choice?.type === "tool" && body.tool_choice?.name === tool.name && Object.keys(body.tool_choice).every(key => ["type", "name"].includes(key));
+  return body.tool_choice?.type === "tool" && body.tool_choice?.name === tool.name && Object.keys(body.tool_choice).every(key => ["type", "name"].includes(key)) ? body : null;
 }
 
 function validGenerationPrompt(content, toolName) {
@@ -149,9 +162,10 @@ function validGenerationPrompt(content, toolName) {
   const keys = ["stage", "contract", "fixedDesign", "languageExposure", "generationRules", "topic", "monthlyDiversity", "approvedPlan", "previousValidationIssues", "previousCandidate", "retryRule"];
   if (Object.keys(payload).some(key => !keys.includes(key))) return false;
   const expectedStage = toolName === PLAN_TOOL.name ? "plan" : "content";
-  if (payload.stage !== expectedStage || !String(payload.contract || "").startsWith("TheBox Talk Flow Simple Conversation v3.")) return false;
-  if (!payload.fixedDesign || JSON.stringify(payload.fixedDesign.styles) !== JSON.stringify(["story", "case", "trend"]) || !Array.isArray(payload.fixedDesign.activities)) return false;
-  if (!Array.isArray(payload.generationRules) || payload.generationRules.length !== 10 || payload.generationRules.some(rule => typeof rule !== "string" || !rule.trim())) return false;
+  if (payload.stage !== expectedStage || payload.contract !== PROMPT_PROFILE.contract) return false;
+  if (JSON.stringify(payload.fixedDesign) !== JSON.stringify(PROMPT_PROFILE.fixedDesign)) return false;
+  if (JSON.stringify(payload.languageExposure) !== JSON.stringify(PROMPT_PROFILE.languageExposure)) return false;
+  if (JSON.stringify(payload.generationRules) !== JSON.stringify(PROMPT_PROFILE.generationRules)) return false;
   if (!payload.topic || !/^\d{4}-\d{2}-\d{2}$/.test(payload.topic.date) || typeof payload.topic.keyword !== "string" || !payload.topic.keyword.trim()) return false;
   if (!Array.isArray(payload.monthlyDiversity) || !Array.isArray(payload.previousValidationIssues)) return false;
   return payload.retryRule === "Create every required content field once." || payload.retryRule === "Keep valid fields unchanged and repair only the listed locations.";
@@ -164,4 +178,4 @@ function upstreamError(status, payload, requestId = "") {
   return { status: safeStatus, body: { error: { type, message: messages[type] || "AI 생성 요청을 처리하지 못했습니다.", request_id: payload?.request_id || requestId || "" } } };
 }
 
-module.exports = { ALLOWED_MODELS, createSession, json, rateLimit, readJson, requireSession, serverConfigured, sessionCookie, upstreamError, validMessageBody, verifyPassword, verifySameOrigin, verifySession };
+module.exports = { ALLOWED_MODELS, createSession, json, messageBodyForUpstream, rateLimit, readJson, requireSession, serverConfigured, sessionCookie, upstreamError, validMessageBody, verifyPassword, verifySameOrigin, verifySession };
