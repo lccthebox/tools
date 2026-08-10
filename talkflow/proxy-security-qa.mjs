@@ -31,15 +31,22 @@ result = await call(login, mockRequest("POST", { password: "correct horse batter
 const cookie = String(result.headers["set-cookie"]); assert.match(cookie, /HttpOnly/); assert.match(cookie, /Secure/); assert.match(cookie, /SameSite=Strict/); assert.doesNotMatch(cookie, /correct horse|qa-upstream-secret/);
 const sessionHeader = { cookie: cookie.split(";")[0] };
 
-let upstreamCalls = 0;
+let upstreamCalls = 0, upstreamFailure = null;
 global.fetch = async (url, options) => {
   upstreamCalls += 1; assert.match(url, /^https:\/\/api\.anthropic\.com\/v1\/(models|messages)$/); assert.equal(options.headers["x-api-key"], "qa-upstream-secret");
   if (url.endsWith("/models")) return new Response(JSON.stringify({ data: [{ id: "claude-sonnet-4-6", display_name: "Claude Sonnet 4.6", secret: "drop" }, { id: "other-model", display_name: "Other" }] }), { status: 200, headers: { "content-type": "application/json" } });
+  if (upstreamFailure) return new Response(JSON.stringify(upstreamFailure), { status: 400, headers: { "content-type": "application/json" } });
   return new Response(JSON.stringify({ id: "msg", type: "message", role: "assistant", content: [{ type: "text", text: "OK" }], model: "claude-sonnet-4-6", usage: { input_tokens: 1, output_tokens: 1 }, internal: "drop" }), { status: 200, headers: { "content-type": "application/json" } });
 };
 result = await call(models, mockRequest("GET", null, sessionHeader)); assert.equal(result.status, 200); assert.deepEqual(result.body.data.map(item => item.id), ["claude-sonnet-4-6"]); assert.equal(result.body.data[0].secret, undefined);
 const connectionBody = { model: "claude-sonnet-4-6", max_tokens: 8, messages: [{ role: "user", content: "Reply with OK." }] };
 result = await call(messages, mockRequest("POST", connectionBody, sessionHeader)); assert.equal(result.status, 200); assert.equal(result.body.internal, undefined);
+const fakeAnthropicKey = ["sk", "ant", "test", "secret"].join("-");
+upstreamFailure = { type: "error", error: { type: "invalid_request_error", message: `fixture diagnostic\nwith ${fakeAnthropicKey}`, prompt: "drop-prompt" }, request_id: "req_fixture" };
+const loggedErrors = [], originalConsoleError = console.error; console.error = (...items) => loggedErrors.push(items.join(" "));
+try { result = await call(messages, mockRequest("POST", connectionBody, sessionHeader)); } finally { console.error = originalConsoleError; upstreamFailure = null; }
+assert.equal(result.status, 400); assert.equal(result.body.error.type, "invalid_request_error"); assert.equal(result.body.error.request_id, "req_fixture"); assert.equal(JSON.stringify(result.body).includes("fixture diagnostic"), false);
+assert.equal(loggedErrors.length, 1); assert.match(loggedErrors[0], /^\[talkflow-anthropic-error\] status=400 type=invalid_request_error message=fixture diagnostic with \[redacted\] request_id=req_fixture stage=connection_test model=claude-sonnet-4-6 timestamp=/); assert.equal(loggedErrors[0].includes("drop-prompt"), false); assert.equal(loggedErrors[0].includes(fakeAnthropicKey), false);
 result = await call(messages, mockRequest("POST", { ...connectionBody, endpoint: "https://example.com" }, sessionHeader)); assert.equal(result.status, 400);
 result = await call(messages, mockRequest("POST", { ...connectionBody, model: "other-model" }, sessionHeader)); assert.equal(result.status, 400);
 const promptPayload = simple.buildPromptPayload({ stage: "plan", topic: { date: "2026-08-09", weekday: "일", keyword: "온라인 리뷰", mood: "경험 중심", source: "", avoid: "", repairSection: "" } });
@@ -63,6 +70,6 @@ result = await call(messages, mockRequest("POST", connectionBody)); assert.equal
 const rateResponse = mockResponse();
 for (let index = 0; index < 31; index += 1) security.rateLimit(mockRequest("POST", null, { "x-vercel-forwarded-for": "203.0.113.9", "x-forwarded-for": `198.51.100.${index}` }), rateResponse.response, "spoof-check", 30, 60000);
 assert.equal(rateResponse.response.statusCode, 429);
-assert.equal(upstreamCalls, 4);
+assert.equal(upstreamCalls, 5);
 assert.equal(JSON.stringify([result, security.ALLOWED_MODELS]).includes("qa-upstream-secret"), false);
 console.log("proxy-security-qa: PASS (authentication, validation, filtering, rate boundary)");

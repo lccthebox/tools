@@ -225,11 +225,37 @@ function validLegacyValue(value, depth) {
   return value && typeof value === "object" && Object.keys(value).length <= 100 && Object.keys(value).every(key => LEGACY_CONTEXT_KEYS.has(key)) && Object.values(value).every(entry => validLegacyValue(entry, depth + 1));
 }
 
-function upstreamError(status, payload, requestId = "") {
-  const type = payload?.error?.type || "upstream_error";
+function upstreamError(status, payload, requestId = "", context = {}) {
+  const type = sanitizeDiagnosticText(payload?.error?.type, "upstream_error", 100);
+  const diagnostic = {
+    httpStatus: status,
+    type,
+    message: sanitizeDiagnosticText(payload?.error?.message, "Malformed or empty Anthropic error response.", 700),
+    request_id: sanitizeDiagnosticText(payload?.request_id || requestId, "", 200),
+    stage: sanitizeDiagnosticText(context.stage, "unknown", 80),
+    model: sanitizeDiagnosticText(context.model, "unknown", 100),
+    timestamp: sanitizeDiagnosticText(context.timestamp, new Date().toISOString(), 100)
+  };
   const safeStatus = status === 401 || status === 403 ? status : status === 429 ? 429 : status >= 500 ? 502 : 400;
   const messages = { authentication_error: "AI 서버 인증을 확인할 수 없습니다.", rate_limit_error: "AI 사용량 제한에 도달했습니다.", overloaded_error: "AI 서버가 혼잡합니다." };
-  return { status: safeStatus, body: { error: { type, message: messages[type] || "AI 생성 요청을 처리하지 못했습니다.", request_id: payload?.request_id || requestId || "" } } };
+  return { status: safeStatus, body: { error: { type, message: messages[type] || "AI 생성 요청을 처리하지 못했습니다.", request_id: diagnostic.request_id } }, diagnostic };
 }
 
-module.exports = { ALLOWED_MODELS, createSession, json, messageBodyForUpstream, rateLimit, readJson, requireSession, serverConfigured, sessionCookie, upstreamError, validMessageBody, verifyPassword, verifySameOrigin, verifySession };
+function sanitizeDiagnosticText(value, fallback, maxLength) {
+  const text = typeof value === "string" && value.trim() ? value : fallback;
+  return String(text || "").replace(/sk-ant-[A-Za-z0-9_-]+/g, "[redacted]").replace(/[\u0000-\u001f\u007f-\u009f]+/g, " ").replace(/\s+/g, " ").trim().slice(0, maxLength);
+}
+
+function anthropicErrorLogLine(diagnostic) {
+  return `[talkflow-anthropic-error] status=${diagnostic.httpStatus} type=${diagnostic.type} message=${diagnostic.message} request_id=${diagnostic.request_id} stage=${diagnostic.stage} model=${diagnostic.model} timestamp=${diagnostic.timestamp}`;
+}
+
+function anthropicRequestStage(body) {
+  if (body?.operation === "legacy_repair") return "legacy_repair";
+  const toolName = body?.tools?.[0]?.name;
+  if (toolName === PLAN_TOOL.name) return "plan";
+  if (toolName === CONTENT_TOOL.name) return "content";
+  return "connection_test";
+}
+
+module.exports = { ALLOWED_MODELS, anthropicErrorLogLine, anthropicRequestStage, createSession, json, messageBodyForUpstream, rateLimit, readJson, requireSession, serverConfigured, sessionCookie, upstreamError, validMessageBody, verifyPassword, verifySameOrigin, verifySession };
