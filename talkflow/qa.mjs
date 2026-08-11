@@ -52,7 +52,7 @@ try {
   check("task home limits priority rows", await page.locator(".task-row").count() <= 8);
   check("global navigation is simplified", await page.locator(".view-tabs .tab").allTextContents().then(items => items.join("|") === "토픽 준비|일괄 인쇄|설정"));
   check("this week is rendered separately", await page.locator(".this-week").isVisible());
-  await page.getByRole("button", { name: "전체 월", exact: true }).click();
+  await page.getByRole("button", { name: "전체 월 보기", exact: true }).click();
   await page.locator(".month-row [data-open$=':student']").first().click();
   check("student view renders all sections", await page.locator("#student-view .flow-card").count() === 9);
   const quality = await page.evaluate(() => Object.values(TalkFlow.getTopics()).map(topic => ({ title: topic.title.en, result: TalkFlow.validateTopic(topic) })));
@@ -116,7 +116,7 @@ try {
     const calendarOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     check(`${width}px calendar has no horizontal overflow`, calendarOverflow <= 1, `${calendarOverflow}px`);
     await page.screenshot({ path: join(evidence, `calendar-${width}.png`), fullPage: true });
-    await page.getByRole("button", { name: "전체 월", exact: true }).click();
+    await page.getByRole("button", { name: "전체 월 보기", exact: true }).click();
     await page.locator(".month-row [data-open$=':student']").first().click();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     check(`${width}px no horizontal overflow`, overflow <= 1, `${overflow}px`);

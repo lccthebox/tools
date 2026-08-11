@@ -99,7 +99,7 @@ try{
   check("task-first home is the default workspace",await page.locator(".task-home").isVisible()&&await page.locator(".task-row").count()<=8);
   check("global navigation has exactly three destinations",await page.locator(".view-tabs .tab").allTextContents().then(items=>items.join("|")==="토픽 준비|일괄 인쇄|설정"));
   check("each task row exposes one primary action",await page.locator(".task-row").evaluateAll(rows=>rows.every(row=>row.querySelectorAll(".row-primary button").length===1)));
-  await page.getByRole("button",{name:"달력",exact:true}).click();
+  await page.getByRole("button",{name:"달력 보기",exact:true}).click();
   check("secondary calendar has seven columns and no internal work actions",await page.locator(".simple-month-grid").isVisible()&&await page.locator(".weekday-row span").count()===7&&await page.locator(".simple-month-grid [data-action]").count()===0);
   check("non-operating dates expose no generation action",await page.locator(".simple-calendar-cell.off[data-auto-date],.simple-calendar-cell.off[data-custom-date]").count()===0);
   const alignmentCritical=await page.evaluate(()=>{
@@ -112,7 +112,7 @@ try{
   await legacyContext.addInitScript(()=>localStorage.setItem("tb_talkflow_settings_v1",JSON.stringify({apiKey:"qa-intercept-key",gistToken:"test-token"})));
   const legacyPage=await legacyContext.newPage();
   await legacyPage.goto(`http://127.0.0.1:${port}/`,{waitUntil:"networkidle"});
-  await legacyPage.getByRole("button",{name:"전체 월",exact:true}).click();
+  await legacyPage.getByRole("button",{name:"전체 월 보기",exact:true}).click();
   await legacyPage.locator("[data-drawer-date='2026-08-03']").click();
   await legacyPage.getByRole("button",{name:"내용 검수",exact:true}).click();
   await legacyPage.getByRole("button",{name:"회화형 구조로 변환"}).click();
