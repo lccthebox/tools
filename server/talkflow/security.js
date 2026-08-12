@@ -160,14 +160,15 @@ function validGenerationPrompt(content, toolName) {
   let payload;
   try { payload = JSON.parse(content); } catch { return false; }
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) return false;
-  const keys = ["stage", "contract", "fixedDesign", "languageExposure", "generationRules", "topic", "monthlyDiversity", "approvedPlan", "previousValidationIssues", "previousCandidate", "retryRule"];
+  const keys = ["stage", "contract", "fixedDesign", "languageExposure", "autoTopicSelection", "generationRules", "topic", "monthlyDiversity", "approvedPlan", "previousValidationIssues", "previousCandidate", "retryRule"];
   if (Object.keys(payload).some(key => !keys.includes(key))) return false;
   const expectedStage = toolName === PLAN_TOOL.name ? "plan" : "content";
   if (payload.stage !== expectedStage || payload.contract !== PROMPT_PROFILE.contract) return false;
   if (JSON.stringify(payload.fixedDesign) !== JSON.stringify(PROMPT_PROFILE.fixedDesign)) return false;
   if (JSON.stringify(payload.languageExposure) !== JSON.stringify(PROMPT_PROFILE.languageExposure)) return false;
+  if (JSON.stringify(payload.autoTopicSelection) !== JSON.stringify(PROMPT_PROFILE.autoTopicSelection)) return false;
   if (JSON.stringify(payload.generationRules) !== JSON.stringify(PROMPT_PROFILE.generationRules)) return false;
-  if (!payload.topic || !/^\d{4}-\d{2}-\d{2}$/.test(payload.topic.date) || typeof payload.topic.keyword !== "string" || !payload.topic.keyword.trim()) return false;
+  if (!payload.topic || !/^\d{4}-\d{2}-\d{2}$/.test(payload.topic.date)) return false;
   if (!Array.isArray(payload.monthlyDiversity) || !Array.isArray(payload.previousValidationIssues)) return false;
   if (!validTopicInput(payload.topic) || !validDiversity(payload.monthlyDiversity) || !validIssues(payload.previousValidationIssues)) return false;
   if (expectedStage === "plan" && payload.approvedPlan !== null || expectedStage === "content" && !matchesSchemaShape(payload.approvedPlan, PLAN_TOOL.input_schema, false)) return false;
@@ -178,13 +179,26 @@ function validGenerationPrompt(content, toolName) {
 }
 
 function validTopicInput(topic) {
-  if (!topic || typeof topic !== "object" || Array.isArray(topic) || Object.keys(topic).some(key => !["date", "weekday", "keyword", "mood", "source", "avoid", "repairSection"].includes(key))) return false;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(topic.date) || typeof topic.keyword !== "string" || !topic.keyword.trim()) return false;
-  return ["weekday", "keyword", "mood", "source", "avoid", "repairSection"].every(key => typeof topic[key] === "string" && topic[key].length <= 4000);
+  const keys = ["date", "weekday", "generationMode", "topicHint", "conversationDirection", "source", "avoid", "repairSection", "recentTopics", "categoryCounts"];
+  if (!topic || typeof topic !== "object" || Array.isArray(topic) || Object.keys(topic).some(key => !keys.includes(key))) return false;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(topic.date) || !["auto", "guided"].includes(topic.generationMode)) return false;
+  if (typeof topic.topicHint !== "string" || topic.topicHint.length > 4000 || topic.generationMode === "auto" && topic.topicHint !== "" || topic.generationMode === "guided" && !topic.topicHint.trim()) return false;
+  if (!["auto", "light", "experience", "debate", "problem-solving"].includes(topic.conversationDirection)) return false;
+  if (!["weekday", "source", "avoid", "repairSection"].every(key => typeof topic[key] === "string" && topic[key].length <= 4000)) return false;
+  return validRecentTopics(topic.recentTopics) && validCategoryCounts(topic.categoryCounts);
+}
+
+function validRecentTopics(items) {
+  const keys = ["date", "title", "category", "activityType"];
+  return Array.isArray(items) && items.length <= 20 && items.every(item => item && typeof item === "object" && !Array.isArray(item) && !Object.keys(item).some(key => !keys.includes(key)) && /^\d{4}-\d{2}-\d{2}$/.test(item.date) && ["title", "category", "activityType"].every(key => typeof item[key] === "string" && item[key].length <= 300));
+}
+
+function validCategoryCounts(value) {
+  return value && typeof value === "object" && !Array.isArray(value) && Object.keys(value).length <= 20 && Object.entries(value).every(([key, count]) => key.length >= 1 && key.length <= 100 && Number.isInteger(count) && count >= 0 && count <= 31);
 }
 
 function validDiversity(items) {
-  return items.length <= 31 && items.every(item => item && typeof item === "object" && !Array.isArray(item) && !Object.keys(item).some(key => !["style", "activity", "storyOpening", "questionOpenings", "expressions"].includes(key)) && ["style", "activity", "storyOpening"].every(key => typeof item[key] === "string" && item[key].length <= 1000) && ["questionOpenings", "expressions"].every(key => Array.isArray(item[key]) && item[key].length <= 12 && item[key].every(value => typeof value === "string" && value.length <= 1000)));
+  return items.length <= 31 && items.every(item => item && typeof item === "object" && !Array.isArray(item) && !Object.keys(item).some(key => !["style", "activity"].includes(key)) && ["style", "activity"].every(key => typeof item[key] === "string" && item[key].length <= 1000));
 }
 
 function validIssues(items) {

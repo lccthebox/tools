@@ -95,13 +95,25 @@
 
   <dialog id="custom-topic-dialog">
     <form method="dialog" class="dialog-card" id="custom-topic-form">
-      <div class="dialog-heading"><div><p class="eyebrow">GUIDED GENERATION</p><h2>주제 지정해서 생성</h2></div><button value="cancel" class="icon-button" aria-label="닫기">×</button></div>
+      <div class="dialog-heading"><div><p class="eyebrow">TOPIC PREPARATION</p><h2>토픽 만들기</h2></div><button value="cancel" class="icon-button" aria-label="닫기">×</button></div>
       <input id="custom-date" type="hidden">
-      <label>주제 또는 키워드<input id="custom-keyword" required placeholder="예: 새로운 소비 트렌드"></label>
-      <label>참고 자료 URL 또는 텍스트<textarea id="custom-source" placeholder="https://... 또는 참고할 내용을 붙여넣으세요"></textarea></label>
-      <label>피하고 싶은 내용<input id="custom-avoid" placeholder="선택 입력"></label>
-      <details><summary>추가 옵션</summary><label>회화 방향<select id="custom-mood"><option>가볍고 편한 분위기</option><option selected>경험 중심</option><option>생각 확장</option><option>함께 해결하기</option></select></label></details>
-      <div class="button-row"><button value="cancel" class="button secondary">취소</button><button value="create" class="button primary">토픽 생성하기</button></div>
+      <section class="topic-create-default" aria-labelledby="auto-topic-title">
+        <div><h3 id="auto-topic-title">새 토픽을 자동으로 준비합니다</h3><p>최근 사용한 주제와 이번 달 구성을 보고 겹치지 않는 토픽을 만듭니다.</p></div>
+        <button value="auto" class="button primary topic-create-primary">자동으로 만들기</button>
+        <div class="topic-create-guided-entry"><span>원하는 주제가 있나요?</span><button type="button" class="button secondary" id="show-guided-topic" aria-expanded="false" aria-controls="guided-topic-fields">직접 주제 지정하기</button></div>
+      </section>
+      <section id="guided-topic-fields" class="topic-create-guided" hidden aria-labelledby="guided-topic-title">
+        <div><h3 id="guided-topic-title">직접 주제 지정</h3><p>원하는 주제나 키워드가 있을 때만 입력하세요.</p></div>
+        <label>주제 또는 키워드<input id="custom-keyword" placeholder="예: 온라인 리뷰" aria-describedby="custom-keyword-error"></label>
+        <p id="custom-keyword-error" class="inline-field-error" role="alert" hidden>주제 또는 키워드를 입력해 주세요.</p>
+        <button value="guided" class="button primary">이 주제로 만들기</button>
+        <button type="button" class="text-action" id="use-auto-topic">← 자동으로 맡기기</button>
+      </section>
+      <details id="topic-create-options" class="topic-create-options"><summary>추가 조건</summary><div>
+        <label>참고 자료 URL 또는 텍스트<textarea id="custom-source" placeholder="선택 입력"></textarea></label>
+        <label>피하고 싶은 내용<input id="custom-avoid" placeholder="선택 입력"></label>
+        <label>회화 방향<select id="custom-mood"><option value="auto" selected>자동 선택</option><option value="light">가볍고 편한 대화</option><option value="experience">경험 중심</option><option value="debate">의견이 갈리는 토론</option><option value="problem-solving">실생활 문제 해결</option></select></label>
+      </div></details>
     </form>
   </dialog>
 
@@ -112,8 +124,8 @@
   <script src="./session-workflow.js"></script>
   <script src="./conversation-fixtures.js"></script>
   <script src="./generation-engine.js"></script>
-  <script src="./simple-generation.js?v=20260805-connection-fix-4"></script>
+  <script src="./simple-generation.js?v=20260812-auto-topic-default"></script>
   <script src="./legacy-repair-prompt.js?v=20260809-proxy-contract"></script>
-  <script src="./app.js?v=20260811-topic-prep-home"></script>
+  <script src="./app.js?v=20260812-auto-topic-default"></script>
 </body>
 </html>

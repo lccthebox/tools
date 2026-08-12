@@ -52,7 +52,7 @@ try {
   page.on("request", request => {
     if (/api\.anthropic\.com|\/api\/talkflow\/(?:models|messages)/.test(request.url())) anthropicRequests.push(`${request.method()} ${request.url()}`);
   });
-  await page.route("**/api/talkflow/**", route => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ configured: false, authenticated: false }) }));
+  await page.route("**/api/talkflow/**", route => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ configured: true, authenticated: true }) }));
   const url = `http://127.0.0.1:${server.address().port}/?section=topics&view=tasks&month=2026-08`;
   await page.goto(url, { waitUntil: "networkidle" });
   const samples = await page.evaluate(() => TalkFlow.getTopics());
@@ -111,6 +111,30 @@ try {
       check("375px product title is at most two lines", await page.locator(".product-intro h1").evaluate(element => element.getBoundingClientRect().height / Number.parseFloat(getComputedStyle(element).lineHeight) <= 2.1));
     }
     await page.screenshot({ path: join(evidence, `task-home-${width}.png`), fullPage: true });
+  }
+
+  await load(multiple, settingsFor(dates));
+  for (const width of [375, 768, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(url, { waitUntil: "networkidle" });
+    await page.locator(".task-row.empty [data-custom-date]").first().click();
+    check(`${width}px auto modal is the default`, await page.locator("#custom-topic-dialog").isVisible() && await page.locator("#guided-topic-fields").isHidden());
+    check(`${width}px auto primary is immediately visible`, await page.locator('#custom-topic-form button[value="auto"].primary').isVisible());
+    check(`${width}px no native required topic input`, await page.locator("#custom-keyword").getAttribute("required") === null);
+    check(`${width}px additional conditions start closed`, !await page.locator("#topic-create-options").evaluate(node => node.open));
+    check(`${width}px auto modal overflow 0`, await page.locator("#custom-topic-dialog").evaluate(node => node.scrollWidth <= node.clientWidth + 1));
+    await page.screenshot({ path: join(evidence, `topic-create-auto-${width}.png`), fullPage: false });
+    await page.getByRole("button", { name: "직접 주제 지정하기" }).click();
+    check(`${width}px guided input expands and receives focus`, await page.locator("#guided-topic-fields").isVisible() && await page.locator("#custom-keyword").evaluate(node => node === document.activeElement));
+    check(`${width}px guided mode has one primary action`, await page.locator("#custom-topic-dialog .primary:visible").count() === 1 && await page.locator(".topic-create-default").isHidden());
+    await page.screenshot({ path: join(evidence, `topic-create-guided-${width}.png`), fullPage: false });
+    await page.locator("#topic-create-options summary").click();
+    check(`${width}px optional fields and automatic direction`, await page.locator("#custom-source").isVisible() && await page.locator("#custom-avoid").isVisible() && await page.locator("#custom-mood").inputValue() === "auto");
+    check(`${width}px expanded modal overflow 0`, await page.locator("#custom-topic-dialog").evaluate(node => node.scrollWidth <= node.clientWidth + 1));
+    check(`${width}px expanded controls and primary stay visible`, await page.locator("#custom-mood").isVisible() && await page.locator('#custom-topic-form button[value="guided"]').isVisible());
+    await page.screenshot({ path: join(evidence, `topic-create-options-${width}.png`), fullPage: false });
+    await page.keyboard.press("Escape");
+    check(`${width}px Escape closes modal`, await page.locator("#custom-topic-dialog").isHidden());
   }
 
   await page.setViewportSize({ width: 375, height: 900 });

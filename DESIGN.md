@@ -67,6 +67,7 @@ Talk Flow is an operational tool for a non-technical study coordinator, a discus
 - `operator-panel`: date/topic input, generation progress, review result, final actions.
 - `month-calendar`: weekday header, operating day, non-operating day, empty, review, printable, and used states.
 - `date-action`: automatic generation and guided generation states for an empty operating date.
+- `topic-create-dialog`: automatic generation is the default state with no topic input; guided topic input and optional source/avoidance/direction controls are progressive disclosures. Guided validation is inline and never uses native required bubbles.
 - `generation-progress`: four concise status messages without storage, API, prompt, or schema details.
 - `operator-review`: scaled A4 preview, location-specific diagnostics, partial repair, separated preview and approval actions.
 - `two-page-preview`: page-one and page-two thumbnails side by side on desktop and stacked on mobile; opens a full-size, keyboard-dismissable A4 dialog.
