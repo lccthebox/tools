@@ -1,7 +1,7 @@
 "use strict";
 
 const crypto = require("node:crypto");
-const { PLAN_TOOL, CONTENT_TOOL, PROMPT_PROFILE, buildPromptPayload } = require("../../talkflow/simple-generation");
+const { PLAN_TOOL, CONTENT_TOOL, PROMPT_PROFILE, buildPromptPayload, validatePlan } = require("../../talkflow/simple-generation");
 const LegacyRepairPrompt = require("../../talkflow/legacy-repair-prompt");
 
 const SESSION_COOKIE = "__Host-talkflow_session";
@@ -171,7 +171,7 @@ function validGenerationPrompt(content, toolName) {
   if (!payload.topic || !/^\d{4}-\d{2}-\d{2}$/.test(payload.topic.date)) return false;
   if (!Array.isArray(payload.monthlyDiversity) || !Array.isArray(payload.previousValidationIssues)) return false;
   if (!validTopicInput(payload.topic) || !validDiversity(payload.monthlyDiversity) || !validIssues(payload.previousValidationIssues)) return false;
-  if (expectedStage === "plan" && payload.approvedPlan !== null || expectedStage === "content" && !matchesSchemaShape(payload.approvedPlan, PLAN_TOOL.input_schema, false)) return false;
+  if (expectedStage === "plan" && payload.approvedPlan !== null || expectedStage === "content" && (!matchesSchemaShape(payload.approvedPlan, PLAN_TOOL.input_schema, false) || !validatePlan(payload.approvedPlan, payload.topic).ok)) return false;
   const candidateSchema = expectedStage === "plan" ? PLAN_TOOL.input_schema : CONTENT_TOOL.input_schema;
   if (payload.previousCandidate !== null && !matchesSchemaShape(payload.previousCandidate, candidateSchema, true)) return false;
   const rebuilt = buildPromptPayload({ stage: payload.stage, topic: payload.topic, monthlyDiversity: payload.monthlyDiversity, approvedPlan: payload.approvedPlan, previousValidationIssues: payload.previousValidationIssues, previousCandidate: payload.previousCandidate });

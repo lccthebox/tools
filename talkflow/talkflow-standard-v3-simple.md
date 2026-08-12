@@ -29,7 +29,7 @@
 - 각 질문은 한 문장, 선택과 이유, 사례 또는 예외로 확장할 수 있어야 한다. 학생용에는 짧은 starter 하나만 표시하고 리더용에는 질문별 후속 질문을 둔다.
 - Today’s English 네 개는 판단, 경험, 동의·반박, 후속 질문 기능을 담당하며 `useIn`으로 Story, Real Talk, Activity의 실제 사용 위치를 연결한다.
 - Activity는 `sourceRef`로 Story ID를 직접 참조한다. 15~25분 동안 실제 자료, 의견 차이, 다른 사람의 말을 듣는 단계, 전원 발화, 구체적인 Group Result를 포함한다.
-- Story 영어에 있는 숫자·시간·가격 정보는 한국어에도 보존한다. 판단 자료의 한국어는 번역만 제공하고 정답을 유도하는 평가형 힌트를 넣지 않는다.
+- Topic Plan은 영어·한국어가 같은 값인 `storyFacts` 1~4개를 먼저 확정한다. Content Fill은 그 사실 원장을 Story EN/KO 양쪽에 모두 포함한다. 시간·기간·가격·퍼센트·평점·후기 수·인원 수는 타입별 canonical 값으로 대칭 검증하며 한쪽의 누락·변경·추가를 blocker로 처리한다. 판단 자료의 한국어는 번역만 제공하고 정답을 유도하는 평가형 힌트를 넣지 않는다.
 - 월간 검사에서는 동일 Activity 연속 사용, 동일 스타일 3회 연속, 동일 질문 문두 3회 초과, 동일 표현 2회 초과를 경고한다.
 
 품질 점수는 Story 15, Question Diversity 15, Answerability 15, Interest 10, Expression Usefulness 10, Activity Connection 15, Bilingual Quality 10, Print Readability 10으로 총 100점이다. 총점 85점 이상이며 각 영역 최소 기준을 충족하고 blocker가 없어야 승인할 수 있다. 숫자 점수는 관리자 고급 영역에서만 확인한다.
