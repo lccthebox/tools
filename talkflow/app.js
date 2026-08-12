@@ -738,7 +738,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed"].includes(topic.o
     return [{role:"user",content:JSON.stringify(Simple.buildPromptPayload({stage,topic,monthlyDiversity,approvedPlan:plan,previousValidationIssues:issues,previousCandidate}))}];
   }
   async function requestGenerationStage(stage,request,plan=null,modelId){
-    const tool=stage==="plan"?Simple.PLAN_TOOL:Simple.CONTENT_TOOL,normalize=stage==="plan"?clone:Simple.normalizeContent,validate=stage==="plan"?Simple.validatePlan:value=>{
+    const tool=stage==="plan"?Simple.PLAN_TOOL:Simple.CONTENT_TOOL,normalize=stage==="plan"?clone:Simple.normalizeContent,validate=stage==="plan"?value=>Simple.validatePlan(value,request):value=>{
       const result=Simple.validateContent(value,plan,Object.values(topics),true);
       if(value?.date===request.date)return result;
       const mismatch={severity:"blocker",id:"B1",group:"structure",location:"date",message:"요청 날짜와 생성 날짜가 일치하지 않습니다."};
@@ -755,6 +755,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed"].includes(topic.o
         if(result.ok)return lastNormalized;
         lastIssues=result.issues.map(item=>clone(item));
         lastError=new Error(lastIssues.map(item=>`${item.location}: ${item.message}`).join(" "));
+        if(lastIssues.some(item=>item.id==="QW4"))break;
       }catch(error){lastError=error;if(error.stopRetry)break}
     }
     if(lastError?.stopRetry){try{await fetchAvailableModels()}catch{} }
