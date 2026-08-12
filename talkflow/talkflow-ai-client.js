@@ -15,10 +15,10 @@
     return payload;
   }
   global.TalkFlowAiClient = Object.freeze({
-    status: () => request("/api/talkflow/status", { method: "GET" }),
-    login: password => request("/api/talkflow/login", { method: "POST", body: JSON.stringify({ password }) }),
-    logout: () => request("/api/talkflow/logout", { method: "POST", body: "{}" }),
-    listModels: ({ signal } = {}) => request("/api/talkflow/models", { method: "GET", signal }),
-    generate: (body, { signal } = {}) => request("/api/talkflow/messages", { method: "POST", body: JSON.stringify(body), signal })
+    status: () => request("/api/talkflow/status/", { method: "GET" }),
+    login: password => request("/api/talkflow/login/", { method: "POST", body: JSON.stringify({ password }) }),
+    logout: () => request("/api/talkflow/logout/", { method: "POST", body: "{}" }),
+    listModels: ({ signal } = {}) => request("/api/talkflow/models/", { method: "GET", signal }),
+    generate: (body, { signal } = {}) => request("/api/talkflow/messages/", { method: "POST", body: JSON.stringify(body), signal })
   });
 })(window);

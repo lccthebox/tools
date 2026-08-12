@@ -16,10 +16,10 @@ try{
   const page=await context.newPage(),calls={status:0,login:0,models:0,messages:0,direct:0},bodies=[];let authenticated=false;
   page.on("request",request=>{if(request.url().startsWith("https://api.anthropic.com/"))calls.direct++});
   await page.route("https://fonts.googleapis.com/**",route=>route.fulfill({status:200,contentType:"text/css",body:""}));
-  await page.route("**/api/talkflow/status",route=>{calls.status++;return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({configured:true,authenticated,model:"Claude Sonnet 4.6"})})});
-  await page.route("**/api/talkflow/login",route=>{calls.login++;bodies.push(route.request().postDataJSON());authenticated=true;return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({authenticated:true})})});
-  await page.route("**/api/talkflow/models",route=>{calls.models++;return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({data:[{id:"claude-sonnet-4-6",display_name:"Claude Sonnet 4.6"}]})})});
-  await page.route("**/api/talkflow/messages",route=>{calls.messages++;bodies.push(route.request().postDataJSON());return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({content:[{type:"text",text:"OK"}]})})});
+  await page.route("**/api/talkflow/status/",route=>{calls.status++;return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({configured:true,authenticated,model:"Claude Sonnet 4.6"})})});
+  await page.route("**/api/talkflow/login/",route=>{calls.login++;bodies.push(route.request().postDataJSON());authenticated=true;return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({authenticated:true})})});
+  await page.route("**/api/talkflow/models/",route=>{calls.models++;return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({data:[{id:"claude-sonnet-4-6",display_name:"Claude Sonnet 4.6"}]})})});
+  await page.route("**/api/talkflow/messages/",route=>{calls.messages++;bodies.push(route.request().postDataJSON());return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({content:[{type:"text",text:"OK"}]})})});
   await page.goto(`http://127.0.0.1:${server.address().port}/`,{waitUntil:"networkidle"});await page.locator("#settings-button").click();
   check("Anthropic key input removed",await page.locator("#api-key,#change-api-key,#api-key-editor").count()===0);
   check("legacy key is absent from DOM",!(await page.locator("body").innerText()).includes("legacy-browser-secret")&&await page.locator("input").evaluateAll(items=>items.every(item=>item.value!=="legacy-browser-secret")));

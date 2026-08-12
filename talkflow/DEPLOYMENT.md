@@ -51,3 +51,10 @@ Vercel Dashboard 또는 `vercel env add`로 세 환경변수를 Preview/Producti
 ## Main 병합 기준
 
 UI, History, PDF, Proxy, 보안, Preview는 기존 토픽과 deterministic fixture/mock으로 검증합니다. 서버 secret이 준비된 경우에만 같은 SHA에서 연결 테스트 1회, Topic Plan 1회, Content Fill 1회, 신규 토픽 1건을 상한으로 라이브 QA합니다. 같은 목적의 반복 생성과 자동 재시도는 하지 않습니다. main 병합과 운영 Pages 반영은 별도 승인 전 실행하지 않습니다.
+
+## 라이브 생성 계측 안전 규칙
+
+- Preview의 Talk Flow API는 `trailingSlash: true`에 맞춘 `/api/talkflow/models/`, `/api/talkflow/messages/`를 canonical 경로로 사용한다. 라이브 QA에서 무슬래시 경로를 호출하거나 redirect를 따라 재구성하지 않는다.
+- Playwright `page.route(...).fetch()`로 Messages 응답 경로를 가로채지 않는다. 호출 수는 Vercel Functions 로그와 `page.on("request")` / `page.on("response")` 이벤트로만 관찰한다.
+- 응답 본문 확인이 꼭 필요하면 원본이 아닌 clone을 비동기로 읽고, 관측 timeout이나 AbortController를 제품 fetch와 공유하지 않는다.
+- Topic Plan과 Content Fill은 자동 재시도하지 않는다. 실패 또는 중단 초안은 보존하고 운영자의 명시적 재시도만 새 AI 요청을 시작한다.
