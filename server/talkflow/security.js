@@ -1,7 +1,7 @@
 "use strict";
 
 const crypto = require("node:crypto");
-const { PLAN_TOOL, CONTENT_TOOL, PROMPT_PROFILE, buildPromptPayload, validatePlan } = require("../../talkflow/simple-generation");
+const { PLAN_TOOL, CONTENT_TOOL, CONTENT_OUTPUT_SCHEMA, PROMPT_PROFILE, buildPromptPayload, validatePlan } = require("../../talkflow/simple-generation");
 const LegacyRepairPrompt = require("../../talkflow/legacy-repair-prompt");
 
 const SESSION_COOKIE = "__Host-talkflow_session";
@@ -153,7 +153,9 @@ function messageBodyForUpstream(body) {
   const canonical = tool && CANONICAL_TOOLS.get(tool.name);
   if (!canonical || JSON.stringify(tool) !== JSON.stringify(canonical)) return false;
   if (body.messages.length !== 1 || body.messages[0].role !== "user" || !validGenerationPrompt(body.messages[0].content, tool.name)) return false;
-  return body.tool_choice?.type === "tool" && body.tool_choice?.name === tool.name && Object.keys(body.tool_choice).every(key => ["type", "name"].includes(key)) ? body : null;
+  if(body.tool_choice?.type!=="tool"||body.tool_choice?.name!==tool.name||!Object.keys(body.tool_choice).every(key=>["type","name"].includes(key)))return null;
+  if(tool.name===CONTENT_TOOL.name)return{model:body.model,max_tokens:body.max_tokens,messages:body.messages,output_config:{format:{type:"json_schema",schema:CONTENT_OUTPUT_SCHEMA}}};
+  return body;
 }
 
 function validGenerationPrompt(content, toolName) {

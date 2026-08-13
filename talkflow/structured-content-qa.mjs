@@ -45,4 +45,16 @@ assert.equal(spaced.session2.activity.name, "Review Jury", "surrounding whitespa
 fails({ ...content, session2: null }, "session2");
 fails({ ...content, session1: JSON.stringify({ ...session1, unknown: true }) }, "session1");
 fails({ ...content, session2: '{"minutes":40,"activity":{"constructor":{"polluted":true}}}' }, "session2");
+
+const structuredPayload = value => ({
+  content: [{ type: "text", text: JSON.stringify(value) }],
+  stop_reason: "end_turn"
+});
+assert.equal(Simple.CONTENT_OUTPUT_SCHEMA.type, "object", "server-owned output schema is exported from the validator source of truth");
+assert.deepEqual(Simple.parseStructuredContentResponse(structuredPayload(content)), content, "one top-level JSON parse returns the full object");
+assert.throws(() => Simple.parseStructuredContentResponse(structuredPayload({ ...content, session2: JSON.stringify(session2) })), error => error?.type === "structured_content_error" && error?.malformedField === "session2", "new structured responses reject nested stringified sessions");
+assert.throws(() => Simple.parseStructuredContentResponse({ content: [{ type: "text", text: "{bad" }], stop_reason: "end_turn" }), error => error?.type === "structured_content_error", "malformed top-level JSON fails closed");
+assert.throws(() => Simple.parseStructuredContentResponse(structuredPayload({ ...content, session2: { ...session2, unknown: true } })), error => error?.type === "structured_content_error", "unknown fields fail schema validation");
+assert.throws(() => Simple.parseStructuredContentResponse({ ...structuredPayload(content), stop_reason: "max_tokens" }), error => error?.type === "incomplete_response" && error?.stopReason === "max_tokens", "max_tokens fails without retry");
+assert.throws(() => Simple.parseStructuredContentResponse({ content: [{ type: "text", text: "I cannot help." }], stop_reason: "refusal" }), error => error?.type === "refusal" && error?.stopReason === "refusal", "refusal fails without parsing");
 console.log("structured-content-qa: PASS (one-level object normalization and fail-closed validation)");

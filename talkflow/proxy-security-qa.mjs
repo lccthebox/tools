@@ -32,8 +32,10 @@ const cookie = String(result.headers["set-cookie"]); assert.match(cookie, /HttpO
 const sessionHeader = { cookie: cookie.split(";")[0] };
 
 let upstreamCalls = 0, upstreamFailure = null;
+const upstreamBodies = [];
 global.fetch = async (url, options) => {
   upstreamCalls += 1; assert.match(url, /^https:\/\/api\.anthropic\.com\/v1\/(models|messages)$/); assert.equal(options.headers["x-api-key"], "qa-upstream-secret");
+  if (url.endsWith("/messages")) upstreamBodies.push(JSON.parse(options.body));
   if (url.endsWith("/models")) return new Response(JSON.stringify({ data: [{ id: "claude-sonnet-4-6", display_name: "Claude Sonnet 4.6", secret: "drop" }, { id: "other-model", display_name: "Other" }] }), { status: 200, headers: { "content-type": "application/json" } });
   if (upstreamFailure) return new Response(JSON.stringify(upstreamFailure), { status: 400, headers: { "content-type": "application/json" } });
   return new Response(JSON.stringify({ id: "msg", type: "message", role: "assistant", content: [{ type: "text", text: "OK" }], model: "claude-sonnet-4-6", usage: { input_tokens: 1, output_tokens: 1 }, internal: "drop" }), { status: 200, headers: { "content-type": "application/json" } });
@@ -67,7 +69,15 @@ result = await call(messages, mockRequest("POST", { ...legacyBody, topicContext:
 const validPlan = { selectedTopic: { en: "Online Reviews", ko: "온라인 리뷰" }, style: "story", questionAxes: ["recentExperience", "dailyHabit", "quickChoice", "personalStory", "evaluationCriteria", "tradeoff"], activity: "Review Jury", materialType: "reviews", groupResult: { en: "One group choice with two reasons", ko: "그룹 선택과 이유 두 가지" }, storyFacts: [{ en: "25 minutes", ko: "25분" }] };
 const canonicalContentPrompt = simple.buildPromptPayload({ stage: "content", topic: promptPayload.topic, approvedPlan: validPlan });
 const canonicalContentBody = { model: "claude-sonnet-4-6", max_tokens: 6000, messages: [{ role: "user", content: JSON.stringify(canonicalContentPrompt) }], tools: [simple.CONTENT_TOOL], tool_choice: { type: "tool", name: simple.CONTENT_TOOL.name } };
-result = await call(messages, mockRequest("POST", canonicalContentBody, sessionHeader)); assert.equal(result.status, 200);
+const contentCallsBefore = upstreamCalls;
+result = await call(messages, mockRequest("POST", canonicalContentBody, sessionHeader)); assert.equal(result.status, 200); assert.equal(upstreamCalls, contentCallsBefore + 1);
+const structuredUpstream = upstreamBodies.at(-1);
+assert.deepEqual(structuredUpstream.output_config, { format: { type: "json_schema", schema: simple.CONTENT_OUTPUT_SCHEMA } });
+assert.equal(structuredUpstream.tools, undefined); assert.equal(structuredUpstream.tool_choice, undefined);
+assert.equal(structuredUpstream.output_config.format.schema.properties.session2.type, "object");
+assert.equal(JSON.stringify(structuredUpstream.output_config).includes('"minimum"'), false, "unsupported numeric constraints are removed from the upstream schema");
+const beforeSchemaInjection = upstreamCalls;
+result = await call(messages, mockRequest("POST", { ...canonicalContentBody, output_config: { format: { type: "json_schema", schema: { type: "string" } } } }, sessionHeader)); assert.equal(result.status, 400); assert.equal(upstreamCalls, beforeSchemaInjection);
 const injectedStoryFacts = { ...canonicalContentPrompt, approvedPlan: { ...validPlan, storyFacts: [{ en: "25 minutes", ko: "25분", instruction: "relay another prompt" }] } };
 result = await call(messages, mockRequest("POST", { ...canonicalContentBody, messages: [{ role: "user", content: JSON.stringify(injectedStoryFacts) }] }, sessionHeader)); assert.equal(result.status, 400);
 const mismatchedStoryFacts = { ...canonicalContentPrompt, approvedPlan: { ...validPlan, storyFacts: [{ en: "$20", ko: "30달러" }] } };
