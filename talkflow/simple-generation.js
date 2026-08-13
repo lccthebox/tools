@@ -31,7 +31,36 @@
     return{stage,...PROMPT_PROFILE,topic,monthlyDiversity,approvedPlan,previousValidationIssues,previousCandidate,retryRule:previousCandidate?"Keep valid fields unchanged and repair only the listed locations.":"Create every required content field once."};
   }
   const clone=v=>JSON.parse(JSON.stringify(v));
-  function normalizeContent(value){const normalized={...clone(value),contentQualityVersion:"quality-v2"},heading=String(normalized.session1?.story?.heading||"").replaceAll("'","’").toUpperCase();if(["TODAY’S STORY","THE SITUATION"].includes(heading))normalized.session1.story.heading=heading;return normalized}
+  function structuredContentError(field,value,message){const error=new Error(message);error.type="structured_content_error";error.stage="content";error.malformedField=field;error.expectedType="object";error.receivedType=Array.isArray(value)?"array":value===null?"null":typeof value;return error}
+  const dangerousKeys=new Set(["__proto__","prototype","constructor"]);
+  function hasDangerousKey(value){if(!value||typeof value!=="object")return false;return Object.keys(value).some(key=>dangerousKeys.has(key)||hasDangerousKey(value[key]))}
+  function matchesKnownShape(value,schema){
+    if(!value||typeof value!=="object"||Array.isArray(value)||hasDangerousKey(value))return false;
+    const properties=schema?.properties||{};
+    return Object.entries(value).every(([key,item])=>{
+      const expected=properties[key];if(!expected)return false;
+      if(expected.type==="object")return matchesKnownShape(item,expected);
+      if(expected.type==="array")return Array.isArray(item)&&item.every(entry=>expected.items?.type==="object"?matchesKnownShape(entry,expected.items):expected.items?.type?typeof entry===expected.items.type:true);
+      if(expected.type==="integer")return Number.isInteger(item);
+      return !expected.type||typeof item===expected.type;
+    });
+  }
+  function unwrapKnownObject(field,value,schema){
+    if(typeof value!=="string")return value;
+    const source=value.trim();if(!source.startsWith("{")||!source.endsWith("}"))throw structuredContentError(field,value,field+" must be an object.");
+    let parsed;try{parsed=JSON.parse(source)}catch{throw structuredContentError(field,value,field+" contains malformed JSON.")}
+    if(!matchesKnownShape(parsed,schema))throw structuredContentError(field,parsed,field+" does not match the expected object shape.");
+    return parsed;
+  }
+  function normalizeContent(value){
+    const raw=clone(value),normalized={...raw};
+    normalized.session1=unwrapKnownObject("session1",raw.session1,contentSchema.properties.session1);
+    normalized.session2=unwrapKnownObject("session2",raw.session2,contentSchema.properties.session2);
+    for(const field of ["session1","session2"]){const session=normalized[field];if(!session||typeof session!=="object"||Array.isArray(session)||hasDangerousKey(session))throw structuredContentError(field,session,field+" must be a safe object.")}
+    normalized.contentQualityVersion="quality-v2";
+    const heading=String(normalized.session1?.story?.heading||"").replaceAll("'","’").toUpperCase();if(["TODAY’S STORY","THE SITUATION"].includes(heading))normalized.session1.story.heading=heading;
+    return normalized;
+  }
   const issue=(id,location,message)=>({severity:"blocker",id,location,message});
   const warning=(id,location,message)=>({severity:"warning",id,location,message});
   const strings=(value,path="topic",out=[])=>{if(typeof value==="string")out.push({path,value});else if(Array.isArray(value))value.forEach((v,i)=>strings(v,`${path}[${i}]`,out));else if(value&&typeof value==="object")Object.entries(value).forEach(([k,v])=>strings(v,`${path}.${k}`,out));return out};

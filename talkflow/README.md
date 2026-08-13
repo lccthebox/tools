@@ -48,6 +48,7 @@ node talkflow/auth-regression-qa.mjs
 node talkflow/connection-qa.mjs
 node talkflow/model-qa.mjs
 node talkflow/simple-qa.mjs
+node talkflow/structured-content-qa.mjs
 node talkflow/generation-engine-qa.mjs
 node talkflow/conversation-qa.mjs
 node talkflow/qa.mjs

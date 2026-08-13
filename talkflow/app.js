@@ -46,7 +46,7 @@
   function aiReady(){return aiServerState.configured&&aiServerState.authenticated}
   function modelById(id){return(settings.availableModels||[]).find(model=>model.id===id)}
   function selectedModelLabel(id=settings.anthropicModel){const model=modelById(id);return model?.displayName||id||"선택 안 됨"}
-  function safeDiagnostics(value){if(!value)return null;return{httpStatus:value.httpStatus||null,type:value.type||"unknown_error",message:value.message||"",requestId:value.requestId||"",modelId:value.modelId||"",stage:value.stage||""}}
+  function safeDiagnostics(value){if(!value)return null;return{httpStatus:value.httpStatus||null,type:value.type||"unknown_error",message:value.message||"",requestId:value.requestId||"",modelId:value.modelId||"",stage:value.stage||"",malformedField:value.malformedField||"",expectedType:value.expectedType||"",receivedType:value.receivedType||""}}
   async function fetchAvailableModels({persist=true,signal}={}){
     let payload;try{payload=await AiClient.listModels({signal})}catch(error){error.stage="models";throw error}
     let models;try{models=AnthropicModels.parseModels(payload)}catch(cause){cause.stage="models";cause.type="response_format_error";throw cause}
@@ -487,14 +487,15 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
   }
   function activity(a){return `<div class="activity">${bilingual(a.titleEn,a.titleKo)}<p>${esc(a.instructionEn)}</p><p class="ko">${esc(a.instructionKo)}</p><div class="option-grid">${a.options.map(o=>`<div class="option">${esc(o)}</div>`).join("")}</div></div>`}
   function card(i,title,body){return `<section class="flow-card" id="section-${i}">${heading(i,title)}${body}</section>`}
-  function failedSection(failure){const location=String(failure?.issues?.[0]?.location||failure?.issues?.[0]||failure?.stage||"content");if(location.includes("story"))return"story";if(location.includes("easyTalk"))return"easyTalk";if(location.includes("realTalk"))return"realTalk";if(location.includes("expressions"))return"expressions";if(location.includes("activity")||location.includes("groupResult")||location.includes("thinkHarder")||location.includes("finalQuestion"))return"activity";return failure?.stage==="plan"?"plan":"content"}
+  function failedSection(failure){if(failure?.type==="structured_content_error"||failure?.error?.type==="structured_content_error")return"content";const location=String(failure?.issues?.[0]?.location||failure?.issues?.[0]||failure?.stage||"content");if(location.includes("story"))return"story";if(location.includes("easyTalk"))return"easyTalk";if(location.includes("realTalk"))return"realTalk";if(location.includes("expressions"))return"expressions";if(location.includes("activity")||location.includes("groupResult")||location.includes("thinkHarder")||location.includes("finalQuestion"))return"activity";return failure?.stage==="plan"?"plan":"content"}
   function generationBlocked(t,detailed=false){
-    const interrupted=t.operatorStatus?.generationStatus==="interrupted",failed=t.operatorStatus?.generationStatus==="failed"||interrupted,title=interrupted?"GENERATION INTERRUPTED":failed?"GENERATION FAILED":"LEGACY OR INVALID DRAFT",failure=t.generationFailure||{},section=failedSection(failure),source=t.originalDraft||t,issues=(failure.issues||[]).map(item=>typeof item==="string"?{location:section,message:item}:item),bilingualFailure=issues.some(item=>item.id==="Q7"&&String(item.location||"").includes("session1.story")),displayTitle=bilingualFailure?"내용 확인 필요":title;
+    const interrupted=t.operatorStatus?.generationStatus==="interrupted",failed=t.operatorStatus?.generationStatus==="failed"||interrupted,title=interrupted?"GENERATION INTERRUPTED":failed?"GENERATION FAILED":"LEGACY OR INVALID DRAFT",failure=t.generationFailure||{},section=failedSection(failure),source=t.originalDraft||t,issues=(failure.issues||[]).map(item=>typeof item==="string"?{location:section,message:item}:item),bilingualFailure=issues.some(item=>item.id==="Q7"&&String(item.location||"").includes("session1.story")),structuralFailure=(failure.error?.type||failure.type)==="structured_content_error",displayTitle=structuralFailure?"본문 생성 결과를 확인해야 합니다.":bilingualFailure?"내용 확인 필요":title;
     if(!detailed)return `<section class="generation-blocked"><p class="eyebrow">CONTENT UNAVAILABLE</p><h1>아직 준비 중인 토픽입니다.</h1><p>관리자가 내용을 확인한 뒤 공개할 예정입니다.</p></section>`;
-    const issueList=bilingualFailure?`<p class="approval-warning">영어와 한국어 Story의 핵심 정보가 일치하지 않아 저장하지 않았습니다.</p>`:issues.length?`<ul class="issue-list">${issues.map(item=>`<li class="critical"><strong>${esc(item.location||section)}</strong><span>${esc(item.message||String(item))}</span></li>`).join("")}</ul>`:`<p class="approval-warning">${esc(failure.message||"생성 응답을 받지 못했습니다.")}</p>`;
-    const error=failure.error||{},details=failed?`<dl class="failure-meta"><div><dt>실패 단계</dt><dd>${esc(error.stage||failure.stage||section)}</dd></div><div><dt>오류 유형</dt><dd>${esc(error.type||"generation_error")}</dd></div><div><dt>사용 모델</dt><dd>${esc(error.modelId||failure.modelId||"선택 안 됨")}</dd></div><div><dt>HTTP 상태</dt><dd>${esc(error.httpStatus||"-")}</dd></div><div><dt>마지막 시도</dt><dd>${esc(error.lastAttemptAt||t.updatedAt||"-")}</dd></div></dl>`:"";
-    const actions=interrupted?`<button class="button primary" data-action="regenerate-v2">다시 생성</button><details><summary class="button secondary">초안 보기</summary><pre>${esc(JSON.stringify(source,null,2))}</pre></details>`:failed?`<button class="button secondary" data-action="settings">모델 설정 확인</button><button class="button secondary" data-failed-regenerate="${esc(section)}">${esc(section)} 섹션만 다시 생성</button><button class="button primary" data-action="regenerate-v2">전체 다시 생성</button>`:`<button class="button primary" data-action="regenerate-v2">새 Conversation-First 구조로 다시 생성</button><button class="button danger" data-action="delete">기존 초안 삭제</button>`;
-    return `<section class="generation-blocked"><p class="eyebrow">${displayTitle}</p><h1>${interrupted?"생성이 중단되었습니다.":failed?"토픽 내용을 완성하지 못했습니다.":"구형 또는 불완전한 자동 생성 초안입니다."}</h1><p>${interrupted?"이전 생성 작업이 완료되지 않았습니다.<br>작성 중이던 상태는 보존되어 있습니다.":failed?bilingualFailure?`실패한 섹션: <b>${esc(section)}</b>`:`실패한 섹션: <b>${esc(section)}</b><br>작성된 초안은 보존했습니다.`:"이 초안은 자동 승인·미리보기·PDF 대상이 아닙니다."}</p>${details}${failed&&!interrupted?issueList:""}<div class="button-row">${actions}</div>${interrupted?"":`<details><summary>${failed?"실패 이유와 생성 진단 보기":"원문 보기"}</summary><pre>${esc(JSON.stringify(failed?safeDiagnostics(error):source,null,2))}</pre></details>`}</section>`;
+    const issueList=structuralFailure?`<p class="approval-warning">생성된 내용의 형식이 완전하지 않아 저장하지 않았습니다.</p>`:bilingualFailure?`<p class="approval-warning">영어와 한국어 Story의 핵심 정보가 일치하지 않아 저장하지 않았습니다.</p>`:issues.length?`<ul class="issue-list">${issues.map(item=>`<li class="critical"><strong>${esc(item.location||section)}</strong><span>${esc(item.message||String(item))}</span></li>`).join("")}</ul>`:`<p class="approval-warning">${esc(failure.message||"생성 응답을 받지 못했습니다.")}</p>`;
+    const error=failure.error||{},details=failed?`<dl class="failure-meta"><div><dt>실패 단계</dt><dd>${esc(error.stage||failure.stage||section)}</dd></div><div><dt>오류 유형</dt><dd>${esc(error.type||"generation_error")}</dd></div>${structuralFailure?`<div><dt>형식 오류 필드</dt><dd>${esc(error.malformedField||failure.malformedField||"-")}</dd></div><div><dt>예상 형식</dt><dd>${esc(error.expectedType||failure.expectedType||"object")}</dd></div><div><dt>받은 형식</dt><dd>${esc(error.receivedType||failure.receivedType||"-")}</dd></div>`:""}<div><dt>사용 모델</dt><dd>${esc(error.modelId||failure.modelId||"선택 안 됨")}</dd></div><div><dt>HTTP 상태</dt><dd>${esc(error.httpStatus||"-")}</dd></div><div><dt>마지막 시도</dt><dd>${esc(error.lastAttemptAt||t.updatedAt||"-")}</dd></div></dl>`:"";
+    const canRetryContent=section==="content"&&failure.plan&&Simple.validatePlan(failure.plan,t.generationRequest||{}).ok;
+    const actions=interrupted?`<button class="button primary" data-action="regenerate-v2">다시 생성</button><details><summary class="button secondary">초안 보기</summary><pre>${esc(JSON.stringify(source,null,2))}</pre></details>`:failed?bilingualFailure?`<button class="button primary" data-action="regenerate-v2">전체 다시 생성</button><button class="button secondary" data-action="settings">모델 설정 확인</button>`:canRetryContent?`<button class="button primary" data-failed-regenerate="content">본문 다시 생성</button><button class="button secondary" data-action="regenerate-v2">전체 다시 생성</button><button class="button secondary" data-action="settings">모델 설정 확인</button>`:section==="content"?`<button class="button primary" data-action="regenerate-v2">전체 다시 생성</button><button class="button secondary" data-action="settings">모델 설정 확인</button>`:`<button class="button primary" data-failed-regenerate="${esc(section)}">${esc(section)} 섹션만 다시 생성</button><button class="button secondary" data-action="regenerate-v2">전체 다시 생성</button><button class="button secondary" data-action="settings">모델 설정 확인</button>`:`<button class="button primary" data-action="regenerate-v2">새 Conversation-First 구조로 다시 생성</button><button class="button danger" data-action="delete">기존 초안 삭제</button>`;
+    return `<section class="generation-blocked"><p class="eyebrow">${displayTitle}</p><h1>${structuralFailure?"본문 생성 결과를 확인해야 합니다.":interrupted?"생성이 중단되었습니다.":failed?"토픽 내용을 완성하지 못했습니다.":"구형 또는 불완전한 자동 생성 초안입니다."}</h1><p>${interrupted?"이전 생성 작업이 완료되지 않았습니다.<br>작성 중이던 상태는 보존되어 있습니다.":failed?structuralFailure?"성공한 Topic Plan이 보존된 경우 본문만 한 번 다시 생성할 수 있습니다.":bilingualFailure?`실패한 섹션: <b>${esc(section)}</b>`:`실패한 섹션: <b>${esc(section)}</b><br>작성된 초안은 보존했습니다.`:"이 초안은 자동 승인·미리보기·PDF 대상이 아닙니다."}</p>${details}${failed&&!interrupted?issueList:""}<div class="button-row">${actions}</div>${interrupted?"":`<details><summary>${failed?"실패 이유와 생성 진단 보기":"원문 보기"}</summary><pre>${esc(JSON.stringify(failed?safeDiagnostics(error):source,null,2))}</pre></details>`}</section>`;
   }
   function renderGeneratedScreen(t,leader=false){
     return `<header class="generated-topic-hero"><p class="eyebrow">${esc(t.date)} · ${leader?"LEADER GUIDE":"STUDENT"}</p><h1>${esc(t.title.en)}</h1><p lang="ko">${esc(t.title.ko)}</p></header><div class="generated-screen">${renderGeneratedHandout(t,leader)}</div>`;
@@ -662,7 +663,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
     document.querySelectorAll("[data-move]").forEach(b=>b.onclick=()=>{const[k,rawI,rawD]=b.dataset.move.split(":"),i=Number(rawI),to=i+Number(rawD),arr=current()[k];if(to<0||to>=arr.length)return;[arr[i],arr[to]]=[arr[to],arr[i]];dirty=true;render()});
     document.querySelectorAll("[data-regenerate]").forEach(b=>{b.disabled=!aiReady();b.onclick=()=>regenerate(b.dataset.regenerate)});
     document.querySelectorAll("[data-simple-regenerate]").forEach(b=>{b.disabled=!aiReady();b.onclick=()=>regenerateSimpleSection(b.dataset.simpleRegenerate)});
-    document.querySelectorAll("[data-failed-regenerate]").forEach(b=>{b.disabled=!aiReady();b.onclick=()=>regenerateFailedSection(b.dataset.failedRegenerate)});
+    document.querySelectorAll("[data-failed-regenerate]").forEach(b=>{b.disabled=b.disabled||!aiReady();b.onclick=()=>regenerateFailedSection(b.dataset.failedRegenerate)});
     document.querySelectorAll("[data-feedback-form]").forEach(form=>form.onsubmit=event=>{
       event.preventDefault();
       const data=new FormData(form),records=loadRecord(KEYS.feedback);
@@ -760,23 +761,34 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
       lastIssues=result.issues.map(item=>clone(item));lastFactMismatch=result.quality?.signals?.storyFactMismatch||null;lastError=new Error(lastIssues.map(item=>`${item.location}: ${item.message}`).join(" "));
     }catch(error){lastError=error}
     const error=new Error(`${stage==="plan"?"Topic Plan":"Content Fill"} failed: ${lastError?.message||"unknown error"}`);
-    error.stage=stage;error.issues=lastIssues;error.diagnostics={raw:lastRaw,normalized:lastNormalized};error.httpStatus=lastError?.httpStatus||null;error.type=lastError?.type||"generation_error";error.requestId=lastError?.requestId||"";error.modelId=modelId;error.payload=lastError?.payload;error.factMismatch=lastFactMismatch;throw error;
+    error.stage=stage;error.issues=lastIssues;error.diagnostics={raw:lastRaw,normalized:lastNormalized};error.httpStatus=lastError?.httpStatus||null;error.type=lastError?.type||"generation_error";error.requestId=lastError?.requestId||"";error.modelId=modelId;error.payload=lastError?.payload;error.factMismatch=lastFactMismatch;error.malformedField=lastError?.malformedField||"";error.expectedType=lastError?.expectedType||"";error.receivedType=lastError?.receivedType||"";throw error;
+  }
+  function buildTopicFromPlan(request,plan,content,modelId){
+    let topic;try{topic=Simple.buildTopic(request,plan,content,Object.values(topics))}catch(error){error.stage="content";error.diagnostics={raw:content,normalized:Simple.normalizeContent(content)};error.approvedPlan=clone(plan);throw error}
+    topic.generationRequest=clone(request);topic.anthropicModel=modelId;return topic;
   }
   async function generateV2Topic(request){
     const modelId=await preflightModel();
     const plan=await requestGenerationStage("plan",request,null,modelId);
     if(!plan)throw Object.assign(new Error("Topic Plan 결과가 없습니다."),{stage:"plan",type:"response_format_error",modelId});
-    const content=await requestGenerationStage("content",request,plan,modelId);
-    let topic;try{topic=Simple.buildTopic(request,plan,content,Object.values(topics))}catch(error){error.stage="content";error.diagnostics={raw:content,normalized:Simple.normalizeContent(content)};throw error}
-    topic.generationRequest=clone(request);topic.anthropicModel=modelId;
-    return topic;
+    try{return buildTopicFromPlan(request,plan,await requestGenerationStage("content",request,plan,modelId),modelId)}
+    catch(error){error.approvedPlan=clone(plan);throw error}
+  }
+  function applyGenerationFailure(pending,request,error,plan=null){
+    const publicFailure=AnthropicModels.publicError(error,error.stage||"plan",error.modelId||settings.anthropicModel||""),candidate=error.diagnostics?.normalized??error.diagnostics?.raw;
+    Object.assign(publicFailure,{malformedField:error.malformedField||"",expectedType:error.expectedType||"",receivedType:error.receivedType||""});
+    pending.status="generation_failed";pending.failedSection=error.stage||"plan";pending.requestedTopic=request.topicHint;pending.lastAttemptAt=publicFailure.lastAttemptAt;pending.operatorStatus.generationStatus="failed";
+    pending.generationFailure={stage:publicFailure.stage,section:failedSection(error),message:publicFailure.message,modelId:publicFailure.modelId,issues:error.issues||[],candidate:candidate===null||candidate===undefined?undefined:clone(candidate),plan:plan?clone(plan):error.approvedPlan?clone(error.approvedPlan):undefined,factMismatch:error.factMismatch?clone(error.factMismatch):undefined,malformedField:error.malformedField||"",expectedType:error.expectedType||"",receivedType:error.receivedType||"",error:publicFailure};
+    pending.quality={status:"review",score:0,issues:[publicFailure.message]};pending.updatedAt=publicFailure.lastAttemptAt;topics[request.date]=pending;dirty=true;
+    const message=error.type==="structured_content_error"?"생성된 내용의 형식이 완전하지 않아 저장하지 않았습니다.":error.factMismatch?"Story 영어와 한국어의 핵심 정보가 일치하지 않아 저장하지 않았습니다.":"토픽 내용을 완성하지 못했습니다. 작성된 초안은 보존했습니다. 실패 이유를 확인하거나 해당 섹션만 다시 생성하세요.";
+    saveTopics(message);
   }
   async function generateAndStore(request,originalDraft=null){
     request=normalizeGenerationRequest(request);if(generationsInFlight.has(request.date)){notify("이 날짜의 토픽을 이미 생성하고 있습니다.",true);return null}generationsInFlight.add(request.date);const pending=pendingGeneration(request,originalDraft);topics[request.date]=pending;activeDate=request.date;dirty=true;navigateTo({section:"topics",view:"month",month:request.date.slice(0,7),date:request.date,tab:"review"});view="admin";drawerDate="";saveTopics("Topic Plan 생성을 시작했습니다.");
     try{
       const topic=await generateV2Topic(request);topics[request.date]=topic;dirty=true;saveTopics("새 Simple Conversation 토픽 생성과 승인 게이트 검사를 완료했습니다.");return topic;
     }catch(error){
-      const publicFailure=AnthropicModels.publicError(error,error.stage||"plan",error.modelId||settings.anthropicModel||"");pending.status="generation_failed";pending.failedSection=error.stage||"plan";pending.requestedTopic=request.topicHint;pending.lastAttemptAt=publicFailure.lastAttemptAt;pending.operatorStatus.generationStatus="failed";pending.generationFailure={stage:publicFailure.stage,section:failedSection(error),message:publicFailure.message,modelId:publicFailure.modelId,issues:error.issues||[],candidate:error.diagnostics?.normalized?clone(error.diagnostics.normalized):undefined,factMismatch:error.factMismatch?clone(error.factMismatch):undefined,error:publicFailure};pending.quality={status:"review",score:0,issues:[publicFailure.message]};pending.updatedAt=publicFailure.lastAttemptAt;topics[request.date]=pending;dirty=true;saveTopics(error.factMismatch?"Story 영어와 한국어의 핵심 정보가 일치하지 않아 저장하지 않았습니다.":"토픽 내용을 완성하지 못했습니다. 작성된 초안은 보존했습니다. 실패 이유를 확인하거나 해당 섹션만 다시 생성하세요.");return null;
+      applyGenerationFailure(pending,request,error);return null;
     }finally{generationsInFlight.delete(request.date)}
   }
   async function regenerateV2(){
@@ -784,7 +796,19 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
     preserveVersion(previous);
     await generateAndStore({...request,date:previous.date},previous);
   }
-  async function regenerateFailedSection(section){const previous=current();if(previous?.operatorStatus?.generationStatus!=="failed")return;const request=previous.generationRequest||{date:previous.date,keyword:previous.title?.ko||"새 대화 주제",mood:previous.category?.ko||"경험 중심"};preserveVersion(previous);await generateAndStore({...request,date:previous.date,repairSection:section},previous)}
+  async function regenerateFailedSection(section){
+    const previous=current();if(previous?.operatorStatus?.generationStatus!=="failed")return;
+    const request=normalizeGenerationRequest(previous.generationRequest||{date:previous.date,keyword:previous.title?.ko||"새 대화 주제",mood:previous.category?.ko||"경험 중심"}),plan=previous.generationFailure?.plan;
+    if(section!=="content"){preserveVersion(previous);await generateAndStore({...request,date:previous.date,repairSection:section},previous);return}
+    if(!plan||!Simple.validatePlan(plan,request).ok){notify("재사용할 수 있는 성공한 Topic Plan이 없습니다. 전체 다시 생성을 사용해 주세요.",true);return}
+    if(generationsInFlight.has(request.date)){notify("이 날짜의 토픽을 이미 생성하고 있습니다.",true);return}
+    preserveVersion(previous);generationsInFlight.add(request.date);const pending=clone(previous);pending.operatorStatus={...pending.operatorStatus,generationStatus:"running"};pending.updatedAt=new Date().toISOString();topics[request.date]=pending;dirty=true;saveTopics("성공한 Topic Plan을 유지하고 Content Fill만 다시 생성합니다.");
+    try{
+      const modelId=previous.generationFailure.modelId||previous.anthropicModel||settings.anthropicModel,content=await requestGenerationStage("content",request,plan,modelId),topic=buildTopicFromPlan(request,plan,content,modelId);
+      topics[request.date]=topic;dirty=true;saveTopics("기존 Topic Plan으로 본문 생성과 승인 게이트 검사를 완료했습니다.");
+    }catch(error){applyGenerationFailure(pending,request,error,plan)}
+    finally{generationsInFlight.delete(request.date)}
+  }
   async function regenerateSimpleSection(section){
     const previous=current();if(previous.generationEngine!==Simple.VERSION)return;
     const request=previous.generationRequest||{date:previous.date,keyword:previous.title?.ko||previous.title?.en,mood:previous.category?.ko||"경험 중심"};preserveVersion(previous);notify(`${section} 부분을 다시 생성하고 있습니다.`);
