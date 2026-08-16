@@ -74,7 +74,8 @@ result = await call(messages, mockRequest("POST", canonicalContentBody, sessionH
 const structuredUpstream = upstreamBodies.at(-1);
 assert.deepEqual(structuredUpstream.output_config, { format: { type: "json_schema", schema: simple.CONTENT_OUTPUT_SCHEMA } });
 assert.equal(structuredUpstream.tools, undefined); assert.equal(structuredUpstream.tool_choice, undefined);
-assert.equal(structuredUpstream.output_config.format.schema.properties.session2.type, "object");
+assert.equal(structuredUpstream.output_config.format.schema.properties.session2, undefined); assert.equal(structuredUpstream.output_config.format.schema.properties.session1, undefined);
+assert.equal(Object.keys(structuredUpstream.output_config.format.schema.properties).length <= 50, true, "upstream uses the shallow transport schema");
 assert.equal(JSON.stringify(structuredUpstream.output_config).includes('"minimum"'), false, "unsupported numeric constraints are removed from the upstream schema");
 const beforeSchemaInjection = upstreamCalls;
 result = await call(messages, mockRequest("POST", { ...canonicalContentBody, output_config: { format: { type: "json_schema", schema: { type: "string" } } } }, sessionHeader)); assert.equal(result.status, 400); assert.equal(upstreamCalls, beforeSchemaInjection);

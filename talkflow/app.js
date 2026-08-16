@@ -753,7 +753,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
     let lastError=null,lastIssues=[],lastRaw=null,lastNormalized=null,lastFactMismatch=null;
     try{
       const payload=await AiClient.generate({model:modelId,max_tokens:6000,messages:generationMessages(stage,request,plan),tools:[tool],tool_choice:{type:"tool",name:tool.name}});
-      const output=stage==="content"?Simple.parseStructuredContentResponse(payload):payload.content?.find(item=>item.type==="tool_use"&&item.name===tool.name)?.input;
+      const output=stage==="content"?Simple.adaptStructuredContentTransport(Simple.parseStructuredContentResponse(payload),plan,request):payload.content?.find(item=>item.type==="tool_use"&&item.name===tool.name)?.input;
       if(!output)throw new Error(`${tool.name} result is missing.`);
       lastRaw=clone(output);lastNormalized=normalize(lastRaw);
       const result=validate(lastNormalized);

@@ -22,6 +22,8 @@ python -m http.server 8766
 
 브라우저는 Anthropic 키를 보거나 저장하지 않습니다. 모델 목록, 연결 테스트, Topic Plan, Content Fill과 모든 부분 재생성은 같은 origin의 `/api/talkflow/*`만 호출합니다.
 
+Content Fill은 서버가 소유한 얕은 transport schema로 구조만 제한하며, 브라우저의 deterministic adapter가 기존 `session1`/`session2` domain object를 조립한 뒤 동일한 bilingual·quality validator를 실행합니다. 클라이언트는 schema를 전송하거나 변경할 수 없습니다.
+
 ## 운영 흐름
 
 1. `해야 할 일`에서 생성 실패, 검수 필요, 승인 가능, 미작성 순서로 작업을 확인합니다.
