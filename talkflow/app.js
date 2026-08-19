@@ -909,9 +909,14 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
     download(monthFile(),JSON.stringify({schema:"thebox-talkflow-v1",month:monthPrefix(),topics:data},null,2),"application/json");
     notify("월간 JSON을 내보냈습니다.");
   }
+  function isRecoverableFailedTopic(topic){
+    if(topic?.generationEngine!==Simple.VERSION||topic?.operatorStatus?.generationStatus!=="failed"||topic?.generationFailure?.stage!=="content")return false;
+    const request=normalizeGenerationRequest(topic.generationRequest||{date:topic.date,generationMode:"auto",topicHint:""});
+    return request.date===topic.date&&Simple.validatePlan(topic.generationFailure.plan,request).ok;
+  }
   function mergeIncomingTopics(incoming){
     if(!incoming||typeof incoming!=="object"||Array.isArray(incoming))throw new Error("topics 객체가 없습니다.");
-    const next=clone(topics);for(const [date,topic] of Object.entries(incoming)){if(!/^\d{4}-\d{2}-\d{2}$/.test(date))throw new Error(`잘못된 날짜: ${date}`);if(topic?.date!==date)throw new Error(`${date}: 토픽 날짜가 일치하지 않습니다.`);const result=validateTopic(topic,{...next,[date]:topic});if(result.score===0)throw new Error(`${date}: 필수 구조가 누락되었습니다.`);next[date]=topic}return next;
+    const next=clone(topics);for(const [date,topic] of Object.entries(incoming)){if(!/^\d{4}-\d{2}-\d{2}$/.test(date))throw new Error(`잘못된 날짜: ${date}`);if(topic?.date!==date)throw new Error(`${date}: 토픽 날짜가 일치하지 않습니다.`);const result=validateTopic(topic,{...next,[date]:topic});if(result.score===0&&!isRecoverableFailedTopic(topic))throw new Error(`${date}: 필수 구조가 누락되었습니다.`);next[date]=topic}return next;
   }
   function importJson(file){
     const reader=new FileReader();reader.onload=()=>{
