@@ -147,7 +147,13 @@ try {
   await load({ [doneDate]: topicFor(approved[0], doneDate) }, settingsFor([doneDate]));
   check("zero actionable items has a calm empty state", await page.locator(".task-row").count() === 0 && await page.getByText("지금 확인할 항목이 없습니다.", { exact: true }).isVisible());
 
-  const weekDates = ["2026-08-10", "2026-08-11", "2026-08-12", "2026-08-13"];
+  const currentMonday = new Date(`${new Date().toISOString().slice(0, 10)}T12:00:00`);
+  currentMonday.setDate(currentMonday.getDate() - ((currentMonday.getDay() + 6) % 7));
+  const weekDates = Array.from({ length: 4 }, (_, index) => {
+    const date = new Date(currentMonday);
+    date.setDate(currentMonday.getDate() + index);
+    return date.toISOString().slice(0, 10);
+  });
   await load(Object.fromEntries(weekDates.map((date, index) => [date, topicFor(approved[index], date)])), settingsFor(weekDates));
   check("completed week collapses to one sentence", await page.getByText("이번 주 토픽 준비가 모두 끝났습니다.", { exact: true }).isVisible() && await page.locator(".week-status").count() === 0);
   check("completed-week capture starts at page top", await page.evaluate(() => scrollY === 0) && await page.locator(".product-intro").isVisible() && await page.locator(".month-title").isVisible());
