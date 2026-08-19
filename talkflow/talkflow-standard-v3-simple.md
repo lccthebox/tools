@@ -30,6 +30,7 @@
 - Today’s English 네 개는 판단, 경험, 동의·반박, 후속 질문 기능을 담당하며 `useIn`으로 Story, Real Talk, Activity의 실제 사용 위치를 연결한다.
 - Activity는 `sourceRef`로 Story ID를 직접 참조한다. 15~25분 동안 실제 자료, 의견 차이, 다른 사람의 말을 듣는 단계, 전원 발화, 구체적인 Group Result를 포함한다.
 - Topic Plan은 영어·한국어가 같은 값인 `storyFacts` 1~4개를 먼저 확정한다. Content Fill은 그 사실 원장을 Story EN/KO 양쪽에 모두 포함한다. 시간·기간·가격·퍼센트·평점·후기 수·인원 수는 타입별 canonical 값으로 대칭 검증하며 한쪽의 누락·변경·추가를 blocker로 처리한다. 판단 자료의 한국어는 번역만 제공하고 정답을 유도하는 평가형 힌트를 넣지 않는다.
+- Content Fill Structured Output은 최종 `session1`/`session2` domain tree를 직접 출력하지 않는다. 서버가 소유한 필수-only 얕은 transport schema로 콘텐츠만 받은 뒤, 성공한 Topic Plan과 deterministic adapter가 제목·스타일·활동·sourceRef·50/40분 고정 구조를 조립한다. Provider 호출 전 프로젝트 보수 기준(optional 8 이하, union 0, depth 4 이하, 전체 properties 45 이하)을 통과해야 하며, 개수·연결성·bilingual·85점 quality gate는 기존 domain validator가 fail-closed로 판정한다.
 - 월간 검사에서는 동일 Activity 연속 사용, 동일 스타일 3회 연속, 동일 질문 문두 3회 초과, 동일 표현 2회 초과를 경고한다.
 
 품질 점수는 Story 15, Question Diversity 15, Answerability 15, Interest 10, Expression Usefulness 10, Activity Connection 15, Bilingual Quality 10, Print Readability 10으로 총 100점이다. 총점 85점 이상이며 각 영역 최소 기준을 충족하고 blocker가 없어야 승인할 수 있다. 숫자 점수는 관리자 고급 영역에서만 확인한다.

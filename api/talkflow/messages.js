@@ -5,7 +5,9 @@ module.exports = async (request, response) => {
   if (!verifySameOrigin(request, response) || !requireSession(request, response) || !rateLimit(request, response, "proxy", 30, 60 * 1000)) return;
   if (!process.env.ANTHROPIC_API_KEY) return json(response, 503, { error: { type: "server_not_configured", message: "AI 서버 설정이 필요합니다." } });
   const body = await readJson(request, response); if (!body) return;
-  const upstreamBody = messageBodyForUpstream(body);
+  let upstreamBody;
+  try { upstreamBody = messageBodyForUpstream(body); }
+  catch (error) { if (error?.type === "CONTENT_FILL_SCHEMA_TOO_COMPLEX_PRECHECK") return json(response, 400, { error: { type: error.type, message: "Content Fill schema did not pass the project complexity precheck." } }); throw error; }
   if (!upstreamBody) return json(response, 400, { error: { type: "invalid_request", message: "Talk Flow 생성 요청 형식이 올바르지 않습니다." } });
   try {
     const upstream = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "content-type": "application/json", "x-api-key": process.env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01" }, body: JSON.stringify(upstreamBody) });
