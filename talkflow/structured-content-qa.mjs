@@ -72,6 +72,7 @@ assert.equal(transportComplexity.optional <= 4, true, `transport optional fields
 assert.equal(transportComplexity.unions, 0, `transport unions must be zero: ${JSON.stringify(transportComplexity)}`);
 assert.equal(typeof Simple.adaptStructuredContentTransport, "function", "transport adapter is exported");
 assert.equal(Simple.CONTENT_FILL_TRANSPORT_SCHEMA.type, "object", "server-owned transport schema is exported");
+assert.deepEqual(Simple.CONTENT_FILL_TRANSPORT_SCHEMA.properties.expressions.items.properties.useIn.items.enum,["story","easyTalk","realTalk","activity"],"provider schema constrains expression use locations before the adapter");
 assert.deepEqual(Simple.parseStructuredContentResponse(structuredPayload(validTransport)), validTransport, "one top-level JSON parse returns the transport object");
 const adapted = Simple.adaptStructuredContentTransport(validTransport, plan, request);
 assert.equal(typeof adapted.session1, "object"); assert.equal(typeof adapted.session2, "object");
