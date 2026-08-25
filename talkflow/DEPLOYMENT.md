@@ -1,0 +1,60 @@
+# Talk Flow 배포 기준
+
+## 구조
+
+- 정적 UI: `/talkflow/`
+- 관리자 상태/로그인/로그아웃: `/api/talkflow/status`, `/login`, `/logout`
+- Anthropic allowlist proxy: `/api/talkflow/models`, `/messages`
+- 실행 환경: 별도 Vercel 프로젝트 `thebox-talkflow-preview`
+
+GitHub Pages에는 서버 함수를 넣지 않습니다. 운영 Pages와 `/topics/`는 이 배포와 분리되어 있습니다.
+
+## 필수 서버 환경변수
+
+- `ANTHROPIC_API_KEY`
+- `TALKFLOW_ADMIN_PASSWORD_HASH`
+- `TALKFLOW_SESSION_SECRET`
+
+환경변수가 하나라도 없으면 status는 `configured: false`를 반환하며 생성 UI가 비활성화됩니다. 기존 토픽 검수와 인쇄는 계속 동작합니다. 비밀값은 브라우저, Git, Vercel 빌드 산출물, PR 본문에 복사하지 않습니다.
+
+## Preview
+
+현재 안전한 UI Preview:
+
+`https://thebox-talkflow-preview.vercel.app/talkflow/`
+
+이 URL은 운영 사이트가 아니라 전용 Preview 프로젝트입니다. 현재 서버 secret이 설정되지 않아 `서버 설정 필요` 상태이며, 브라우저 직접 Anthropic 요청은 0입니다. Vercel의 고유 preview deployment는 조직 SSO 보호도 적용됩니다.
+
+배포 명령:
+
+```powershell
+vercel pull --yes --scope theboxis
+vercel build
+vercel deploy --prebuilt --scope theboxis
+```
+
+전용 안정 URL을 갱신할 때만 `vercel build --prod`와 `vercel deploy --prebuilt --prod --scope theboxis`를 사용합니다. 이는 `thebox-talkflow-preview` 프로젝트에만 적용하며 GitHub Pages나 main을 배포하지 않습니다.
+
+## 비밀값 설정 후 검증
+
+Vercel Dashboard 또는 `vercel env add`로 세 환경변수를 Preview/Production 대상에 직접 입력한 뒤 재배포합니다. Codex나 브라우저 DOM으로 기존 API 키를 복사하지 않습니다.
+
+검증 순서:
+
+1. status가 configured이고 비로그인 상태인지 확인
+2. 관리자 로그인 후 Secure HttpOnly session 확인
+3. Models 1회와 Messages 1회, pending 0 확인
+4. Proxy 경로 변경 후 필요한 경우 신규 토픽 정확히 1건만 생성해 quality·저장·새로고침·History·학생용·리더용·PDF까지 검증
+5. 학생·리더 각 2페이지, PDF, History, reload 확인
+6. client `api.anthropic.com` 요청 0과 secret scan 확인
+
+## Main 병합 기준
+
+UI, History, PDF, Proxy, 보안, Preview는 기존 토픽과 deterministic fixture/mock으로 검증합니다. 서버 secret이 준비된 경우에만 같은 SHA에서 연결 테스트 1회, Topic Plan 1회, Content Fill 1회, 신규 토픽 1건을 상한으로 라이브 QA합니다. 같은 목적의 반복 생성과 자동 재시도는 하지 않습니다. main 병합과 운영 Pages 반영은 별도 승인 전 실행하지 않습니다.
+
+## 라이브 생성 계측 안전 규칙
+
+- Preview의 Talk Flow API는 `trailingSlash: true`에 맞춘 `/api/talkflow/models/`, `/api/talkflow/messages/`를 canonical 경로로 사용한다. 라이브 QA에서 무슬래시 경로를 호출하거나 redirect를 따라 재구성하지 않는다.
+- Playwright `page.route(...).fetch()`로 Messages 응답 경로를 가로채지 않는다. 호출 수는 Vercel Functions 로그와 `page.on("request")` / `page.on("response")` 이벤트로만 관찰한다.
+- 응답 본문 확인이 꼭 필요하면 원본이 아닌 clone을 비동기로 읽고, 관측 timeout이나 AbortController를 제품 fetch와 공유하지 않는다.
+- Topic Plan과 Content Fill은 자동 재시도하지 않는다. 실패 또는 중단 초안은 보존하고 운영자의 명시적 재시도만 새 AI 요청을 시작한다.
