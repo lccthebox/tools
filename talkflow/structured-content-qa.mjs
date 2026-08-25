@@ -73,10 +73,14 @@ assert.equal(transportComplexity.unions, 0, `transport unions must be zero: ${JS
 assert.equal(typeof Simple.adaptStructuredContentTransport, "function", "transport adapter is exported");
 assert.equal(Simple.CONTENT_FILL_TRANSPORT_SCHEMA.type, "object", "server-owned transport schema is exported");
 assert.deepEqual(Simple.CONTENT_FILL_TRANSPORT_SCHEMA.properties.expressions.items.properties.useIn.items.enum,["story","easyTalk","realTalk","activity"],"provider schema constrains expression use locations before the adapter");
-assert.equal(Simple.CONTENT_FILL_TRANSPORT_SCHEMA.properties.storySentences.minItems, 4, "provider schema requires four Story pairs");
-assert.equal(Simple.CONTENT_FILL_TRANSPORT_SCHEMA.properties.storySentences.maxItems, 4, "provider schema caps Story pairs at four");
-assert.equal(Simple.CONTENT_FILL_TRANSPORT_SCHEMA.properties.leaderEmergency.minItems, 4, "provider schema requires four emergency prompts");
-assert.equal(Simple.CONTENT_FILL_TRANSPORT_SCHEMA.properties.leaderEmergency.maxItems, 4, "provider schema caps emergency prompts at four");
+assert.equal(Simple.CONTENT_FILL_TRANSPORT_SCHEMA.properties.storySentences.minItems, 4, "transport contract requires four Story pairs");
+assert.equal(Simple.CONTENT_FILL_TRANSPORT_SCHEMA.properties.storySentences.maxItems, 4, "transport contract caps Story pairs at four");
+assert.equal(Simple.CONTENT_FILL_TRANSPORT_SCHEMA.properties.leaderEmergency.minItems, 4, "transport contract requires four emergency prompts");
+assert.equal(Simple.CONTENT_FILL_TRANSPORT_SCHEMA.properties.leaderEmergency.maxItems, 4, "transport contract caps emergency prompts at four");
+const providerMinItems = [];
+const collectProviderMinItems = value => { if (!value || typeof value !== "object") return; if (Number.isInteger(value.minItems)) providerMinItems.push(value.minItems); Object.values(value).forEach(collectProviderMinItems); };
+collectProviderMinItems(Simple.CONTENT_OUTPUT_SCHEMA);
+assert.equal(providerMinItems.every(value => value === 0 || value === 1), true, `provider schema must omit unsupported minItems: ${JSON.stringify(providerMinItems)}`);
 assert.deepEqual(Simple.parseStructuredContentResponse(structuredPayload(validTransport)), validTransport, "one top-level JSON parse returns the transport object");
 const adapted = Simple.adaptStructuredContentTransport(validTransport, plan, request);
 assert.equal(typeof adapted.session1, "object"); assert.equal(typeof adapted.session2, "object");
