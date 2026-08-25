@@ -29,6 +29,9 @@ const cases = [
   ["rating synonym", "The rating is 4.8.", "평점은 4.8이에요.", true],
   ["rating reordered", "The rating is 4.8.", "4.8 평점이에요.", true],
   ["hyphenated rating", "It has a 4.8-star rating.", "평점은 4.8이에요.", true],
+  ["written one-star rating", "It deserves a one-star rating.", "평점 1점이에요.", true],
+  ["written one-star review", "She may leave a one-star review.", "별점 1점 후기를 남길 수 있어요.", true],
+  ["rating missing in English", "She may leave a review.", "평점 1점 후기를 남길 수 있어요.", false],
   ["percentage notation", "About 25 percent agreed.", "약 25퍼센트가 동의했어요.", true],
   ["person count notation", "Three friends joined.", "친구 세 명이 참여했어요.", true],
   ["written person count", "Seven friends joined.", "친구 일곱 명이 참여했어요.", true],
@@ -52,6 +55,46 @@ for (const [name, en, ko, expected] of cases) {
   assert.equal(Simple.storyFactsMatch(en, ko), expected, name);
 }
 
+for (const [name, ko] of [
+  ["one room", "방 한 개"],
+  ["one request", "한 번 요청했다"],
+  ["one problem", "한 가지 문제가 있었다"],
+  ["one night", "1박"],
+  ["one person", "1명"]
+]) {
+  const facts = Simple.storyFactComparison("No rating marker.", ko).koFacts;
+  assert.equal(facts.some(fact => fact.startsWith("rating:")), false, `${name} must not create a rating fact`);
+}
+for (const [ko, expected] of [["별 1개", "rating:1"], ["별점 1점", "rating:1"], ["평점 1점", "rating:1"]]) {
+  assert.equal(Simple.storyFactComparison("No rating marker.", ko).koFacts.includes(expected), true, `${ko} must create ${expected}`);
+}
+const mixedFacts = Simple.storyFactComparison(
+  "At 7 p.m., one person paid $20 after a 25-minute wait and left a 4.5-star rating.",
+  "오후 7시에 한 명이 25분 기다린 뒤 20달러를 내고 별점 4.5점을 남겼어요."
+);
+assert.equal(mixedFacts.match, true, "count, price, time, duration, and decimal rating stay type-separated");
+
+const liveStoryEn = [
+  "Jiyeon paid ₩180,000 for one night at a city hotel and expected a high-floor room with a view.",
+  "The room was on the 2nd floor, not the 10th floor she booked, and the window faced a wall.",
+  "Check-in was at 3 p.m., but the room wasn't ready until 5 p.m., so she waited in the lobby for two hours.",
+  "Now Jiyeon must decide whether to complain at the front desk, leave a one-star review online, or accept the situation and say nothing."
+];
+const liveStoryKo = [
+  "지연은 도심 호텔에서 하룻밤에 18만 원을 냈고, 전망 좋은 고층 방을 기대했어요.",
+  "방은 예약한 10층이 아니라 2층이었고, 창문은 벽을 향하고 있었어요.",
+  "체크인은 오후 3시였지만, 방은 오후 5시가 되어서야 준비됐고, 그녀는 두 시간을 로비에서 기다렸어요.",
+  "지금 지연은 프런트에 항의할지, 온라인에 별점 1점 후기를 남길지, 아니면 그냥 받아들일지 결정해야 해요."
+];
+const livePlanFacts = [
+  { en: "Jiyeon paid ₩180,000 for one night.", ko: "지연은 하룻밤에 18만 원을 냈어요." },
+  { en: "The room was on the 2nd floor, not the 10th floor she booked.", ko: "방은 예약한 10층이 아니라 2층이었어요." },
+  { en: "Check-in was at 3 p.m., but the room wasn't ready until 5 p.m.", ko: "체크인은 오후 3시였지만, 방은 오후 5시가 되어서야 준비됐어요." }
+];
+const liveComparison = Simple.storyFactComparison(liveStoryEn, liveStoryKo, livePlanFacts);
+assert.equal(liveComparison.match, true, `saved Live candidate must align: ${JSON.stringify(liveComparison)}`);
+assert.deepEqual(liveComparison.missingInEn, [], "saved Live candidate has no missing EN fact");
+
 const anchors = [
   { en: "4.8 stars", ko: "별점 4.8" },
   { en: "380 reviews", ko: "후기 380개" },
@@ -72,4 +115,4 @@ const guidedPrompt = Simple.buildPromptPayload({ stage: "plan", topic: { generat
 assert.deepEqual(autoPrompt.generationRules, guidedPrompt.generationRules, "auto and guided share one bilingual fact rule");
 assert.match(autoPrompt.generationRules[0], /storyFacts/, "canonical prompt requires shared Story facts");
 
-console.log(`PASS: ${cases.length + 8} bilingual Story fact fixtures`);
+console.log("PASS: 48 existing + 13 rating forensic bilingual Story fact fixtures");
