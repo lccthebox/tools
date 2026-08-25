@@ -57,7 +57,7 @@ const toTransport = value => ({
   realTalk: value.session1.realTalk.map(({ en, ko, starter, reasonPrompt, longAnswerPrompt }) => ({ en, ko, starter, reasonPrompt, longAnswerPrompt })),
   expressions: value.session1.expressions.map(({ en, ko, useIn }) => ({ en, ko, useIn })),
   quickVoteEn: value.session1.quickVote.en, quickVoteKo: value.session1.quickVote.ko, quickVoteOptions: value.session1.quickVote.options, quickVoteNoReasonKo: value.session1.quickVote.noReasonKo,
-  activityInstructionKo: value.session2.activity.instructionKo, materials: value.session2.activity.materials.slice(1), stepsKo: value.session2.activity.stepsKo, activityPhrases: value.session2.activity.phrases, participationKo: value.session2.activity.participationKo, disagreementKo: value.session2.activity.disagreementKo, listeningKo: value.session2.activity.listeningKo,
+  activityInstructionKo: value.session2.activity.instructionKo, materials: value.session2.activity.materials.slice(1), stepsKo: value.session2.activity.stepsKo, activityPhrases: value.session2.activity.phrases, disagreementKo: value.session2.activity.disagreementKo, listeningKo: value.session2.activity.listeningKo,
   resetEn: value.session2.reset.en, resetKo: value.session2.reset.ko, thinkHarderEn: value.session2.thinkHarder.en, thinkHarderKo: value.session2.thinkHarder.ko, finalQuestionEn: value.session2.finalQuestion.en, finalQuestionKo: value.session2.finalQuestion.ko,
   leaderNotes: [value.leader.story, value.leader.easyTalk, value.leader.realTalk, value.leader.activity, value.leader.final, value.leader.timeCutKo, value.leader.activitySupport.demoKo, value.leader.activitySupport.quietKo, value.leader.activitySupport.longKo, value.leader.activitySupport.timeCutKo, value.leader.activitySupport.fastAgreementKo], leaderEmergency: value.leader.emergency, easyTalkFollowups: value.leader.easyTalkFollowups, realTalkFollowups: value.leader.realTalkFollowups
 });
@@ -72,6 +72,7 @@ assert.equal(transportComplexity.optional <= 4, true, `transport optional fields
 assert.equal(transportComplexity.unions, 0, `transport unions must be zero: ${JSON.stringify(transportComplexity)}`);
 assert.equal(typeof Simple.adaptStructuredContentTransport, "function", "transport adapter is exported");
 assert.equal(Simple.CONTENT_FILL_TRANSPORT_SCHEMA.type, "object", "server-owned transport schema is exported");
+assert.equal("participationKo" in Simple.CONTENT_FILL_TRANSPORT_SCHEMA.properties, false, "participationKo is server-owned, not provider-generated");
 assert.deepEqual(Simple.CONTENT_FILL_TRANSPORT_SCHEMA.properties.expressions.items.properties.useIn.items.enum,["story","easyTalk","realTalk","activity"],"provider schema constrains expression use locations before the adapter");
 assert.equal(Simple.CONTENT_FILL_TRANSPORT_SCHEMA.properties.storySentences.minItems, 4, "transport contract requires four Story pairs");
 assert.equal(Simple.CONTENT_FILL_TRANSPORT_SCHEMA.properties.storySentences.maxItems, 4, "transport contract caps Story pairs at four");
@@ -108,6 +109,19 @@ assert.deepEqual(adapted.session2.activity.stepsKo, session2.activity.stepsKo, "
 assert.deepEqual(adapted.session2.thinkHarder, session2.thinkHarder, "Think Harder maps through the adapter");
 assert.deepEqual(adapted.session2.finalQuestion, session2.finalQuestion, "Final Question maps through the adapter");
 assert.deepEqual(adapted.leader.activitySupport, content.leader.activitySupport, "leader notes map through the adapter");
+const participationIssue = value => Simple.validateContent(value, plan, [], true).issues.some(item => item.location === "session2.activity.participationKo");
+const speechOnly = structuredClone(adapted); speechOnly.session2.activity.participationKo = "모든 사람이 한 번씩 자신의 의견을 말하세요."; speechOnly.session2.activity.listeningKo = "";
+assert.equal(participationIssue(speechOnly), true, "speaking without listening fails the participation contract");
+const listeningOnly = structuredClone(adapted); listeningOnly.session2.activity.participationKo = "다른 사람의 의견을 잘 듣고 반응하세요.";
+assert.equal(participationIssue(listeningOnly), true, "listening without every-person speech fails the participation contract");
+const speechAndListening = structuredClone(adapted); speechAndListening.session2.activity.participationKo = "모든 사람이 한 번씩 자신의 의견을 말하세요.";
+assert.equal(participationIssue(speechAndListening), false, "the current validator accepts every-person speech plus a listening step");
+assert.equal(participationIssue(adapted), false, "deterministic speaking, listening, and response flow passes");
+assert.equal(adapted.session2.activity.participationKo, "모든 사람이 한 번씩 자신의 의견을 말하세요. 그다음 다른 사람의 의견을 잘 듣고, 한 가지를 골라 질문하거나 이유를 덧붙여 반응하세요.", "adapter owns the natural participation flow");
+const liveFailureCandidate = structuredClone(adapted); liveFailureCandidate.session2.activity.participationKo = "아직 말하지 않은 분, 이 후기에 대해 어떻게 생각하세요?"; liveFailureCandidate.session2.activity.listeningKo = "방금 들은 의견 중에서 가장 공감되는 부분이 있었나요?";
+assert.equal(participationIssue(liveFailureCandidate), true, "the latest live candidate reproduces the participation failure offline");
+assert.equal(participationIssue(Simple.adaptStructuredContentTransport(validTransport, plan, request)), false, "the same candidate transport passes after deterministic adaptation");
+assert.throws(() => Simple.adaptStructuredContentTransport({ ...validTransport, participationKo: "Claude override" }, plan, request), error => error?.schemaValidationType === "additional_property", "provider output cannot override deterministic participationKo");
 assert.throws(() => Simple.parseStructuredContentResponse(structuredPayload({ ...validTransport, session2: JSON.stringify(session2) })), error => error?.type === "structured_content_error", "nested stringified domain objects fail");
 assert.throws(() => Simple.parseStructuredContentResponse({ content: [{ type: "text", text: "{bad" }], stop_reason: "end_turn" }), error => error?.type === "structured_content_error", "malformed top-level JSON fails closed");
 assert.throws(() => Simple.parseStructuredContentResponse(structuredPayload({ ...validTransport, unknown: true })), error => error?.type === "structured_content_error", "unknown fields fail schema validation");
