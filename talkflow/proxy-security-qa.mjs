@@ -38,11 +38,13 @@ global.fetch = async (url, options) => {
   if (url.endsWith("/messages")) upstreamBodies.push(JSON.parse(options.body));
   if (url.endsWith("/models")) return new Response(JSON.stringify({ data: [{ id: "claude-sonnet-4-6", display_name: "Claude Sonnet 4.6", secret: "drop" }, { id: "other-model", display_name: "Other" }] }), { status: 200, headers: { "content-type": "application/json" } });
   if (upstreamFailure) return new Response(JSON.stringify(upstreamFailure), { status: 400, headers: { "content-type": "application/json" } });
-  return new Response(JSON.stringify({ id: "msg", type: "message", role: "assistant", content: [{ type: "text", text: "OK" }], model: "claude-sonnet-4-6", usage: { input_tokens: 1, output_tokens: 1 }, internal: "drop" }), { status: 200, headers: { "content-type": "application/json" } });
+  return new Response(JSON.stringify({ id: "msg", type: "message", role: "assistant", content: [{ type: "text", text: "OK" }], model: "claude-sonnet-4-6", stop_reason: "end_turn", usage: { input_tokens: 11, output_tokens: 7 }, internal: "drop" }), { status: 200, headers: { "content-type": "application/json", "request-id": "req_success_fixture" } });
 };
 result = await call(models, mockRequest("GET", null, sessionHeader)); assert.equal(result.status, 200); assert.deepEqual(result.body.data.map(item => item.id), ["claude-sonnet-4-6"]); assert.equal(result.body.data[0].secret, undefined);
 const connectionBody = { model: "claude-sonnet-4-6", max_tokens: 8, messages: [{ role: "user", content: "Reply with OK." }] };
 result = await call(messages, mockRequest("POST", connectionBody, sessionHeader)); assert.equal(result.status, 200); assert.equal(result.body.internal, undefined);
+assert.deepEqual(result.body.provider_meta, { requestId: "req_success_fixture", stopReason: "end_turn", usage: { inputTokens: 11, outputTokens: 7 }, maxTokens: 8, elapsedMs: result.body.provider_meta.elapsedMs, httpStatus: 200 });
+assert.equal(Number.isFinite(result.body.provider_meta.elapsedMs), true); assert.equal(result.body.provider_meta.elapsedMs >= 0, true);
 const fakeAnthropicKey = ["sk", "ant", "test", "secret"].join("-");
 upstreamFailure = { type: "error", error: { type: "invalid_request_error", message: `fixture diagnostic\nwith ${fakeAnthropicKey}`, prompt: "drop-prompt" }, request_id: "req_fixture" };
 const loggedErrors = [], originalConsoleError = console.error; console.error = (...items) => loggedErrors.push(items.join(" "));

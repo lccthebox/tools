@@ -46,7 +46,8 @@
   function aiReady(){return aiServerState.configured&&aiServerState.authenticated}
   function modelById(id){return(settings.availableModels||[]).find(model=>model.id===id)}
   function selectedModelLabel(id=settings.anthropicModel){const model=modelById(id);return model?.displayName||id||"선택 안 됨"}
-  function safeDiagnostics(value){if(!value)return null;return{httpStatus:value.httpStatus||null,type:value.type||"unknown_error",message:value.message||"",requestId:value.requestId||"",modelId:value.modelId||"",stage:value.stage||"",malformedField:value.malformedField||"",expectedType:value.expectedType||"",receivedType:value.receivedType||"",stopReason:value.stopReason||"",schemaValidationType:value.schemaValidationType||""}}
+  function safeProviderMeta(value){if(!value||typeof value!=="object")return null;return{requestId:String(value.requestId||"").slice(0,200),stopReason:String(value.stopReason||"").slice(0,80),usage:{inputTokens:Number(value.usage?.inputTokens)||0,outputTokens:Number(value.usage?.outputTokens)||0},maxTokens:Number(value.maxTokens)||0,elapsedMs:Math.max(0,Number(value.elapsedMs)||0),httpStatus:Number(value.httpStatus)||null}}
+  function safeDiagnostics(value){if(!value)return null;return{httpStatus:value.httpStatus||null,type:value.type||"unknown_error",message:value.message||"",requestId:value.requestId||"",modelId:value.modelId||"",stage:value.stage||"",malformedField:value.malformedField||"",expectedType:value.expectedType||"",receivedType:value.receivedType||"",stopReason:value.stopReason||"",schemaValidationType:value.schemaValidationType||"",providerMeta:safeProviderMeta(value.providerMeta)}}
   async function fetchAvailableModels({persist=true,signal}={}){
     let payload;try{payload=await AiClient.listModels({signal})}catch(error){error.stage="models";throw error}
     let models;try{models=AnthropicModels.parseModels(payload)}catch(cause){cause.stage="models";cause.type="response_format_error";throw cause}
@@ -750,9 +751,10 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
       const mismatch={severity:"blocker",id:"B1",group:"structure",location:"date",message:"요청 날짜와 생성 날짜가 일치하지 않습니다."};
       return{...result,ok:false,issues:[...result.issues,mismatch],blockers:[...result.blockers,mismatch]};
     };
-    let lastError=null,lastIssues=[],lastRaw=null,lastNormalized=null,lastFactMismatch=null;
+    let lastError=null,lastIssues=[],lastRaw=null,lastNormalized=null,lastFactMismatch=null,lastProviderMeta=null;
     try{
       const payload=await AiClient.generate({model:modelId,max_tokens:6000,messages:generationMessages(stage,request,plan),tools:[tool],tool_choice:{type:"tool",name:tool.name}});
+      lastProviderMeta=safeProviderMeta(payload.provider_meta);
       const output=stage==="content"?Simple.adaptStructuredContentTransport(Simple.parseStructuredContentResponse(payload),plan,request):payload.content?.find(item=>item.type==="tool_use"&&item.name===tool.name)?.input;
       if(!output)throw new Error(`${tool.name} result is missing.`);
       lastRaw=clone(output);lastNormalized=normalize(lastRaw);
@@ -761,7 +763,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
       lastIssues=result.issues.map(item=>clone(item));const factMismatch=result.quality?.signals?.storyFactMismatch;lastFactMismatch=factMismatch&&(factMismatch.missingInEn?.length||factMismatch.missingInKo?.length)?factMismatch:null;lastError=new Error(lastIssues.map(item=>`${item.location}: ${item.message}`).join(" "));
     }catch(error){lastError=error}
     const error=new Error(`${stage==="plan"?"Topic Plan":"Content Fill"} failed: ${lastError?.message||"unknown error"}`);
-    error.stage=stage;error.issues=lastIssues;error.diagnostics={raw:lastRaw,normalized:lastNormalized};error.httpStatus=lastError?.httpStatus||null;error.type=lastError?.type||"generation_error";error.requestId=lastError?.requestId||"";error.modelId=modelId;error.payload=lastError?.payload;error.factMismatch=lastFactMismatch;error.malformedField=lastError?.malformedField||"";error.expectedType=lastError?.expectedType||"";error.receivedType=lastError?.receivedType||"";error.stopReason=lastError?.stopReason||"";error.schemaValidationType=lastError?.schemaValidationType||"";throw error;
+    error.stage=stage;error.issues=lastIssues;error.diagnostics={raw:lastRaw,normalized:lastNormalized};error.httpStatus=lastError?.httpStatus||lastProviderMeta?.httpStatus||null;error.type=lastError?.type||"generation_error";error.requestId=lastError?.requestId||lastProviderMeta?.requestId||"";error.modelId=modelId;error.payload=lastError?.payload;error.factMismatch=lastFactMismatch;error.malformedField=lastError?.malformedField||"";error.expectedType=lastError?.expectedType||"";error.receivedType=lastError?.receivedType||"";error.stopReason=lastError?.stopReason||lastProviderMeta?.stopReason||"";error.schemaValidationType=lastError?.schemaValidationType||"";error.providerMeta=lastProviderMeta||safeProviderMeta(lastError?.providerMeta);throw error;
   }
   function buildTopicFromPlan(request,plan,content,modelId){
     let topic;try{topic=Simple.buildTopic(request,plan,content,Object.values(topics))}catch(error){error.stage="content";error.diagnostics={raw:content,normalized:Simple.normalizeContent(content)};error.approvedPlan=clone(plan);throw error}
@@ -776,9 +778,9 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
   }
   function applyGenerationFailure(pending,request,error,plan=null){
     const publicFailure=AnthropicModels.publicError(error,error.stage||"plan",error.modelId||settings.anthropicModel||""),candidate=error.diagnostics?.normalized??error.diagnostics?.raw;
-    Object.assign(publicFailure,{malformedField:error.malformedField||"",expectedType:error.expectedType||"",receivedType:error.receivedType||"",stopReason:error.stopReason||"",schemaValidationType:error.schemaValidationType||""});
+    Object.assign(publicFailure,{malformedField:error.malformedField||"",expectedType:error.expectedType||"",receivedType:error.receivedType||"",stopReason:error.stopReason||"",schemaValidationType:error.schemaValidationType||"",providerMeta:safeProviderMeta(error.providerMeta)});
     pending.status="generation_failed";pending.failedSection=error.stage||"plan";pending.requestedTopic=request.topicHint;pending.lastAttemptAt=publicFailure.lastAttemptAt;pending.operatorStatus.generationStatus="failed";
-    pending.generationFailure={stage:publicFailure.stage,section:failedSection(error),message:publicFailure.message,modelId:publicFailure.modelId,issues:error.issues||[],candidate:candidate===null||candidate===undefined?undefined:clone(candidate),plan:plan?clone(plan):error.approvedPlan?clone(error.approvedPlan):undefined,factMismatch:error.factMismatch?clone(error.factMismatch):undefined,malformedField:error.malformedField||"",expectedType:error.expectedType||"",receivedType:error.receivedType||"",stopReason:error.stopReason||"",schemaValidationType:error.schemaValidationType||"",error:publicFailure};
+    pending.generationFailure={stage:publicFailure.stage,section:failedSection(error),message:publicFailure.message,modelId:publicFailure.modelId,issues:error.issues||[],candidate:candidate===null||candidate===undefined?undefined:clone(candidate),plan:plan?clone(plan):error.approvedPlan?clone(error.approvedPlan):undefined,factMismatch:error.factMismatch?clone(error.factMismatch):undefined,malformedField:error.malformedField||"",expectedType:error.expectedType||"",receivedType:error.receivedType||"",stopReason:error.stopReason||"",schemaValidationType:error.schemaValidationType||"",providerMeta:safeProviderMeta(error.providerMeta),error:publicFailure};
     pending.quality={status:"review",score:0,issues:[publicFailure.message]};pending.updatedAt=publicFailure.lastAttemptAt;topics[request.date]=pending;dirty=true;
     const participationFailure=(error.issues||[]).some(item=>String(item.location||"")==="session2.activity.participationKo"),storyFailure=(error.issues||[]).some(item=>item.id==="Q7"&&String(item.location||"").includes("session1.story"));
     const message=error.type==="incomplete_response"?"본문 생성이 중간에 끝났습니다.":error.type==="refusal"?"이 주제로는 내용을 생성할 수 없습니다.":error.type==="structured_content_error"?"생성된 내용의 형식을 확인해야 합니다.":participationFailure?"활동 진행에 필요한 참여 단계가 빠졌습니다.":storyFailure?"Story 영어와 한국어의 핵심 정보가 일치하지 않아 저장하지 않았습니다.":"토픽 내용을 완성하지 못했습니다. 작성된 초안은 보존했습니다. 실패 이유를 확인하거나 해당 섹션만 다시 생성하세요.";
