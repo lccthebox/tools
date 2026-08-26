@@ -11,6 +11,9 @@ New topics use the `simple-v1` two-page editorial system. Existing saved topics 
 - No full-width dark bands, nested card decoration, or visible generation labels.
 - Korean uses `word-break: keep-all`. Material numbers use circular high-contrast badges that remain distinct in grayscale.
 - Print floors: title 20pt; question 11pt; Korean guidance, activity, and materials 9pt; helper 8pt; leader note 8.5pt.
+- Print hierarchy uses three explicit tiers: Story/Activity as 13-14pt anchors, Easy/Real/English as 11.5-12.5pt working sections, and Vote/Everyone/Think guidance as 9.5-10.5pt support.
+- Printable questions are editorial rows, never cards: a quiet number, 600-weight English, medium-charcoal Korean support, generous vertical rhythm, and one thin divider. Only evidence materials and the group result may remain bounded work areas.
+- The actual Simple v3 Quick Vote remains a choose-one vote, but print renders its existing options as three paper-native check rows with writing rules rather than screen tags; no ranking semantics are invented when the topic does not supply ranking material.
 
 The previous bound-field direction below is retained only for compatibility with existing topics.
 
@@ -49,6 +52,7 @@ Talk Flow is an operational tool for a non-technical study coordinator, a discus
 - Bound-field print aliases: charcoal ink/header `#111614`, secondary ink `#5c6560`, evergreen accent `#1f5c40`, soft evergreen `#eef4f0`, warning ochre `#8a6a12`, warm warning surface `#fbf5e6`, and neutral rule `#dce0dd`.
 - Spacing follows 4px increments; dense print spacing may use millimetres.
 - Screen type: 11–50px existing scale. Print minimums: title 18pt, core question 11pt, action line 9.5pt, Korean support 8.5pt.
+- Simple workbook print aliases: `--simple-print-title-size`, `--simple-print-tier-major-size`, `--simple-print-tier-working-size`, `--simple-print-tier-support-size`, `--simple-print-question-size`, `--simple-print-korean-size`, `--simple-print-note-size`, `--simple-print-hairline`, and `--simple-print-space-*`. These aliases own the printable hierarchy; selectors consume tokens rather than redefining the scale.
 - Radius: 7, 9, 12, 15, 18, and 24px existing component scale.
 
 ## 4. Layout
