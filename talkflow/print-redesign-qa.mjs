@@ -73,7 +73,7 @@ try {
   screenPage.on("request", request => {
     if (request.url().includes("api.anthropic.com")) externalAiRequests.push(request.url());
   });
-  for (const width of [375, 768, 1280]) {
+  for (const width of [375, 768, 1280, 1600]) {
     await screenPage.setViewportSize({ width, height: 900 });
     await screenPage.goto(`http://127.0.0.1:${port}/?fixtures=sessions&section=topics&view=tasks&month=2026-08`, { waitUntil: "networkidle" });
     const horizontalOverflow = await screenPage.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
@@ -97,6 +97,7 @@ try {
     await page.emulateMedia({ media: "print" });
     const metrics = await page.locator(".simple-handout").evaluate(handout => {
       const points = selector => [...handout.querySelectorAll(selector)].map(node => Number.parseFloat(getComputedStyle(node).fontSize) * 72 / 96);
+      const weight = selector => [...handout.querySelectorAll(selector)].map(node => Number.parseInt(getComputedStyle(node).fontWeight, 10));
       const minimum = selector => {
         const values = points(selector);
         return values.length ? Math.min(...values) : null;
@@ -131,6 +132,11 @@ try {
           return contentBottom - sectionBottom;
         }))),
         largeBoxes: pages.map(node => node.querySelectorAll(".simple-story,.simple-materials,.simple-result").length),
+        fullQuestionCards: [...handout.querySelectorAll(".simple-questions li")].filter(node => {
+          const style = getComputedStyle(node);
+          return [style.borderTopWidth, style.borderRightWidth, style.borderBottomWidth, style.borderLeftWidth]
+            .every(value => Number.parseFloat(value) > 0);
+        }).length,
         sectionHeights: pages.map(node => [...node.querySelectorAll(":scope > .simple-body > .simple-section")].map(section => ({
           name: section.querySelector("h2")?.textContent || "",
           height: section.getBoundingClientRect().height
@@ -143,10 +149,13 @@ try {
         }))),
         type: {
           title: minimum(".simple-title h1"),
-          section: minimum(".simple-section h2"),
+          sectionMajor: minimum(".simple-story h2,.simple-activity>h2"),
+          sectionWorking: minimum(".simple-page-1>.simple-section:not(.simple-story):not(.simple-reset) h2"),
+          sectionSupport: minimum(".simple-reset h2,.simple-result h2,.simple-think h2"),
           storyEnglish: minimum(".simple-story-copy p:first-child"),
           storyKorean: minimum(".simple-story-copy p + p"),
           question: minimum(".simple-questions strong,.simple-final>strong,.simple-think>strong"),
+          questionWeights: weight(".simple-questions strong"),
           korean: minimum(".simple-questions>li>span,.simple-instruction,.simple-steps li,.simple-participation,.simple-result>span,.simple-final>span"),
           leaderNote: minimum(".simple-leader-note")
         },
@@ -182,7 +191,9 @@ const pass = Object.values(report.print).every(item => item.domPages === 2 && it
   && item.sectionContentOverflow.every(value => value <= 1)
   && item.bottomClearanceMm.every(value => value >= 11.5)
   && item.largeBoxes.every(value => value <= 3)
-  && item.type.title >= 20 && item.type.section >= 12.5 && item.type.storyEnglish >= 10.5
+  && item.fullQuestionCards === 0
+  && item.type.title >= 20 && item.type.sectionMajor >= 13 && item.type.sectionWorking >= 11.5 && item.type.sectionSupport >= 9.5
+  && item.type.questionWeights.every(value => value === 600) && item.type.storyEnglish >= 10.5
   && item.type.storyKorean >= 10 && item.type.question >= 11 && item.type.korean >= 9.99
   && (item.type.leaderNote === null || item.type.leaderNote >= 9)
   && item.structure.story === 1 && item.structure.easy === 1 && item.structure.real === 1

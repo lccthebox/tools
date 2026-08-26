@@ -11,6 +11,8 @@ New topics use the `simple-v1` two-page editorial system. Existing saved topics 
 - No full-width dark bands, nested card decoration, or visible generation labels.
 - Korean uses `word-break: keep-all`. Material numbers use circular high-contrast badges that remain distinct in grayscale.
 - Print floors: title 20pt; question 11pt; Korean guidance, activity, and materials 9pt; helper 8pt; leader note 8.5pt.
+- Print hierarchy uses three explicit tiers: Story/Activity as 13-14pt anchors, Easy/Real/English as 11.5-12.5pt working sections, and Vote/Everyone/Think guidance as 9.5-10.5pt support.
+- Printable questions are editorial rows, never cards: a quiet number, 600-weight English, medium-charcoal Korean support, generous vertical rhythm, and one thin divider. Only evidence materials and the group result may remain bounded work areas.
 
 The previous bound-field direction below is retained only for compatibility with existing topics.
 
