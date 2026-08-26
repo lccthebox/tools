@@ -534,35 +534,67 @@
 }
 
 @media print{
+  .simple-handout{
+    --simple-print-title-size:24pt;
+    --simple-print-title-leading:1.04;
+    --simple-print-tier-major-size:13.5pt;
+    --simple-print-tier-working-size:12pt;
+    --simple-print-tier-support-size:10.25pt;
+    --simple-print-final-size:12.5pt;
+    --simple-print-question-size:11.25pt;
+    --simple-print-korean-size:10pt;
+    --simple-print-note-size:9pt;
+    --simple-print-header-size:9.5pt;
+    --simple-print-helper-size:9.75pt;
+    --simple-print-index-column:7mm;
+    --simple-print-story-inset:4mm;
+    --simple-print-note-label:21mm;
+    --simple-print-space-2xs:.4mm;
+    --simple-print-space-xs:.5mm;
+    --simple-print-space-sm:.6mm;
+    --simple-print-space-md:1.2mm;
+    --simple-print-space-lg:2mm;
+    --simple-print-space-xl:2.5mm;
+    --simple-print-index-pad:.55mm;
+    --simple-print-english-row:2.3mm;
+    --simple-print-hairline:.55pt;
+    --simple-print-result-rule:.8pt;
+    --simple-print-accent-rule:1.2mm;
+    --simple-print-note-rule:1mm;
+  }
+  .simple-leader-handout{
+    --simple-print-title-size:21pt;
+    --simple-print-note-label:14mm;
+  }
   .simple-header b{
     font-size:0!important;
     letter-spacing:0!important;
   }
   .simple-header b::after{
     content:"THEBOX · TALK FLOW";
-    font-size:9.5pt;
+    font-size:var(--simple-print-header-size);
     font-weight:800;
     letter-spacing:.12em;
   }
-  .simple-title h1{font-size:24pt!important;line-height:1.04!important}
+  .simple-title h1{font-size:var(--simple-print-title-size)!important;line-height:var(--simple-print-title-leading)!important}
   .simple-section h2,.simple-leader-handout .simple-section h2{
-    font-size:12pt!important;
+    font-size:var(--simple-print-tier-working-size)!important;
     letter-spacing:.065em;
   }
   .simple-story h2,.simple-activity>h2,
   .simple-leader-handout .simple-story h2,.simple-leader-handout .simple-activity>h2{
-    font-size:13.5pt!important;
+    font-size:var(--simple-print-tier-major-size)!important;
     letter-spacing:.055em;
   }
   .simple-reset h2,.simple-result h2,.simple-think h2,
   .simple-leader-handout .simple-reset h2,.simple-leader-handout .simple-result h2,.simple-leader-handout .simple-think h2{
-    font-size:10.25pt!important;
+    font-size:var(--simple-print-tier-support-size)!important;
     letter-spacing:.09em;
   }
-  .simple-final h2,.simple-leader-handout .simple-final h2{font-size:12.5pt!important}
+  .simple-final h2,.simple-leader-handout .simple-final h2{font-size:var(--simple-print-final-size)!important}
   .simple-story{
-    padding:2.5mm 0 2.5mm 4mm!important;
-    border-left:1.2mm solid var(--simple-green)!important;
+    padding:var(--simple-print-space-xl) 0 var(--simple-print-space-xl) var(--simple-print-story-inset)!important;
+    border-left:var(--simple-print-accent-rule) solid var(--simple-green)!important;
     background:transparent!important;
   }
   .simple-story-copy p,.simple-leader-handout .simple-story-copy p{
@@ -574,9 +606,9 @@
   }
   .simple-questions{gap:0!important}
   .simple-questions li{
-    grid-template-columns:7mm minmax(0,1.08fr) minmax(0,.92fr);
-    padding:.4mm 0 .6mm;
-    border-bottom:.55pt solid var(--simple-rule);
+    grid-template-columns:var(--simple-print-index-column) minmax(0,1.08fr) minmax(0,.92fr);
+    padding:var(--simple-print-space-2xs) 0 var(--simple-print-space-sm);
+    border-bottom:var(--simple-print-hairline) solid var(--simple-rule);
   }
   .simple-questions li:last-child{border-bottom:0}
   .simple-questions li::before{
@@ -584,73 +616,73 @@
     display:block!important;
     width:auto!important;
     height:auto!important;
-    padding-top:.55mm;
+    padding-top:var(--simple-print-index-pad);
     border:0!important;
     border-radius:0!important;
     color:var(--simple-green);
-    font-size:9pt!important;
+    font-size:var(--simple-print-note-size)!important;
     font-weight:800;
     letter-spacing:.08em;
     text-align:left;
   }
   .simple-questions strong{
-    font-size:11.25pt!important;
+    font-size:var(--simple-print-question-size)!important;
     font-weight:600!important;
     line-height:1.35!important;
   }
   .simple-questions>li>span{
     color:var(--simple-muted)!important;
-    font-size:10pt!important;
+    font-size:var(--simple-print-korean-size)!important;
     font-weight:400;
     line-height:1.4!important;
   }
   .simple-options,.simple-help{
     color:var(--simple-muted);
-    font-size:9.75pt!important;
+    font-size:var(--simple-print-helper-size)!important;
     font-style:normal;
     font-weight:500;
     line-height:1.42!important;
   }
-  .simple-english p{padding:2.3mm 0!important}
+  .simple-english p{padding:var(--simple-print-english-row) 0!important}
   .simple-english strong{font-weight:600}
   .simple-reset{
     grid-template-columns:26mm minmax(0,1fr);
-    padding:2.5mm 0!important;
+    padding:var(--simple-print-space-xl) 0!important;
   }
   .simple-reset strong{font-weight:600}
   .simple-vote-options b{font-weight:600}
   .simple-activity h3{font-weight:700}
   .simple-steps li{background:transparent!important}
   .simple-participation{
-    border-left:1.2mm solid var(--simple-green);
+    border-left:var(--simple-print-accent-rule) solid var(--simple-green);
     font-weight:500;
   }
-  .simple-result{border-width:.8pt!important}
-  .simple-result>i{border-bottom:.55pt solid var(--simple-rule)}
+  .simple-result{border-width:var(--simple-print-result-rule)!important}
+  .simple-result>i{border-bottom:var(--simple-print-hairline) solid var(--simple-rule)}
   .simple-think strong,.simple-final strong{font-weight:600}
   .simple-leader-note{
-    grid-template-columns:21mm 1fr!important;
-    padding:0 0 0 2mm!important;
+    grid-template-columns:var(--simple-print-note-label) 1fr!important;
+    padding:0 0 0 var(--simple-print-space-lg)!important;
     border:0!important;
-    border-left:1mm solid var(--simple-rule)!important;
+    border-left:var(--simple-print-note-rule) solid var(--simple-rule)!important;
     background:transparent!important;
     color:var(--simple-muted)!important;
   }
   .simple-leader-note b,.simple-leader-note span{
     color:var(--simple-muted)!important;
-    font-size:9pt!important;
+    font-size:var(--simple-print-note-size)!important;
     font-weight:500;
   }
   .simple-leader-note b{font-weight:700}
   .simple-leader-handout .simple-page-1 .simple-leader-note,
   .simple-leader-handout .simple-activity .simple-leader-note{
-    padding:0 0 0 2mm!important;
+    padding:0 0 0 var(--simple-print-space-lg)!important;
   }
   .simple-leader-handout .simple-page-1 .simple-leader-note{
-    grid-template-columns:14mm 1fr!important;
-    padding-left:.5mm!important;
+    grid-template-columns:var(--simple-print-note-label) 1fr!important;
+    padding-left:var(--simple-print-space-xs)!important;
   }
   .simple-leader-handout .simple-page-1>.simple-section{
-    padding-top:1.2mm!important;
+    padding-top:var(--simple-print-space-md)!important;
   }
 }

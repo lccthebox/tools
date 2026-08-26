@@ -51,6 +51,7 @@ Talk Flow is an operational tool for a non-technical study coordinator, a discus
 - Bound-field print aliases: charcoal ink/header `#111614`, secondary ink `#5c6560`, evergreen accent `#1f5c40`, soft evergreen `#eef4f0`, warning ochre `#8a6a12`, warm warning surface `#fbf5e6`, and neutral rule `#dce0dd`.
 - Spacing follows 4px increments; dense print spacing may use millimetres.
 - Screen type: 11–50px existing scale. Print minimums: title 18pt, core question 11pt, action line 9.5pt, Korean support 8.5pt.
+- Simple workbook print aliases: `--simple-print-title-size`, `--simple-print-tier-major-size`, `--simple-print-tier-working-size`, `--simple-print-tier-support-size`, `--simple-print-question-size`, `--simple-print-korean-size`, `--simple-print-note-size`, `--simple-print-hairline`, and `--simple-print-space-*`. These aliases own the printable hierarchy; selectors consume tokens rather than redefining the scale.
 - Radius: 7, 9, 12, 15, 18, and 24px existing component scale.
 
 ## 4. Layout
