@@ -13,6 +13,7 @@ New topics use the `simple-v1` two-page editorial system. Existing saved topics 
 - Print floors: title 20pt; question 11pt; Korean guidance, activity, and materials 9pt; helper 8pt; leader note 8.5pt.
 - Print hierarchy uses three explicit tiers: Story/Activity as 13-14pt anchors, Easy/Real/English as 11.5-12.5pt working sections, and Vote/Everyone/Think guidance as 9.5-10.5pt support.
 - Printable questions are editorial rows, never cards: a quiet number, 600-weight English, medium-charcoal Korean support, generous vertical rhythm, and one thin divider. Only evidence materials and the group result may remain bounded work areas.
+- The actual Simple v3 Quick Vote remains a choose-one vote, but print renders its existing options as three paper-native check rows with writing rules rather than screen tags; no ranking semantics are invented when the topic does not supply ranking material.
 
 The previous bound-field direction below is retained only for compatibility with existing topics.
 

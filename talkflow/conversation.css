@@ -557,6 +557,8 @@
     --simple-print-space-xl:2.5mm;
     --simple-print-index-pad:.55mm;
     --simple-print-english-row:2.3mm;
+    --simple-print-vote-gap:5mm;
+    --simple-print-vote-pad:.5mm;
     --simple-print-hairline:.55pt;
     --simple-print-result-rule:.8pt;
     --simple-print-accent-rule:1.2mm;
@@ -650,7 +652,17 @@
     padding:var(--simple-print-space-xl) 0!important;
   }
   .simple-reset strong{font-weight:600}
-  .simple-vote-options b{font-weight:600}
+  .simple-vote-options{
+    display:grid!important;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:var(--simple-print-vote-gap)!important;
+  }
+  .simple-vote-options b{
+    min-width:0;
+    padding-bottom:var(--simple-print-vote-pad);
+    border-bottom:var(--simple-print-hairline) solid var(--simple-rule);
+    font-weight:600;
+  }
   .simple-activity h3{font-weight:700}
   .simple-steps li{background:transparent!important}
   .simple-participation{
