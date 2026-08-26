@@ -103,6 +103,39 @@ try {
         return values.length ? Math.min(...values) : null;
       };
       const pages = [...handout.querySelectorAll(".a4-page")];
+      const finalKorean = handout.querySelector(".simple-final>span");
+      const characterLines = (node, target) => {
+        if (!node?.firstChild) return [];
+        const start = node.textContent.indexOf(target);
+        if (start < 0) return [];
+        return [...target].map((character, index) => {
+          if (/\s/u.test(character)) return null;
+          const range = document.createRange();
+          range.setStart(node.firstChild, start + index);
+          range.setEnd(node.firstChild, start + index + 1);
+          return Math.round(range.getBoundingClientRect().top * 10) / 10;
+        }).filter(value => value !== null);
+      };
+      const finalKoreanStyle = finalKorean ? getComputedStyle(finalKorean) : null;
+      const wrappingPhrases = ["한 가지", "두 가지", "세 가지", "어떤 사람", "다른 사람", "가장 중요한", "선택할 수 있는", "이야기해 보세요"];
+      const fixture = document.createElement("div");
+      fixture.className = "simple-handout";
+      fixture.style.cssText = "position:fixed;left:-10000px;top:0;width:7mm";
+      fixture.innerHTML = `<section class="simple-section simple-final">${wrappingPhrases.map(phrase => `<span>${phrase}</span>`).join("")}<strong>English wrapping remains normal.</strong></section>`;
+      document.body.append(fixture);
+      const fixtureResults = [...fixture.querySelectorAll("span")].map(node => {
+        const text = node.textContent;
+        let offset = 0;
+        const tokens = text.split(/\s+/u).map(token => {
+          const start = text.indexOf(token, offset);
+          offset = start + token.length;
+          return { token, lines: characterLines(node, token).length ? [...new Set(characterLines(node, token))].length : 0 };
+        });
+        return { text, tokens };
+      });
+      const fixtureEnglishStyle = getComputedStyle(fixture.querySelector("strong"));
+      const englishWrapping = { wordBreak: fixtureEnglishStyle.wordBreak, overflowWrap: fixtureEnglishStyle.overflowWrap };
+      fixture.remove();
       return {
         domPages: pages.length,
         pageParts: pages.map(node => [...node.children].map(child => ({ name: child.className || child.tagName, height: child.getBoundingClientRect().height }))),
@@ -126,6 +159,16 @@ try {
         }),
         emergencyVisible: [...handout.querySelectorAll(".simple-emergency")]
           .filter(node => getComputedStyle(node).display !== "none" && node.getBoundingClientRect().height > 0).length,
+        koreanWrapping: {
+          wordBreak: finalKoreanStyle?.wordBreak ?? null,
+          overflowWrap: finalKoreanStyle?.overflowWrap ?? null,
+          lineBreak: finalKoreanStyle?.lineBreak ?? null,
+          whiteSpace: finalKoreanStyle?.whiteSpace ?? null,
+          oneThingLines: characterLines(finalKorean, "한 가지"),
+          fixtures: fixtureResults,
+          englishWordBreak: englishWrapping.wordBreak,
+          englishOverflowWrap: englishWrapping.overflowWrap
+        },
         sectionContentOverflow: pages.map(node => Math.max(0, ...[...node.querySelectorAll(":scope > .simple-body > .simple-section")].map(section => {
           const sectionBottom = section.getBoundingClientRect().bottom;
           const contentBottom = Math.max(sectionBottom, ...[...section.querySelectorAll("*")].map(child => child.getBoundingClientRect().bottom));
@@ -198,7 +241,11 @@ const pass = Object.values(report.print).every(item => item.domPages === 2 && it
   && (item.type.leaderNote === null || item.type.leaderNote >= 9)
   && item.structure.story === 1 && item.structure.easy === 1 && item.structure.real === 1
   && item.structure.english === 4 && item.structure.steps === 4 && item.structure.result === 1
-  && item.structure.thinkHarder === 1 && item.structure.final === 1)
+  && item.structure.thinkHarder === 1 && item.structure.final === 1
+  && item.koreanWrapping.wordBreak === "keep-all" && item.koreanWrapping.overflowWrap === "normal"
+  && item.koreanWrapping.lineBreak === "strict" && new Set(item.koreanWrapping.oneThingLines).size === 1
+  && item.koreanWrapping.fixtures.every(fixture => fixture.tokens.every(token => token.lines === 1))
+  && item.koreanWrapping.englishWordBreak === "normal" && item.koreanWrapping.englishOverflowWrap === "normal")
   && report.screen.every(item => item.horizontalOverflow <= 0)
   && report.print.student.emergencyVisible === 0 && report.print.leader.emergencyVisible === 1
   && report.consoleErrors.length === 0 && report.externalAiRequests === 0;
