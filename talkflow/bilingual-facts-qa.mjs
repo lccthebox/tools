@@ -133,6 +133,21 @@ assert.equal(Simple.validatePlan({ ...planBase, storyFacts: giftFacts }).ok, tru
 assert.equal(Simple.validatePlan({ ...planBase, storyFacts: giftFacts.map((fact, index) => index === 3 ? { ...fact, ko: "미아는 그 가방을 두 번 사용했어요." } : fact) }).ok, false, "saved Plan with changed count still fails");
 const autoPrompt = Simple.buildPromptPayload({ stage: "plan", topic: { generationMode: "auto" } });
 const guidedPrompt = Simple.buildPromptPayload({ stage: "plan", topic: { generationMode: "guided", topicHint: "여행" } });
+const qualitativePlan = { ...planBase, storyFacts: [
+  { en: "The gift cost ₩85,000.", ko: "선물 가격은 85,000원이었어요." },
+  { en: "The gift was the wrong color — navy instead of white.", ko: "선물은 색이 잘못됐어요 — 흰색이 아닌 네이비였어요." }
+] };
+const qualitativeFailure = Simple.validatePlan(qualitativePlan);
+assert.equal(qualitativeFailure.ok, false, "qualitative-only anchor must not bypass the quantitative contract");
+assert.equal(qualitativeFailure.issues[0].location, "plan.storyFacts[1]", "diagnostic identifies the exact rejected anchor");
+assert.match(qualitativeFailure.issues[0].message, /정량/, "unsupported anchor is not mislabeled a translation mismatch");
+assert.equal(Simple.validatePlan({ ...qualitativePlan, storyFacts: qualitativePlan.storyFacts.slice(0, 1) }).ok, true, "quantitative anchor list passes without changing any anchor text");
+assert.match(autoPrompt.generationRules[0], /Do not put qualitative/, "generation contract explicitly excludes qualitative anchors");
+assert.match(Simple.PLAN_TOOL.input_schema.properties.storyFacts.items.properties.en.description, /quantitative/, "item-level schema conveys the same contract");
+const mismatchedPlan = Simple.validatePlan({ ...planBase, storyFacts: [{ en: "$20", ko: "30달러" }] });
+assert.equal(mismatchedPlan.ok, false);
+assert.equal(mismatchedPlan.issues[0].location, "plan.storyFacts[0]");
+assert.match(mismatchedPlan.issues[0].message, /priceUsd:20.*priceUsd:30/, "diagnostic preserves the actual typed value mismatch");
 assert.deepEqual(autoPrompt.generationRules, guidedPrompt.generationRules, "auto and guided share one bilingual fact rule");
 assert.match(autoPrompt.generationRules[0], /storyFacts/, "canonical prompt requires shared Story facts");
 
