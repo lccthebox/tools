@@ -110,9 +110,30 @@ const planBase = { selectedTopic: { en: "A Fair Choice", ko: "공정한 선택" 
 assert.equal(Simple.validatePlan({ ...planBase, storyFacts: [{ en: "25 minutes", ko: "25분" }] }).ok, true, "matching Plan anchors pass");
 assert.equal(Simple.validatePlan(planBase).ok, false, "missing Plan anchors fail closed");
 assert.equal(Simple.validatePlan({ ...planBase, storyFacts: [{ en: "$20", ko: "30달러" }] }).ok, false, "mismatched Plan anchors fail closed");
+for (const en of ["Mia used the bag 1 time.", "Mia used the bag one time.", "Mia used the bag once."]) {
+  for (const ko of ["미아는 가방을 한 번 사용했어요.", "미아는 가방을 1번 사용했어요."]) {
+    assert.equal(Simple.storyFactsMatch(en, ko), true, `${en} / ${ko}`);
+    assert.equal(Simple.storyFactsMatch(en, "미아는 가방을 두 번 사용했어요."), false, "different occurrence counts fail closed");
+  }
+}
+assert.equal(Simple.storyFactsMatch("Mia used the bag twice.", "미아는 가방을 두 번 사용했어요."), true);
+assert.equal(Simple.storyFactsMatch("Mia used the bag two times.", "미아는 가방을 2회 사용했어요."), true);
+assert.deepEqual(Simple.storyFactComparison("Mia used it once.", "미아는 한 번 사용했어요.").enFacts, ["occurrenceCount:1"]);
+assert.equal(Simple.storyFactComparison("Once the shop opens, Mia will return it.", "매장이 열리면 미아는 돌려줄 거예요.").enFacts.length, 0, "conditional once is not a count");
+assert.equal(Simple.storyFactComparison("twenty-one times", "스물한 번").enFacts.includes("occurrenceCount:1"), false, "compound number must not become one");
+assert.equal(Simple.storyFactComparison("1.5 times", "1.5번").enFacts.includes("occurrenceCount:5"), false, "decimal must not become a partial integer count");
+assert.equal(Simple.storyFactsMatch("Mia used the bag 1 time.", "미아는 한 명을 만났어요."), false, "count units remain separated");
+const giftFacts = [
+  { en: "The bag cost ₩180,000.", ko: "가방 가격은 18만 원이에요." },
+  { en: "Mia's friend spent 3 weeks choosing it.", ko: "미아 친구는 3주 동안 골랐어요." },
+  { en: "The store allows returns within 14 days.", ko: "매장은 14일 이내에 반품이 가능해요." },
+  { en: "Mia has used the bag only 1 time.", ko: "미아는 그 가방을 딱 한 번 사용했어요." }
+];
+assert.equal(Simple.validatePlan({ ...planBase, storyFacts: giftFacts }).ok, true, "saved gift Plan replay passes without provider repair");
+assert.equal(Simple.validatePlan({ ...planBase, storyFacts: giftFacts.map((fact, index) => index === 3 ? { ...fact, ko: "미아는 그 가방을 두 번 사용했어요." } : fact) }).ok, false, "saved Plan with changed count still fails");
 const autoPrompt = Simple.buildPromptPayload({ stage: "plan", topic: { generationMode: "auto" } });
 const guidedPrompt = Simple.buildPromptPayload({ stage: "plan", topic: { generationMode: "guided", topicHint: "여행" } });
 assert.deepEqual(autoPrompt.generationRules, guidedPrompt.generationRules, "auto and guided share one bilingual fact rule");
 assert.match(autoPrompt.generationRules[0], /storyFacts/, "canonical prompt requires shared Story facts");
 
-console.log("PASS: 48 existing + 13 rating forensic bilingual Story fact fixtures");
+console.log("PASS: existing bilingual/rating fixtures, occurrence counts, and saved gift Plan replay");
