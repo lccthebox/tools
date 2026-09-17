@@ -114,6 +114,8 @@
   const normalized=value=>String(value||"").toLowerCase().replace(/[^a-z0-9가-힣 ]/g,"").replace(/\s+/g," ").trim();
   const opening=value=>normalized(value).split(" ").slice(0,3).join(" ");
   function storyFactSet(value){const source=String(value||"").replace(/,/g,""),facts=[],used=[];const add=(kind,amount,match)=>{facts.push(`${kind}:${Number(amount)}`);used.push([match.index,match.index+match[0].length])},scan=(pattern,kind,valueOf=match=>match[1])=>{for(const match of source.matchAll(pattern))if(!used.some(([start,end])=>match.index<end&&match.index+match[0].length>start))add(kind,valueOf(match),match)};
+    for(const match of source.matchAll(/\b(?:rating(?:\s+(?:is|of))?|rated|score\s+of)\s*(\d+(?:\.\d+)?)\s*(?:stars?\s*)?out\s+of\s*(\d+(?:\.\d+)?)/gi)){add("rating",match[1],match);facts.push(`ratingScale:${Number(match[2])}`)}
+    for(const match of source.matchAll(/(?:(?:별점|평점)(?:은|이)?\s*)?(\d+(?:\.\d+)?)\s*점\s*만점에\s*(\d+(?:\.\d+)?)\s*점/g)){add("rating",match[2],match);facts.push(`ratingScale:${Number(match[1])}`)}
     const occurrenceNumbers={one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,한:1,두:2,세:3,네:4,다섯:5,여섯:6,일곱:7,여덟:8,아홉:9,열:10};
     scan(/(?<![A-Za-z0-9.-])(one|two|three|four|five|six|seven|eight|nine|ten|\d+)[ -]+times?\b/gi,"occurrenceCount",match=>occurrenceNumbers[match[1].toLowerCase()]||Number(match[1]));
     scan(/\b(once|twice)\b(?=\s*(?:[.!?,;:]|$)|\s+(?:before|after|already|only|so far|in|this|last|during|since|for|with|but|and)\b)/gi,"occurrenceCount",match=>match[1].toLowerCase()==="once"?1:2);
