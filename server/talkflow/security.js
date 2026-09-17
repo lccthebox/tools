@@ -155,7 +155,14 @@ function messageBodyForUpstream(body) {
   if (body.messages.length !== 1 || body.messages[0].role !== "user" || !validGenerationPrompt(body.messages[0].content, tool.name)) return false;
   if(body.tool_choice?.type!=="tool"||body.tool_choice?.name!==tool.name||!Object.keys(body.tool_choice).every(key=>["type","name"].includes(key)))return null;
   if(tool.name===CONTENT_TOOL.name){assertContentFillSchemaComplexity();return{model:body.model,max_tokens:body.max_tokens,messages:body.messages,output_config:{format:{type:"json_schema",schema:CONTENT_OUTPUT_SCHEMA}}}}
-  return body;
+  const strictPlanTool = structuredClone(PLAN_TOOL);
+  strictPlanTool.strict = true;
+  const properties = strictPlanTool.input_schema.properties;
+  properties.questionAxes.minItems = 1;
+  delete properties.questionAxes.maxItems;
+  delete properties.storyFacts.maxItems;
+  for (const language of ["en", "ko"]) properties.storyFacts.items.properties[language].pattern = "[0-9]";
+  return { ...body, tools: [strictPlanTool] };
 }
 
 function validGenerationPrompt(content, toolName) {
