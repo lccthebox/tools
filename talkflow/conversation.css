@@ -175,7 +175,7 @@
   }
   .simple-handout .a4-page:last-child{break-after:auto!important;page-break-after:auto!important}
   .simple-handout .a4-page+.a4-page{break-before:page!important;page-break-before:always!important}
-  .simple-handout .a4-page:nth-child(2){padding-top:24mm!important}
+  .simple-handout .a4-page:nth-child(2){padding-top:12mm!important}
   .simple-header{
     position:static!important;
     inset:auto!important;
@@ -496,7 +496,7 @@
   .simple-emergency b{grid-column:1/-1;width:auto}
   .simple-handout .a4-page:nth-child(2) .simple-title{display:none!important}
   .simple-leader-handout .a4-page:first-child .simple-emergency{display:none!important}
-  .simple-leader-handout .a4-page:nth-child(2) .simple-emergency{position:absolute!important;inset:auto 14mm 3mm!important}
+  .simple-leader-handout .a4-page:nth-child(2) .simple-emergency{position:static!important;inset:auto!important}
   .simple-leader-handout .a4-page:nth-child(2) .simple-emergency{padding-top:1mm!important;line-height:1.25!important}
   .simple-leader-handout .a4-page:nth-child(2) .simple-emergency span,.simple-leader-handout .a4-page:nth-child(2) .simple-emergency b{line-height:1.25!important}
   .simple-leader-handout .simple-result>i{height:3mm!important}
@@ -512,7 +512,7 @@
   .simple-handout:not(.simple-leader-handout) .simple-steps li{min-height:12mm!important}
   .simple-handout:not(.simple-leader-handout) .simple-result>i{height:6mm!important}
   .simple-handout:not(.simple-leader-handout) .simple-page-2>.simple-final{padding-left:4mm!important}
-  .simple-leader-handout .simple-page-2{grid-template-columns:.85fr 1fr 1.5fr}
+  .simple-leader-handout .simple-page-2{grid-template-columns:minmax(0,.85fr) minmax(0,1.3fr) minmax(0,1.2fr)}
   .simple-leader-handout .simple-steps li{min-height:8.5mm!important}
   .simple-leader-handout .simple-source-material{padding:1.5mm 2.5mm!important}
   .simple-leader-handout .simple-steps{margin-top:0!important}
@@ -527,7 +527,8 @@
     display:grid!important;
     grid-template-columns:repeat(4,minmax(0,1fr))!important;
     gap:.7mm 3mm!important;
-    inset:auto 14mm 12mm!important;
+    position:static!important;
+    inset:auto!important;
     margin:0!important;
     padding:1mm 2mm!important;
     background:var(--simple-soft)!important;
@@ -703,4 +704,15 @@
   .simple-leader-handout .simple-page-1>.simple-section{
     padding-top:var(--simple-print-space-md)!important;
   }
+  .simple-handout .a4-page:nth-child(2){grid-template-rows:auto minmax(0,1fr) auto}
+  .simple-page-2 .simple-activity{grid-auto-rows:max-content}
+  .simple-page-2 .simple-activity>.simple-instruction{grid-column:1/-1;grid-row:2}
+  .simple-page-2 .simple-activity>.simple-source-material{grid-column:1/-1;grid-row:3}
+  .simple-page-2 .simple-activity>.simple-roles{grid-row:4}
+  .simple-page-2 .simple-activity>.simple-materials{grid-row:5}
+  .simple-page-2 .simple-activity>.simple-steps{grid-row:6}
+  .simple-page-2 .simple-activity>.simple-phrases{grid-row:7}
+  .simple-page-2 .simple-activity>.simple-participation{grid-row:8}
+  .simple-page-2 .simple-activity>.simple-leader-note{grid-row:9}
+  .simple-page-2 .simple-activity>.simple-leader-note span{columns:auto}
 }
