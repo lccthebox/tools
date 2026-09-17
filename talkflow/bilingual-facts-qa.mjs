@@ -5,6 +5,9 @@ const require = createRequire(import.meta.url);
 const Simple = require("./simple-generation.js");
 
 const cases = [
+  ["actual online rating with intervening object", "The online rating for the bag is 4.8 out of 5.", "그 가방의 온라인 평점은 5점 만점에 4.8점이에요.", true],
+  ["ordinary out-of count is not a rating", "4 out of 5 friends came.", "평점은 5점 만점에 4점이에요.", false],
+  ["rating in previous sentence does not retype a count", "Check the rating. 4 out of 5 friends came.", "평점은 5점 만점에 4점이에요.", false],
   ["actual September Plan rating denominator order", "The product photo showed a rating of 4.8 out of 5.", "상품 사진 옆 평점은 5점 만점에 4.8점이었어요.", true],
   ["changed rating still fails", "The rating is 4.8 out of 5.", "평점은 5점 만점에 4.7점이에요.", false],
   ["changed rating scale still fails", "The rating is 4.8 out of 5.", "평점은 10점 만점에 4.8점이에요.", false],
