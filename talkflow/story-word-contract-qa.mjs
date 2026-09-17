@@ -3,18 +3,15 @@ import { createRequire } from "node:module";
 
 const Simple = createRequire(import.meta.url)("./simple-generation.js");
 const sentenceSchema = Simple.CONTENT_OUTPUT_SCHEMA.properties.storySentences.items.properties.en;
-assert.equal(typeof sentenceSchema.pattern, "string", "Story word budget must be enforced by provider grammar, not prompt alone");
-const pattern = new RegExp(sentenceSchema.pattern);
-const sentence = count => Array.from({ length: count }, (_, index) => `word${index}`).join(" ") + ".";
-for (const count of [0, 1, 13, 22, 91]) assert.equal(pattern.test(sentence(count)), false, `${count} words must fail`);
-for (const count of [14, 15, 20, 21]) assert.equal(pattern.test(sentence(count)), true, `${count} words must pass`);
-const words = value => (value.match(/[A-Za-z0-9’'-]+/g) || []).length;
-for (const count of [14, 21]) {
-  const story = Array.from({ length: 4 }, () => sentence(count)).join(" ");
-  assert.ok(words(story) >= 55 && words(story) <= 90);
-}
-assert.equal(pattern.test("Mina's ₩30,000 dinner booking allowed twenty-five minutes before her friends had to decide together."), true);
-assert.equal(pattern.test("Mina paid 89000 won."), false, "Short numeric anchor alone is not a complete Story scene");
+assert.equal(sentenceSchema.pattern, undefined, "Do not send the range-quantified Story regex rejected by Anthropic");
+assert.match(sentenceSchema.description, /14–21/);
+assert.match(sentenceSchema.description, /56–84/);
+const story = count => ({ session1: { story: {
+  en: [["Mina", "paid", "89000", "won", "but", "should", "you", ...Array.from({ length: count - 7 }, () => "consider")].join(" ")],
+  ko: ["하지만 어떻게 선택할까요"]
+} } });
+for (const count of [54, 91]) assert.equal(Simple.contentQuality(story(count)).scores.story, 10, `${count} words retains the original failure penalty`);
+for (const count of [55, 56, 84, 90]) assert.equal(Simple.contentQuality(story(count)).scores.story, 15, `${count} words retains the original valid range`);
 assert.deepEqual(Simple.qualityRules.story, { weight: 15, floor: 11 }, "Quality threshold remains unchanged");
 assert.equal(Simple.assertContentFillSchemaComplexity().properties, 44);
-console.log("Story word contract QA PASS: boundaries, tokenization, grammar projection, unchanged Quality and complexity.");
+console.log("Story word contract QA PASS: rejected provider regex absent, descriptive budget retained, original 55–90 Quality boundaries unchanged.");
