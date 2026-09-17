@@ -55,6 +55,18 @@ result = await call(messages, mockRequest("POST", { ...connectionBody, endpoint:
 result = await call(messages, mockRequest("POST", { ...connectionBody, model: "other-model" }, sessionHeader)); assert.equal(result.status, 400);
 const promptPayload = simple.buildPromptPayload({ stage: "plan", topic: { date: "2026-08-09", weekday: "일", generationMode: "auto", topicHint: "", conversationDirection: "auto", source: "", avoid: "", repairSection: "", recentTopics: [{ date: "2026-08-03", title: "온라인 리뷰", category: "소비", activityType: "Review Jury" }], categoryCounts: { "소비": 1 } } });
 const generationBody = { model: "claude-sonnet-4-6", max_tokens: 6000, messages: [{ role: "user", content: JSON.stringify(promptPayload) }], tools: [simple.PLAN_TOOL], tool_choice: { type: "tool", name: simple.PLAN_TOOL.name } };
+const strictPlanProjection = security.messageBodyForUpstream(generationBody);
+assert.equal(strictPlanProjection.tools[0].strict, true, "Plan quantitative contract must be grammar enforced, not just described");
+for (const language of ["en", "ko"]) {
+  const pattern = new RegExp(strictPlanProjection.tools[0].input_schema.properties.storyFacts.items.properties[language].pattern);
+  assert.equal(pattern.test(language === "en" ? "Asked for size M but received L." : "M 사이즈 대신 L 사이즈를 받았어요."), false, "qualitative size-only anchor cannot satisfy strict grammar");
+  assert.equal(pattern.test(language === "en" ? "The jacket costs 89000 won." : "재킷 가격은 89000원이에요."), true);
+}
+assert.equal(strictPlanProjection.tools[0].input_schema.properties.questionAxes.minItems, 1);
+assert.equal(strictPlanProjection.tools[0].input_schema.properties.questionAxes.maxItems, undefined);
+assert.equal(strictPlanProjection.tools[0].input_schema.properties.storyFacts.maxItems, undefined);
+assert.equal(simple.PLAN_TOOL.input_schema.properties.questionAxes.minItems, 6, "domain cardinality remains enforced");
+assert.equal(simple.PLAN_TOOL.input_schema.properties.storyFacts.maxItems, 4);
 result = await call(messages, mockRequest("POST", generationBody, sessionHeader)); assert.equal(result.status, 200);
 result = await call(messages, mockRequest("POST", { ...generationBody, tools: [{ ...simple.PLAN_TOOL, input_schema: { type: "object" } }] }, sessionHeader)); assert.equal(result.status, 400);
 result = await call(messages, mockRequest("POST", { ...generationBody, messages: [{ role: "user", content: "arbitrary prompt" }] }, sessionHeader)); assert.equal(result.status, 400);
