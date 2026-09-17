@@ -8,6 +8,7 @@ New topics use the `simple-v1` two-page editorial system. Existing saved topics 
 - Page 1: serif title, one story/situation, EASY TALK ×3, REAL TALK ×3, TODAY'S ENGLISH ×4, and one actionable QUICK VOTE.
 - Page 2: one activity with real materials, a 2×2 four-step decision path, GROUP RESULT, one THINK HARDER question, and FINAL QUESTION.
 - Leader copies retain the hierarchy and add short near-section notes plus bottom emergency phrases.
+- Print page 2 uses the shared 12mm page inset, full-width Story evidence below the activity introduction, and content-sized activity rows. Leader emergency phrases occupy a normal-flow footer row, never an absolute overlay. Font sizes and screen layout remain unchanged.
 - No full-width dark bands, nested card decoration, or visible generation labels.
 - Korean uses `word-break: keep-all`. Material numbers use circular high-contrast badges that remain distinct in grayscale.
 - Print floors: title 20pt; question 11pt; Korean guidance, activity, and materials 9pt; helper 8pt; leader note 8.5pt.
