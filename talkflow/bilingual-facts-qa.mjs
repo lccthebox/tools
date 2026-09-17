@@ -5,6 +5,11 @@ const require = createRequire(import.meta.url);
 const Simple = require("./simple-generation.js");
 
 const cases = [
+  ["actual September Plan rating denominator order", "The product photo showed a rating of 4.8 out of 5.", "상품 사진 옆 평점은 5점 만점에 4.8점이었어요.", true],
+  ["changed rating still fails", "The rating is 4.8 out of 5.", "평점은 5점 만점에 4.7점이에요.", false],
+  ["changed rating scale still fails", "The rating is 4.8 out of 5.", "평점은 10점 만점에 4.8점이에요.", false],
+  ["omitted rating scale still fails", "The rating is 4.8 out of 5.", "평점은 4.8이에요.", false],
+  ["rating and scale swapped still fail", "The rating is 4.8 out of 5.", "평점은 4.8점 만점에 5점이에요.", false],
   ["same typed numbers", "The wait is 25 minutes and the rating is 4.8 stars.", "대기 시간은 25분이고 별점은 4.8이에요.", true],
   ["duration notation", "The wait is 25 minutes.", "대기 시간은 25분이에요.", true],
   ["hour duration words", "The class lasts two hours.", "수업은 두 시간 동안 진행돼요.", true],
