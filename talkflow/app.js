@@ -502,7 +502,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
     return `<header class="generated-topic-hero"><p class="eyebrow">${esc(t.date)} · ${leader?"LEADER GUIDE":"STUDENT"}</p><h1>${esc(t.title.en)}</h1><p lang="ko">${esc(t.title.ko)}</p></header><div class="generated-screen">${renderGeneratedHandout(t,leader)}</div>`;
   }
   function renderSimpleScreen(t,leader=false){
-    return `<header class="preview-toolbar"><div><strong>${leader?"리더용":"학생용"} A4 미리보기</strong><span>정확히 2페이지</span></div><div class="segmented"><button data-preview-page="1" class="${previewPage==="1"?"is-active":""}">1페이지</button><button data-preview-page="2" class="${previewPage==="2"?"is-active":""}">2페이지</button></div><label>확대<select data-preview-zoom><option value="fit" ${previewZoom==="fit"?"selected":""}>페이지 맞춤</option><option value="75" ${previewZoom==="75"?"selected":""}>75%</option><option value="100" ${previewZoom==="100"?"selected":""}>100%</option></select></label><button class="button primary" ${leader?`data-print-leader="${t.date}"`:`data-open="${t.date}:print"`}>PDF 저장 / 인쇄</button></header><div class="generated-screen preview-surface show-page-${previewPage}">${renderSimpleHandout(t,leader)}</div>`;
+    return `<header class="preview-toolbar reading-toolbar"><div><strong>${leader?"리더용":"학생용"} 읽기 보기</strong><span>편하게 읽고 대화하세요 · 인쇄는 A4 2페이지</span></div><button class="button primary" ${leader?`data-print-leader="${t.date}"`:`data-open="${t.date}:print"`}>PDF 저장 / 인쇄</button></header><div class="generated-screen preview-surface show-page-${previewPage}">${renderSimpleHandout(t,leader)}</div>`;
   }
   function renderStudent(t){
     if(!t)return empty();
