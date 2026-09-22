@@ -113,6 +113,10 @@ Talk Flow is an operational tool for a non-technical study coordinator, a discus
 - `response-groups`: three immediate ASK phrases and three immediate REACT phrases.
 - `quality-panel`: ready, review, regenerate.
 - `feedback-card`: unanswered and submitted.
+- `topic-completion`: unanswered, saving, completed, and error. One short reflection is the completion action; it never changes the shared topic.
+- `topic-history`: a compact monthly disclosure listing completed dates, topic titles, and saved one-line reflections. Completed date pills include a checkmark and accessible completion label.
+- `topic-completion`: unanswered, saving, completed, and error. One short reflection is the completion action; it never changes the shared topic.
+- `topic-history`: a compact monthly disclosure listing completed dates, topic titles, and saved one-line reflections. Completed date pills include a checkmark and accessible completion label.
 - `a4-page`: screen preview and print state.
 - `bilingual-rule`: English action text is primary; its Korean operational meaning sits directly below at 75–80% scale.
 - `evidence-choice`: review body, BUY / DON'T BUY checks, and a visible evidence-mark line.
@@ -120,6 +124,8 @@ Talk Flow is an operational tool for a non-technical study coordinator, a discus
 ## 6. Interaction and accessibility
 
 - Every control is a real button, input, select, or labelled group.
+- Topic completion uses a labelled textarea, visible character count, disabled saving state, and a polite status message. A saved response remains editable and is restored on return visits.
+- Topic completion uses a labelled textarea, visible character count, disabled saving state, and a polite status message. A saved response remains editable and is restored on return visits.
 - Keyboard focus remains visible. Status updates use the existing polite live region.
 - Technical settings remain available but closed by default.
 - Calendar cards expose one lifecycle status only. Status always combines text with a non-color marker; contradictory approval/PDF/used labels are never shown together.

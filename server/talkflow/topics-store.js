@@ -17,6 +17,7 @@ async function supabaseRequest(path,{key,method="POST",body}={}){
 
 async function memberLogin(credentials){const {anonKey}=configuration();return supabaseRequest("rpc/conversation_member_portal",{key:anonKey,body:{p_action:"verify",p_payload:credentials}})}
 async function memberTopics(token,month){const {anonKey}=configuration();return supabaseRequest("rpc/conversation_member_topics",{key:anonKey,body:{p_action:"list",p_payload:{token,month}}})}
+async function memberProgress(token,action,payload){const {anonKey}=configuration();return supabaseRequest("rpc/conversation_member_topic_progress",{key:anonKey,body:{p_action:action,p_payload:{token,...payload}}})}
 
 function publishableTopic(topic){
   const copy=value=>JSON.parse(JSON.stringify(value??null));
@@ -29,4 +30,4 @@ async function publishTopic(topic){
   return{publishedAt};
 }
 
-module.exports={configuration,memberLogin,memberTopics,publishableTopic,publishTopic};
+module.exports={configuration,memberLogin,memberTopics,memberProgress,publishableTopic,publishTopic};
