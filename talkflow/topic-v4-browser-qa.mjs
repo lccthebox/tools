@@ -26,7 +26,9 @@ try{
     if(await handout.locator(".a4-page").count()!==2)throw new Error(`${width}: two pages required`);
     const pageOverflow=await handout.locator(".a4-page").evaluateAll(pages=>pages.map(page=>page.scrollHeight-page.clientHeight));
     if(pageOverflow.some(value=>value>1))throw new Error(`${width}: A4 content overflow ${pageOverflow.join(",")}`);
-    if(await handout.locator(".topic-v4-block").count()!==9)throw new Error(`${width}: nine content blocks required`);
+    if(await handout.locator(".topic-v4-story-panel").count()!==1)throw new Error(`${width}: Story panel missing`);
+    if(await handout.locator(".topic-v4-talk").count()!==2)throw new Error(`${width}: Easy/Real Talk columns missing`);
+    if(await handout.locator(".topic-v4-wide-section").count()!==2)throw new Error(`${width}: Round Two sections missing`);
     if(await handout.innerText().then(value=>/SESSION|JURY|LEADER|ACTIVITY|VERDICT/.test(value)))throw new Error(`${width}: legacy content leaked`);
     if(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth+1))throw new Error(`${width}: horizontal overflow`);
     if(width===1280){

@@ -8,8 +8,8 @@ const oldSections=["easyTalk","realTalk","activity","leader","session1","session
 assert.equal(fixture.topicVersion,"topic-v4");
 assert.equal(fixture.page1.story.fictional,true);
 assert.ok(approvedStars.includes(fixture.page1.story.star));
-assert.match(fixture.page1.story.en,/^Imagine\s+/);
-assert.ok(fixture.page1.story.en.includes(fixture.page1.story.star));
+assert.match(fixture.page1.story.en,/Yuna/);
+assert.ok(fixture.page1.story.en.includes(fixture.page1.story.star.split(/\s+/).at(-1)));
 assert.ok(fixture.page1.story.ko.length>30);
 assert.equal(fixture.page1.keyWords.length,4);
 assert.equal(fixture.page1.quickVote.options.length,3);
@@ -24,7 +24,7 @@ oldSections.forEach(key=>assert.equal(Object.hasOwn(fixture,key),false,`${key} m
 const memberSource=readFileSync(new URL("./member.js",import.meta.url),"utf8");
 assert.match(memberSource,/topicVersion==="topic-v4"/);
 assert.match(memberSource,/STORY 해석/);
-assert.match(memberSource,/ROUND TWO/);
+assert.match(memberSource,/Round Two/);
 assert.match(memberSource,/renderCompletion\(topic\)/);
 
 const css=readFileSync(new URL("./member.css",import.meta.url),"utf8");

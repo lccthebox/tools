@@ -1,15 +1,15 @@
 {
   "id": "member-fixture-v4-2026-09-24",
   "topicVersion": "topic-v4",
-  "date": "2026-09-24",
+  "date": "2026-09-29",
   "category": {"en":"WORK & CAREER","ko":"일과 직장"},
   "title": {"en": "Should You Answer That Message Tonight?", "ko": "오늘 밤 그 메시지에 답해야 할까요?"},
   "page1": {
     "story": {
       "star": "Kim Yuna",
       "fictional": true,
-      "en": "Imagine Kim Yuna is at dinner with her sister when her phone lights up: a message from her manager at 9:14 PM. She reads three lines, then freezes. Her sister rolls her eyes and jokes, ‘Congratulations, you work at a hospital now?’ Yuna is not sure whether to laugh. Last month, a co-worker who never replied at night was passed over for a promotion. Her thumb hovers over the screen. She wants a clear boundary, but she also wants to protect her career. Should she reply now?",
-      "ko": "김연아가 언니와 저녁을 먹던 중 밤 9시 14분, 매니저에게 메시지를 받는 가상의 상황입니다. 내용을 읽은 연아는 순간 멈칫합니다. 언니는 병원에서 일하냐며 농담하지만, 연아에게는 고민할 이유가 있습니다. 지난달 밤늦은 연락에 답하지 않던 동료가 승진에서 제외됐기 때문입니다. 연아는 분명한 경계를 지키면서도 자신의 커리어를 보호하고 싶습니다. 지금 답장을 해야 할까요?"
+      "en": "Yuna is at dinner with her sister when her phone lights up: a message from her manager at 9:14 PM. She reads three lines, then freezes. Her sister rolls her eyes: ‘Congratulations, you work at a hospital now?’ Yuna isn’t sure — last month, a co-worker who never replied at night got passed over for a promotion. Her thumb hovers over the screen. Should she reply now?",
+      "ko": "유나는 언니와 저녁을 먹던 중 밤 9시 14분, 매니저에게 메시지를 받습니다. 내용을 읽은 유나는 순간 멈칫합니다. 언니는 “축하해, 너 이제 병원에서 일하나 보네?”라며 늦은 시간까지 오는 업무 연락을 비꼽니다. 유나가 고민하는 이유가 있습니다. 지난달 퇴근 후 연락에 잘 답하지 않던 동료가 승진에서 제외됐기 때문입니다. 답장을 할까 말까, 유나의 손가락이 휴대폰 화면 위에서 멈춥니다. 유나는 지금 답장해야 할까요?"
     },
     "keyWords": [
       {"en":"freeze","ko":"얼어붙다"},
