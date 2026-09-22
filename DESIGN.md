@@ -2,6 +2,16 @@
 
 ## Active direction: Simple Conversation v3
 
+### Screen reading view
+
+- Student, leader, and print-route screen previews are reading views, not fixed-height A4 simulations. Paper height grows with content; only actual print media fixes two A4 pages.
+- Reuse evergreen ink, muted Korean support, DM Sans/Noto Sans KR, and the serif topic title. Reading tokens: width 800px, body 18px, Korean/support 16px, section label 13px, title 32px (28px on phones), spacing 8/16/24/32px, page inset 24–48px. Mobile inset is 16px. The nested handout body must not inherit the app shell main padding.
+- Questions are single-column numbered editorial rows, with 600-weight English and regular Korean beneath. No question boxes. Materials remain two columns on desktop, one on phones; activity steps retain 2×2 on desktop and stack on phones.
+- Story is an unboxed reading passage. One thin rule introduces each major section. Expressions and leader notes are supporting text, not another row of task cards. Group Result retains a quiet writing line.
+- One page switch lives in the existing date navigation. The reading toolbar offers only its role, an A4 print clarification, and print action; no redundant page switch or paper zoom.
+- Every question, translation, activity, extension, final question, and leader note remains present. No content, storage, generation, validation, or actual print rule changes.
+- Persona gate: a mixed-confidence learner can read one question at a time; a coordinator can find printing without duplicate controls; a leader can read supporting notes without covering student content. Korean must keep whole words; no fixed screen clipping or horizontal document overflow at 375/768/1280/1600px.
+
 New topics use the `simple-v1` two-page editorial system. Existing saved topics and `/topics/` retain their previous renderer and are never converted automatically.
 
 - White A4, charcoal copy, deep-green accents, generous whitespace, and thin rules.

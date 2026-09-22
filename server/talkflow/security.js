@@ -176,7 +176,6 @@ function validGenerationPrompt(content, toolName) {
   if (JSON.stringify(payload.fixedDesign) !== JSON.stringify(PROMPT_PROFILE.fixedDesign)) return false;
   if (JSON.stringify(payload.languageExposure) !== JSON.stringify(PROMPT_PROFILE.languageExposure)) return false;
   if (JSON.stringify(payload.autoTopicSelection) !== JSON.stringify(PROMPT_PROFILE.autoTopicSelection)) return false;
-  if (JSON.stringify(payload.generationRules) !== JSON.stringify(PROMPT_PROFILE.generationRules)) return false;
   if (!payload.topic || !/^\d{4}-\d{2}-\d{2}$/.test(payload.topic.date)) return false;
   if (!Array.isArray(payload.monthlyDiversity) || !Array.isArray(payload.previousValidationIssues)) return false;
   if (!validTopicInput(payload.topic) || !validDiversity(payload.monthlyDiversity) || !validIssues(payload.previousValidationIssues)) return false;

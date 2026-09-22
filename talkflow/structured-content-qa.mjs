@@ -7,13 +7,13 @@ const Simple = require("./simple-generation.js");
 const session1 = {
   minutes: 50,
   story: { heading: "TODAY’S STORY", id: "story-fixture", en: ["Mina paid ₩30,000 for a dinner reservation that allowed only 25 minutes for arrival.", "She expected her two friends to arrive on time, but one friend was delayed by work.", "The restaurant offered a later table with a smaller menu while another nearby place cost less.", "Should the group wait, change restaurants, or keep the booking without their late friend?"], ko: ["미나는 도착까지 25분만 허용되는 저녁 예약에 3만 원을 냈어요.", "친구 두 명이 제시간에 오길 기대했지만 한 명은 일 때문에 늦었어요.", "식당은 메뉴가 더 적은 늦은 시간 자리를 제안했고 근처 다른 식당은 비용이 더 적었어요.", "그룹은 기다릴지, 식당을 바꿀지, 늦는 친구 없이 예약을 유지할지 선택해야 해요."] },
-  easyTalk: Array.from({ length: 3 }, (_, index) => ({ en: `Easy ${index}`, ko: `쉬운 질문 ${index}`, axis: ["recentExperience", "dailyHabit", "quickChoice"][index], starter: "I think…", reasonPrompt: "Because…", longAnswerPrompt: "For example…" })), realTalk: Array.from({ length: 3 }, (_, index) => ({ en: `Real ${index}`, ko: `진짜 질문 ${index}`, axis: ["personalStory", "evaluationCriteria", "tradeoff"][index], starter: "For me…", reasonPrompt: "My reason…", longAnswerPrompt: "One exception…" })), expressions: Array.from({ length: 4 }, (_, index) => ({ en: `Expression ${index}`, ko: `표현 ${index}`, useIn: index === 0 ? ["activity"] : ["story"] })),
-  quickVote: { en: "Choose.", ko: "선택하세요.", options: ["A", "B"], noReasonKo: "이유 전에 선택하세요." }
+  easyTalk: Array.from({ length: 3 }, (_, index) => ({ en: `Easy ${index}`, ko: `쉬운 질문 ${index}`, axis: ["recentExperience", "dailyHabit", "quickChoice"][index], starter: "I think…", reasonPrompt: "Because…", longAnswerPrompt: "For example…" })), realTalk: Array.from({ length: 3 }, (_, index) => ({ en: `Real ${index}`, ko: `진짜 질문 ${index}`, axis: ["personalStory", "evaluationCriteria", "tradeoff"][index], starter: "For me…", reasonPrompt: "My reason…", longAnswerPrompt: "One exception…" })), expressions: Array.from({ length: 5 }, (_, index) => ({ en: `Expression ${index} ___`, ko: `표현 ${index}`, useIn: index === 0 ? ["activity"] : ["story"] })),
+  quickVote: { en: "Choose.", ko: "선택하세요.", options: ["A", "B", "C"], noReasonKo: "이유 전에 선택하세요." }
 };
 const session2 = {
   minutes: 40,
-  reset: { en: "Look at the facts.", ko: "정보를 살펴봐요." },
-  activity: { name: "Review Jury", instructionKo: "시간과 비용을 비교해요.", materials: [{ en: "Mina paid ₩30,000 for a dinner reservation that allowed only 25 minutes for arrival.", ko: "미나는 도착까지 25분만 허용되는 저녁 예약에 3만 원을 냈어요." }, { en: "The later table keeps the group together but offers a smaller menu.", ko: "늦은 시간 자리는 그룹이 함께할 수 있지만 메뉴가 더 적어요." }], stepsKo: ["선택해요.", "근거를 말해요.", "질문해요.", "선택을 바꿀지 정해요."], phrases: ["Expression 0", "Ask why.", "I agree.", "We decide."], participationKo: "모든 사람이 말해요.", sourceRef: "story-fixture", disagreementKo: "시간, 비용, 함께 식사하는 것의 우선순위가 달라요.", listeningKo: "다른 사람의 근거를 요약해요.", estimatedMinutes: 20 },
+  reset: { en: "For the dinner reservation, I prefer ___ because ___.", ko: "저녁 예약에서는 ___ 때문에 ___을 선호해요." },
+  activity: { name: "Review Jury", instructionKo: "시간과 비용을 비교해요.", materials: [{ en: "Mina paid ₩30,000 for a dinner reservation that allowed only 25 minutes for arrival.", ko: "미나는 도착까지 25분만 허용되는 저녁 예약에 3만 원을 냈어요." }, { en: "One friend can arrive earlier but needs a quiet table to take a work call.", ko: "한 친구는 일찍 올 수 있지만 업무 전화를 받을 조용한 자리가 필요해요." }, { en: "Another friend prefers the later table because everyone can eat together.", ko: "다른 친구는 모두 함께 먹을 수 있어서 늦은 시간 자리를 선호해요." }, { en: "A nearby restaurant has more seats but cannot keep the reservation after 7 p.m.", ko: "근처 식당은 자리가 더 많지만 오후 7시 이후에는 예약을 유지할 수 없어요." }, { en: "The group can wait outside, but rain is expected before the late friend arrives.", ko: "그룹은 밖에서 기다릴 수 있지만 늦는 친구가 오기 전에 비가 올 예정이에요." }], stepsKo: ["선택해요.", "카드를 받아요.", "근거를 듣고 질문해요.", "선택을 바꿀지 정하고 평결을 써요.", "평결을 공유해요."], phrases: ["Expression 0 ___", "Ask why.", "I agree.", "We decide."], participationKo: "모든 사람이 말해요.", sourceRef: "story-fixture", disagreementKo: "시간, 비용, 함께 식사하는 것의 우선순위가 달라요.", listeningKo: "다른 사람의 근거를 요약해요.", estimatedMinutes: 20 },
   groupResult: { en: "One decision with two reasons", ko: "결정과 이유", type: "decision" },
   thinkHarder: { en: "What makes this difficult?", ko: "무엇이 어려워요?" },
   finalQuestion: { en: "What will you do?", ko: "무엇을 할 거예요?" }
@@ -56,9 +56,9 @@ const toTransport = value => ({
   easyTalk: value.session1.easyTalk.map(({ en, ko, starter, reasonPrompt, longAnswerPrompt }) => ({ en, ko, starter, reasonPrompt, longAnswerPrompt })),
   realTalk: value.session1.realTalk.map(({ en, ko, starter, reasonPrompt, longAnswerPrompt }) => ({ en, ko, starter, reasonPrompt, longAnswerPrompt })),
   expressions: value.session1.expressions.map(({ en, ko, useIn }) => ({ en, ko, useIn })),
-  quickVoteEn: value.session1.quickVote.en, quickVoteKo: value.session1.quickVote.ko, quickVoteOptions: value.session1.quickVote.options, quickVoteNoReasonKo: value.session1.quickVote.noReasonKo,
-  activityInstructionKo: value.session2.activity.instructionKo, materials: value.session2.activity.materials.slice(1), stepsKo: value.session2.activity.stepsKo, activityPhrases: value.session2.activity.phrases, disagreementKo: value.session2.activity.disagreementKo, listeningKo: value.session2.activity.listeningKo,
-  resetEn: value.session2.reset.en, resetKo: value.session2.reset.ko, thinkHarderEn: value.session2.thinkHarder.en, thinkHarderKo: value.session2.thinkHarder.ko, finalQuestionEn: value.session2.finalQuestion.en, finalQuestionKo: value.session2.finalQuestion.ko,
+  quickVoteOptions: value.session1.quickVote.options,
+  activityInstructionKo: value.session2.activity.instructionKo, materials: value.session2.activity.materials.slice(1), activityPhrases: value.session2.activity.phrases, disagreementKo: value.session2.activity.disagreementKo, listeningKo: value.session2.activity.listeningKo,
+  thinkHarderEn: value.session2.thinkHarder.en, thinkHarderKo: value.session2.thinkHarder.ko, finalQuestionEn: value.session2.finalQuestion.en, finalQuestionKo: value.session2.finalQuestion.ko,
   leaderNotes: [value.leader.story, value.leader.easyTalk, value.leader.realTalk, value.leader.activity, value.leader.final, value.leader.timeCutKo, value.leader.activitySupport.demoKo, value.leader.activitySupport.quietKo, value.leader.activitySupport.longKo, value.leader.activitySupport.timeCutKo, value.leader.activitySupport.fastAgreementKo], leaderEmergency: value.leader.emergency, easyTalkFollowups: value.leader.easyTalkFollowups, realTalkFollowups: value.leader.realTalkFollowups
 });
 const plan = { selectedTopic: content.title, style: content.style, questionAxes: ["recentExperience", "dailyHabit", "quickChoice", "personalStory", "evaluationCriteria", "tradeoff"], activity: content.session2.activity.name, materialType: "reviews", groupResult: { en: "One decision with two concrete reasons", ko: "구체적인 이유 두 개가 있는 결정 하나" }, storyFacts: [{ en: "25 minutes", ko: "25분" }, { en: "₩30,000", ko: "3만 원" }, { en: "two friends", ko: "친구 두 명" }] };
@@ -73,11 +73,18 @@ assert.equal(transportComplexity.unions, 0, `transport unions must be zero: ${JS
 assert.equal(typeof Simple.adaptStructuredContentTransport, "function", "transport adapter is exported");
 assert.equal(Simple.CONTENT_FILL_TRANSPORT_SCHEMA.type, "object", "server-owned transport schema is exported");
 assert.equal("participationKo" in Simple.CONTENT_FILL_TRANSPORT_SCHEMA.properties, false, "participationKo is server-owned, not provider-generated");
+assert.equal("quickVoteEn" in Simple.CONTENT_FILL_TRANSPORT_SCHEMA.properties, false, "Quick Vote instructions are server-owned, not provider-generated");
+assert.equal("stepsKo" in Simple.CONTENT_FILL_TRANSPORT_SCHEMA.properties, false, "Jury steps are server-owned, not provider-generated");
+assert.equal("resetEn" in Simple.CONTENT_FILL_TRANSPORT_SCHEMA.properties, false, "Say It Kindly is server-owned, not provider-generated");
 assert.deepEqual(Simple.CONTENT_FILL_TRANSPORT_SCHEMA.properties.expressions.items.properties.useIn.items.enum,["story","easyTalk","realTalk","activity"],"provider schema constrains expression use locations before the adapter");
 assert.equal(Simple.CONTENT_FILL_TRANSPORT_SCHEMA.properties.storySentences.minItems, 4, "transport contract requires four Story pairs");
 assert.equal(Simple.CONTENT_FILL_TRANSPORT_SCHEMA.properties.storySentences.maxItems, 4, "transport contract caps Story pairs at four");
 assert.equal(Simple.CONTENT_FILL_TRANSPORT_SCHEMA.properties.leaderEmergency.minItems, 4, "transport contract requires four emergency prompts");
 assert.equal(Simple.CONTENT_FILL_TRANSPORT_SCHEMA.properties.leaderEmergency.maxItems, 4, "transport contract caps emergency prompts at four");
+assert.match(Simple.CONTENT_FILL_TRANSPORT_SCHEMA.properties.easyTalk.description, /12 English words or fewer/);
+assert.match(Simple.CONTENT_FILL_TRANSPORT_SCHEMA.properties.easyTalk.description, /then humor/i);
+assert.match(Simple.CONTENT_FILL_TRANSPORT_SCHEMA.properties.materials.description, /30 English words or fewer/);
+assert.match(Simple.CONTENT_FILL_TRANSPORT_SCHEMA.properties.materials.description, /ratings? or scores?/i);
 const providerMinItems = [];
 const collectProviderMinItems = value => { if (!value || typeof value !== "object") return; if (Number.isInteger(value.minItems)) providerMinItems.push(value.minItems); Object.values(value).forEach(collectProviderMinItems); };
 collectProviderMinItems(Simple.CONTENT_OUTPUT_SCHEMA);
@@ -93,6 +100,59 @@ assert.deepEqual(providerMinLengths, [], `provider schema must omit unsupported 
 assert.deepEqual(Simple.parseStructuredContentResponse(structuredPayload(validTransport)), validTransport, "one top-level JSON parse returns the transport object");
 const adapted = Simple.adaptStructuredContentTransport(validTransport, plan, request);
 assert.equal(typeof adapted.session1, "object"); assert.equal(typeof adapted.session2, "object");
+const productionAdapted = Simple.normalizeContent(adapted);
+assert.equal(Simple.validateContent(productionAdapted, plan, [], true).issues.some(item => item.location === "facilitation.practice"), false, "server-owned Say It Kindly accepts a topic title containing Gift in the production validation path");
+const shortTitlePlan = { ...plan, selectedTopic: { en: "A Day Off", ko: "쉬는 날" } };
+const shortTitleAdapted = Simple.adaptStructuredContentTransport(validTransport, shortTitlePlan, request);
+const productionShortTitleAdapted = Simple.normalizeContent(shortTitleAdapted);
+assert.equal(Simple.validateContent(productionShortTitleAdapted, shortTitlePlan, [], true).issues.some(item => item.location === "facilitation.practice"), false, "server-owned Say It Kindly accepts a title made of short words in the production validation path");
+const overwrittenPractice = structuredClone(productionAdapted);
+overwrittenPractice.facilitation.practice.promptEn = "I prefer ___ because ___.";
+assert.equal(Simple.validateContent(overwrittenPractice, plan, [], true).issues.some(item => item.location === "facilitation.practice"), true, "arbitrary Say It Kindly text cannot replace the server-owned topic frame");
+assert.equal(adapted.facilitationVersion, "self-running-v2.2", "new topics use the Core v2.2 facilitation contract");
+assert.equal(adapted.facilitation.totalMinutes, 90);
+assert.equal(adapted.facilitation.transitionBufferMinutes, 10);
+assert.equal(adapted.facilitation.setup.minutes, 2);
+assert.deepEqual(Object.values(adapted.facilitation.rounds).map(round => round.minutes), [5, 15, 20, 25, 10, 3]);
+assert.equal(adapted.facilitation.setup.minutes + Object.values(adapted.facilitation.rounds).reduce((sum, round) => sum + round.minutes, 0) + adapted.facilitation.transitionBufferMinutes, 90);
+assert.match(adapted.facilitation.informationGapKo, /카드 시트/);
+assert.match(adapted.facilitation.informationGapKo, /자기 말/);
+assert.match(adapted.facilitation.setup.goldenRuleEn, /Everyone speaks once/i);
+assert.match(adapted.facilitation.setup.hostRuleKo, /Host/);
+assert.match(adapted.facilitation.setup.timerRuleKo, /Timer/);
+assert.match(adapted.facilitation.informationGapKo, /다른 카드 내용을 보지 말고/);
+assert.match(adapted.facilitation.minorityFirstKo, /다른 선택/);
+assert.match(adapted.facilitation.verdictTemplateEn, /One person disagrees/);
+assert.match(adapted.facilitation.practice.promptEn, /A Gift/);
+assert.match(adapted.facilitation.wrap.stemEn, /Next time/);
+assert.deepEqual(Object.keys(adapted.facilitation.levelSupport), ["starterKo", "coreKo", "deepKo"]);
+assert.equal(adapted.session2.activity.estimatedMinutes, 25);
+const contractStressTransport=structuredClone(validTransport);
+contractStressTransport.storySentences=[
+  {en:"Mina booked dinner for three people and paid ₩30,000 before checking the arrival policy carefully.",ko:"미나는 도착 규칙을 자세히 확인하기 전에 3명 저녁 식사를 예약하고 3만 원을 냈어요."},
+  {en:"The restaurant allowed only 25 minutes for arrival, but one friend was delayed unexpectedly at work.",ko:"식당은 도착 시간을 20분만 허용했지만 친구 한 명이 직장에서 예상치 못하게 늦었어요."},
+  {en:"A later table would keep everyone together, although the smaller menu disappointed Mina and changed what she expected from the evening.",ko:"늦은 시간 자리는 모두 함께 앉게 해 주지만 작은 메뉴는 미나를 실망하게 했어요."},
+  {en:"She must now choose whether to wait, change restaurants, or keep the original booking without her late friend.",ko:"이제 미나는 기다릴지, 식당을 바꿀지, 늦는 친구 없이 기존 예약을 유지할지 선택해야 해요."}
+];
+contractStressTransport.materials[0]={en:"Option A gives the group a quieter table near the back window, and the manager can hold it while the late friend travels across town after finishing an unexpected work call.",ko:"선택 A는 뒤쪽 창가의 조용한 자리를 제공하고 관리자는 늦는 친구가 업무 전화를 마치고 오는 동안 자리를 유지해 줄 수 있어요."};
+const scrambledPlan={...plan,questionAxes:["prediction","policy","comparison","groupDecision","problemSolving","tradeoff"]};
+const contractStressAdapted=Simple.adaptStructuredContentTransport(contractStressTransport,scrambledPlan,request);
+assert.deepEqual(contractStressAdapted.session1.quickVote,{en:"Choose one option. Show 1, 2, or 3 at the same time.",ko:"세 선택지 중 하나를 고르고 손가락 1·2·3으로 동시에 표시하세요.",options:validTransport.quickVoteOptions,noReasonKo:"이유는 말하지 말고 먼저 하나만 선택하세요."},"adapter owns the Quick Vote action contract");
+assert.deepEqual([...contractStressAdapted.session1.easyTalk,...contractStressAdapted.session1.realTalk].map(item=>item.axis),["recentExperience","dailyHabit","quickChoice","personalStory","evaluationCriteria","tradeoff"],"adapter owns semantic question axes instead of trusting arbitrary Plan order");
+assert.equal(Simple.validateContent(contractStressAdapted,scrambledPlan,[],true).issues.some(item=>["session2.activity.stepsKo","session1.story.en","session2.activity.materials","facilitation.practice","session1.story.ko"].includes(item.location)),false,JSON.stringify(Simple.validateContent(contractStressAdapted,scrambledPlan,[],true).issues));
+assert.equal(Simple.storyFactsMatch(contractStressAdapted.session1.story.en.join(" "),contractStressAdapted.session1.story.ko.join(" "),scrambledPlan.storyFacts),true,"adapter aligns quantitative Story facts across languages");
+assert.equal(contractStressAdapted.session1.story.en.join(" ").match(/[A-Za-z0-9’'-]+/g).length>=60&&contractStressAdapted.session1.story.en.join(" ").match(/[A-Za-z0-9’'-]+/g).length<=70,true,"adapter guarantees the 60–70 word Story budget");
+assert.equal(contractStressAdapted.session2.activity.materials.slice(1).every(item=>(item.en.match(/[A-Za-z0-9’'-]+/g)||[]).length<=30),true,"adapter caps private cards at 30 English words");
+assert.match(contractStressAdapted.session2.activity.stepsKo[3],/선택을 바꿀지/);
+assert.match(contractStressAdapted.facilitation.practice.promptEn,/A Gift/i);
+assert.doesNotMatch(contractStressAdapted.facilitation.practice.promptEn,/gift, but I hoped/i);
+assert.equal(Simple.validateContent(adapted, plan, [], true).issues.some(item => item.id === "S11"), false, JSON.stringify(Simple.validateContent(adapted, plan, [], true).issues));
+const noHost = structuredClone(adapted); delete noHost.facilitation.setup.hostRuleKo;
+assert.equal(Simple.validateContent(noHost, plan, [], true).issues.some(item => item.location === "facilitation.setup"), true, "missing Host rule fails closed");
+const noGap = structuredClone(adapted); delete noGap.facilitation.informationGapKo;
+assert.equal(Simple.validateContent(noGap, plan, [], true).issues.some(item => item.location === "facilitation.activity"), true, "missing information gap fails closed");
+const noWrap = structuredClone(adapted); delete noWrap.facilitation.wrap.stemEn;
+assert.equal(Simple.validateContent(noWrap, plan, [], true).issues.some(item => item.location === "facilitation.closing"), true, "missing wrap fails closed");
 assert.equal(adapted.session1.story.id, adapted.session2.activity.sourceRef, "sourceRef is deterministic");
 assert.deepEqual(adapted.title, plan.selectedTopic, "Story title is authoritative from Plan");
 assert.equal(adapted.session1.story.en.length, 4, "adapter returns four Story EN sentences");
@@ -102,10 +162,14 @@ assert.equal(adapted.session2.activity.materials[0].ko, adapted.session1.story.k
 assert.deepEqual(adapted.title, plan.selectedTopic, "title comes from Plan"); assert.equal(adapted.style, plan.style, "style comes from Plan"); assert.equal(adapted.session1.minutes, 50); assert.equal(adapted.session2.minutes, 40);
 assert.deepEqual(adapted.session1.easyTalk.map(item => item.en), session1.easyTalk.map(item => item.en), "Easy Talk maps through the adapter");
 assert.deepEqual(adapted.session1.realTalk.map(item => item.en), session1.realTalk.map(item => item.en), "Real Talk maps through the adapter");
-assert.deepEqual(adapted.session1.expressions, session1.expressions, "Today’s English maps through the adapter");
-assert.deepEqual(adapted.session1.quickVote, session1.quickVote, "Quick Vote maps through the adapter");
+assert.deepEqual(adapted.session1.expressions.map(({topicSpecific,...item})=>item), session1.expressions, "Today’s English maps through the adapter"); assert.deepEqual(adapted.session1.expressions.map(item=>item.topicSpecific),[true,true,true,false,false],"three expressions are marked topic-specific");
+assert.deepEqual(adapted.session1.quickVote,{en:"Choose one option. Show 1, 2, or 3 at the same time.",ko:"세 선택지 중 하나를 고르고 손가락 1·2·3으로 동시에 표시하세요.",options:session1.quickVote.options,noReasonKo:"이유는 말하지 말고 먼저 하나만 선택하세요."},"Quick Vote instructions are deterministic while options map through the adapter");
+assert.throws(() => Simple.adaptStructuredContentTransport({ ...validTransport, quickVoteKo: "Claude override" }, plan, request), error => error?.schemaValidationType === "additional_property", "provider output cannot override deterministic Quick Vote instructions");
+assert.throws(() => Simple.adaptStructuredContentTransport({ ...validTransport, stepsKo: ["Claude override"] }, plan, request), error => error?.schemaValidationType === "additional_property", "provider output cannot override deterministic Jury steps");
+assert.throws(() => Simple.adaptStructuredContentTransport({ ...validTransport, resetEn: "Claude override" }, plan, request), error => error?.schemaValidationType === "additional_property", "provider output cannot override deterministic Say It Kindly");
 assert.deepEqual(adapted.session2.activity.materials, session2.activity.materials, "adapter prepends the selected Story pair to judgment materials");
-assert.deepEqual(adapted.session2.activity.stepsKo, session2.activity.stepsKo, "activity steps map through the adapter");
+assert.deepEqual(adapted.session2.activity.stepsKo, ["두 선택지 중 하나를 먼저 고르세요.","비밀 카드 한 장을 받고, 다른 사람에게 보여 주지 않은 채 자기 말로 설명하세요.","서로 다른 근거를 듣고 궁금한 점을 하나 질문하세요.","선택을 바꿀지 정한 뒤, 우리 팀의 최종 선택과 이유를 적으세요.","우리 팀의 선택과 이유를 함께 나누세요."], "adapter owns the natural Korean Jury step contract");
+assert.doesNotMatch(adapted.session2.activity.stepsKo.join(" "), /PRIVATE CARD|평결문|평결/, "member-facing Jury steps do not expose internal or legalistic wording");
 assert.deepEqual(adapted.session2.thinkHarder, session2.thinkHarder, "Think Harder maps through the adapter");
 assert.deepEqual(adapted.session2.finalQuestion, session2.finalQuestion, "Final Question maps through the adapter");
 assert.deepEqual(adapted.leader.activitySupport, content.leader.activitySupport, "leader notes map through the adapter");
@@ -150,7 +214,7 @@ const missingTransport = { ...validTransport }; delete missingTransport.finalQue
 assert.throws(() => Simple.parseStructuredContentResponse(structuredPayload(missingTransport)), error => error?.schemaValidationType === "required", "missing required transport fields fail");
 assert.throws(() => Simple.parseStructuredContentResponse(structuredPayload({ ...validTransport, easyTalk: JSON.stringify(validTransport.easyTalk) })), error => error?.schemaValidationType === "type", "nested JSON strings fail");
 assert.throws(() => Simple.parseStructuredContentResponse({ content: [{ type: "text", text: '{"__proto__":{"polluted":true}}' }], stop_reason: "end_turn" }), error => error?.type === "structured_content_error", "prototype pollution fails");
-const oversizedSchema = structuredClone(Simple.CONTENT_FILL_TRANSPORT_SCHEMA); Object.assign(oversizedSchema.properties, { extraA: { type: "string" }, extraB: { type: "string" }, extraC: { type: "string" } });
+const oversizedSchema = structuredClone(Simple.CONTENT_FILL_TRANSPORT_SCHEMA); Object.assign(oversizedSchema.properties, Object.fromEntries(Array.from({length:10},(_,index)=>[`extra${index}`,{type:"string"}])));
 assert.throws(() => Simple.assertContentFillSchemaComplexity(oversizedSchema), error => error?.type === "CONTENT_FILL_SCHEMA_TOO_COMPLEX_PRECHECK", "project complexity gate fails before provider dispatch");
 assert.throws(() => Simple.parseStructuredContentResponse({ ...structuredPayload(validTransport), stop_reason: "max_tokens" }), error => error?.type === "incomplete_response" && error?.stopReason === "max_tokens", "max_tokens fails without retry");
 assert.throws(() => Simple.parseStructuredContentResponse({ content: [{ type: "text", text: "I cannot help." }], stop_reason: "refusal" }), error => error?.type === "refusal" && error?.stopReason === "refusal", "refusal fails without parsing");
