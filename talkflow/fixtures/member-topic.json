@@ -1,0 +1,17 @@
+{
+  "id": "member-fixture-2026-09-24",
+  "date": "2026-09-24",
+  "title": {"en": "The Gift That Doesn't Fit", "ko": "마음에 들지 않는 선물"},
+  "session1": {
+    "story": {"en": ["Mina received a thoughtful jacket that was two sizes too large. The return window closes in seven days, so she must decide whether to keep it, exchange it, or tell her friend honestly."]},
+    "easyTalk": [{"en": "Have you received a gift that didn't fit you?"}, {"en": "How do you choose a gift for someone?"}, {"en": "What gift always makes you smile?"}],
+    "realTalk": [{"en": "Is honesty always best when receiving a gift?"}, {"en": "What makes a gift feel meaningful?"}, {"en": "Should expensive gifts create an obligation?"}],
+    "expressions": [{"en": "It's the thought that counts."}, {"en": "Could I exchange this for another size?"}, {"en": "I really appreciate the thought."}, {"en": "I'd rather be honest about it."}]
+  },
+  "session2": {
+    "activity": {"name": "Gift Advice Circle", "instructionKo": "서로 다른 상황을 읽고 가장 배려 있는 답을 함께 고르세요.", "materials": [{"en": "A jacket is two sizes too large, but your friend chose it carefully."}, {"en": "The receipt expires tomorrow and an exchange is still possible."}], "stepsKo": ["상황 하나를 고르세요.", "각자 가능한 답을 하나씩 말하세요.", "다른 사람의 의견을 듣고 질문하세요.", "우리 팀의 최종 선택과 이유를 정하세요."]},
+    "groupResult": {"en": "Our group chooses the kindest honest response.", "ko": "우리 팀이 고른 가장 솔직하고 배려 있는 답"},
+    "thinkHarder": {"en": "Can honesty about a gift protect a friendship?"},
+    "finalQuestion": {"en": "What matters most when you give someone a gift?"}
+  }
+}
