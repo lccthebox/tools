@@ -2,12 +2,13 @@
 
 const crypto = require("node:crypto");
 const { PLAN_TOOL, CONTENT_TOOL, CONTENT_OUTPUT_SCHEMA, PROMPT_PROFILE, assertContentFillSchemaComplexity, buildPromptPayload, validatePlan } = require("../../talkflow/simple-generation");
+const TopicV4 = require("../../talkflow/topic-v4-generation");
 const LegacyRepairPrompt = require("../../talkflow/legacy-repair-prompt");
 
 const SESSION_COOKIE = "__Host-talkflow_session";
 const SESSION_TTL_SECONDS = 8 * 60 * 60;
 const ALLOWED_MODELS = new Set(["claude-sonnet-4-6"]);
-const CANONICAL_TOOLS = new Map([[PLAN_TOOL.name, PLAN_TOOL], [CONTENT_TOOL.name, CONTENT_TOOL]]);
+const CANONICAL_TOOLS = new Map([[PLAN_TOOL.name, PLAN_TOOL], [CONTENT_TOOL.name, CONTENT_TOOL], [TopicV4.PLAN_TOOL.name, TopicV4.PLAN_TOOL], [TopicV4.CONTENT_TOOL.name, TopicV4.CONTENT_TOOL]]);
 const LEGACY_CONTEXT_KEYS = new Set(["activity", "activitySupport", "assignedOpposition", "axis", "category", "commonErrors", "conversationFlow", "conversationMaterial", "createdAt", "date", "deeperFollowUp", "demoKo", "easyEntry", "emergency", "en", "estimatedMinutes", "example", "exampleFollowUp", "final", "finalClose", "finalQuestion", "finalRound", "followUp", "goal", "groupResult", "hidden", "hook", "id", "instruction", "instructionEn", "instructionKo", "issues", "ko", "leader", "leaderNotes", "longKo", "mainActivity", "mainDiscussion", "material", "materials", "mechanism", "midGame", "minutes", "name", "openEndedDecision", "operatorStatus", "options", "optionsText", "output", "page", "participantOutput", "phrases", "prompt", "promptAxes", "quality", "question", "questionEn", "questionKo", "quickActivity", "quietKo", "reasonPrompt", "recommendedSkip", "reset", "roles", "score", "sensitiveWarning", "session1", "session2", "sessionOne", "sessionTwo", "smallTalk", "sourceRef", "speakingMechanisms", "starter", "status", "steps", "stepsKo", "target", "thinkHarder", "timeCutKo", "timedTurn", "title", "titleEn", "titleKo", "topicMode", "translation", "type", "updatedAt", "usage", "usefulPhrases", "whenConversationStops"]);
 const buckets = globalThis.__talkflowRateBuckets || (globalThis.__talkflowRateBuckets = new Map());
 
@@ -154,6 +155,8 @@ function messageBodyForUpstream(body) {
   if (!canonical || JSON.stringify(tool) !== JSON.stringify(canonical)) return false;
   if (body.messages.length !== 1 || body.messages[0].role !== "user" || !validGenerationPrompt(body.messages[0].content, tool.name)) return false;
   if(body.tool_choice?.type!=="tool"||body.tool_choice?.name!==tool.name||!Object.keys(body.tool_choice).every(key=>["type","name"].includes(key)))return null;
+  if(tool.name===TopicV4.CONTENT_TOOL.name)return{model:body.model,max_tokens:body.max_tokens,messages:body.messages,output_config:{format:{type:"json_schema",schema:TopicV4.CONTENT_TOOL.input_schema}}};
+  if(tool.name===TopicV4.PLAN_TOOL.name){const strictPlanTool=structuredClone(TopicV4.PLAN_TOOL);strictPlanTool.strict=true;return{...body,tools:[strictPlanTool]}}
   if(tool.name===CONTENT_TOOL.name){assertContentFillSchemaComplexity();return{model:body.model,max_tokens:body.max_tokens,messages:body.messages,output_config:{format:{type:"json_schema",schema:CONTENT_OUTPUT_SCHEMA}}}}
   const strictPlanTool = structuredClone(PLAN_TOOL);
   strictPlanTool.strict = true;
@@ -169,6 +172,7 @@ function validGenerationPrompt(content, toolName) {
   let payload;
   try { payload = JSON.parse(content); } catch { return false; }
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) return false;
+  if (toolName === TopicV4.PLAN_TOOL.name || toolName === TopicV4.CONTENT_TOOL.name) return validTopicV4Prompt(payload, toolName);
   const keys = ["stage", "contract", "fixedDesign", "languageExposure", "autoTopicSelection", "generationRules", "topic", "monthlyDiversity", "approvedPlan", "previousValidationIssues", "previousCandidate", "retryRule"];
   if (Object.keys(payload).some(key => !keys.includes(key))) return false;
   const expectedStage = toolName === PLAN_TOOL.name ? "plan" : "content";
@@ -183,6 +187,17 @@ function validGenerationPrompt(content, toolName) {
   const candidateSchema = expectedStage === "plan" ? PLAN_TOOL.input_schema : CONTENT_TOOL.input_schema;
   if (payload.previousCandidate !== null && !matchesSchemaShape(payload.previousCandidate, candidateSchema, true)) return false;
   const rebuilt = buildPromptPayload({ stage: payload.stage, topic: payload.topic, monthlyDiversity: payload.monthlyDiversity, approvedPlan: payload.approvedPlan, previousValidationIssues: payload.previousValidationIssues, previousCandidate: payload.previousCandidate });
+  return JSON.stringify(payload) === JSON.stringify(rebuilt);
+}
+
+function validTopicV4Prompt(payload, toolName) {
+  const keys = ["contract", "stage", "topic", "approvedPlan", "visualContract", "contentRules"];
+  if (Object.keys(payload).some(key => !keys.includes(key))) return false;
+  const expectedStage = toolName === TopicV4.PLAN_TOOL.name ? "plan" : "content";
+  if (payload.stage !== expectedStage || !validTopicInput(payload.topic)) return false;
+  if (expectedStage === "plan" && payload.approvedPlan !== null) return false;
+  if (expectedStage === "content" && (!matchesSchemaShape(payload.approvedPlan, TopicV4.PLAN_TOOL.input_schema, false) || !TopicV4.validatePlan(payload.approvedPlan, payload.topic).ok)) return false;
+  const rebuilt = TopicV4.buildPromptPayload({ stage: expectedStage, topic: payload.topic, approvedPlan: payload.approvedPlan });
   return JSON.stringify(payload) === JSON.stringify(rebuilt);
 }
 
