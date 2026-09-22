@@ -24,9 +24,16 @@ try{
     await page.locator(`[data-open="${topic.date}:admin"]`).click();
     const handout=page.locator(".topic-v4-handout").first();if(!await handout.count())throw new Error(`${width}: v4 handout missing`);
     if(await handout.locator(".a4-page").count()!==2)throw new Error(`${width}: two pages required`);
-    if(await handout.locator(".topic-v4-block").count()!==7)throw new Error(`${width}: seven content blocks required`);
+    const pageOverflow=await handout.locator(".a4-page").evaluateAll(pages=>pages.map(page=>page.scrollHeight-page.clientHeight));
+    if(pageOverflow.some(value=>value>1))throw new Error(`${width}: A4 content overflow ${pageOverflow.join(",")}`);
+    if(await handout.locator(".topic-v4-block").count()!==9)throw new Error(`${width}: nine content blocks required`);
     if(await handout.innerText().then(value=>/SESSION|JURY|LEADER|ACTIVITY|VERDICT/.test(value)))throw new Error(`${width}: legacy content leaked`);
     if(await page.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth+1))throw new Error(`${width}: horizontal overflow`);
+    if(width===1280){
+      await handout.screenshot({path:join(root,"artifacts","topic-v4-mockup-admin.png")});
+      await handout.locator(".a4-page").nth(0).screenshot({path:join(root,"artifacts","topic-v4-mockup-page-1.png")});
+      await handout.locator(".a4-page").nth(1).screenshot({path:join(root,"artifacts","topic-v4-mockup-page-2.png")});
+    }
   }
   await page.setViewportSize({width:375,height:900});await page.goto(`${origin}/member.html?fixtures=1`,{waitUntil:"networkidle"});
   if(await page.locator(".section-guide").count())throw new Error("Korean guide text remains");

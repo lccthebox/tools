@@ -2,55 +2,39 @@
   "id": "member-fixture-v4-2026-09-24",
   "topicVersion": "topic-v4",
   "date": "2026-09-24",
-  "category": "Everyday Choices",
-  "title": {"en": "A Sunday With No Plans", "ko": "아무 계획 없는 일요일"},
+  "category": {"en":"WORK & CAREER","ko":"일과 직장"},
+  "title": {"en": "Should You Answer That Message Tonight?", "ko": "오늘 밤 그 메시지에 답해야 할까요?"},
   "page1": {
     "story": {
-      "star": "Rosé",
+      "star": "Kim Yuna",
       "fictional": true,
-      "paragraphs": [
-        "Imagine Rosé has a completely free Sunday. There is no schedule, no camera, and no one waiting for her.",
-        "She wants to enjoy the day, but three ideas sound equally good: staying home with music, taking a quiet walk, or meeting an old friend for lunch.",
-        "She can choose only one. Which kind of day would help her feel truly rested?"
-      ]
+      "en": "Imagine Kim Yuna is at dinner with her sister when her phone lights up: a message from her manager at 9:14 PM. She reads three lines, then freezes. Her sister rolls her eyes and jokes, ‘Congratulations, you work at a hospital now?’ Yuna is not sure whether to laugh. Last month, a co-worker who never replied at night was passed over for a promotion. Her thumb hovers over the screen. She wants a clear boundary, but she also wants to protect her career. Should she reply now?",
+      "ko": "김연아가 언니와 저녁을 먹던 중 밤 9시 14분, 매니저에게 메시지를 받는 가상의 상황입니다. 내용을 읽은 연아는 순간 멈칫합니다. 언니는 병원에서 일하냐며 농담하지만, 연아에게는 고민할 이유가 있습니다. 지난달 밤늦은 연락에 답하지 않던 동료가 승진에서 제외됐기 때문입니다. 연아는 분명한 경계를 지키면서도 자신의 커리어를 보호하고 싶습니다. 지금 답장을 해야 할까요?"
     },
     "keyWords": [
-      {"en":"completely free","ko":"완전히 한가한"},
-      {"en":"equally good","ko":"똑같이 좋아 보이는"},
-      {"en":"stay home","ko":"집에서 쉬다"},
-      {"en":"quiet walk","ko":"조용한 산책"},
-      {"en":"feel rested","ko":"충분히 쉰 기분이 들다"}
+      {"en":"freeze","ko":"얼어붙다"},
+      {"en":"hover","ko":"머뭇거리다"},
+      {"en":"passed over","ko":"(승진에서) 밀리다"},
+      {"en":"boundary","ko":"경계, 선"}
     ],
     "quickVote": {
-      "question":"What would you choose for a completely free Sunday?",
-      "options":["Stay home","Go outside alone","Meet someone"]
+      "question":"What should Yuna do right now?",
+      "options":["Reply now","Wait until Monday","Send ‘I’ll look Monday’"]
     },
-    "questions": [
-      "What does a truly restful day look like for you?",
-      "When did you last enjoy a day with no fixed plans?",
-      "Do you recharge better alone or with other people? Why?",
-      "What small plan can make an ordinary Sunday feel special?"
-    ]
+    "easyTalk": ["Tell us about a time a message landed at the worst possible moment. What were you doing, and how did you react?","What’s your actual system for late-night work messages, and how did you land on it?","Describe the moment you realized a message could wait, or learned the hard way that it couldn’t."],
+    "realTalk": ["Tell us about a time you rushed a reply just to look responsive. What happened, and would you do it again?","How many minutes can a message wait before it starts to feel urgent, and when was that last tested?","Tell us how after-hours messaging really works where you’re from or where you work, with an example."],
+    "todayEnglish": [{"en":"I’ll circle back to this on ___.","ko":"___에 다시 답장할게요."},{"en":"That can wait until morning.","ko":"그건 아침까지 기다려도 돼요."},{"en":"I don’t want to set that precedent.","ko":"그런 선례를 만들고 싶지 않아요."},{"en":"Out of office doesn’t mean out of mind.","ko":"퇴근했다고 신경까지 꺼지는 건 아니죠."}]
   },
   "page2": {
     "randomQuestions": [
-      "What is something simple you never get tired of?",
-      "Which place in your neighborhood deserves more attention?",
-      "What skill would you enjoy learning slowly?",
-      "What makes someone easy to talk to?"
+      {"en":"What’s a purchase under $20 that made you happier than you expected?","ko":"2만 원도 안 되는 물건이 기대보다 훨씬 행복하게 해 준 적이 있나요?"},
+      {"en":"If you had one completely free hour today, what would you actually do with it?","ko":"아무 방해 없는 한 시간이 생기면 진짜 뭘 하시겠어요?"},
+      {"en":"What’s a childhood rule you still follow without even thinking about it?","ko":"어릴 때 생긴 규칙인데 지금도 무의식적으로 지키는 게 있나요?"},
+      {"en":"Which chore do you secretly enjoy more than you’d admit?","ko":"은근히 좋아하지만 잘 말하지 않는 집안일이 있나요?"},
+      {"en":"What’s the last thing that made you laugh out loud? What happened?","ko":"최근에 크게 웃었던 일은 무엇이었나요?"}
     ],
     "randomWords": [
-      {"en":"curious","ko":"궁금해하는"},
-      {"en":"familiar","ko":"익숙한"},
-      {"en":"unexpected","ko":"뜻밖의"},
-      {"en":"comfortable","ko":"편안한"},
-      {"en":"worthwhile","ko":"가치 있는"},
-      {"en":"flexible","ko":"유연한"}
-    ],
-    "balanceGames": [
-      {"left":"A full day outside","right":"A full day at home"},
-      {"left":"Make plans early","right":"Decide at the last minute"},
-      {"left":"One close friend","right":"A lively group"}
+      {"en":"Sunday","ko":"일요일"},{"en":"Keys","ko":"열쇠"},{"en":"Rain","ko":"비"},{"en":"Neighbor","ko":"이웃"},{"en":"Coffee","ko":"커피"},{"en":"Silence","ko":"침묵"},{"en":"Photo","ko":"사진"},{"en":"Stranger","ko":"낯선 사람"},{"en":"Playlist","ko":"플레이리스트"},{"en":"Shortcut","ko":"지름길"}
     ]
   }
 }
