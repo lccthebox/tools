@@ -6,7 +6,7 @@ The topic content model starts from zero. No v2/v3 content rule, activity,
 validation requirement, leader workflow, or section meaning is inherited. Legacy
 topics remain readable but are not the design source for new topics.
 
-The locked visual contract is `talkflow-visual-spec-FINAL.md`:
+The locked visual contract is the supplied `TALK FLOW 목업.pdf`:
 
 - A4 is 794×1123px with 44px vertical and 52px horizontal inset.
 - Paper is pure white. Ink is `#1B1B18`, green is `#2B5940`, supporting gray is
@@ -16,10 +16,12 @@ The locked visual contract is `talkflow-visual-spec-FINAL.md`:
 - Every content block uses the same 3px green left rule and 12px inset.
 - Content has two pages and one member-facing version; there is no student/leader
   split.
-- Page 1 moves from a clearly fictional Korean-star story to useful words, an
-  immediate choice, and open experience questions.
-- Page 2 is independent of the story and contains light random questions, words
-  to reuse, and balance choices. It must feel optional and easy to enter.
+- Page 1 is ordered as seat numbering, TODAY'S STORY, four KEY WORDS, a
+  three-option QUICK VOTE, three EASY TALK questions, three REAL TALK questions,
+  four bilingual TODAY'S ENGLISH expressions, and one Korean Story translation.
+- Page 2 is titled ROUND TWO and contains a new-table numbering rule, five
+  bilingual RANDOM QUESTIONS, and ten bilingual RANDOM WORDS. Balance games and
+  every legacy jury/activity block are excluded.
 - New stories use only an approved Korean K-pop or K-sports public name and begin
   with an explicit fictional cue such as “Imagine …”. They never imply a real
   incident, endorsement, controversy, quotation, or private fact.
