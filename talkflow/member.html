@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="TheBox 멤버를 위한 오늘의 영어 대화 토픽">
+  <title>오늘의 토픽 · TheBox Topic</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/talkflow/member.css">
+</head>
+<body>
+  <a class="skip-link" href="#topic">오늘의 토픽으로 건너뛰기</a>
+  <header class="member-header">
+    <a class="member-brand" href="/talkflow/member/"><span aria-hidden="true">T</span><strong>TheBox Topic</strong></a>
+    <button id="member-logout" class="quiet-button" type="button" hidden>로그아웃</button>
+  </header>
+
+  <main>
+    <section id="member-login-view" class="login-view" aria-labelledby="login-title">
+      <div class="login-copy"><p class="eyebrow">MEMBER ONLY</p><h1 id="login-title">오늘의 토픽을<br>확인하세요</h1><p>더박스에 등록한 정보로 확인하면 모든 멤버가 같은 토픽을 봅니다.</p></div>
+      <form id="member-login-form" class="login-card">
+        <label>이름<input id="member-name" autocomplete="name" required></label>
+        <label>휴대폰 번호<input id="member-phone" inputmode="tel" autocomplete="tel" placeholder="01012345678" required></label>
+        <label>생년월일<input id="member-birth" inputmode="numeric" autocomplete="bday" placeholder="YYYYMMDD" required></label>
+        <p id="member-login-error" class="form-error" role="alert" hidden></p>
+        <button class="primary-button" type="submit">멤버 확인</button>
+      </form>
+    </section>
+
+    <section id="member-topic-view" class="topic-view" hidden>
+      <header class="topic-toolbar">
+        <div><p class="eyebrow">TODAY’S TOPIC</p><h1 id="member-month-label"></h1></div>
+        <div class="month-controls" aria-label="월 이동"><button id="member-prev-month" type="button" aria-label="이전 달">←</button><button id="member-next-month" type="button" aria-label="다음 달">→</button></div>
+      </header>
+      <nav id="member-date-list" class="date-list" aria-label="토픽 날짜"></nav>
+      <article id="topic" class="topic-document" tabindex="-1"></article>
+    </section>
+  </main>
+
+  <script src="/talkflow/sample-topics.js"></script>
+  <script src="/talkflow/member.js"></script>
+</body>
+</html>
