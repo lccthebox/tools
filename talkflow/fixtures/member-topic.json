@@ -1,17 +1,56 @@
 {
-  "id": "member-fixture-2026-09-24",
+  "id": "member-fixture-v4-2026-09-24",
+  "topicVersion": "topic-v4",
   "date": "2026-09-24",
-  "title": {"en": "The Gift That Doesn't Fit", "ko": "마음에 들지 않는 선물"},
-  "session1": {
-    "story": {"en": ["Mina received a thoughtful jacket that was two sizes too large. The return window closes in seven days, so she must decide whether to keep it, exchange it, or tell her friend honestly."]},
-    "easyTalk": [{"en": "Have you received a gift that didn't fit you?"}, {"en": "How do you choose a gift for someone?"}, {"en": "What gift always makes you smile?"}],
-    "realTalk": [{"en": "Is honesty always best when receiving a gift?"}, {"en": "What makes a gift feel meaningful?"}, {"en": "Should expensive gifts create an obligation?"}],
-    "expressions": [{"en": "It's the thought that counts."}, {"en": "Could I exchange this for another size?"}, {"en": "I really appreciate the thought."}, {"en": "I'd rather be honest about it."}]
+  "category": "Everyday Choices",
+  "title": {"en": "A Sunday With No Plans", "ko": "아무 계획 없는 일요일"},
+  "page1": {
+    "story": {
+      "star": "Rosé",
+      "fictional": true,
+      "paragraphs": [
+        "Imagine Rosé has a completely free Sunday. There is no schedule, no camera, and no one waiting for her.",
+        "She wants to enjoy the day, but three ideas sound equally good: staying home with music, taking a quiet walk, or meeting an old friend for lunch.",
+        "She can choose only one. Which kind of day would help her feel truly rested?"
+      ]
+    },
+    "keyWords": [
+      {"en":"completely free","ko":"완전히 한가한"},
+      {"en":"equally good","ko":"똑같이 좋아 보이는"},
+      {"en":"stay home","ko":"집에서 쉬다"},
+      {"en":"quiet walk","ko":"조용한 산책"},
+      {"en":"feel rested","ko":"충분히 쉰 기분이 들다"}
+    ],
+    "quickVote": {
+      "question":"What would you choose for a completely free Sunday?",
+      "options":["Stay home","Go outside alone","Meet someone"]
+    },
+    "questions": [
+      "What does a truly restful day look like for you?",
+      "When did you last enjoy a day with no fixed plans?",
+      "Do you recharge better alone or with other people? Why?",
+      "What small plan can make an ordinary Sunday feel special?"
+    ]
   },
-  "session2": {
-    "activity": {"name": "Gift Advice Circle", "instructionKo": "서로 다른 상황을 읽고 가장 배려 있는 답을 함께 고르세요.", "materials": [{"en": "A jacket is two sizes too large, but your friend chose it carefully."}, {"en": "The receipt expires tomorrow and an exchange is still possible."}], "stepsKo": ["상황 하나를 고르세요.", "각자 가능한 답을 하나씩 말하세요.", "다른 사람의 의견을 듣고 질문하세요.", "우리 팀의 최종 선택과 이유를 정하세요."]},
-    "groupResult": {"en": "Our group chooses the kindest honest response.", "ko": "우리 팀이 고른 가장 솔직하고 배려 있는 답"},
-    "thinkHarder": {"en": "Can honesty about a gift protect a friendship?"},
-    "finalQuestion": {"en": "What matters most when you give someone a gift?"}
+  "page2": {
+    "randomQuestions": [
+      "What is something simple you never get tired of?",
+      "Which place in your neighborhood deserves more attention?",
+      "What skill would you enjoy learning slowly?",
+      "What makes someone easy to talk to?"
+    ],
+    "randomWords": [
+      {"en":"curious","ko":"궁금해하는"},
+      {"en":"familiar","ko":"익숙한"},
+      {"en":"unexpected","ko":"뜻밖의"},
+      {"en":"comfortable","ko":"편안한"},
+      {"en":"worthwhile","ko":"가치 있는"},
+      {"en":"flexible","ko":"유연한"}
+    ],
+    "balanceGames": [
+      {"left":"A full day outside","right":"A full day at home"},
+      {"left":"Make plans early","right":"Decide at the last minute"},
+      {"left":"One close friend","right":"A lively group"}
+    ]
   }
 }

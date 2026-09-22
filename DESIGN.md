@@ -1,6 +1,51 @@
 # TheBox Talk Flow Design Contract
 
-## Active direction: Simple Conversation v3
+## Active direction: TheBox Topic v4 — content reset
+
+The topic content model starts from zero. No v2/v3 content rule, activity,
+validation requirement, leader workflow, or section meaning is inherited. Legacy
+topics remain readable but are not the design source for new topics.
+
+The locked visual contract is `talkflow-visual-spec-FINAL.md`:
+
+- A4 is 794×1123px with 44px vertical and 52px horizontal inset.
+- Paper is pure white. Ink is `#1B1B18`, green is `#2B5940`, supporting gray is
+  `#5C5C57`, tertiary gray is `#8B8B84`, and rules are `#E3E0D6`.
+- Source Serif 4 is used only for the page title. Noto Sans KR owns every other
+  element.
+- Every content block uses the same 3px green left rule and 12px inset.
+- Content has two pages and one member-facing version; there is no student/leader
+  split.
+- Page 1 moves from a clearly fictional Korean-star story to useful words, an
+  immediate choice, and open experience questions.
+- Page 2 is independent of the story and contains light random questions, words
+  to reuse, and balance choices. It must feel optional and easy to enter.
+- New stories use only an approved Korean K-pop or K-sports public name and begin
+  with an explicit fictional cue such as “Imagine …”. They never imply a real
+  incident, endorsement, controversy, quotation, or private fact.
+- The conversation remains understandable without knowing the named person and
+  works for adults from their 20s through 60s.
+- The existing member completion form (“오늘의 한 줄”) and monthly history are
+  unchanged.
+- Member mobile reading at 375–600px uses an 18px document inset, 16px Story
+  and question copy, 1.6–1.7 line height, and 44px minimum choice rows. Long
+  English titles and prompts wrap inside the document without clipping; compact
+  print typography never leaks into the member reading surface.
+
+### New topic blocks
+
+1. `TODAY'S STORY` — short fictional setup and one universal choice.
+2. `KEY WORDS` — five practical words, not full sentence translations.
+3. `QUICK VOTE` — three short options; choose before explaining.
+4. `TALK ABOUT YOU` — four open questions grounded in lived experience.
+5. `RANDOM QUESTIONS` — four independent, low-pressure prompts.
+6. `RANDOM WORDS` — six reusable words with concise Korean meanings.
+7. `BALANCE GAME` — three paired choices that invite a reason.
+
+The blocks are editorial content, not nested cards. Only the existing completion
+form may use a filled surface.
+
+## Previous direction: Simple Conversation v3 (legacy compatibility only)
 
 ### Screen reading view
 
