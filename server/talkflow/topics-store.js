@@ -21,6 +21,7 @@ async function memberProgress(token,action,payload){const {anonKey}=configuratio
 
 function publishableTopic(topic){
   const copy=value=>JSON.parse(JSON.stringify(value??null));
+  if(topic.topicVersion==="topic-v4")return{id:String(topic.id||""),topicVersion:"topic-v4",date:String(topic.date||""),title:copy(topic.title),category:copy(topic.category),page1:copy(topic.page1),page2:copy(topic.page2)};
   return{id:String(topic.id||""),date:String(topic.date||""),title:copy(topic.title),category:copy(topic.category),style:String(topic.style||""),generationEngine:String(topic.generationEngine||""),session1:{story:copy(topic.session1?.story),easyTalk:copy(topic.session1?.easyTalk||[]),realTalk:copy(topic.session1?.realTalk||[]),expressions:copy(topic.session1?.expressions||[]),quickVote:copy(topic.session1?.quickVote)},session2:{reset:copy(topic.session2?.reset),activity:copy(topic.session2?.activity),groupResult:copy(topic.session2?.groupResult),thinkHarder:copy(topic.session2?.thinkHarder),finalQuestion:copy(topic.session2?.finalQuestion)}};
 }
 
