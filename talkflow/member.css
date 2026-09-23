@@ -116,3 +116,4 @@
   .login-card .primary-button{height:52px;margin-top:2px}
 }
 @media(max-width:390px){.login-view{padding-inline:14px}.login-copy h1{font-size:36px}.login-card{padding-inline:18px}}
+.empty-topic{display:grid;justify-items:center;gap:8px;padding:72px 20px;text-align:center}.empty-topic>span{display:grid;width:42px;height:42px;place-items:center;border-radius:13px;background:var(--brand-red);color:#fff;font-weight:800}.empty-topic strong{color:var(--ink);font-size:18px}.empty-topic p{margin:0;color:var(--muted);font-size:13px;line-height:1.6;word-break:keep-all}
