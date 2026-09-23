@@ -191,7 +191,7 @@ function validGenerationPrompt(content, toolName) {
 }
 
 function validTopicV4Prompt(payload, toolName) {
-  const keys = ["contract", "stage", "topic", "approvedPlan", "visualContract", "contentRules"];
+  const keys = ["contract", "stage", "topic", "approvedPlan", "selectedPage1Template", "rules"];
   if (Object.keys(payload).some(key => !keys.includes(key))) return false;
   const expectedStage = toolName === TopicV4.PLAN_TOOL.name ? "plan" : "content";
   if (payload.stage !== expectedStage || !validTopicInput(payload.topic)) return false;

@@ -1,48 +1,20 @@
 # TheBox Talk Flow Design Contract
 
-## Active direction: TheBox Topic v4 — content reset
+## Active direction: TheBox Topic v4.1 MASTER
 
-The topic content model starts from zero. No v2/v3 content rule, activity,
-validation requirement, leader workflow, or section meaning is inherited. Legacy
-topics remain readable but are not the design source for new topics.
-
-The locked visual contract is the supplied `TALK FLOW 목업.pdf`:
-
-- A4 is 794×1123px with 44px vertical and 52px horizontal inset.
-- Paper is pure white. Ink is `#1B1B18`, green is `#2B5940`, supporting gray is
-  `#5C5C57`, tertiary gray is `#8B8B84`, and rules are `#E3E0D6`.
-- Source Serif 4 is used only for the page title. Noto Sans KR owns every other
-  element.
-- Every content block uses the same 3px green left rule and 12px inset.
-- Content has two pages and one member-facing version; there is no student/leader
-  split.
-- Page 1 is ordered as seat numbering, TODAY'S STORY, four KEY WORDS, a
-  three-option QUICK VOTE, three EASY TALK questions, three REAL TALK questions,
-  four bilingual TODAY'S ENGLISH expressions, and one Korean Story translation.
-- Page 2 is titled ROUND TWO and contains a new-table numbering rule, five
-  bilingual RANDOM QUESTIONS, and ten bilingual RANDOM WORDS. Balance games and
-  every legacy jury/activity block are excluded.
-- New stories use only an approved Korean K-pop or K-sports public name and begin
-  with an explicit fictional cue such as “Imagine …”. They never imply a real
-  incident, endorsement, controversy, quotation, or private fact.
-- The conversation remains understandable without knowing the named person and
-  works for adults from their 20s through 60s.
-- The existing member completion form (“오늘의 한 줄”) and monthly history are
-  unchanged.
-- Member mobile reading at 375–600px uses an 18px document inset, 16px Story
-  and question copy, 1.6–1.7 line height, and 44px minimum choice rows. Long
-  English titles and prompts wrap inside the document without clipping; compact
-  print typography never leaks into the member reading surface.
-
-### New topic blocks
-
-1. `TODAY'S STORY` — short fictional setup and one universal choice.
-2. `KEY WORDS` — five practical words, not full sentence translations.
-3. `QUICK VOTE` — three short options; choose before explaining.
-4. `TALK ABOUT YOU` — four open questions grounded in lived experience.
-5. `RANDOM QUESTIONS` — four independent, low-pressure prompts.
-6. `RANDOM WORDS` — six reusable words with concise Korean meanings.
-7. `BALANCE GAME` — three paired choices that invite a reason.
+- Each topic is exactly two A4 pages. Page 1 is Template A Story (70%) or Template B Icebreakers (30%); Page 2 is always Article/Advanced.
+- Template A contains TODAY'S STORY, four KEY WORDS, QUICK VOTE, three EASY TALK questions, three REAL TALK questions, and four TODAY'S ENGLISH expressions.
+- Template B contains six RANDOM QUESTIONS and six BALANCE GAME rows. RANDOM WORDS is prohibited.
+- Article contains TODAY'S ARTICLE, five KEY WORDS, YOUR STANCE with three choices, and five DISCUSSION questions.
+- Story names come from the approved Korean K-pop/K-sports list and only appear in explicitly fictional, universal situations.
+- Page categories differ and permanently map to the v4.1 category palette. Print and member screens use the same category colors.
+- A4 is 794×1123px with 44px vertical and 52px horizontal padding. Source Serif 4 is reserved for the main title; Noto Sans KR owns all other text.
+- Member navigation is calendar-first. Calendar cells show availability without titles; the monthly list shows date, category, and title.
+- A published topic opens as two independent category-and-title accordions. Page 1 saves “여러분이라면?”; Article saves a three-choice comprehension check.
+- Brand red `#A9302E` is limited to app identity and date/status accents. Category colors are `#35507A`, `#B25C39`, `#6B4C7A`, `#9C7A1E`, `#A65166`, `#2C6E6B`, `#1F4D3D`, and `#355E3B`.
+- Member entry is a compact identity gate, not a landing-page hero. On phones the brand header, introduction, and form start in the first viewport with 24–40px vertical rhythm; no viewport-centering or decorative empty band may push the form below the fold. The canvas uses `#F7F7F6`, brand identity uses `#A9302E`, form surfaces stay white, and the confirmation action uses evergreen `#2B5940`.
+- Member entry inputs must stay white in browser autofill, retain a 48px minimum target, and use the existing evergreen focus ring. The login card uses one quiet border and the existing low-elevation shadow.
+- New v4.1 content never includes legacy Jury, leader, session, activity, Round Two, Random Words, host, or timing blocks.
 
 The blocks are editorial content, not nested cards. Only the existing completion
 form may use a filled surface.
@@ -125,6 +97,7 @@ Talk Flow is an operational tool for a non-technical study coordinator, a discus
 ## 5. Reusable primitives and states
 
 - `button`: primary, secondary, danger, disabled, focus-visible.
+- `member-entry`: desktop two-column and mobile single-column states, browser-autofilled input state, validation error, submitting, and authenticated handoff.
 - `workflow-step`: pending, current, complete.
 - `operator-panel`: date/topic input, generation progress, review result, final actions.
 - `month-calendar`: weekday header, operating day, non-operating day, empty, review, printable, and used states.
