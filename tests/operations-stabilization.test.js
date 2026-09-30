@@ -9,7 +9,9 @@ const source = fs.readFileSync(sourcePath, 'utf8');
 function functionBody(name) {
   const start = source.indexOf(`function ${name}(`);
   assert.notEqual(start, -1, `missing function ${name}`);
-  const next = source.indexOf('\nfunction ', start + 10);
+  const tail = source.slice(start + 10);
+  const nextMatch = tail.match(/\n(?:async )?function /);
+  const next = nextMatch ? start + 10 + nextMatch.index : -1;
   return source.slice(start, next === -1 ? source.length : next);
 }
 
@@ -58,4 +60,26 @@ test('high-risk persisted content is escaped before HTML rendering', () => {
   const calendar = functionBody('evHtml');
   assert.match(calendar, /escapeHTML\(ev\.summary/);
   assert.match(calendar, /escapeHTML\(ev\.location/);
+});
+
+test('Firebase Auth email login is wired to an approved manager mapping', () => {
+  assert.match(source, /firebase-auth-compat\.js/);
+  assert.match(source, /signInWithEmailAndPassword\(userid, pw\)/);
+  assert.match(functionBody('doLogin'), /m\.authUid===authUser\.uid/);
+  assert.match(functionBody('doLogin'), /m\.email/);
+  assert.match(functionBody('doLogin'), /await fbAuth\.signOut\(\)/);
+});
+
+test('public signup can no longer persist plaintext passwords', () => {
+  const signup = functionBody('doSignup');
+  assert.doesNotMatch(signup, /fbDb\.ref/);
+  assert.doesNotMatch(signup, /pw\s*:/);
+  assert.doesNotMatch(source, /id="su-pw"/);
+});
+
+test('Firebase sessions are validated before restoration', () => {
+  const restore = functionBody('tryRestoreSession');
+  assert.match(restore, /authMode==='firebase'/);
+  assert.match(restore, /authUser\.uid!==authUid/);
+  assert.match(restore, /Firebase user has no manager mapping/);
 });

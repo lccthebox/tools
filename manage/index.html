@@ -17,6 +17,7 @@
 
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script>
 const firebaseConfig = {
@@ -29,6 +30,8 @@ const firebaseConfig = {
   appId: "1:10309694425:web:32579df338b007ef591fc8"
 };
 firebase.initializeApp(firebaseConfig);
+const fbAuth = firebase.auth();
+fbAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(e=>console.warn('Firebase Auth persistence:',e));
 const fbDb = firebase.database();
 let fbSyncEnabled = true; // Firebase 동기화 on/off
 </script>
@@ -966,15 +969,15 @@ textarea.finput{resize:vertical;min-height:60px}
 
     <!-- 로그인 패널 -->
     <div id="login-panel">
-      <div class="login-sub" style="margin-bottom:18px">아이디와 비밀번호로 로그인하세요</div>
-      <input class="login-pw" id="login-userid" type="text" placeholder="아이디" style="letter-spacing:0;margin-bottom:8px" autocomplete="username">
+      <div class="login-sub" style="margin-bottom:18px">Firebase 이메일 또는 기존 아이디로 로그인하세요</div>
+      <input class="login-pw" id="login-userid" type="text" placeholder="이메일 또는 기존 아이디" style="letter-spacing:0;margin-bottom:8px" autocomplete="username" inputmode="email">
       <input class="login-pw" id="login-pw-input" type="password" placeholder="비밀번호" autocomplete="current-password"
         onkeydown="if(event.key==='Enter')doLogin()">
       <button class="login-btn" onclick="doLogin()" style="margin-top:10px">로그인</button>
       <div class="login-err" id="login-err"></div>
       <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
         <button onclick="showSignupPanel()" style="background:none;border:none;font-size:12px;color:var(--accent);cursor:pointer;font-family:'Noto Sans KR',sans-serif">
-          계정 가입 신청 →
+          계정 등록 안내 →
         </button>
       </div>
     </div>
@@ -987,12 +990,8 @@ textarea.finput{resize:vertical;min-height:60px}
 
     <!-- 가입 신청 패널 -->
     <div id="signup-panel" style="display:none">
-      <div class="login-sub" style="margin-bottom:16px">계정 가입을 신청합니다<br><span style="font-size:11px;color:var(--text3)">관리자 승인 후 로그인 가능합니다</span></div>
-      <input class="login-pw" id="su-userid" type="text" placeholder="아이디 (영문/숫자)" style="letter-spacing:0;margin-bottom:8px" autocomplete="off">
-      <input class="login-pw" id="su-name" type="text" placeholder="이름 (표시될 이름)" style="letter-spacing:0;margin-bottom:8px">
-      <input class="login-pw" id="su-pw" type="password" placeholder="비밀번호" autocomplete="new-password" style="margin-bottom:8px">
-      <input class="login-pw" id="su-pw2" type="password" placeholder="비밀번호 확인" autocomplete="new-password">
-      <button class="login-btn" onclick="doSignup()" style="margin-top:10px">가입 신청</button>
+      <div class="login-sub" style="margin-bottom:16px">계정은 운영 관리자만 등록할 수 있습니다.</div>
+      <div style="padding:14px;border-radius:10px;background:var(--bg3);font-size:12px;line-height:1.7;color:var(--text2)">Firebase Authentication에 사용자를 만든 뒤, 운영 도구의 <b>계정 관리</b>에서 같은 이메일을 연결해 주세요. 비밀번호는 운영 데이터베이스에 저장되지 않습니다.</div>
       <div class="login-err" id="signup-err"></div>
       <button onclick="showLoginPanel()" style="background:none;border:none;font-size:12px;color:var(--text3);cursor:pointer;margin-top:10px;font-family:'Noto Sans KR',sans-serif">
         ← 로그인으로 돌아가기
@@ -2369,61 +2368,8 @@ function showLoginPanel(){
 }
 
 async function doSignup(){
-  const userid=(document.getElementById('su-userid')?.value||'').trim();
-  const name=(document.getElementById('su-name')?.value||'').trim();
-  const pw=document.getElementById('su-pw')?.value||'';
-  const pw2=document.getElementById('su-pw2')?.value||'';
   const err=document.getElementById('signup-err');
-  if(!userid){if(err)err.textContent='아이디를 입력해주세요.';return;}
-  if(!name){if(err)err.textContent='이름을 입력해주세요.';return;}
-  if(!pw||pw.length<4){if(err)err.textContent='비밀번호는 4자 이상이어야 합니다.';return;}
-  if(pw!==pw2){if(err)err.textContent='비밀번호가 일치하지 않습니다.';return;}
-  
-  try {
-    // Firebase에 중복 확인
-    const userSnap = await fbDb.ref(`users/${userid}`).once('value');
-    if(userSnap.exists()){
-      if(err)err.textContent='이미 사용 중인 아이디입니다.';
-      return;
-    }
-    
-    // Firebase에 영구 저장
-    const userData = {
-      userid: userid,
-      name: name,
-      pw: pw,
-      role: '매니저',
-      color: '#0ea87a',
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-      signupIP: 'web',
-      loginHistory: [] // 로그인 이력 배열
-    };
-    
-    await fbDb.ref(`users/${userid}`).set(userData);
-    
-    // 로컬 PENDING도 업데이트 (호환성)
-    PENDING.push({
-      id:'pnd'+Date.now(),
-      userid,name,pw,
-      role:'매니저',
-      color:'#0ea87a',
-      requestedAt:new Date().toISOString()
-    });
-    try{await window.storage.set(PKEY,JSON.stringify(PENDING));}catch(e){}
-    
-    showLoginPanel();
-    const loginErr=document.getElementById('login-err');
-    if(loginErr){loginErr.style.color='var(--teal)';loginErr.textContent='가입 신청 완료! 관리자 승인 후 로그인 가능합니다.';}
-    
-    document.getElementById('su-userid').value='';
-    document.getElementById('su-name').value='';
-    document.getElementById('su-pw').value='';
-    document.getElementById('su-pw2').value='';
-  } catch(e) {
-    console.error('Signup error:', e);
-    if(err)err.textContent='가입 신청 중 오류가 발생했습니다: ' + e.message;
-  }
+  if(err) err.textContent='보안을 위해 공개 가입은 중단되었습니다. 관리자에게 계정 등록을 요청해 주세요.';
 }
 
 async function loadPending(){
@@ -2439,7 +2385,7 @@ async function doLogin(){
   const err    = document.getElementById('login-err');
 
   if(!userid){
-    if(err){err.style.color='var(--red)';err.textContent='아이디를 입력해주세요.';}
+    if(err){err.style.color='var(--red)';err.textContent='이메일 또는 아이디를 입력해주세요.';}
     return;
   }
   if(!pw){
@@ -2448,6 +2394,48 @@ async function doLogin(){
   }
 
   if(err) err.textContent = '';
+
+  // Firebase 이메일 로그인: 인증 성공과 운영자 권한 매핑을 모두 통과해야 한다.
+  if(userid.includes('@')){
+    if(err){err.style.color='var(--text3)';err.textContent='Firebase 인증 중...';}
+    try{
+      const credential = await fbAuth.signInWithEmailAndPassword(userid, pw);
+      const authUser = credential.user;
+      const email = (authUser.email||userid).trim().toLowerCase();
+      let mgr = MANAGERS.find(m=>m.authUid===authUser.uid)
+             || MANAGERS.find(m=>(m.email||'').trim().toLowerCase()===email);
+      if(!mgr&&fbDb){
+        const managersSnap=await fbDb.ref('thebox_managers').once('value');
+        const cloudManagers=managersSnap.val();
+        if(Array.isArray(cloudManagers)){
+          MANAGERS=cloudManagers;
+          mgr=MANAGERS.find(m=>m.authUid===authUser.uid)
+           || MANAGERS.find(m=>(m.email||'').trim().toLowerCase()===email);
+        }
+      }
+      if(!mgr){
+        await fbAuth.signOut();
+        if(err){err.style.color='var(--red)';err.textContent='인증은 성공했지만 운영자 권한이 연결되지 않았습니다. 계정 관리에서 같은 이메일을 등록해 주세요.';}
+        return;
+      }
+      if(mgr.status==='rejected'||mgr.status==='deleted'){
+        await fbAuth.signOut();
+        if(err){err.style.color='var(--red)';err.textContent='사용이 중지된 계정입니다.';}
+        return;
+      }
+      mgr.authUid=authUser.uid;
+      mgr.email=email;
+      await saveManagers().catch(()=>{});
+      _completeLogin(mgr,authUser);
+    }catch(e){
+      console.warn('Firebase Auth login failed:',e.code||e.message);
+      const message = e.code==='auth/too-many-requests'
+        ? '로그인 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.'
+        : '이메일 또는 비밀번호가 올바르지 않습니다.';
+      if(err){err.style.color='var(--red)';err.textContent=message;}
+    }
+    return;
+  }
 
   // ── 1) 로컬 MANAGERS에서 즉시 확인 (admin·기본 계정 포함) ──
   let mgr = MANAGERS.find(m => m.userid === userid)
@@ -2514,7 +2502,7 @@ async function doLogin(){
   }
 }
 
-function _completeLogin(mgr){
+function _completeLogin(mgr,authUser){
   const err = document.getElementById('login-err');
   if(err) err.textContent = '';
 
@@ -2523,6 +2511,8 @@ function _completeLogin(mgr){
   try{
     localStorage.setItem('thebox_session', JSON.stringify({
       managerId: mgr.userid||mgr.id,
+      authUid: authUser?.uid||null,
+      authMode: authUser?'firebase':'legacy',
       page: 'dashboard',
       loginAt: new Date().toISOString()
     }));
@@ -2547,8 +2537,9 @@ function _completeLogin(mgr){
 }
 
 
-function doLogout(){
+async function doLogout(){
   currentManager=null;
+  try{if(fbAuth.currentUser)await fbAuth.signOut();}catch(e){console.warn('Firebase sign-out failed:',e);}
   try{
     localStorage.removeItem('thebox_session');
     sessionStorage.removeItem('thebox_session');
@@ -3492,7 +3483,13 @@ function goPage(n){
   // 세션 저장 (localStorage에도 저장하여 F5 시 페이지 유지)
   try{
     if(currentManager){
-      const s = {managerId: currentManager.userid || currentManager.id, page: n};
+      const authUser=fbAuth.currentUser;
+      const s={
+        managerId:currentManager.userid||currentManager.id,
+        authUid:authUser?.uid||null,
+        authMode:authUser?'firebase':'legacy',
+        page:n
+      };
       localStorage.setItem('thebox_session', JSON.stringify(s));
       sessionStorage.setItem('thebox_session', JSON.stringify(s));
     }
@@ -9882,6 +9879,7 @@ function openAccountModal(id){
   document.getElementById('modal-form').innerHTML=`
     <div class="fgroup"><label class="flabel">아이디 *</label><input class="finput" id="f-acc-userid" value="${m?.userid||''}" placeholder="아이디 (영문/숫자)" autocomplete="off"></div>
     <div class="fgroup"><label class="flabel">이름 *</label><input class="finput" id="f-acc-name" value="${m?.name||''}" placeholder="이름"></div>
+    <div class="fgroup full"><label class="flabel">Firebase 로그인 이메일</label><input class="finput" id="f-acc-email" type="email" value="${escapeHTML(m?.email||'')}" placeholder="Firebase Authentication에 등록한 이메일" autocomplete="off"><div style="font-size:11px;color:var(--text3);margin-top:3px">Firebase 콘솔의 사용자 이메일과 정확히 같아야 합니다. 비밀번호는 여기에 저장하지 않습니다.</div></div>
     <div class="fgroup"><label class="flabel">역할</label>
       <select class="finput" id="f-acc-role">
         <option value="원장" ${m?.role==='원장'?'selected':''}>원장</option>
@@ -9911,6 +9909,7 @@ function openAccountModal(id){
 async function saveAccount(id){
   const userid=(document.getElementById('f-acc-userid')?.value||'').trim();
   const name=document.getElementById('f-acc-name')?.value.trim();
+  const email=(document.getElementById('f-acc-email')?.value||'').trim().toLowerCase();
   const role=document.getElementById('f-acc-role')?.value||'매니저';
   const pw=document.getElementById('f-acc-pw')?.value;
   const pw2=document.getElementById('f-acc-pw2')?.value;
@@ -9918,6 +9917,8 @@ async function saveAccount(id){
   
   if(!name){alert('이름을 입력해주세요.');return;}
   if(!userid){alert('아이디를 입력해주세요.');return;}
+  if(email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){alert('Firebase 로그인 이메일 형식을 확인해 주세요.');return;}
+  if(email&&MANAGERS.some(m=>m.id!==id&&(m.email||'').trim().toLowerCase()===email)){alert('이미 다른 계정에 연결된 이메일입니다.');return;}
   if(pw&&pw!==pw2){alert('비밀번호가 일치하지 않습니다.');return;}
   
   let historyData = null;
@@ -9930,11 +9931,12 @@ async function saveAccount(id){
         type: 'edit',
         userid: m.userid,
         before: {...m},
-        after: {userid, name, role, color}
+        after: {userid, name, email, role, color}
       };
       
       m.userid=userid;
       m.name=name;
+      m.email=email;
       m.role=role;
       m.color=color;
       if(pw)m.pw=pw;
@@ -9944,12 +9946,12 @@ async function saveAccount(id){
         try {
           const updates = {
             name: name,
+            email: email,
             role: role,
             color: color,
             updatedBy: currentManager?.userid || 'admin',
             updatedAt: new Date().toISOString()
           };
-          if(pw) updates.pw = pw;
           await fbDb.ref(`users/${m.userid}`).update(updates);
         } catch(e){
           console.error('Firebase update error:', e);
@@ -9958,16 +9960,16 @@ async function saveAccount(id){
     }
   }else{
     // 신규 추가
-    if(!pw){alert('비밀번호를 입력해주세요.');return;}
+    if(!pw&&!email){alert('Firebase 이메일 또는 기존 비밀번호 중 하나를 입력해주세요.');return;}
     if(MANAGERS.find(m=>m.userid===userid)){alert('이미 사용 중인 아이디입니다.');return;}
     
     historyData = {
       type: 'create',
       userid: userid,
-      data: {userid, name, role, color}
+      data: {userid, name, email, role, color}
     };
     
-    MANAGERS.push({id:'mgr'+Date.now(),userid,name,role,pw,color});
+    MANAGERS.push({id:'mgr'+Date.now(),userid,name,email,role,...(pw?{pw}:{}),color});
     
     // Firebase에도 추가
     if(fbDb){
@@ -9975,7 +9977,7 @@ async function saveAccount(id){
         await fbDb.ref(`users/${userid}`).set({
           userid: userid,
           name: name,
-          pw: pw,
+          email: email,
           role: role,
           color: color,
           status: 'approved',
@@ -12693,7 +12695,23 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 });
 
 // 새로고침 시 세션 복원
-function tryRestoreSession(){
+async function waitForFirebaseAuthUser(){
+  return new Promise(resolve=>{
+    let unsubscribe=()=>{};
+    const timeout=setTimeout(()=>{unsubscribe();resolve(null);},5000);
+    unsubscribe=fbAuth.onAuthStateChanged(user=>{
+      clearTimeout(timeout);
+      unsubscribe();
+      resolve(user);
+    },()=>{
+      clearTimeout(timeout);
+      unsubscribe();
+      resolve(null);
+    });
+  });
+}
+
+async function tryRestoreSession(){
   console.group('Session Restore Check');
   try{
     const stored = localStorage.getItem('thebox_session') || sessionStorage.getItem('thebox_session');
@@ -12703,8 +12721,33 @@ function tryRestoreSession(){
       return;
     }
     
-    const {managerId, page} = JSON.parse(stored);
-    console.log('Loaded session info:', {managerId, page});
+    const {managerId, authUid, authMode, page} = JSON.parse(stored);
+    console.log('Loaded session info:', {managerId, authMode, page});
+
+    if(authMode==='firebase'){
+      const authUser=await waitForFirebaseAuthUser();
+      if(!authUser||!authUid||authUser.uid!==authUid){
+        localStorage.removeItem('thebox_session');
+        sessionStorage.removeItem('thebox_session');
+        console.warn('Firebase session is no longer valid.');
+        console.groupEnd();
+        return;
+      }
+      const email=(authUser.email||'').trim().toLowerCase();
+      const authMgr=MANAGERS.find(m=>m.authUid===authUser.uid)
+                 || MANAGERS.find(m=>(m.email||'').trim().toLowerCase()===email);
+      if(!authMgr){
+        await fbAuth.signOut().catch(()=>{});
+        localStorage.removeItem('thebox_session');
+        sessionStorage.removeItem('thebox_session');
+        console.warn('Firebase user has no manager mapping.');
+        console.groupEnd();
+        return;
+      }
+      _restoreSessionWithMgr(authMgr,page,authUser);
+      console.groupEnd();
+      return;
+    }
     
     // MANAGERS 배열에서 먼저 찾기
     let mgr = MANAGERS.find(m=> (m.userid && m.userid===managerId) || (m.id && m.id===managerId));
@@ -12748,8 +12791,8 @@ function tryRestoreSession(){
   console.groupEnd();
 }
 
-function _restoreSessionWithMgr(mgr, page){
-  _completeLogin(mgr);
+function _restoreSessionWithMgr(mgr, page, authUser){
+  _completeLogin(mgr,authUser);
   if(page && page !== 'dashboard'){
     setTimeout(()=>goPage(page), 300);
   }
