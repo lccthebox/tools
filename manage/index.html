@@ -2803,6 +2803,17 @@ const SS=[];
 const ST=[];
 const SC=[];
 // ══ 유틸 ══
+function escapeHTML(value){
+  return String(value??'').replace(/[&<>"']/g,function(ch){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];
+  });
+}
+function safeExternalUrl(value){
+  try{
+    const url=new URL(String(value||''),window.location.href);
+    return (url.protocol==='https:'||url.protocol==='http:')?escapeHTML(url.href):'';
+  }catch(e){return '';}
+}
 function addMonths(d,m){
   if(!d||!m) return '';
   var parts=d.split('-');
@@ -2905,16 +2916,18 @@ function runSearch(q){
 
 function searchRowHTML(s){
   const tdStyle='padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:middle';
+  const safeName=escapeHTML(s.name||'');
+  const safePhone=escapeHTML(s.phone||'-');
   
   if(s.isStudy){
     const rowBg = s.payStatus==='미납' ? 'rgba(214,48,48,0.04)' : '';
     return `<tr style="background:${rowBg}" onclick="openModal('studyMemberDetail','${s.id}')" onmouseenter="this.style.background='rgba(92,82,232,0.04)'" onmouseleave="this.style.background='${rowBg}'" style="cursor:pointer">
-      <td style="${tdStyle};font-weight:600;white-space:nowrap">${s.name} <span class="badge b-accent" style="font-size:8px;padding:1px 4px">스터디</span></td>
-      <td style="${tdStyle};font-family:var(--font-mono);font-size:12px;color:var(--text2);white-space:nowrap">${s.phone||'-'}</td>
+      <td style="${tdStyle};font-weight:600;white-space:nowrap">${safeName} <span class="badge b-accent" style="font-size:8px;padding:1px 4px">스터디</span></td>
+      <td style="${tdStyle};font-family:var(--font-mono);font-size:12px;color:var(--text2);white-space:nowrap">${safePhone}</td>
       <td style="${tdStyle}">
-        <span style="background:var(--accent-light);color:var(--accent);padding:2px 7px;border-radius:99px;font-size:11px;font-weight:700;white-space:nowrap">${s._leaderName || '리더'}</span>
+        <span style="background:var(--accent-light);color:var(--accent);padding:2px 7px;border-radius:99px;font-size:11px;font-weight:700;white-space:nowrap">${escapeHTML(s._leaderName || '리더')}</span>
       </td>
-      <td style="${tdStyle};font-size:12px;color:var(--text2)">${s._groupName}</td>
+      <td style="${tdStyle};font-size:12px;color:var(--text2)">${escapeHTML(s._groupName||'')}</td>
       <td style="${tdStyle};text-align:center;font-size:12px">-</td>
       <td style="${tdStyle};text-align:center;font-size:12px;color:var(--accent)">${s.credits}회 남음</td>
       <td style="${tdStyle};text-align:center">${sBadge(s.status)}</td>
@@ -2955,11 +2968,11 @@ function searchRowHTML(s){
   return`<tr oncontextmenu="openCtxMenu(event,'${s.id}')" onclick="openModal('studentDetail','${s.id}')"
     style="cursor:pointer;background:${rowBg};border-bottom:1px solid var(--border)"
     onmouseenter="this.style.background='#f8f9ff'" onmouseleave="this.style.background='${rowBg}'">
-    <td style="padding:13px 16px;font-weight:700;font-size:14px;white-space:nowrap">${s.name}</td>
-    <td style="padding:13px 16px;font-size:13px;color:var(--text2)">${s.phone||'-'}</td>
+    <td style="padding:13px 16px;font-weight:700;font-size:14px;white-space:nowrap">${safeName}</td>
+    <td style="padding:13px 16px;font-size:13px;color:var(--text2)">${safePhone}</td>
     <td style="padding:13px 16px">
-      <span style="font-size:13px;font-weight:600;color:${tc}">${pri.teacher}</span>
-      <div style="font-size:11px;color:var(--text3);margin-top:2px">${classNames}</div>
+      <span style="font-size:13px;font-weight:600;color:${tc}">${escapeHTML(pri.teacher||'')}</span>
+      <div style="font-size:11px;color:var(--text3);margin-top:2px">${escapeHTML(classNames)}</div>
     </td>
     <td style="padding:13px 16px;font-size:13px;color:var(--text2)">${fmtDate(pri.startDate)}</td>
     <td style="padding:13px 16px">
@@ -2992,7 +3005,7 @@ function updPaySearch(id,val,isStudy){
     if(!s)return;
     s.pay=val;
   }
-  save('students');
+  save(isStudy ? 'study' : 'students');
   // 현재 검색 결과 새로고침
   const q=document.getElementById('search-input')?.value||'';
   runSearch(q);
@@ -3255,11 +3268,47 @@ document.addEventListener('keydown', function(e) {
 let _saveTimer=null;
 // 변경된 컬렉션만 추적 (동시 접속 충돌 방지)
 let _dirtyKeys=new Set();
+const SNAP_KEY='thebox2_snapshots_v1';
+const SNAP_MAX=10;
+const SNAP_INTERVAL_MS=5*60*1000;
+let _snapshotTimer=null;
+let _lastSnapshotAt=0;
+
+function takeSnapshot(label){
+  try{
+    const payload={students:S.students,trials:S.trials,consults:S.consults,calNotes:S.calNotes,board:S.board,teacherPrices:S.teacherPrices,dailyNotes:S.dailyNotes||[],study:S.study||{},teacherInfo:S.teacherInfo||{}};
+    const groups=(payload.study&&payload.study.groups)||[];
+    const snapshot={
+      ts:Date.now(),
+      by:(currentManager&&currentManager.name)||'자동 저장',
+      label:label||'자동 저장',
+      studentCount:(payload.students||[]).length,
+      studyMemberCount:groups.reduce(function(sum,g){return sum+(g.members||[]).length;},0),
+      data:JSON.stringify(payload)
+    };
+    let snaps=[];
+    try{snaps=JSON.parse(localStorage.getItem(SNAP_KEY)||'[]');}catch(e){}
+    localStorage.setItem(SNAP_KEY,JSON.stringify([snapshot].concat(snaps).slice(0,SNAP_MAX)));
+    _lastSnapshotAt=snapshot.ts;
+    return true;
+  }catch(e){
+    console.warn('Snapshot save error:',e.message);
+    return false;
+  }
+}
+
+function scheduleSnapshot(){
+  const wait=Math.max(0,SNAP_INTERVAL_MS-(Date.now()-_lastSnapshotAt));
+  if(wait===0){takeSnapshot();return;}
+  if(_snapshotTimer)return;
+  _snapshotTimer=setTimeout(function(){_snapshotTimer=null;takeSnapshot();},wait);
+}
 
 function save(dirtyKey){
   const payload={students:S.students,trials:S.trials,consults:S.consults,calNotes:S.calNotes,board:S.board,teacherPrices:S.teacherPrices,dailyNotes:S.dailyNotes||[],study:S.study||{},teacherInfo:S.teacherInfo||{}};
   // 1) 로컬에 즉시 저장 (빠르고 안전)
   try{ window.storage.set(SKEY,JSON.stringify(payload)).catch(function(){}); }catch(e){}
+  scheduleSnapshot();
 
   // 변경된 키 추적 (인자 없으면 전체 키 더티 처리)
   if(dirtyKey && typeof dirtyKey==='string'){
@@ -3917,7 +3966,8 @@ function evHtml(ev, isConsult){
   var bar = isConsult ? '#f59f00' : (ev.colorId ? GCAL_C[parseInt(ev.colorId)-1]||'#6058e8' : '#6058e8');
   var bg  = isConsult ? 'rgba(255,224,102,0.15)' : 'var(--bg2)';
   var bd  = isConsult ? '1px solid rgba(245,159,0,0.4)' : '1px solid var(--border)';
-  var title = ev.summary || '(제목 없음)';
+  var title = escapeHTML(ev.summary || '(제목 없음)');
+  var location = escapeHTML(ev.location || '');
   var timeStr = isAD ? '종일' : (st + ' ~ ' + et);
   
   var passStyle = isPassed ? 'opacity:0.4; filter:grayscale(1); text-decoration:line-through;' : '';
@@ -3929,7 +3979,7 @@ function evHtml(ev, isConsult){
     + '</div>'
     + '<div style="flex:1;padding:8px 12px;min-width:0;overflow:hidden">'
     +   '<div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(isConsult?'📞 ':'')+title+'</div>'
-    +   (ev.location?'<div style="font-size:11px;color:var(--text3)">📍 '+ev.location+'</div>':'')
+    +   (location?'<div style="font-size:11px;color:var(--text3)">📍 '+location+'</div>':'')
     + '</div>'
     + '</div>';
 }
@@ -9234,7 +9284,7 @@ function renderBoard(){
     const authors = [...new Set((S.board||[]).map(p=>p.author).filter(Boolean))];
     const prev = authorSel.value;
     authorSel.innerHTML = '<option value="">작성자 전체</option>' +
-      authors.map(a=>`<option value="${a}" ${a===prev?'selected':''}>${a}</option>`).join('');
+      authors.map(a=>`<option value="${escapeHTML(a)}" ${a===prev?'selected':''}>${escapeHTML(a)}</option>`).join('');
   }
 
   const list=(S.board||[]).filter(p=>{
@@ -9252,28 +9302,32 @@ function renderBoard(){
     <div>${bq||cat||author?'검색 결과가 없습니다':'등록된 게시물이 없습니다'}</div>
   </div>`;return;}
 
-  const hi = (text) => {
-    if(!bq||!text) return text||'';
-    const escaped = bq.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-    return text.replace(new RegExp('('+escaped+')','gi'),
+  const hi = (text,isEscaped) => {
+    const safeText=isEscaped?text:escapeHTML(text||'');
+    if(!bq||!safeText) return safeText;
+    const escaped = escapeHTML(bq).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    return safeText.replace(new RegExp('('+escaped+')','gi'),
       '<mark style="background:var(--amber-light);color:var(--amber);padding:0 2px;border-radius:2px">$1</mark>');
   };
 
   el.innerHTML=list.map(p=>{
     const catColor={공지:'b-red',자료:'b-teal',내부:'b-amber'}[p.cat]||'b-gray';
+    const safeTitle=escapeHTML(p.title||'');
+    const safeContent=escapeHTML(p.content||'');
+    const safeLink=safeExternalUrl(p.link);
     return`<div class="card" style="margin-bottom:10px;transition:box-shadow .12s"
         onmouseover="this.style.boxShadow='0 2px 12px rgba(96,88,232,.08)'"
         onmouseout="this.style.boxShadow=''">
       <div style="padding:14px 18px;display:flex;align-items:flex-start;gap:12px">
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
-            <span class="badge ${catColor}">${p.cat}</span>
-            <span style="font-size:14px;font-weight:600;color:var(--text)">${hi(p.title)}</span>
+            <span class="badge ${catColor}">${escapeHTML(p.cat||'')}</span>
+            <span style="font-size:14px;font-weight:600;color:var(--text)">${hi(safeTitle,true)}</span>
           </div>
-          <div style="font-size:13px;color:var(--text2);line-height:1.65;white-space:pre-wrap;max-height:120px;overflow:hidden">${hi(p.content||'')}</div>
-          ${p.link?`<a href="${p.link}" target="_blank" style="font-size:12px;color:var(--accent);display:inline-flex;align-items:center;gap:4px;margin-top:8px">🔗 첨부 링크</a>`:''}
+          <div style="font-size:13px;color:var(--text2);line-height:1.65;white-space:pre-wrap;max-height:120px;overflow:hidden">${hi(safeContent,true)}</div>
+          ${safeLink?`<a href="${safeLink}" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:var(--accent);display:inline-flex;align-items:center;gap:4px;margin-top:8px">🔗 첨부 링크</a>`:''}
           <div style="font-size:11px;color:var(--text3);margin-top:10px;display:flex;gap:8px;align-items:center">
-            <span style="font-weight:600">${p.author}</span>
+            <span style="font-weight:600">${escapeHTML(p.author||'')}</span>
             <span>·</span>
             <span>${fmtFull(p.date.slice(0,10))}</span>
           </div>
@@ -11815,7 +11869,7 @@ function delStudyHold(id, date){
   m.holdDates = (m.holdDates||[]).filter(d => d !== date);
   if(!m.history) m.history = [];
   m.history.push({ date: new Date().toISOString().slice(0,16).replace('T',' '), msg: `일일 홀딩 취소 (${date})`, by: currentManager?.name||'' });
-  save('students'); renderStudy(); openModal('hold', id);
+  save('study'); renderStudy(); openModal('hold', id);
 }
 
 // ── 스터디 멤버 폼 (상세 / 편집) ──
@@ -12541,7 +12595,7 @@ function delStudyMember(groupId,memberId){
   const m=(g.members||[]).find(x=>x.id===memberId);
   pushUndo(`멤버 삭제 (${m?.name||''})`);
   g.members=g.members.filter(x=>x.id!==memberId);
-  save('students');renderStudy();
+  save('study');renderStudy();
 }
 
 // ═══ 출석 차감 (요일별 일괄) ═══
@@ -12588,7 +12642,7 @@ function addStudyWaiting(){
   S.study.waiting.push({id:gid('sw'),dayGroup:studyDay,name,phone:prompt('연락처:')||'',level:prompt('레벨:')||'',preferDay:prompt('참여요일:')||'',waitDate:today(),memo:''});
   save('study');renderStudy();
 }
-function delStudyWaiting(id){S.study.waiting=S.study.waiting.filter(x=>x.id!==id);save('students');renderStudy();}
+function delStudyWaiting(id){S.study.waiting=S.study.waiting.filter(x=>x.id!==id);save('study');renderStudy();}
 
 function addStudyReturn(){
   const name=prompt('이름:');if(!name)return;
@@ -12596,7 +12650,7 @@ function addStudyReturn(){
   S.study.returnList.push({id:gid('sr'),dayGroup:studyDay,name,phone:prompt('연락처:')||'',memo:prompt('비고:')||''});
   save('study');renderStudy();
 }
-function delStudyReturn(id){S.study.returnList=S.study.returnList.filter(x=>x.id!==id);save('students');renderStudy();}
+function delStudyReturn(id){S.study.returnList=S.study.returnList.filter(x=>x.id!==id);save('study');renderStudy();}
 
 function addStudyIndiv(){
   const name=prompt('이름:');if(!name)return;
@@ -12614,7 +12668,7 @@ function editStudyIndiv(id){
 function delStudyIndiv(id){
   if(!confirm('삭제하시겠습니까?'))return;
   S.study.indivCredits=S.study.indivCredits.filter(x=>x.id!==id);
-  save('students');renderStudy();
+  save('study');renderStudy();
 }
 
 // 앱 시작 - DOM 완전히 로드된 후 실행
@@ -13075,7 +13129,7 @@ function delStudyPayRecord(memberId, idx){
     if(logIdx>=0) S.study.creditLog.splice(logIdx,1);
     m.credits = Math.max(0,(m.credits||0) - removed.credits);
   }
-  save('students');
+  save('study');
   // 모달 이력 테이블만 새로고침
   const tbody = document.getElementById('spay-history-tbody');
   if(tbody) tbody.innerHTML = spayHistoryRows(m);
@@ -13764,7 +13818,7 @@ function addStudyLeader(){
   save('study'); renderStudy();
 }
 
-function delStudyLeader(id){ if(confirm('삭제하시겠습니까?')){ S.study.leaders=S.study.leaders.filter(x=>x.id!==id); save('students'); renderStudy(); } }
+function delStudyLeader(id){ if(confirm('삭제하시겠습니까?')){ S.study.leaders=S.study.leaders.filter(x=>x.id!==id); save('study'); renderStudy(); } }
 
 function addStudyKorean(editId){
   // v2026-05-04-A: 강제 새로고침용 버전 주석
@@ -13940,7 +13994,7 @@ function delStudyStaff(type, id){
   if(confirm('삭제하시겠습니까?')){
     if(type==='korean') S.study.koreanStaff = S.study.koreanStaff.filter(x=>x.id!==id);
     else S.study.nativeStaff = S.study.nativeStaff.filter(x=>x.id!==id);
-    save('students'); renderStudy();
+    save('study'); renderStudy();
   }
 }
 
