@@ -67,13 +67,14 @@ async function deleteLegacyPublishedTopics(){
   await supabaseRequest(`talkflow_published_topics?or=${filter}`,{key:serviceKey,method:"DELETE"});
 }
 
+// Print reads the whole month, like the member list, so star names match the member screen.
 async function boardTopic(date){
-  const {serviceKey}=configuration();
-  const rows=await supabaseRequest(`talkflow_published_topics?date=eq.${encodeURIComponent(date)}&select=date%2Ctopic%2Cpublished_at`,{key:serviceKey,method:"GET"});
-  const row=Array.isArray(rows)?rows[0]:null;
-  const topic=row?.topic;
-  if(!topic||topic.topicVersion!=="topic-v4.3"||topic.date!==date)return null;
-  return JSON.parse(JSON.stringify(TopicV4.migrateLegacyRmTopic(topic)));
+  const {serviceKey}=configuration(),[year,month]=String(date).split("-").map(Number),next=new Date(Date.UTC(year,month,1)).toISOString().slice(0,10);
+  const rows=await supabaseRequest(`talkflow_published_topics?date=gte.${encodeURIComponent(`${String(date).slice(0,7)}-01`)}&date=lt.${encodeURIComponent(next)}&select=date%2Ctopic%2Cpublished_at&order=date.asc`,{key:serviceKey,method:"GET"});
+  const monthTopics=(Array.isArray(rows)?rows:[]).map(row=>row?.topic).filter(Boolean);
+  const topic=TopicV4.migrateMonthTopics(monthTopics).find(item=>item?.date===date);
+  if(!topic||topic.topicVersion!=="topic-v4.3")return null;
+  return JSON.parse(JSON.stringify(topic));
 }
 
 module.exports={configuration,memberLogin,memberHandoff,memberTopics,memberProgress,memberTopicView,managerTopicViews,publishableTopic,publishTopic,deletePublishedTopic,deleteLegacyPublishedTopics,boardTopic,recordFailure,__test:{supabaseRequest,recordFailure}};
