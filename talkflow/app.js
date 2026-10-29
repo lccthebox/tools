@@ -1283,7 +1283,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
     if(!response.ok)throw new Error(payload?.error?.message||"발행된 토픽을 불러오지 못했습니다.");
     const topic=payload?.topic;
     if(!topic||topic.topicVersion!=="topic-v4.3"||topic.date!==date||!topic.page1||!topic.page2)throw new Error("발행된 토픽 형식이 올바르지 않습니다.");
-    topics={...topics,[date]:topic};
+    topics={...topics,[date]:TopicV4.migrateLegacyRmTopic(topic)};
   }
   async function loadManagerTopicViews(){
     const month=monthPrefix();

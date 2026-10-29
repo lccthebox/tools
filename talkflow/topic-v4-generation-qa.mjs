@@ -26,6 +26,20 @@ const migratedMixedIdentity=TopicV4.migrateLegacyRmTopic(mixedIdentityTopic);
 assert.doesNotMatch(`${migratedMixedIdentity.page1.story.en} ${migratedMixedIdentity.page1.quickVote.question}`,/\bRM\b|Ji-yeon/,"saved mixed-name topics are normalized on load so members do not see the old name mix");
 for(const field of ["keyWords","easyTalk","realTalk","todayEnglish"])assert.ok(Array.isArray(migratedMixedIdentity.page1[field]),`legacy name migration must keep page1.${field} as an array so print and member views can render it`);
 assert.ok(Array.isArray(migratedMixedIdentity.page1.quickVote.options),"legacy name migration must keep Quick Vote options as an array");
+{
+  // Real published story that mixed three names on Page 1.
+  const story="Donghae keeps the desk beside him clear every single day. New colleagues assume it belongs to someone important. One afternoon, Ji-yeon finally asks him directly. Donghae pauses. Ji-yeon stares at the desk, then nods slowly.";
+  const mixed={...topic,date:"2026-10-20",topicPlan:{...plan,star:"RM"},page1:{...topic.page1,title:{en:"The Extra Seat",ko:"빈자리"},story:{...topic.page1.story,star:"RM",en:story},quickVote:{...topic.page1.quickVote,question:"What do you think RM's empty desk is really about?"},easyTalk:["What brings you joy at work?",...topic.page1.easyTalk.slice(1)]}};
+  const repaired=TopicV4.migrateLegacyRmTopic(mixed),star=repaired.page1.story.star,text=`${repaired.page1.story.en} ${repaired.page1.quickVote.question}`;
+  assert.ok(TopicV4.STARS.includes(star)&&star!=="Donghae"&&!/\bRM\b|Ji-yeon|Donghae/.test(text)&&text.includes(`${star}'s empty desk`),"a mixed-name Page 1 must use one star name everywhere");
+  assert.match(repaired.page1.story.en,/New colleagues assume/,"the ordinary word New must not be replaced by a star name");
+  assert.equal(repaired.page1.easyTalk[0],"What brings you joy at work?","the ordinary word joy must not be replaced by a star name");
+  assert.match(repaired.page1.story.en,/\. A colleague stares/,"a replaced name at the start of a sentence must be capitalized");
+  assert.ok(!["Taeyeon","Lalisa","Jennie","Jisoo","Yuna"].includes(star),"a story about him must not receive a female star name");
+  const titleMismatch={...topic,page1:{...topic.page1,title:{...topic.page1.title,en:"The Garden Party"}}};
+  assert.ok(TopicV4.validateContent(titleMismatch,plan).issues.some(item=>item.location==="page1.title"),"a Page 1 title that the story never mentions must be blocked");
+  assert.equal(TopicV4.validateContent({...topic,page1:{...topic.page1,story:{...topic.page1.story,en:`${topic.page1.story.en} It brings her joy and something new.`}}},plan).issues.some(item=>item.location==="page1.starConsistency"),false,"ordinary words like joy and new must not count as other people's names");
+}
 for(const star of ["Yuna Kim","Yoo Jimin","Heung-min Son"]){
   const named=JSON.parse(JSON.stringify({...topic,page1:{...topic.page1,story:{...topic.page1.story,star,en:`${star} is choosing a quiet plan for the evening.`}},topicPlan:{...plan,star}}));
   const migrated=TopicV4.migrateLegacyRmTopic(named);

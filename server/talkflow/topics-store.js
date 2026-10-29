@@ -51,7 +51,7 @@ function publishableTopic(topic){
 }
 
 async function publishTopic(topic){
-  const {serviceKey}=configuration(),published=publishableTopic(topic),publishedAt=new Date().toISOString();
+  const {serviceKey}=configuration(),published=publishableTopic(TopicV4.migrateLegacyRmTopic(topic)),publishedAt=new Date().toISOString();
   await supabaseRequest("talkflow_published_topics?on_conflict=date",{key:serviceKey,method:"POST",prefer:"resolution=merge-duplicates,return=representation",body:{date:published.date,topic:published,published_at:publishedAt}});
   return{publishedAt};
 }
@@ -73,7 +73,7 @@ async function boardTopic(date){
   const row=Array.isArray(rows)?rows[0]:null;
   const topic=row?.topic;
   if(!topic||topic.topicVersion!=="topic-v4.3"||topic.date!==date)return null;
-  return JSON.parse(JSON.stringify(topic));
+  return JSON.parse(JSON.stringify(TopicV4.migrateLegacyRmTopic(topic)));
 }
 
 module.exports={configuration,memberLogin,memberHandoff,memberTopics,memberProgress,memberTopicView,managerTopicViews,publishableTopic,publishTopic,deletePublishedTopic,deleteLegacyPublishedTopics,boardTopic,recordFailure,__test:{supabaseRequest,recordFailure}};

@@ -165,6 +165,8 @@ try {
     // A real model writes Page 1 with the approved star, so the fixture story follows the plan star too.
     const star = approvedPlan?.star || fixture.page1.story.star;
     const answer = tool === "submit_topic_v43_content" ? JSON.parse(JSON.stringify(input).replaceAll(fixture.page1.story.star, star).replace(/\bYuna\b(?! Kim)/g, star)) : input;
+    // It also ties the Quick Vote to the approved Page 1 title, as the title-fit rule asks.
+    if (tool === "submit_topic_v43_content" && approvedPlan?.titleEn) answer.quickVoteQuestion = `What would you do in "${approvedPlan.titleEn}"?`;
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ stop_reason: "end_turn", content: [{ type: "tool_use", name: tool, input: answer }] }) });
   });
   await page.goto(`http://127.0.0.1:${server.address().port}`, { waitUntil: "networkidle" });
