@@ -46,6 +46,13 @@ assert.ok(Array.isArray(migratedMixedIdentity.page1.quickVote.options),"legacy n
   assert.equal(new Set(monthStars).size,monthStars.length,`stars must not repeat within a month: ${monthStars.join(",")}`);
   assert.equal(monthStars[0],"Jungsu","the earliest date keeps its original star");
   assert.ok(month.every(item=>item.page1.quickVote.question===`What should ${item.page1.story.star} do?`&&item.topicPlan.star===item.page1.story.star),"a renamed star is applied to the plan, story and Quick Vote together");
+  // English hyphenated words are not romanized names; real published titles were damaged by this ("A a colleague Hour").
+  const compound={...topic,page1:{...topic.page1,title:{...topic.page1.title,en:"A Screen-Free Hour"},story:{...topic.page1.story,en:`${topic.page1.story.star} tries a screen-free evening. Ji-yeon laughs. Go-to snacks wait on the desk.`},quickVote:{...topic.page1.quickVote,options:["A Down-filled jacket","A wool coat","Nothing"]}}};
+  const compoundMigrated=TopicV4.migrateLegacyRmTopic(compound);
+  assert.equal(compoundMigrated.page1.title.en,"A Screen-Free Hour","Screen-Free must not become a colleague");
+  assert.equal(compoundMigrated.page1.quickVote.options[0],"A Down-filled jacket","Down-filled must not become a colleague");
+  assert.match(compoundMigrated.page1.story.en,/A colleague laughs\. Go-to snacks/,"a romanized name is replaced while Go-to stays");
+  assert.equal(TopicV4.validateContent(compound,plan).issues.find(item=>item.location==="page1.starConsistency")?.message.includes("Screen-Free"),false,"English compounds are not reported as other people's names");
   const sourceWith=title=>({...topic.page2.source,title});
   assert.equal(TopicV4.isSafeArticleSource(sourceWith("Flood risk is a time bomb for insurers")),true,"the idiom time bomb is not a violence signal");
   assert.equal(TopicV4.isSafeArticleSource(sourceWith("Attackers exploit an old browser bug")),true,"exploiting a software bug is not exploitation of people");
