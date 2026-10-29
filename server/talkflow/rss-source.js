@@ -1,7 +1,6 @@
 "use strict";
 
 const FEEDS = Object.freeze([
-  { publisher: "Reddit · Business", category: "CONSUMER & ECONOMY", url: "https://www.reddit.com/r/business/top/.rss?t=month" },
   { publisher: "Reddit · Parenting", category: "RELATIONSHIPS & FAMILY", url: "https://www.reddit.com/r/Parenting/top/.rss?t=month" },
   { publisher: "Reddit · Explain Like I'm Five", category: "CULTURE", url: "https://www.reddit.com/r/explainlikeimfive/top/.rss?t=month" },
   { publisher: "BBC News · Technology", category: "TECH & DIGITAL", url: "https://feeds.bbci.co.uk/news/technology/rss.xml" },
@@ -12,7 +11,6 @@ const FEEDS = Object.freeze([
   { publisher: "The Guardian · Culture", category: "CULTURE", url: "https://www.theguardian.com/culture/rss" },
   { publisher: "The Guardian · Travel", category: "DINING & LIFESTYLE", url: "https://www.theguardian.com/travel/rss" },
   { publisher: "The Guardian · Money", category: "CONSUMER & ECONOMY", url: "https://www.theguardian.com/money/rss" },
-  { publisher: "The Guardian · Society", category: "SOCIAL TRENDS", url: "https://www.theguardian.com/society/rss" },
   { publisher: "NPR · Arts & Life", category: "CULTURE", url: "https://feeds.npr.org/1008/rss.xml" },
   { publisher: "Google News · Lifestyle", category: "DINING & LIFESTYLE", url: "https://news.google.com/rss/search?q=lifestyle+when%3A3m&hl=en-US&gl=US&ceid=US:en" },
   { publisher: "Google News · Culture", category: "CULTURE", url: "https://news.google.com/rss/search?q=culture+entertainment+when%3A3m&hl=en-US&gl=US&ceid=US:en" },
@@ -24,7 +22,9 @@ const FEEDS = Object.freeze([
   { publisher: "Google News · Hobbies", category: "CULTURE", url: "https://news.google.com/rss/search?q=new+hobby+trend+when%3A3m&hl=en-US&gl=US&ceid=US:en" },
   { publisher: "Google News · Pets", category: "LIFE", url: "https://news.google.com/rss/search?q=pet+owners+daily+life+when%3A3m&hl=en-US&gl=US&ceid=US:en" },
   { publisher: "Google News · Friendship", category: "RELATIONSHIPS & FAMILY", url: "https://news.google.com/rss/search?q=friendship+social+life+when%3A3m&hl=en-US&gl=US&ceid=US:en" },
-  { publisher: "Google News · Phones & Apps", category: "TECH & DIGITAL", url: "https://news.google.com/rss/search?q=smartphone+apps+daily+life+when%3A3m&hl=en-US&gl=US&ceid=US:en" }
+  { publisher: "Google News · Phones & Apps", category: "TECH & DIGITAL", url: "https://news.google.com/rss/search?q=smartphone+apps+daily+life+when%3A3m&hl=en-US&gl=US&ceid=US:en" },
+  { publisher: "Google News · Neighbourhood Life", category: "SOCIAL TRENDS", url: "https://news.google.com/rss/search?q=neighbors+community+daily+life+when%3A3m&hl=en-US&gl=US&ceid=US:en" },
+  { publisher: "Google News · Shopping Habits", category: "CONSUMER & ECONOMY", url: "https://news.google.com/rss/search?q=shopping+habits+consumers+when%3A3m&hl=en-US&gl=US&ceid=US:en" }
 ]);
 const CACHE_MS = 10 * 60 * 1000;
 const ARTICLE_WINDOW_MS = 90 * 24 * 60 * 60 * 1000;
@@ -33,7 +33,7 @@ const FEATURED_CONVERSATION_CATEGORIES = new Set(["SOCIAL TRENDS", "CULTURE", "L
 const TECHNICAL_CATEGORIES = new Set(["TECH & DIGITAL", "CONSUMER & ECONOMY"]);
 const FRIENDLY_TO_TECHNICAL_RATIO = 3;
 const STOP_WORDS = new Set(["about", "after", "against", "ahead", "also", "amid", "and", "are", "bbc", "been", "before", "between", "but", "can", "could", "does", "for", "from", "have", "into", "its", "more", "new", "not", "over", "says", "that", "the", "their", "there", "these", "they", "this", "was", "what", "when", "where", "which", "who", "will", "with", "would", "you", "your"]);
-const SENSITIVE_TERMS = new Set(["army", "backlash", "cancer", "chemotherapy", "contamination", "councillor", "dementia", "disaster", "disease", "dying", "earthquake", "feud", "flooding", "hospice", "illness", "injured", "nhs", "pollution", "raf", "refugee", "slams", "toxic", "troops", "tumour", "tumor", "abuse", "abused", "allegation", "allegations", "assault", "attack", "bisexual", "bomb", "buddhism", "buddhist", "catholic", "catholicism", "christian", "christianity", "church", "civil", "coercion", "complaint", "complaints", "conflict", "consent", "court", "crime", "criminal", "crisis", "death", "defendant", "died", "election", "explicit", "exploit", "exploitation", "faith", "funeral", "gay", "gender", "government", "harassment", "harassed", "hindu", "hinduism", "homosexual", "investigate", "investigation", "islam", "islamic", "jewish", "judaism", "killed", "lawsuit", "lawsuits", "legal", "lesbian", "lgbt", "lgbtq", "litigation", "military", "minister", "misconduct", "mosque", "murder", "nude", "nudity", "parliament", "plaintiff", "police", "politics", "pope", "porn", "prayer", "president", "pride", "queer", "rape", "religion", "religious", "settlement", "sex", "sexual", "shooting", "survivor", "survivors", "synagogue", "temple", "terror", "trafficking", "transgender", "trial", "vatican", "victim", "victims", "violence", "violent", "war"]);
+const SENSITIVE_TERMS = new Set(["administration", "adult", "deport", "deportation", "hack", "hacked", "hackers", "immigration", "protest", "protesters", "protests", "stolen", "theft", "trump", "army", "backlash", "cancer", "chemotherapy", "contamination", "councillor", "dementia", "disaster", "disease", "dying", "earthquake", "feud", "flooding", "hospice", "illness", "injured", "nhs", "pollution", "raf", "refugee", "slams", "toxic", "troops", "tumour", "tumor", "abuse", "abused", "allegation", "allegations", "assault", "attack", "bisexual", "bomb", "buddhism", "buddhist", "catholic", "catholicism", "christian", "christianity", "church", "civil", "coercion", "complaint", "complaints", "conflict", "consent", "court", "crime", "criminal", "crisis", "death", "defendant", "died", "election", "explicit", "exploit", "exploitation", "faith", "funeral", "gay", "gender", "government", "harassment", "harassed", "hindu", "hinduism", "homosexual", "investigate", "investigation", "islam", "islamic", "jewish", "judaism", "killed", "lawsuit", "lawsuits", "legal", "lesbian", "lgbt", "lgbtq", "litigation", "military", "minister", "misconduct", "mosque", "murder", "nude", "nudity", "parliament", "plaintiff", "police", "politics", "pope", "porn", "prayer", "president", "pride", "queer", "rape", "religion", "religious", "settlement", "sex", "sexual", "shooting", "survivor", "survivors", "synagogue", "temple", "terror", "trafficking", "transgender", "trial", "vatican", "victim", "victims", "violence", "violent", "war"]);
 const cache = globalThis.__theboxRssSourceCache || (globalThis.__theboxRssSourceCache = { articles: null, expiresAt: 0 });
 
 function cleanText(value, max = 1200) {
