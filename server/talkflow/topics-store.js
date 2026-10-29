@@ -39,7 +39,7 @@ async function supabaseRequest(path,{key,method="POST",body,prefer="return=repre
 
 async function memberLogin(credentials){const {anonKey}=configuration();return supabaseRequest("rpc/conversation_member_portal",{key:anonKey,body:{p_action:"verify",p_payload:credentials},retries:1})}
 async function memberHandoff(code){const {anonKey}=configuration(),result=await supabaseRequest("rpc/conversation_topic_sso",{key:anonKey,body:{p_action:"exchange",p_payload:{handoff:code}}});return{token:result?.session||"",expiresAt:result?.expiresAt||null}}
-async function memberTopics(token,month){const {anonKey}=configuration(),result=await supabaseRequest("rpc/conversation_member_topics",{key:anonKey,body:{p_action:"list",p_payload:{token,month}},retries:1});return Array.isArray(result?.topics)?{...result,topics:result.topics.map(TopicV4.migrateLegacyRmTopic)}:result}
+async function memberTopics(token,month){const {anonKey}=configuration(),result=await supabaseRequest("rpc/conversation_member_topics",{key:anonKey,body:{p_action:"list",p_payload:{token,month}},retries:1});return Array.isArray(result?.topics)?{...result,topics:TopicV4.migrateMonthTopics(result.topics)}:result}
 async function memberProgress(token,action,payload){const {anonKey}=configuration();return supabaseRequest("rpc/conversation_member_topic_progress",{key:anonKey,body:{p_action:action,p_payload:{token,...payload}},retries:1})}
 async function memberTopicView(token,date){const {anonKey}=configuration();return supabaseRequest("rpc/conversation_member_topic_view",{key:anonKey,body:{p_payload:{token,date}},retries:1})}
 async function managerTopicViews(month){const {serviceKey}=configuration();return supabaseRequest("rpc/conversation_talkflow_view_summary",{key:serviceKey,body:{p_month:month}})}

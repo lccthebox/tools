@@ -37,7 +37,17 @@ assert.ok(Array.isArray(migratedMixedIdentity.page1.quickVote.options),"legacy n
   assert.match(repaired.page1.story.en,/\. A colleague stares/,"a replaced name at the start of a sentence must be capitalized");
   assert.ok(!["Taeyeon","Lalisa","Jennie","Jisoo","Yuna"].includes(star),"a story about him must not receive a female star name");
   const titleMismatch={...topic,page1:{...topic.page1,title:{...topic.page1.title,en:"The Garden Party"}}};
-  assert.ok(TopicV4.validateContent(titleMismatch,plan).issues.some(item=>item.location==="page1.title"),"a Page 1 title that the story never mentions must be blocked");
+  const titleCheck=TopicV4.validateContent(titleMismatch,plan);
+  assert.ok(titleCheck.warnings.some(item=>item.location==="page1.title")&&!titleCheck.issues.some(item=>item.location==="page1.title"),"a title the story never mentions is a review warning, not a blocker, so figurative titles stay usable");
+  // One month must not repeat a star: earlier dates keep theirs, later repeats are renamed consistently.
+  const monthTopic=(day,star)=>({...topic,date:`2026-10-${String(day).padStart(2,"0")}`,topicPlan:{...plan,star},page1:{...topic.page1,story:{...topic.page1.story,star,en:`${star} keeps the desk beside him clear every day.`},quickVote:{...topic.page1.quickVote,question:`What should ${star} do?`}}});
+  const month=TopicV4.migrateMonthTopics([12,17,19,20,24,25,26].map(day=>monthTopic(day,"Jungsu")));
+  const monthStars=month.map(item=>item.page1.story.star);
+  assert.equal(new Set(monthStars).size,monthStars.length,`stars must not repeat within a month: ${monthStars.join(",")}`);
+  assert.equal(monthStars[0],"Jungsu","the earliest date keeps its original star");
+  assert.ok(month.every(item=>item.page1.quickVote.question===`What should ${item.page1.story.star} do?`&&item.topicPlan.star===item.page1.story.star),"a renamed star is applied to the plan, story and Quick Vote together");
+  const rmStars=[12,15,17,19,20].map(day=>TopicV4.migrateLegacyRmTopic(monthTopic(day,"RM")).page1.story.star);
+  assert.equal(new Set(rmStars).size,rmStars.length,`legacy RM stories on different days must not collapse onto one star: ${rmStars.join(",")}`);
   assert.equal(TopicV4.validateContent({...topic,page1:{...topic.page1,story:{...topic.page1.story,en:`${topic.page1.story.en} It brings her joy and something new.`}}},plan).issues.some(item=>item.location==="page1.starConsistency"),false,"ordinary words like joy and new must not count as other people's names");
 }
 for(const star of ["Yuna Kim","Yoo Jimin","Heung-min Son"]){

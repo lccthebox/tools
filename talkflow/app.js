@@ -44,6 +44,8 @@
   function today(){return new Date().toISOString().slice(0,10)}
   function printCopies(value){const count=Number.parseInt(value,10);return Number.isFinite(count)?Math.min(80,Math.max(1,count)):1}
   function isPublishedPrintRoute(){return publishedPrint.active&&view==="print"}
+  // Name cleanup runs per month so one star is not repeated across a month's topics.
+  function migrateTopicMap(map){const entries=Object.entries(map||{}),migrated=TopicV4.migrateMonthTopics(entries.map(([,topic])=>topic));return Object.fromEntries(entries.map(([date],index)=>[date,migrated[index]]))}
   function loadTopics(){
     try{
       const fixture=new URLSearchParams(location.search).get("fixtures");
@@ -68,7 +70,7 @@
         const interruptedAt=new Date().toISOString(),staleBefore=Date.now()-5*60*1000;let recovered=false;
         Object.values(parsed).forEach(topic=>{const timestamp=Date.parse(topic?.updatedAt||topic?.createdAt||"");if(topic?.operatorStatus?.generationStatus!=="running"||Number.isFinite(timestamp)&&timestamp>staleBefore)return;topic.operatorStatus={...topic.operatorStatus,generationStatus:"interrupted"};topic.status="generation_interrupted";topic.failedSection=topic.failedSection||"plan";topic.generationFailure={stage:topic.failedSection,section:topic.failedSection,message:"이전 생성 작업이 완료되지 않았습니다.",issues:[],error:{type:"generation_interrupted",stage:topic.failedSection,lastAttemptAt:topic.updatedAt||topic.createdAt||interruptedAt}};topic.quality={status:"review",score:0,issues:["이전 생성 작업이 완료되지 않았습니다."]};topic.updatedAt=interruptedAt;recovered=true});
         if(recovered)localStorage.setItem(KEYS.data,JSON.stringify(parsed));
-        const migrated=Object.fromEntries(Object.entries(parsed).map(([date,topic])=>[date,TopicV4.migrateLegacyRmTopic(topic)]));
+        const migrated=migrateTopicMap(parsed);
         if(JSON.stringify(migrated)!==JSON.stringify(parsed)){parsed=migrated;localStorage.setItem(KEYS.data,JSON.stringify(parsed));}
         if(fixture==="conversation"||fixture==="sessions")return window.TalkFlowSessions.applyTopics(window.TalkFlowConversation.applyFixtures(parsed),fixture==="sessions");
         return window.TalkFlowSessions.applyTopics(parsed);
@@ -1230,7 +1232,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
   async function gistPull(){
     const {gistToken,gistId:id}=gistCredentialsFromForm();if(!id){notify("Gist ID를 입력하세요.",true);return}if(!gistToken){notify("비공개 Gist를 불러오려면 이 컴퓨터에서 Gist 토큰을 입력하세요.",true);return}
     try{
-      const parsed=await parseGistTopicFile(id,gistToken);mergeArticleHistory(parsed.articleHistory);mergePageOneHistory(parsed.pageOneHistory);topics=Object.fromEntries(Object.entries(mergeIncomingTopics(parsed.topics)).map(([date,topic])=>[date,TopicV4.migrateLegacyRmTopic(topic)]));settings.gistId=id;saveSettings();saveTopics("TheBox Topic 전용 Gist에서 불러왔습니다.");
+      const parsed=await parseGistTopicFile(id,gistToken);mergeArticleHistory(parsed.articleHistory);mergePageOneHistory(parsed.pageOneHistory);topics=migrateTopicMap(mergeIncomingTopics(parsed.topics));settings.gistId=id;saveSettings();saveTopics("TheBox Topic 전용 Gist에서 불러왔습니다.");
     }catch(error){notify(`Gist 불러오기 실패: ${error.message}`,true)}
   }
   function saveSettings(){const persisted={...settings};delete persisted.apiKey;delete persisted.gistToken;localStorage.setItem(KEYS.settings,JSON.stringify(persisted));if(settings.gistToken)sessionStorage.setItem(KEYS.gistToken,settings.gistToken);else sessionStorage.removeItem(KEYS.gistToken)}
