@@ -19,6 +19,8 @@ assert.match(app,/첫 장 다시 생성/);
 assert.match(app,/Article 다시 생성/);
 assert.match(app,/articlePlanForRetainedPage/,"Article regeneration must validate a replacement source against the retained first page");
 assert.match(app,/ensureArticleSource\(\{\.\.\.candidate,articleSource:null\}\)/,"Article regeneration must replace its RSS source instead of reusing the old one");
+assert.doesNotMatch(app,/In my country/,"the Page 1 prompt line must not invite comparing countries");
+assert.match(app,/MY TURN<br>In my life or at work/);
 const cacheVersion=file=>Number(index.match(new RegExp(`${file.replace(".","\\.")}\\?v=(\\d{8})-`))?.[1]||0);
 assert.ok(cacheVersion("topic-v4-generation.js")>=20261013,"prompt-contract changes must publish a fresh client generation module");
 assert.ok(cacheVersion("app.js")>=20261013,"Article regeneration behavior must publish a fresh application module");
