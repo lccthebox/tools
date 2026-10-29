@@ -155,8 +155,10 @@ function messageBodyForUpstream(body) {
   if (!canonical || JSON.stringify(tool) !== JSON.stringify(canonical)) return false;
   if (body.messages.length !== 1 || body.messages[0].role !== "user" || !validGenerationPrompt(body.messages[0].content, tool.name)) return false;
   if(body.tool_choice?.type!=="tool"||body.tool_choice?.name!==tool.name||!Object.keys(body.tool_choice).every(key=>["type","name"].includes(key)))return null;
-  if(tool.name===TopicV4.CONTENT_TOOL.name)return{model:body.model,max_tokens:body.max_tokens,messages:body.messages,output_config:{format:{type:"json_schema",schema:TopicV4.CONTENT_TOOL.input_schema}}};
-  if(tool.name===TopicV4.PLAN_TOOL.name){const strictPlanTool=structuredClone(TopicV4.PLAN_TOOL);strictPlanTool.strict=true;return{...body,tools:[strictPlanTool]}}
+  const canonicalTopicV4Prompt = canonicalTopicV4PromptForUpstream(body.messages[0].content, tool.name);
+  const messages = canonicalTopicV4Prompt ? [{ role: "user", content: JSON.stringify(canonicalTopicV4Prompt) }] : body.messages;
+  if(tool.name===TopicV4.CONTENT_TOOL.name)return{model:body.model,max_tokens:body.max_tokens,messages,output_config:{format:{type:"json_schema",schema:TopicV4.CONTENT_TOOL.input_schema}}};
+  if(tool.name===TopicV4.PLAN_TOOL.name){const strictPlanTool=structuredClone(TopicV4.PLAN_TOOL);strictPlanTool.strict=true;return{...body,messages,tools:[strictPlanTool]}}
   if(tool.name===CONTENT_TOOL.name){assertContentFillSchemaComplexity();return{model:body.model,max_tokens:body.max_tokens,messages:body.messages,output_config:{format:{type:"json_schema",schema:CONTENT_OUTPUT_SCHEMA}}}}
   const strictPlanTool = structuredClone(PLAN_TOOL);
   strictPlanTool.strict = true;
@@ -191,14 +193,49 @@ function validGenerationPrompt(content, toolName) {
 }
 
 function validTopicV4Prompt(payload, toolName) {
-  const keys = ["contract", "stage", "topic", "approvedPlan", "visualContract", "contentRules"];
+  const keys = ["contract", "stage", "topic", "approvedPlan", "selectedPage1Template", "rules", "repair"];
   if (Object.keys(payload).some(key => !keys.includes(key))) return false;
   const expectedStage = toolName === TopicV4.PLAN_TOOL.name ? "plan" : "content";
-  if (payload.stage !== expectedStage || !validTopicInput(payload.topic)) return false;
+  if (payload.stage !== expectedStage || !validTopicV4Input(payload.topic)) return false;
   if (expectedStage === "plan" && payload.approvedPlan !== null) return false;
   if (expectedStage === "content" && (!matchesSchemaShape(payload.approvedPlan, TopicV4.PLAN_TOOL.input_schema, false) || !TopicV4.validatePlan(payload.approvedPlan, payload.topic).ok)) return false;
-  const rebuilt = TopicV4.buildPromptPayload({ stage: expectedStage, topic: payload.topic, approvedPlan: payload.approvedPlan });
-  return JSON.stringify(payload) === JSON.stringify(rebuilt);
+  if (!validTopicV4Repair(payload.repair)) return false;
+  return Boolean(canonicalTopicV4PromptPayload(payload, expectedStage));
+}
+
+function canonicalTopicV4PromptForUpstream(content, toolName) {
+  if (toolName !== TopicV4.PLAN_TOOL.name && toolName !== TopicV4.CONTENT_TOOL.name) return null;
+  try {
+    const payload = JSON.parse(content);
+    const expectedStage = toolName === TopicV4.PLAN_TOOL.name ? "plan" : "content";
+    return canonicalTopicV4PromptPayload(payload, expectedStage);
+  } catch { return null; }
+}
+
+function canonicalTopicV4PromptPayload(payload, expectedStage) {
+  const rebuilt = TopicV4.buildPromptPayload({ stage: expectedStage, topic: payload.topic, approvedPlan: payload.approvedPlan, repairIssues: payload.repair?.issues || [] });
+  if (JSON.stringify(payload) === JSON.stringify(rebuilt)) return rebuilt;
+  const previousArticleLengthRule = "Story English is 55-85 words. Article is an original balanced five-to-six sentence CEFR A2-B1 discussion text, based only on articleSource title and excerpt. Use short, direct sentences and familiar daily vocabulary. Replace difficult academic, legal, policy, and technical wording with plain English; do not copy or quote source prose, and end on the central issue.";
+  const priorContract = structuredClone(rebuilt);
+  priorContract.rules = priorContract.rules.map(rule => rule.startsWith("Story English is 55-85 words.") ? previousArticleLengthRule : rule);
+  return JSON.stringify(payload) === JSON.stringify(priorContract) ? rebuilt : null;
+}
+
+function validTopicV4Repair(repair) {
+  if (repair === null) return true;
+  if (!repair || typeof repair !== "object" || Array.isArray(repair) || Object.keys(repair).length !== 1 || !Array.isArray(repair.issues) || repair.issues.length < 1 || repair.issues.length > 20) return false;
+  return repair.issues.every(item => item && typeof item === "object" && !Array.isArray(item) && Object.keys(item).length === 2 && typeof item.location === "string" && item.location.length > 0 && item.location.length <= 4000 && typeof item.message === "string" && item.message.length > 0 && item.message.length <= 4000);
+}
+
+function validArticleSource(source) {
+  const keys = ["publisher", "category", "title", "titleKey", "subjectKey", "url", "excerpt", "popularityScore", "publishedAt"];
+  if (!source || typeof source !== "object" || Array.isArray(source) || Object.keys(source).some(key => !keys.includes(key))) return false;
+  if (!["publisher", "title", "url", "excerpt", "publishedAt"].every(key => typeof source[key] === "string" && source[key].trim())) return false;
+  if (!["category", "titleKey", "subjectKey"].every(key => source[key] === undefined || typeof source[key] === "string")) return false;
+  if (source.popularityScore !== undefined && (!Number.isFinite(source.popularityScore) || source.popularityScore < 0 || source.popularityScore > 1000000000)) return false;
+  if (source.category && !Object.hasOwn(TopicV4.CATEGORIES, source.category)) return false;
+  if (source.publisher.length > 120 || source.category?.length > 40 || source.title.length > 240 || source.titleKey?.length > 240 || source.subjectKey?.length > 320 || source.excerpt.length > 500 || source.url.length > 2048 || !Number.isFinite(Date.parse(source.publishedAt))) return false;
+  try { return new URL(source.url).protocol === "https:" && TopicV4.isSafeArticleSource(source); } catch { return false; }
 }
 
 function validTopicInput(topic) {
@@ -211,9 +248,28 @@ function validTopicInput(topic) {
   return validRecentTopics(topic.recentTopics) && validCategoryCounts(topic.categoryCounts);
 }
 
+function validTopicV4Input(topic) {
+  const keys = ["date", "weekday", "generationMode", "topicHint", "conversationDirection", "source", "articleSource", "avoid", "repairSection", "page1Category", "articleCategory", "page1Template", "planVariant", "recentTopics", "recentStars", "selectedStar", "categoryCounts"];
+  if (!topic || typeof topic !== "object" || Array.isArray(topic) || Object.keys(topic).some(key => !keys.includes(key))) return false;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(topic.date) || !["auto", "guided"].includes(topic.generationMode)) return false;
+  if (typeof topic.topicHint !== "string" || topic.topicHint.length > 4000 || topic.generationMode === "auto" && topic.topicHint !== "" || topic.generationMode === "guided" && !topic.topicHint.trim()) return false;
+  if (!["auto", "light", "experience", "debate", "problem-solving"].includes(topic.conversationDirection)) return false;
+  if (!["weekday", "source", "avoid", "repairSection"].every(key => typeof topic[key] === "string" && topic[key].length <= 4000)) return false;
+  // Old open browser tabs can submit a pre-category-selection v4 request.
+  // Treat an omitted preference as automatic so a safe deploy does not strand
+  // an already-open operator screen; explicit preferences remain strict.
+  const categoryChoice = value => value === undefined || value === "auto" || Object.hasOwn(TopicV4.CATEGORIES, value);
+  if (!validArticleSource(topic.articleSource) || !categoryChoice(topic.page1Category) || !categoryChoice(topic.articleCategory) || topic.articleCategory === "ICEBREAKERS" || topic.page1Category !== "auto" && topic.page1Category === topic.articleCategory || !["A", "B"].includes(topic.page1Template) || topic.page1Category === "ICEBREAKERS" && topic.page1Template !== "B" || topic.page1Category !== "auto" && topic.page1Category !== "ICEBREAKERS" && topic.page1Template !== "A" || topic.planVariant !== undefined && (!Number.isInteger(topic.planVariant) || topic.planVariant < 0 || topic.planVariant > 100) || !TopicV4.STARS.includes(topic.selectedStar)) return false;
+  return validRecentTopics(topic.recentTopics) && validRecentStars(topic.recentStars) && validCategoryCounts(topic.categoryCounts);
+}
+
 function validRecentTopics(items) {
   const keys = ["date", "title", "category", "activityType"];
   return Array.isArray(items) && items.length <= 20 && items.every(item => item && typeof item === "object" && !Array.isArray(item) && !Object.keys(item).some(key => !keys.includes(key)) && /^\d{4}-\d{2}-\d{2}$/.test(item.date) && ["title", "category", "activityType"].every(key => typeof item[key] === "string" && item[key].length <= 300));
+}
+
+function validRecentStars(items) {
+  return Array.isArray(items) && items.length <= 31 && items.every(star => typeof star === "string" && TopicV4.STARS.includes(star));
 }
 
 function validCategoryCounts(value) {
@@ -263,18 +319,21 @@ function validLegacyValue(value, depth) {
 }
 
 function upstreamError(status, payload, requestId = "", context = {}) {
-  const type = sanitizeDiagnosticText(payload?.error?.type, "upstream_error", 100);
+  const upstreamType = sanitizeDiagnosticText(payload?.error?.type, "upstream_error", 100);
+  const upstreamMessage = sanitizeDiagnosticText(payload?.error?.message, "Malformed or empty Anthropic error response.", 700);
+  const creditBalanceLow = upstreamType === "invalid_request_error" && /credit balance.*(?:too low|low)|purchase credits/i.test(upstreamMessage);
+  const type = creditBalanceLow ? "credit_balance_low" : upstreamType;
   const diagnostic = {
     httpStatus: status,
-    type,
-    message: sanitizeDiagnosticText(payload?.error?.message, "Malformed or empty Anthropic error response.", 700),
+    type: upstreamType,
+    message: upstreamMessage,
     request_id: sanitizeDiagnosticText(payload?.request_id || requestId, "", 200),
     stage: sanitizeDiagnosticText(context.stage, "unknown", 80),
     model: sanitizeDiagnosticText(context.model, "unknown", 100),
     timestamp: sanitizeDiagnosticText(context.timestamp, new Date().toISOString(), 100)
   };
   const safeStatus = status === 401 || status === 403 ? status : status === 429 ? 429 : status >= 500 ? 502 : 400;
-  const messages = { authentication_error: "AI 서버 인증을 확인할 수 없습니다.", rate_limit_error: "AI 사용량 제한에 도달했습니다.", overloaded_error: "AI 서버가 혼잡합니다." };
+  const messages = { authentication_error: "AI 서버 인증을 확인할 수 없습니다.", credit_balance_low: "Anthropic API 크레딧 잔액이 부족합니다. 충전 후 잠시 뒤 다시 시도해 주세요.", rate_limit_error: "AI 사용량 제한에 도달했습니다.", overloaded_error: "AI 서버가 혼잡합니다." };
   return { status: safeStatus, body: { error: { type, message: messages[type] || "AI 생성 요청을 처리하지 못했습니다.", request_id: diagnostic.request_id } }, diagnostic };
 }
 
@@ -290,8 +349,8 @@ function anthropicErrorLogLine(diagnostic) {
 function anthropicRequestStage(body) {
   if (body?.operation === "legacy_repair") return "legacy_repair";
   const toolName = body?.tools?.[0]?.name;
-  if (toolName === PLAN_TOOL.name) return "plan";
-  if (toolName === CONTENT_TOOL.name) return "content";
+  if (toolName === PLAN_TOOL.name || toolName === TopicV4.PLAN_TOOL.name) return "plan";
+  if (toolName === CONTENT_TOOL.name || toolName === TopicV4.CONTENT_TOOL.name) return "content";
   return "connection_test";
 }
 

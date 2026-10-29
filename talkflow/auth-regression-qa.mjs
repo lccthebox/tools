@@ -12,7 +12,7 @@ const server=createServer(async(req,res)=>{try{const pathname=new URL(req.url,"h
 const browser=await playwright.chromium.launch({headless:true}),checks=[],check=(name,pass,detail="")=>{checks.push(name);if(!pass)throw new Error(`${name}: ${detail}`)};
 try{
   const context=await browser.newContext();
-  await context.addInitScript(()=>localStorage.setItem("tb_talkflow_settings_v1",JSON.stringify({apiKey:"legacy-browser-secret",gistId:"preserved-gist"})));
+  await context.addInitScript(()=>localStorage.setItem("tb_talkflow_settings_v1",JSON.stringify({apiKey:"legacy-browser-secret",gistToken:"legacy-gist-secret",gistId:"preserved-gist"})));
   const page=await context.newPage(),calls={status:0,login:0,models:0,messages:0,direct:0},bodies=[];let authenticated=false;
   page.on("request",request=>{if(request.url().startsWith("https://api.anthropic.com/"))calls.direct++});
   await page.route("https://fonts.googleapis.com/**",route=>route.fulfill({status:200,contentType:"text/css",body:""}));
@@ -23,6 +23,8 @@ try{
   await page.goto(`http://127.0.0.1:${server.address().port}/`,{waitUntil:"networkidle"});await page.locator("#settings-button").click();
   check("Anthropic key input removed",await page.locator("#api-key,#change-api-key,#api-key-editor").count()===0);
   check("legacy key is absent from DOM",!(await page.locator("body").innerText()).includes("legacy-browser-secret")&&await page.locator("input").evaluateAll(items=>items.every(item=>item.value!=="legacy-browser-secret")));
+  check("legacy Gist token is removed from persistent storage",await page.evaluate(()=>!Object.hasOwn(JSON.parse(localStorage.getItem("tb_talkflow_settings_v1")||"{}"),"gistToken")));
+  check("legacy Gist token is available only for this tab",await page.evaluate(()=>sessionStorage.getItem("tb_talkflow_gist_token_v1")==="legacy-gist-secret"));
   check("legacy migration is offered once",await page.locator("#legacy-key-migration").isVisible(),JSON.stringify({element:await page.locator("#legacy-key-migration").evaluate(element=>({hidden:element.hidden,parentHidden:element.closest("[data-settings-panel]")?.hidden,text:element.textContent})),storage:await page.evaluate(()=>localStorage.getItem("tb_talkflow_settings_v1"))}));
   await page.locator("#remove-legacy-api-key").click();
   check("migration removes only old API key",await page.evaluate(()=>{const value=JSON.parse(localStorage.getItem("tb_talkflow_settings_v1")||"{}");return !Object.hasOwn(value,"apiKey")&&value.gistId==="preserved-gist"}));

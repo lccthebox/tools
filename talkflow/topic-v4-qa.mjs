@@ -1,35 +1,25 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import {readFile} from "node:fs/promises";
 
-const fixture=JSON.parse(readFileSync(new URL("./fixtures/member-topic.json",import.meta.url),"utf8"));
-const approvedStars=["BTS","BLACKPINK","Stray Kids","ATEEZ","EXO","SEVENTEEN","aespa","IU","Son Heung-min","Kim Yuna","Rosé"];
-const oldSections=["easyTalk","realTalk","activity","leader","session1","session2"];
-
-assert.equal(fixture.topicVersion,"topic-v4");
+const root=new URL("./",import.meta.url),fixture=JSON.parse(await readFile(new URL("fixtures/member-topic.json",root),"utf8")),member=await readFile(new URL("member.js",root),"utf8"),html=await readFile(new URL("member.html",root),"utf8"),index=await readFile(new URL("index.html",root),"utf8"),css=await readFile(new URL("member.css",root),"utf8"),app=await readFile(new URL("app.js",root),"utf8");
+assert.equal(fixture.topicVersion,"topic-v4.3");
 assert.equal(fixture.page1.story.fictional,true);
-assert.ok(approvedStars.includes(fixture.page1.story.star));
-assert.match(fixture.page1.story.en,/Yuna/);
-assert.ok(fixture.page1.story.en.includes(fixture.page1.story.star.split(/\s+/).at(-1)));
-assert.ok(fixture.page1.story.ko.length>30);
 assert.equal(fixture.page1.keyWords.length,4);
-assert.equal(fixture.page1.quickVote.options.length,3);
-assert.equal(fixture.page1.easyTalk.length,3);
-assert.equal(fixture.page1.realTalk.length,3);
-assert.equal(fixture.page1.todayEnglish.length,4);
-assert.equal(fixture.page2.randomQuestions.length,5);
-assert.equal(fixture.page2.randomWords.length,10);
-assert.equal(fixture.page2.balanceGames,undefined);
-oldSections.forEach(key=>assert.equal(Object.hasOwn(fixture,key),false,`${key} must not be inherited`));
-
-const memberSource=readFileSync(new URL("./member.js",import.meta.url),"utf8");
-assert.match(memberSource,/topicVersion==="topic-v4"/);
-assert.match(memberSource,/STORY 해석/);
-assert.match(memberSource,/Round Two/);
-assert.match(memberSource,/renderCompletion\(topic\)/);
-
-const css=readFileSync(new URL("./member.css",import.meta.url),"utf8");
-for(const token of ["#1b1b18","#2b5940","#5c5c57","#8b8b84","#e3e0d6","#f2f6f3"])assert.match(css,new RegExp(token));
-assert.match(css,/border-left:3px solid var\(--green\)/);
-assert.match(css,/font-family:var\(--font-display\)/);
-
-console.log("Topic v4 reset fixture QA passed.");
+assert.equal(fixture.page2.template,"ARTICLE");
+assert.equal(fixture.page2.keyWords.length,5);
+assert.equal(fixture.page2.discussion.length,5);
+assert.match(html,/member-calendar-tab/);
+assert.match(html,/member-list-tab/);
+assert.match(member,/topic-accordions/);
+assert.match(member,/여러분이라면\?/);
+assert.match(member,/quizOptions|quiz\.options/);
+assert.doesNotMatch(member,/Ask & Pass|Round Two|RANDOM WORDS/);
+assert.match(css,/--brand-red:#a9302e/);
+assert.match(app,/첫 장 다시 생성/);
+assert.match(app,/Article 다시 생성/);
+assert.match(app,/articlePlanForRetainedPage/,"Article regeneration must validate a replacement source against the retained first page");
+assert.match(app,/ensureArticleSource\(\{\.\.\.candidate,articleSource:null\}\)/,"Article regeneration must replace its RSS source instead of reusing the old one");
+const cacheVersion=file=>Number(index.match(new RegExp(`${file.replace(".","\\.")}\\?v=(\\d{8})-`))?.[1]||0);
+assert.ok(cacheVersion("topic-v4-generation.js")>=20261013,"prompt-contract changes must publish a fresh client generation module");
+assert.ok(cacheVersion("app.js")>=20261013,"Article regeneration behavior must publish a fresh application module");
+console.log("PASS topic-v4-qa: calendar, accordions, completion modes, regeneration controls");

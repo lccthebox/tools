@@ -2,6 +2,12 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "cleanUrls": true,
   "trailingSlash": true,
+  "functions": {
+    "api/talkflow/*.js": {
+      "regions": ["icn1"],
+      "functionFailoverRegions": ["sin1"]
+    }
+  },
   "headers": [
     {
       "source": "/talkflow/(.*)",

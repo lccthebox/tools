@@ -1,40 +1,9 @@
 {
-  "id": "member-fixture-v4-2026-09-24",
-  "topicVersion": "topic-v4",
-  "date": "2026-09-29",
-  "category": {"en":"WORK & CAREER","ko":"일과 직장"},
-  "title": {"en": "Should You Answer That Message Tonight?", "ko": "오늘 밤 그 메시지에 답해야 할까요?"},
-  "page1": {
-    "story": {
-      "star": "Kim Yuna",
-      "fictional": true,
-      "en": "Yuna is at dinner with her sister when her phone lights up: a message from her manager at 9:14 PM. She reads three lines, then freezes. Her sister rolls her eyes: ‘Congratulations, you work at a hospital now?’ Yuna isn’t sure — last month, a co-worker who never replied at night got passed over for a promotion. Her thumb hovers over the screen. Should she reply now?",
-      "ko": "유나는 언니와 저녁을 먹던 중 밤 9시 14분, 매니저에게 메시지를 받습니다. 내용을 읽은 유나는 순간 멈칫합니다. 언니는 “축하해, 너 이제 병원에서 일하나 보네?”라며 늦은 시간까지 오는 업무 연락을 비꼽니다. 유나가 고민하는 이유가 있습니다. 지난달 퇴근 후 연락에 잘 답하지 않던 동료가 승진에서 제외됐기 때문입니다. 답장을 할까 말까, 유나의 손가락이 휴대폰 화면 위에서 멈춥니다. 유나는 지금 답장해야 할까요?"
-    },
-    "keyWords": [
-      {"en":"freeze","ko":"얼어붙다"},
-      {"en":"hover","ko":"머뭇거리다"},
-      {"en":"passed over","ko":"(승진에서) 밀리다"},
-      {"en":"boundary","ko":"경계, 선"}
-    ],
-    "quickVote": {
-      "question":"What should Yuna do right now?",
-      "options":["Reply now","Wait until Monday","Send ‘I’ll look Monday’"]
-    },
-    "easyTalk": ["Tell us about a time a message landed at the worst possible moment. What were you doing, and how did you react?","What’s your actual system for late-night work messages, and how did you land on it?","Describe the moment you realized a message could wait, or learned the hard way that it couldn’t."],
-    "realTalk": ["Tell us about a time you rushed a reply just to look responsive. What happened, and would you do it again?","How many minutes can a message wait before it starts to feel urgent, and when was that last tested?","Tell us how after-hours messaging really works where you’re from or where you work, with an example."],
-    "todayEnglish": [{"en":"I’ll circle back to this on ___.","ko":"___에 다시 답장할게요."},{"en":"That can wait until morning.","ko":"그건 아침까지 기다려도 돼요."},{"en":"I don’t want to set that precedent.","ko":"그런 선례를 만들고 싶지 않아요."},{"en":"Out of office doesn’t mean out of mind.","ko":"퇴근했다고 신경까지 꺼지는 건 아니죠."}]
-  },
-  "page2": {
-    "randomQuestions": [
-      {"en":"What’s a purchase under $20 that made you happier than you expected?","ko":"2만 원도 안 되는 물건이 기대보다 훨씬 행복하게 해 준 적이 있나요?"},
-      {"en":"If you had one completely free hour today, what would you actually do with it?","ko":"아무 방해 없는 한 시간이 생기면 진짜 뭘 하시겠어요?"},
-      {"en":"What’s a childhood rule you still follow without even thinking about it?","ko":"어릴 때 생긴 규칙인데 지금도 무의식적으로 지키는 게 있나요?"},
-      {"en":"Which chore do you secretly enjoy more than you’d admit?","ko":"은근히 좋아하지만 잘 말하지 않는 집안일이 있나요?"},
-      {"en":"What’s the last thing that made you laugh out loud? What happened?","ko":"최근에 크게 웃었던 일은 무엇이었나요?"}
-    ],
-    "randomWords": [
-      {"en":"Sunday","ko":"일요일"},{"en":"Keys","ko":"열쇠"},{"en":"Rain","ko":"비"},{"en":"Neighbor","ko":"이웃"},{"en":"Coffee","ko":"커피"},{"en":"Silence","ko":"침묵"},{"en":"Photo","ko":"사진"},{"en":"Stranger","ko":"낯선 사람"},{"en":"Playlist","ko":"플레이리스트"},{"en":"Shortcut","ko":"지름길"}
-    ]
-  }
+  "id":"member-fixture-v43","topicVersion":"topic-v4.3","date":"2026-10-01","generationEngine":"v4-topic-v43","standardVersion":"4.3","templateVersion":"topic-v4.3",
+  "title":{"en":"Should You Answer That Message Tonight?","ko":"오늘 밤 그 메시지에 답해야 할까요?"},
+  "category":{"en":"WORK & CAREER","ko":"","color":"#35507A"},
+  "page1":{"template":"A","title":{"en":"Should You Answer That Message Tonight?","ko":"오늘 밤 그 메시지에 답해야 할까요?"},"category":"WORK & CAREER","categoryColor":"#35507A","story":{"star":"Yuna Kim","fictional":true,"en":"Yuna Kim is finishing dinner when a work message appears at 9:14 p.m. Her manager asks for a quick answer, but Yuna promised herself a quiet evening with her sister. Last month, a teammate who ignored late messages missed an important update. Her sister jokes that the phone deserves its own chair. Yuna must decide whether to reply now, set a boundary, or wait until morning.","ko":""},"keyWords":[{"en":"boundary","ko":"경계"},{"en":"urgent","ko":"긴급한"},{"en":"reply","ko":"답장하다"},{"en":"switch off","ko":"일에서 벗어나다"}],"quickVote":{"question":"What should Yuna do?","options":["Reply now","Wait until morning","Send a short boundary message"]},"easyTalk":["When do you stop checking work messages?","What helps you switch off after work?","Which messages feel truly urgent?"],"realTalk":["Should managers contact staff after work?","Does fast replying create unfair expectations?","How do boundaries differ across workplaces?"],"todayEnglish":["I’ll get back to you tomorrow.","Is this time-sensitive?","I’m offline for the evening.","Let’s discuss this during work hours."]},
+  "page2":{"template":"ARTICLE","title":"Why Cities Are Rethinking Public Benches","category":"SOCIAL TRENDS","categoryColor":"#6B4C7A","source":{"publisher":"BBC News · World","category":"SOCIAL TRENDS","title":"Cities debate the future of public seating","url":"https://www.bbc.co.uk/news/world-public-seating","excerpt":"A report on how public benches affect rest, access and the way people use shared streets.","popularityScore":120,"publishedAt":"2026-09-23T12:00:00.000Z"},"article":"Public benches may look like small pieces of street furniture, but they shape who can comfortably use a neighbourhood. Older adults, parents, commuters and people with disabilities often rely on a place to pause. Some cities remove benches to discourage long stays, while others add them to make public spaces more welcoming. Supporters say good seating encourages walking and chance conversations. Critics worry about maintenance costs and misuse. The debate asks whether a city should design its streets mainly for moving through or for spending time together.","keyWords":[{"en":"public space","ko":"공공 공간"},{"en":"commuter","ko":"통근자"},{"en":"maintenance","ko":"유지 관리"},{"en":"welcoming","ko":"환영하는"},{"en":"neighbourhood","ko":"동네"}],"stance":{"question":"Should cities add more public benches?","options":["Yes, in every busy area","Only where people request them","No, streets need less furniture"]},"discussion":["Who benefits most from public benches?","What makes a public space feel welcoming?","Should comfort matter as much as efficiency?","How could cities prevent damage without removing seats?","What shared place in your area needs improvement?"],"quiz":{"question":"What is one reason supporters value benches?","options":["They encourage walking","They replace buses","They reduce rent"],"answer":0}},
+  "topicPlan":{"titleEn":"Should You Answer That Message Tonight?","titleKo":"오늘 밤 그 메시지에 답해야 할까요?","star":"Yuna Kim","category":"WORK & CAREER","page1Template":"A","page1Premise":"A fictional late work-message decision during a quiet evening.","articleTitle":"Why Cities Are Rethinking Public Benches","articleCategory":"SOCIAL TRENDS","page2Premise":"A public-space policy debate about seating in city streets."},
+  "reviewCard":{"coreSituation":"1페이지는 가상의 일상 상황을 바탕으로 한 선택을 다룹니다. 2페이지는 SOCIAL TRENDS 관점의 기사형 토론입니다. 두 장은 서로 다른 출발점에서 의견을 말하게 설계했습니다.","pageOneQuestion":"참여자가 오늘 밤 그 메시지에 답해야 할까요?에 대해 자신의 경험과 기준을 말할 수 있는지 확인합니다.","article":"Cities debate the future of public seating를 바탕으로, Should cities add more public benches?을 토론합니다.","sourceLink":"https://www.bbc.co.uk/news/world-public-seating","leading":"아니오 · 세 가지 선택지를 제공하고 어느 한쪽 답을 정답으로 두지 않습니다.","allAges":"예 · 일상 선택, 관계, 일, 소비처럼 성인 학습자가 자신의 경험으로 답할 수 있는 범위입니다.","english":"문제 없음 · 구조·문장 수·필수 항목 검사를 통과한 뒤 표시됩니다.","overlap":"아니오","final":{"status":"공개 가능","reason":"두 페이지의 카테고리와 소재가 분리되어 있고, 원문 링크를 대조할 수 있습니다."}}
 }

@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=20260811-topic-prep-home">
+  <link rel="stylesheet" href="./styles.css?v=20260928-v43-reset-r1">
   <link rel="stylesheet" href="./conversation.css">
 </head>
 <body>
@@ -48,6 +48,7 @@
       <section id="topic-view" class="view"></section>
       <section id="admin-view" class="view" hidden></section>
       <section id="print-view" class="print-view" hidden></section>
+      <section id="poster-view" class="poster-view" hidden></section>
     </main>
   </div>
 
@@ -96,8 +97,15 @@
     <form method="dialog" class="dialog-card" id="custom-topic-form">
       <div class="dialog-heading"><div><p class="eyebrow">TOPIC PREPARATION</p><h2>토픽 만들기</h2></div><button value="cancel" class="icon-button" aria-label="닫기">×</button></div>
       <input id="custom-date" type="hidden">
+      <section class="topic-category-preferences" aria-labelledby="topic-category-preferences-title">
+        <div><h3 id="topic-category-preferences-title">카테고리 선택</h3><p>1부 대화와 2부 Article의 방향을 직접 정할 수 있습니다. 두 장은 같은 카테고리로 만들 수 없습니다.</p></div>
+        <div class="form-grid">
+          <label>1부 대화 카테고리<select id="custom-page1-category"><option value="auto" selected>자동 선택</option><option value="LIFE">라이프</option><option value="RELATIONSHIPS & FAMILY">관계·가족</option><option value="DINING & LIFESTYLE">라이프스타일</option><option value="CULTURE">컬처·연예</option><option value="SOCIAL TRENDS">소셜 트렌드</option><option value="WORK & CAREER">일·커리어</option><option value="TECH & DIGITAL">테크·디지털</option><option value="ICEBREAKERS">아이스브레이커</option></select></label>
+          <label>2부 Article 카테고리<select id="custom-article-category"><option value="auto" selected>자동 추천</option><option value="SOCIAL TRENDS">소셜 트렌드</option><option value="CULTURE">컬처·연예</option><option value="LIFE">라이프</option><option value="DINING & LIFESTYLE">라이프스타일</option><option value="RELATIONSHIPS & FAMILY">관계·가족</option><option value="WORK & CAREER">일·커리어</option><option value="TECH & DIGITAL">테크·디지털</option><option value="CONSUMER & ECONOMY">금융·경제</option></select></label>
+        </div>
+      </section>
       <section class="topic-create-default" aria-labelledby="auto-topic-title">
-        <div><h3 id="auto-topic-title">새 토픽을 자동으로 준비합니다</h3><p>최근 사용한 주제와 이번 달 구성을 보고 겹치지 않는 토픽을 만듭니다.</p></div>
+        <div><h3 id="auto-topic-title">새 토픽을 자동으로 준비합니다</h3><p>최신 BBC RSS 기사와 이번 달 구성을 바탕으로, 원문 링크가 포함된 토픽을 만듭니다.</p></div>
         <button value="auto" class="button primary topic-create-primary">자동으로 만들기</button>
         <div class="topic-create-guided-entry"><span>원하는 주제가 있나요?</span><button type="button" class="button secondary" id="show-guided-topic" aria-expanded="false" aria-controls="guided-topic-fields">직접 주제 지정하기</button></div>
       </section>
@@ -119,13 +127,13 @@
   <input id="json-import" type="file" accept="application/json,.json" hidden>
   <script src="./sample-topics.js"></script>
   <script src="./anthropic-models.js"></script>
-  <script src="./talkflow-ai-client.js?v=20260812-no-stage-retry"></script>
+  <script src="./talkflow-ai-client.js?v=20261029-safe-reset-r1"></script>
   <script src="./session-workflow.js"></script>
   <script src="./conversation-fixtures.js"></script>
   <script src="./generation-engine.js"></script>
   <script src="./simple-generation.js?v=20260816-flat-transport"></script>
-  <script src="./topic-v4-generation.js?v=20260922-content-reset"></script>
+  <script src="./topic-v4-generation.js?v=20261029-names-r2"></script>
   <script src="./legacy-repair-prompt.js?v=20260809-proxy-contract"></script>
-  <script src="./app.js?v=20260922-content-reset"></script>
+  <script src="./app.js?v=20261029-names-r2"></script>
 </body>
 </html>

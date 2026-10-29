@@ -105,7 +105,17 @@ try {
   check("stored Gist secret is absent from DOM", await page.locator("#gist-token").inputValue() === "");
   check("stored Gist ID is absent from DOM", await page.locator("#gist-id").inputValue() === "");
   await page.getByRole("button", { name: "설정 저장" }).click();
-  check("blank settings save preserves Gist secret", await page.evaluate(() => Boolean(JSON.parse(localStorage.getItem("tb_talkflow_settings_v1")).gistToken)));
+  check("blank settings save keeps Gist secret only for this tab", await page.evaluate(() => !Object.hasOwn(JSON.parse(localStorage.getItem("tb_talkflow_settings_v1")),"gistToken")&&sessionStorage.getItem("tb_talkflow_gist_token_v1")==="test-token"));
+  await page.unroute("https://api.github.com/gists");
+  await page.route("https://api.github.com/gists/imported-gist", route => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ files: { "thebox-talkflow-2026-08.json": { content: "{\\\"topics\\\":{", raw_url: "https://gist.githubusercontent.com/thebox/test/raw/thebox-talkflow-2026-08.json" } } }) }));
+  await page.route("https://gist.githubusercontent.com/thebox/test/raw/thebox-talkflow-2026-08.json", route => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ schema: "thebox-talkflow-v1", topics: {} }) }));
+  await page.evaluate(() => { sessionStorage.removeItem("tb_talkflow_gist_token_v1"); localStorage.setItem("tb_talkflow_settings_v1", "{}"); });
+  await page.reload({ waitUntil: "networkidle" });
+  await page.locator("#gist-token").fill("new-desktop-token");
+  await page.locator("#gist-id").fill("imported-gist");
+  await page.getByRole("button", { name: "Gist 불러오기" }).click();
+  await page.waitForFunction(() => document.querySelector("#notice")?.textContent.includes("Gist에서 불러왔습니다."));
+  check("Gist pull uses a just-entered token and the complete raw file", await page.locator("#notice").textContent().then(text => text.includes("Gist에서 불러왔습니다.")));
   await page.keyboard.press("Escape");
   await page.waitForFunction(() => !document.querySelector("#notice").classList.contains("show"));
 

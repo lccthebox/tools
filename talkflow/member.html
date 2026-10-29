@@ -8,10 +8,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/talkflow/member.css?v=topic-v4-reset">
+  <link rel="stylesheet" href="/talkflow/member.css?v=20260927-rss-source-r2">
 </head>
 <body>
-  <a class="skip-link" href="#topic">오늘의 토픽으로 건너뛰기</a>
+  <a class="skip-link" href="#member-login-form">멤버 확인으로 건너뛰기</a>
   <header class="member-header">
     <a class="member-brand" href="/talkflow/member/"><span aria-hidden="true">T</span><strong>TheBox Topic</strong></a>
     <button id="member-logout" class="quiet-button" type="button" hidden>로그아웃</button>
@@ -30,20 +30,15 @@
     </section>
 
     <section id="member-topic-view" class="topic-view" hidden>
-      <header class="topic-toolbar">
-        <div><p class="eyebrow">TODAY’S TOPIC</p><h1 id="member-month-label"></h1></div>
-        <div class="month-controls" aria-label="월 이동"><button id="member-prev-month" type="button" aria-label="이전 달">←</button><button id="member-next-month" type="button" aria-label="다음 달">→</button></div>
-      </header>
-      <nav id="member-date-list" class="date-list" aria-label="토픽 날짜"></nav>
-      <details class="history-panel">
-        <summary><span>내 토픽 기록</span><strong id="member-history-count">0개 완료</strong></summary>
-        <div id="member-history-list" class="history-list"></div>
-      </details>
+      <header class="topic-toolbar"><div><p class="eyebrow">TODAY’S TOPIC</p><h1 id="member-month-label"></h1></div><div class="month-controls" aria-label="월 이동"><button id="member-prev-month" type="button" aria-label="이전 달">←</button><button id="member-next-month" type="button" aria-label="다음 달">→</button></div></header>
+      <nav class="member-view-tabs" aria-label="월 탐색"><button id="member-calendar-tab" type="button" aria-current="page">달력으로 보기</button><button id="member-list-tab" type="button">리스트로 보기</button></nav>
+      <section id="member-browser" class="member-browser" aria-label="월별 토픽"></section>
+      <section id="member-history" aria-label="내가 읽은 토픽"></section>
       <article id="topic" class="topic-document" tabindex="-1"></article>
     </section>
   </main>
 
   <script src="/talkflow/sample-topics.js"></script>
-  <script src="/talkflow/member.js?v=topic-v4-reset"></script>
+  <script src="/talkflow/member.js?v=20261001-login-guard-r1"></script>
 </body>
 </html>
