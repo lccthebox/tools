@@ -46,6 +46,16 @@ assert.ok(Array.isArray(migratedMixedIdentity.page1.quickVote.options),"legacy n
   assert.equal(new Set(monthStars).size,monthStars.length,`stars must not repeat within a month: ${monthStars.join(",")}`);
   assert.equal(monthStars[0],"Jungsu","the earliest date keeps its original star");
   assert.ok(month.every(item=>item.page1.quickVote.question===`What should ${item.page1.story.star} do?`&&item.topicPlan.star===item.page1.story.star),"a renamed star is applied to the plan, story and Quick Vote together");
+  const sourceWith=title=>({...topic.page2.source,title});
+  assert.equal(TopicV4.isSafeArticleSource(sourceWith("Flood risk is a time bomb for insurers")),true,"the idiom time bomb is not a violence signal");
+  assert.equal(TopicV4.isSafeArticleSource(sourceWith("Attackers exploit an old browser bug")),true,"exploiting a software bug is not exploitation of people");
+  assert.equal(TopicV4.isSafeArticleSource(sourceWith("A bomb exploded downtown")),false,"real violence stays blocked");
+  assert.equal(TopicV4.isSafeArticleSource(sourceWith("Sexual exploitation case reopened")),false,"exploitation of people stays blocked");
+  const flagged={...topic,generationEngine:TopicV4.VERSION,topicPlan:plan,page2:{...topic.page2,article:`${topic.page2.article} Early chat rooms were also full of harassment.`}};
+  flagged.reviewCard=TopicV4.reviewCard(flagged);
+  assert.equal(TopicV4.evaluate(flagged).ready,false,"an unapproved draft with a sensitive word is blocked");
+  const approvedFlagged={...flagged,quality:{status:"approved"}},approvedResult=TopicV4.evaluate(approvedFlagged);
+  assert.ok(approvedResult.ready&&approvedResult.warnings.some(item=>item.location==="page2.safety"),"an operator-approved topic keeps printing and shows the sensitive word as a warning");
   const rmStars=[12,15,17,19,20].map(day=>TopicV4.migrateLegacyRmTopic(monthTopic(day,"RM")).page1.story.star);
   assert.equal(new Set(rmStars).size,rmStars.length,`legacy RM stories on different days must not collapse onto one star: ${rmStars.join(",")}`);
   assert.equal(TopicV4.validateContent({...topic,page1:{...topic.page1,story:{...topic.page1.story,en:`${topic.page1.story.en} It brings her joy and something new.`}}},plan).issues.some(item=>item.location==="page1.starConsistency"),false,"ordinary words like joy and new must not count as other people's names");
