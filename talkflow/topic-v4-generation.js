@@ -101,7 +101,43 @@ const AUTO_PAGE_ONE_LANES=Object.freeze([
   {category:"LIFE",titleEn:"A Weekend Walk",titleKo:"주말 산책",premise:"Taking a short walk and noticing one new thing nearby."},
   {category:"RELATIONSHIPS & FAMILY",titleEn:"The Shared Plan",titleKo:"함께 정하는 계획",premise:"Finding a fair way for friends to choose a simple weekend activity."},
   {category:"DINING & LIFESTYLE",titleEn:"The Last Slice",titleKo:"마지막 한 조각",premise:"Deciding when to save a favorite snack and when to share it."},
-  {category:"CULTURE",titleEn:"A New Hobby",titleKo:"새로운 취미",premise:"Choosing whether to begin a small creative hobby with no pressure to be perfect."}
+  {category:"CULTURE",titleEn:"A New Hobby",titleKo:"새로운 취미",premise:"Choosing whether to begin a small creative hobby with no pressure to be perfect."},
+  {category:"LIFE",titleEn:"The Early Alarm",titleKo:"이른 알람",premise:"Deciding whether to get up with the first alarm or sleep ten more minutes."},
+  {category:"LIFE",titleEn:"Rainy Day Plans",titleKo:"비 오는 날의 계획",premise:"Changing outdoor plans when it suddenly starts to rain."},
+  {category:"LIFE",titleEn:"The Messy Drawer",titleKo:"엉망인 서랍",premise:"Deciding when to finally clean out one messy drawer at home."},
+  {category:"LIFE",titleEn:"Lost Umbrella",titleKo:"잃어버린 우산",premise:"Choosing what to do after leaving an umbrella on the bus."},
+  {category:"LIFE",titleEn:"The Long Commute",titleKo:"긴 출퇴근길",premise:"Finding a good way to use a long daily commute."},
+  {category:"RELATIONSHIPS & FAMILY",titleEn:"The Birthday Gift",titleKo:"생일 선물",premise:"Choosing a birthday gift for a friend who says they want nothing."},
+  {category:"RELATIONSHIPS & FAMILY",titleEn:"The Group Chat",titleKo:"단체 채팅방",premise:"Deciding whether to answer a busy group chat right away."},
+  {category:"RELATIONSHIPS & FAMILY",titleEn:"Sunday Phone Call",titleKo:"일요일 안부 전화",premise:"Making time for a weekly call with a parent."},
+  {category:"RELATIONSHIPS & FAMILY",titleEn:"The Borrowed Book",titleKo:"빌린 책",premise:"Deciding how to ask a friend to return a borrowed book."},
+  {category:"RELATIONSHIPS & FAMILY",titleEn:"Holiday Seating",titleKo:"명절 자리 배치",premise:"Choosing where everyone sits at a family dinner."},
+  {category:"DINING & LIFESTYLE",titleEn:"The New Cafe",titleKo:"새로 생긴 카페",premise:"Choosing between a favorite cafe and a new one down the street."},
+  {category:"DINING & LIFESTYLE",titleEn:"Lunch Box",titleKo:"도시락",premise:"Deciding whether to pack lunch or eat out during a busy week."},
+  {category:"DINING & LIFESTYLE",titleEn:"Spicy or Mild",titleKo:"매운맛 순한맛",premise:"Ordering for a group when people like different levels of spice."},
+  {category:"DINING & LIFESTYLE",titleEn:"The Leftover Plan",titleKo:"남은 음식 활용법",premise:"Deciding what to do with leftovers from a big dinner."},
+  {category:"DINING & LIFESTYLE",titleEn:"Picnic Basket",titleKo:"피크닉 바구니",premise:"Planning what to bring for a simple picnic in the park."},
+  {category:"CULTURE",titleEn:"The Concert Ticket",titleKo:"콘서트 티켓",premise:"Deciding whether to buy an expensive ticket for a favorite band."},
+  {category:"CULTURE",titleEn:"Movie Night",titleKo:"영화 보는 밤",premise:"Choosing one movie when friends want different genres."},
+  {category:"CULTURE",titleEn:"The Museum Visit",titleKo:"미술관 나들이",premise:"Deciding how long to stay at a museum on a free afternoon."},
+  {category:"CULTURE",titleEn:"A Song for the Road",titleKo:"드라이브 노래",premise:"Picking music for a long drive with friends."},
+  {category:"SOCIAL TRENDS",titleEn:"The Shared Desk",titleKo:"함께 쓰는 책상",premise:"Sharing a desk at a busy co-working space."},
+  {category:"SOCIAL TRENDS",titleEn:"Quiet Carriage",titleKo:"조용한 객차",premise:"Deciding what to do when someone talks loudly on a quiet train."},
+  {category:"SOCIAL TRENDS",titleEn:"The Tip Jar",titleKo:"팁 상자",premise:"Deciding whether to leave a tip at a small coffee stand."},
+  {category:"SOCIAL TRENDS",titleEn:"Neighbourhood Notice",titleKo:"동네 게시판",premise:"Writing a friendly note to neighbours about a shared space."},
+  {category:"CONSUMER & ECONOMY",titleEn:"The Sale Sign",titleKo:"세일 표시",premise:"Deciding whether a big discount is really a good deal."},
+  {category:"CONSUMER & ECONOMY",titleEn:"Second-Hand Find",titleKo:"중고 득템",premise:"Choosing between a new item and a cheaper used one."},
+  {category:"CONSUMER & ECONOMY",titleEn:"The Monthly Budget",titleKo:"한 달 예산",premise:"Planning a simple budget for the month ahead."},
+  {category:"CONSUMER & ECONOMY",titleEn:"Subscription Check",titleKo:"구독 점검",premise:"Deciding which monthly subscriptions to keep."},
+  {category:"WORK & CAREER",titleEn:"The First Day",titleKo:"첫 출근",premise:"Making a good start on the first day at a new job."},
+  {category:"WORK & CAREER",titleEn:"The Lunch Meeting",titleKo:"점심 회의",premise:"Deciding whether to join a lunch meeting or take a real break."},
+  {category:"WORK & CAREER",titleEn:"A New Skill",titleKo:"새로운 기술",premise:"Choosing one small skill to learn for work this month."},
+  {category:"WORK & CAREER",titleEn:"The Team Photo",titleKo:"팀 사진",premise:"Organizing a team photo when everyone is busy."},
+  {category:"TECH & DIGITAL",titleEn:"The Phone Update",titleKo:"휴대폰 업데이트",premise:"Deciding whether to update a phone right away or wait."},
+  {category:"TECH & DIGITAL",titleEn:"Photo Overload",titleKo:"사진 정리",premise:"Sorting thousands of photos on a phone."},
+  {category:"TECH & DIGITAL",titleEn:"The Smart Speaker",titleKo:"스마트 스피커",premise:"Deciding whether a smart speaker is useful at home."},
+  {category:"TECH & DIGITAL",titleEn:"Map or Memory",titleKo:"지도 앱 vs 기억",premise:"Choosing between a map app and finding the way from memory."},
+  {category:"TECH & DIGITAL",titleEn:"The Password Reset",titleKo:"비밀번호 재설정",premise:"Dealing with a forgotten password on a busy morning."}
 ]);
 const AUTO_ICEBREAKER_LANES=Object.freeze([
   {titleEn:"The Perfect Break",titleKo:"나에게 맞는 휴식",premise:"Light questions about how people spend a short, ordinary break during a busy week."},
@@ -111,7 +147,19 @@ const AUTO_ICEBREAKER_LANES=Object.freeze([
   {titleEn:"A Simple Plan",titleKo:"간단한 계획",premise:"Light questions about making easy plans with friends when everyone wants something different."},
   {titleEn:"One Thing to Try",titleKo:"새로 해 보고 싶은 것",premise:"Light questions about trying a low-pressure activity, food, or hobby for the first time."},
   {titleEn:"Home or Out?",titleKo:"집에서, 밖에서",premise:"Light questions about choosing between a quiet evening at home and a casual outing."},
-  {titleEn:"Everyday Favourites",titleKo:"일상의 최애",premise:"Light questions about the familiar items, places, and routines people enjoy most."}
+  {titleEn:"Everyday Favourites",titleKo:"일상의 최애",premise:"Light questions about the familiar items, places, and routines people enjoy most."},
+  {titleEn:"Your Perfect Sunday",titleKo:"나의 완벽한 일요일",premise:"Light questions about how people like to spend an ideal Sunday."},
+  {titleEn:"Food Memories",titleKo:"음식에 얽힌 추억",premise:"Light questions about favourite foods and the memories behind them."},
+  {titleEn:"Travel Mood",titleKo:"여행 취향",premise:"Light questions about simple travel preferences and dream trips."},
+  {titleEn:"Morning or Night",titleKo:"아침형 저녁형",premise:"Light questions about being a morning person or a night owl."},
+  {titleEn:"Small Habits",titleKo:"작은 습관",premise:"Light questions about tiny daily habits that make life easier."},
+  {titleEn:"Seasons and You",titleKo:"계절과 나",premise:"Light questions about favourite seasons and seasonal activities."},
+  {titleEn:"Music Moments",titleKo:"음악이 있는 순간",premise:"Light questions about songs that fit different moments of the day."},
+  {titleEn:"City or Nature",titleKo:"도시와 자연",premise:"Light questions about choosing between city fun and quiet nature."},
+  {titleEn:"Childhood Favourites",titleKo:"어릴 적 최애",premise:"Light questions about favourite games, snacks, and shows from childhood."},
+  {titleEn:"Weekend Treats",titleKo:"주말의 작은 사치",premise:"Light questions about small treats people enjoy on weekends."},
+  {titleEn:"Home Comforts",titleKo:"집에서의 편안함",premise:"Light questions about what makes a home feel comfortable."},
+  {titleEn:"Learning Something New",titleKo:"새로운 배움",premise:"Light questions about things people would like to learn for fun."}
 ]);
 function stableSeed(value){return String(value||"").split("").reduce((sum,char)=>sum+char.charCodeAt(0),0)}
 function pageOneHistoryMatches(plan,topic={}){const title=clean(plan?.titleEn).toLowerCase(),premise=clean(plan?.page1Premise),template=clean(plan?.page1Template);return(Array.isArray(topic?.recentPageOnes)?topic.recentPageOnes:[]).some(item=>{const previousTitle=clean(item?.titleEn||item?.title).toLowerCase(),previousPremise=clean(item?.premise);if(previousTitle&&title===previousTitle)return true;return template!=="B"&&previousPremise&&premise&&premisesOverlap(premise,previousPremise)})}
