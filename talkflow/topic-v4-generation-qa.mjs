@@ -53,6 +53,14 @@ assert.ok(Array.isArray(migratedMixedIdentity.page1.quickVote.options),"legacy n
   assert.equal(compoundMigrated.page1.quickVote.options[0],"A Down-filled jacket","Down-filled must not become a colleague");
   assert.match(compoundMigrated.page1.story.en,/A colleague laughs\. Go-to snacks/,"a romanized name is replaced while Go-to stays");
   assert.equal(TopicV4.validateContent(compound,plan).issues.find(item=>item.location==="page1.starConsistency")?.message.includes("Screen-Free"),false,"English compounds are not reported as other people's names");
+  // A month of automatic topics must not run out of Page 1 titles and fall back to repeats or "X: Y" variants.
+  const monthPlans=[];
+  for(let day=1;day<=26;day++)monthPlans.push(TopicV4.buildStablePlan({date:`2026-11-${String(day).padStart(2,"0")}`,page1Template:"A",selectedStar:"Namjoon",articleSource:topic.page2.source,recentPageOnes:monthPlans.map(item=>({titleEn:item.titleEn,premise:item.page1Premise}))}));
+  assert.equal(new Set(monthPlans.map(item=>item.titleEn)).size,26,"26 days of story topics get 26 different titles");
+  assert.equal(monthPlans.filter(item=>item.titleEn.includes(":")).length,0,"a month never needs fallback title variants");
+  const icePlans=[];
+  for(let day=1;day<=12;day++)icePlans.push(TopicV4.buildStablePlan({date:`2026-11-${String(day).padStart(2,"0")}`,page1Template:"B",selectedStar:"Namjoon",articleSource:topic.page2.source,recentPageOnes:icePlans.map(item=>({titleEn:item.titleEn,premise:item.page1Premise}))}));
+  assert.equal(new Set(icePlans.map(item=>item.titleEn)).size,12,"12 icebreaker topics get 12 different titles");
   const sourceWith=title=>({...topic.page2.source,title});
   assert.equal(TopicV4.isSafeArticleSource(sourceWith("Flood risk is a time bomb for insurers")),true,"the idiom time bomb is not a violence signal");
   assert.equal(TopicV4.isSafeArticleSource(sourceWith("Attackers exploit an old browser bug")),true,"exploiting a software bug is not exploitation of people");
