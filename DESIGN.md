@@ -1,20 +1,35 @@
 # TheBox Talk Flow Design Contract
 
-## Active direction: TheBox Topic v4.1 MASTER
+## Active direction: TheBox Topic v4.3 MASTER
 
-- Each topic is exactly two A4 pages. Page 1 is Template A Story (70%) or Template B Icebreakers (30%); Page 2 is always Article/Advanced.
+### Member reading surface: supplied mobile / desktop reference contract
+
+- The supplied `thebox-app-mobile-color-spec` plus the companion mobile and desktop HTML are the visual source of truth for the member route. This is a presentation-only contract; data loading, completion records, topic expansion, and calendar behavior remain unchanged.
+- App identity is `#A9302E`; category is an existing dynamic `--category` value; ink is `#1C1C1A`; supporting gray is `#5F5F58` / `#96968D`; rules are `#E8E7E2`; canvas is `#FAFAF9`; surfaces are white. Brand red is never reused as a topic-category color.
+- The member surface uses Noto Sans KR only. It has one 1000px desktop column with 36px page inset and a 375px mobile column with 18px inset. Mobile and desktop share the same hierarchy rather than distinct products.
+- Header anatomy: white 30px rounded red T mark, 15px brand name, and a quiet outlined logout control. The topic header uses a 10.5px uppercase gray eyebrow, 26px month title, compact tabs, and 32px outlined month controls.
+- The calendar and expanded topic use one white, 14px-radius, 1px-rule surface. Calendar availability, selected topic categories, and completion checks are the existing DOM states; CSS must not fabricate topic data or completion counts.
+- Topic accordions have a compact category-and-title header. Expanded editorial blocks use 12px uppercase category labels, 14.5px / 1.75 story text, thin rules, four compact key-word chips, and light option rows. The two existing completion forms are the only filled or emphasized surfaces.
+- At 640px and below: header inset is 18px, document inset is 18px, month controls are 32px, calendar cells remain one row of seven days, accordion headers stack category above title, key words become two columns, and all question/option material becomes a single readable column. CJK content uses `word-break: keep-all` with normal overflow wrapping.
+
+- Each topic is exactly two A4 pages. Page 1 is Template A Story (85%) or Template B Icebreakers (15%), set once by `TEMPLATE_A_PERCENT` in `talkflow/topic-v4-generation.js`; Page 2 is always Article/Advanced. Page 2 is sourced first, then Page 1 is planned with a different category and a materially unrelated premise.
 - Template A contains TODAY'S STORY, four KEY WORDS, QUICK VOTE, three EASY TALK questions, three REAL TALK questions, and four TODAY'S ENGLISH expressions.
 - Template B contains six RANDOM QUESTIONS and six BALANCE GAME rows. RANDOM WORDS is prohibited.
 - Article contains TODAY'S ARTICLE, five KEY WORDS, YOUR STANCE with three choices, and five DISCUSSION questions.
 - Story names come from the approved Korean K-pop/K-sports list and only appear in explicitly fictional, universal situations.
-- Page categories differ and permanently map to the v4.1 category palette. Print and member screens use the same category colors.
+- Page categories differ and permanently map to the v4.3 category palette. Print and member screens use the same category colors.
 - A4 is 794×1123px with 44px vertical and 52px horizontal padding. Source Serif 4 is reserved for the main title; Noto Sans KR owns all other text.
-- Member navigation is calendar-first. Calendar cells show availability without titles; the monthly list shows date, category, and title.
-- A published topic opens as two independent category-and-title accordions. Page 1 saves “여러분이라면?”; Article saves a three-choice comprehension check.
+- Member navigation is calendar-first. Its two view labels are `달력으로 보기` and `리스트로 보기`; calendar cells show availability without titles and the monthly list shows date, category, and title.
+- A published topic opens as two independent category-and-title accordions, both collapsed by default. Page 1 saves “여러분이라면?”; Article saves a three-choice comprehension check.
+- `내가 읽은 토픽 보기` is a closed-by-default personal disclosure below the month browser. It lists only the signed-in member’s saved reading records for the active month, never changes shared topic content, and each row returns to that topic.
+- RSS-based Articles place one compact `ORIGINAL SOURCE` citation between the Article label and learning adaptation. It uses the Article category color, the existing hairline rule, a 12.5px linked publisher/title line, and no extra surface.
 - Brand red `#A9302E` is limited to app identity and date/status accents. Category colors are `#35507A`, `#B25C39`, `#6B4C7A`, `#9C7A1E`, `#A65166`, `#2C6E6B`, `#1F4D3D`, and `#355E3B`.
-- Member entry is a compact identity gate, not a landing-page hero. On phones the brand header, introduction, and form start in the first viewport with 24–40px vertical rhythm; no viewport-centering or decorative empty band may push the form below the fold. The canvas uses `#F7F7F6`, brand identity uses `#A9302E`, form surfaces stay white, and the confirmation action uses evergreen `#2B5940`.
+- Member entry is a compact identity gate, not a landing-page hero. It accepts the existing name, phone number, and birth-date confirmation fields. The Member Lounge’s one-time handoff may also open the same signed-in topic view automatically. On phones the brand header, introduction, and form start in the first viewport with 24–40px vertical rhythm; no viewport-centering or decorative empty band may push the form below the fold. The canvas uses `#F7F7F6`, brand identity uses `#A9302E`, form surfaces stay white, and the confirmation action uses evergreen `#2B5940`.
 - Member entry inputs must stay white in browser autofill, retain a 48px minimum target, and use the existing evergreen focus ring. The login card uses one quiet border and the existing low-elevation shadow.
-- New v4.1 content never includes legacy Jury, leader, session, activity, Round Two, Random Words, host, or timing blocks.
+- New v4.3 content never includes legacy Jury, leader, session, activity, Round Two, Random Words, host, or timing blocks. A manager-only Korean review card exposes the Article source link and blocks approval when its final judgment is `수정 필요`; it is never included in print or member content. Published topics may also show a compact, manager-only unique-member count (`멤버 열람 N명`) without member names.
+- The manager-only monthly poster is a separate B4 landscape print surface, never part of member routes. Its exact paper box is 364mm × 257mm with 14mm / 16mm / 10mm top-side-bottom inset, a `#EDECE6` preview canvas, and a white printed page.
+- Poster hierarchy is limited to red English month plus ink year, `THE BOX TOPIC`, a 3px red header rule, white weekday type on a red bar, a dynamic 5-or-6-row calendar grid, and centered `B` mark plus `THE BOX` footer. Cells contain only a red date and, where present, one colored 7px category dot plus an auto-fit 2–6-word topic phrase. They never expose category labels, activity names, source links, full questions, badges, or secondary visual decoration. Poster dots intentionally use the reduced five-tone `POSTER_CATEGORY_COLORS` set in `talkflow/app.js` (navy, gold, wine, rose, green), not the eight page colors, so a month reads as a few calm groups.
+- The poster’s print CSS page size is installed only while this view is active so regular A4 handout printing retains its own page setting. Calendar rows use dynamic equal `1fr` tracks and the phrase renderer reduces only from 16.5px to 11px if needed; it does not clip a phrase.
 
 The blocks are editorial content, not nested cards. Only the existing completion
 form may use a filled surface.
@@ -103,6 +118,7 @@ Talk Flow is an operational tool for a non-technical study coordinator, a discus
 - `month-calendar`: weekday header, operating day, non-operating day, empty, review, printable, and used states.
 - `date-action`: automatic generation and guided generation states for an empty operating date.
 - `topic-create-dialog`: automatic generation is the default state with no topic input; guided topic input and optional source/avoidance/direction controls are progressive disclosures. Guided validation is inline and never uses native required bubbles.
+- `topic-category-preferences`: visible two-select control inside the existing topic-create dialog. Page 1 supports automatic, everyday-category, and icebreaker choices; Article supports automatic or one exact RSS category. The same explicit category on both selects is an inline generation block, never a silent fallback.
 - `generation-progress`: four concise status messages without storage, API, prompt, or schema details.
 - `operator-review`: scaled A4 preview, location-specific diagnostics, partial repair, separated preview and approval actions.
 - `two-page-preview`: page-one and page-two thumbnails side by side on desktop and stacked on mobile; opens a full-size, keyboard-dismissable A4 dialog.
@@ -165,6 +181,9 @@ Talk Flow is an operational tool for a non-technical study coordinator, a discus
 - Approval is driven by B1–B11 blockers and W1–W12 warnings. Any blocker disables approval; warnings stay visible but do not prevent approval.
 - Student and leader modes share one renderer; leader mode only appends leader-note blocks and a data-derived TIME CUT line.
 - Automatic generation saves a review draft and never approves it. Existing or approved dates are never overwritten.
+- Page 1 uses one deterministic, real Korean-star display name from the approved roster. A name already used by another completed topic in the same month is unavailable; the generator and validator receive the same selected name, so a repeated name cannot pass as a Plan.
+- Member visibility begins on 2026-10-01. The member API filters older topic and completion-record dates, the member calendar cannot navigate earlier than October 2026, and pre-launch dates remain administrator-only.
+- The v4.1 review actions include a danger-styled delete control. Deleting a topic removes its local administrator draft and its same-date shared member publication after explicit confirmation.
 - Printed sections use a shared white-surface, deep-green left rule, charcoal body, neutral bordered phrase-chip system, and remain separable in grayscale.
 
 ## 8. Accepted debt

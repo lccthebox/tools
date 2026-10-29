@@ -39,23 +39,23 @@ Content Fill은 서버가 소유한 얕은 transport schema로 구조만 제한�
 - Anthropic 키는 서버 환경변수에서만 읽습니다.
 - 관리자 비밀번호는 scrypt hash로만 저장하며 로그인 후 HttpOnly·Secure·SameSite=Strict 세션 cookie를 사용합니다.
 - 이전 버전이 브라우저 설정에 저장한 Anthropic 키가 있으면 AI 설정의 `안전하게 삭제`를 한 번 사용합니다. 다른 Talk Flow 설정과 토픽은 유지됩니다.
-- Gist token은 기존 동작을 유지하며 JSON/viewer export에 Anthropic 키나 관리자 비밀번호가 포함되지 않습니다.
+- Gist token은 브라우저 탭(sessionStorage)에만 보관하며 탭을 닫으면 사라집니다. JSON/viewer export에 Anthropic 키나 관리자 비밀번호가 포함되지 않습니다.
+- v4.3 전환 시 이 브라우저의 이전 토픽은 `tb_talkflow_reset_backup`에 한 번 백업한 뒤 비웁니다. 저장 공간이 부족하면 이 백업을 먼저 비웁니다. 멤버 공개 저장소에서는 v4.3이 아닌 토픽만 정리합니다.
 - 기존 승인 토픽, 실패 초안, 이전 형식 토픽과 `/topics/`는 자동 수정하지 않습니다.
 
 ## QA
 
+배포 전에는 현행 QA 전체를 병렬로 실행합니다. 하나라도 실패하면 종료 코드가 1입니다.
+
 ```powershell
-node talkflow/proxy-security-qa.mjs
-node talkflow/auth-regression-qa.mjs
-node talkflow/connection-qa.mjs
-node talkflow/model-qa.mjs
-node talkflow/simple-qa.mjs
-node talkflow/structured-content-qa.mjs
-node talkflow/generation-engine-qa.mjs
-node talkflow/conversation-qa.mjs
-node talkflow/qa.mjs
-node talkflow/navigation-qa.mjs
-node talkflow/print-qa.mjs
+node talkflow/run-qa.mjs
+```
+
+- `node talkflow/run-qa.mjs topic-v4`처럼 이름 일부를 주면 해당 스크립트만 실행합니다. `--jobs=N`으로 동시 실행 수를 바꿉니다.
+- v4.3 이전 화면(리더 인쇄물, 샘플 토픽, Simple/v2 엔진)용 스크립트는 기본에서 제외되며 `--all`로 함께 실행합니다. 목록과 이유는 `run-qa.mjs` 상단에 있습니다.
+- 배포 주소나 내보낸 토픽 파일이 필요한 스크립트는 직접 실행합니다.
+
+```powershell
 node talkflow/preview-qa.mjs https://<preview-host>/talkflow/
 ```
 

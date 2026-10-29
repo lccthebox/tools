@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 
-const root=new URL("./",import.meta.url),fixture=JSON.parse(await readFile(new URL("fixtures/member-topic.json",root),"utf8")),member=await readFile(new URL("member.js",root),"utf8"),html=await readFile(new URL("member.html",root),"utf8"),css=await readFile(new URL("member.css",root),"utf8"),app=await readFile(new URL("app.js",root),"utf8");
-assert.equal(fixture.topicVersion,"topic-v4.1");
+const root=new URL("./",import.meta.url),fixture=JSON.parse(await readFile(new URL("fixtures/member-topic.json",root),"utf8")),member=await readFile(new URL("member.js",root),"utf8"),html=await readFile(new URL("member.html",root),"utf8"),index=await readFile(new URL("index.html",root),"utf8"),css=await readFile(new URL("member.css",root),"utf8"),app=await readFile(new URL("app.js",root),"utf8");
+assert.equal(fixture.topicVersion,"topic-v4.3");
 assert.equal(fixture.page1.story.fictional,true);
 assert.equal(fixture.page1.keyWords.length,4);
 assert.equal(fixture.page2.template,"ARTICLE");
@@ -17,4 +17,9 @@ assert.doesNotMatch(member,/Ask & Pass|Round Two|RANDOM WORDS/);
 assert.match(css,/--brand-red:#a9302e/);
 assert.match(app,/첫 장 다시 생성/);
 assert.match(app,/Article 다시 생성/);
+assert.match(app,/articlePlanForRetainedPage/,"Article regeneration must validate a replacement source against the retained first page");
+assert.match(app,/ensureArticleSource\(\{\.\.\.candidate,articleSource:null\}\)/,"Article regeneration must replace its RSS source instead of reusing the old one");
+const cacheVersion=file=>Number(index.match(new RegExp(`${file.replace(".","\\.")}\\?v=(\\d{8})-`))?.[1]||0);
+assert.ok(cacheVersion("topic-v4-generation.js")>=20261013,"prompt-contract changes must publish a fresh client generation module");
+assert.ok(cacheVersion("app.js")>=20261013,"Article regeneration behavior must publish a fresh application module");
 console.log("PASS topic-v4-qa: calendar, accordions, completion modes, regeneration controls");

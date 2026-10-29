@@ -1,6 +1,6 @@
 (function () {
   "use strict";
-  const KEYS={data:"tb_talkflow_v1",settings:"tb_talkflow_settings_v1",drafts:"tb_talkflow_drafts_v1",versions:"tb_talkflow_versions_v1",feedback:"tb_talkflow_feedback_v1"};
+  const KEYS={data:"tb_talkflow_v1",settings:"tb_talkflow_settings_v1",gistToken:"tb_talkflow_gist_token_v1",drafts:"tb_talkflow_drafts_v1",versions:"tb_talkflow_versions_v1",feedback:"tb_talkflow_feedback_v1",articleHistory:"tb_talkflow_article_history_v1",pageOneHistory:"tb_talkflow_page_one_history_v1",topicReset:"tb_talkflow_topic_reset_v43",publishedReset:"tb_talkflow_published_reset_v43",resetBackup:"tb_talkflow_reset_backup"};
   const STANDARD={version:"2",studentTemplate:"student-v4",leaderTemplate:"leader-v4"};
   const SECTION_KEYS=["hook","goal","smallTalk","quickActivity","easyEntry","mainDiscussion","midGame","usefulPhrases","finalRound"];
   const SECTION_LABELS=["Topic Hook","Today's Goal","Small Talk","Quick Activity","Easy Entry","Main Discussion","Mid-game","Useful Phrases","Final Round"];
@@ -15,35 +15,68 @@
   const esc=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const koTitle=value=>esc(value).replace(/ (?=\S+$)/,"&nbsp;");
   const clone=value=>JSON.parse(JSON.stringify(value));
+  // Server and Gist calls give up after a bounded wait so login, publish and delete never hang the screen.
+  const timedFetch=(url,init={},milliseconds=20000)=>fetch(url,{...init,signal:init.signal||(AbortSignal.timeout?AbortSignal.timeout(milliseconds):undefined)});
   let legacyApiKeyPresent=false,aiServerState={checked:false,configured:false,authenticated:false,model:"Claude Sonnet 4.6"};
+  let topicViewsByDate={},topicViewsMonth="";
   let topics=loadTopics(),settings=loadSettings(),activeDate=Object.keys(topics).sort()[0]||today(),cursor=new Date("2026-08-01T12:00:00"),view="prepare",prepareMode="tasks",prepareFilter="all",drawerDate="",drawerReturnFocusDate="",detailTab="review",previewPage="1",previewZoom="fit",settingsPanel="ai",historyIndex=0,isRestoringRoute=false,dirty=false;
   let printDates=new Set();
+  let publishedPrint={active:false,loading:false,error:"",copies:1};
   const generationsInFlight=new Set();
+  const POSTER_CATEGORY_COLORS={
+    "WORK & CAREER":"#2A4B8D",
+    "TECH & DIGITAL":"#2A4B8D",
+    "DINING & LIFESTYLE":"#B8860B",
+    "SOCIAL TRENDS":"#B8860B",
+    "CULTURE":"#B8860B",
+    "CONSUMER & ECONOMY":"#7A2333",
+    "RELATIONSHIPS & FAMILY":"#B23A5C",
+    "LIFE":"#2F6F4F",
+    "ICEBREAKERS":"#2F6F4F"
+  };
+  const categoryPreference=value=>{const category=String(value||"").trim().toUpperCase();return TopicV4?.CATEGORIES?.[category]?category:"auto"};
+  const articleCategoryPreference=value=>{const category=categoryPreference(value);return category==="ICEBREAKERS"?"auto":category};
+  const hasCategoryConflict=(page1Category,articleCategory)=>page1Category!=="auto"&&articleCategory!=="auto"&&page1Category===articleCategory;
+  const categoryOptions=(kind="page1")=>{const options=kind==="page1"?[['auto','자동 선택'],['LIFE','라이프'],['RELATIONSHIPS & FAMILY','관계·가족'],['DINING & LIFESTYLE','라이프스타일'],['CULTURE','컬처·연예'],['SOCIAL TRENDS','소셜 트렌드'],['WORK & CAREER','일·커리어'],['TECH & DIGITAL','테크·디지털'],['ICEBREAKERS','아이스브레이커']]:[['auto','자동 추천'],['SOCIAL TRENDS','소셜 트렌드'],['CULTURE','컬처·연예'],['LIFE','라이프'],['DINING & LIFESTYLE','라이프스타일'],['RELATIONSHIPS & FAMILY','관계·가족'],['WORK & CAREER','일·커리어'],['TECH & DIGITAL','테크·디지털'],['CONSUMER & ECONOMY','금융·경제']];return options.map(([value,label])=>`<option value="${value}">${label}</option>`).join("")};
   let timerSeconds=0,timerHandle=null;
   let connectionTestController=null,connectionTestPromise=null,modelsRefreshPromise=null;
 
   function today(){return new Date().toISOString().slice(0,10)}
+  function printCopies(value){const count=Number.parseInt(value,10);return Number.isFinite(count)?Math.min(80,Math.max(1,count)):1}
+  function isPublishedPrintRoute(){return publishedPrint.active&&view==="print"}
   function loadTopics(){
     try{
-      const raw=localStorage.getItem(KEYS.data),fixture=new URLSearchParams(location.search).get("fixtures");
+      const fixture=new URLSearchParams(location.search).get("fixtures");
+      if(!fixture&&localStorage.getItem(KEYS.topicReset)!==TopicV4.TEMPLATE_VERSION){
+        const previous={data:localStorage.getItem(KEYS.data),drafts:localStorage.getItem(KEYS.drafts),versions:localStorage.getItem(KEYS.versions)};
+        try{if(previous.data||previous.drafts||previous.versions)localStorage.setItem(KEYS.resetBackup,JSON.stringify({savedAt:new Date().toISOString(),fromVersion:localStorage.getItem(KEYS.topicReset)||"",...previous}))}catch{}
+        localStorage.removeItem(KEYS.data);
+        localStorage.removeItem(KEYS.drafts);
+        localStorage.removeItem(KEYS.versions);
+        localStorage.setItem(KEYS.topicReset,TopicV4.TEMPLATE_VERSION);
+        return{};
+      }
+      const raw=localStorage.getItem(KEYS.data);
       if(!raw){
         const samples=clone(window.TALKFLOW_SAMPLE_TOPICS||{});
-        if(!fixture)return samples;
+        if(!fixture)return{};
         const conversations=window.TalkFlowConversation.applyFixtures(samples);
         return window.TalkFlowSessions.applyTopics(conversations,fixture==="sessions");
       }
-      const parsed=JSON.parse(raw);
+      let parsed=JSON.parse(raw);
       if(parsed&&typeof parsed==="object"&&!Array.isArray(parsed)){
         const interruptedAt=new Date().toISOString(),staleBefore=Date.now()-5*60*1000;let recovered=false;
         Object.values(parsed).forEach(topic=>{const timestamp=Date.parse(topic?.updatedAt||topic?.createdAt||"");if(topic?.operatorStatus?.generationStatus!=="running"||Number.isFinite(timestamp)&&timestamp>staleBefore)return;topic.operatorStatus={...topic.operatorStatus,generationStatus:"interrupted"};topic.status="generation_interrupted";topic.failedSection=topic.failedSection||"plan";topic.generationFailure={stage:topic.failedSection,section:topic.failedSection,message:"이전 생성 작업이 완료되지 않았습니다.",issues:[],error:{type:"generation_interrupted",stage:topic.failedSection,lastAttemptAt:topic.updatedAt||topic.createdAt||interruptedAt}};topic.quality={status:"review",score:0,issues:["이전 생성 작업이 완료되지 않았습니다."]};topic.updatedAt=interruptedAt;recovered=true});
         if(recovered)localStorage.setItem(KEYS.data,JSON.stringify(parsed));
+        const migrated=Object.fromEntries(Object.entries(parsed).map(([date,topic])=>[date,TopicV4.migrateLegacyRmTopic(topic)]));
+        if(JSON.stringify(migrated)!==JSON.stringify(parsed)){parsed=migrated;localStorage.setItem(KEYS.data,JSON.stringify(parsed));}
         if(fixture==="conversation"||fixture==="sessions")return window.TalkFlowSessions.applyTopics(window.TalkFlowConversation.applyFixtures(parsed),fixture==="sessions");
         return window.TalkFlowSessions.applyTopics(parsed);
       }
       return clone(window.TALKFLOW_SAMPLE_TOPICS||{});
     }catch(error){setTimeout(()=>notify(`저장 데이터 복원 실패: ${error.message}`,true));return clone(window.TALKFLOW_SAMPLE_TOPICS||{})}
   }
-  function loadSettings(){try{const value=JSON.parse(localStorage.getItem(KEYS.settings)||"{}");legacyApiKeyPresent=typeof value.apiKey==="string"&&Boolean(value.apiKey.trim());delete value.apiKey;return value}catch{legacyApiKeyPresent=false;return{}}}
+  function loadSettings(){try{const value=JSON.parse(localStorage.getItem(KEYS.settings)||"{}"),legacyGistToken=typeof value.gistToken==="string"?value.gistToken:"";legacyApiKeyPresent=typeof value.apiKey==="string"&&Boolean(value.apiKey.trim());delete value.apiKey;delete value.gistToken;localStorage.setItem(KEYS.settings,JSON.stringify(value));if(legacyGistToken)sessionStorage.setItem(KEYS.gistToken,legacyGistToken);return{...value,gistToken:sessionStorage.getItem(KEYS.gistToken)||""}}catch{legacyApiKeyPresent=false;return{gistToken:sessionStorage.getItem(KEYS.gistToken)||""}}}
   function aiReady(){return aiServerState.configured&&aiServerState.authenticated}
   function modelById(id){return(settings.availableModels||[]).find(model=>model.id===id)}
   function selectedModelLabel(id=settings.anthropicModel){const model=modelById(id);return model?.displayName||id||"선택 안 됨"}
@@ -63,11 +96,21 @@
     return modelId;
   }
   function saveTopics(message="저장했습니다."){
-    try{localStorage.setItem(KEYS.data,JSON.stringify(topics));dirty=false;localStorage.removeItem(KEYS.drafts);notify(message);render()}
+    // When storage is full, the one-time reset backup is the first thing given up for current topics.
+    const write=()=>localStorage.setItem(KEYS.data,JSON.stringify(topics));
+    try{try{write()}catch(error){if(!localStorage.getItem(KEYS.resetBackup))throw error;localStorage.removeItem(KEYS.resetBackup);write()}dirty=false;localStorage.removeItem(KEYS.drafts);notify(message);render()}
     catch(error){notify(`저장 실패: ${error.message}`,true)}
   }
   function saveDraft(){if(!dirty)return;try{localStorage.setItem(KEYS.drafts,JSON.stringify({activeDate,topic:topics[activeDate],savedAt:new Date().toISOString()}))}catch{}}
   function loadRecord(key){try{return JSON.parse(localStorage.getItem(key)||"{}")}catch{return{}}}
+  function articleHistoryFor(date){const entries=loadRecord(KEYS.articleHistory)[String(date||"").slice(0,7)];return(Array.isArray(entries)?entries:[]).map(normalizeArticleSource).filter(Boolean)}
+  function allArticleHistory(date){const target=String(date||"").slice(0,7),records=loadRecord(KEYS.articleHistory),entries=Object.entries(records).filter(([month])=>/^\d{4}-\d{2}$/.test(month)&&(!target||month<=target)).sort(([left],[right])=>right.localeCompare(left)).flatMap(([,items])=>Array.isArray(items)?items:[]).map(normalizeArticleSource).filter(Boolean),seen=new Set;return entries.filter(item=>{const key=item.url||item.titleKey;if(!key||seen.has(key))return false;seen.add(key);return true}).slice(0,240)}
+  function mergeArticleHistory(incoming){if(!incoming||typeof incoming!=="object"||Array.isArray(incoming))return;const current=loadRecord(KEYS.articleHistory),next={...current};for(const [month,items] of Object.entries(incoming)){if(!/^\d{4}-\d{2}$/.test(month)||!Array.isArray(items))continue;const seen=new Set,merged=[...(Array.isArray(current[month])?current[month]:[]),...items].map(normalizeArticleSource).filter(Boolean).filter(item=>{const key=item.url||item.titleKey;if(!key||seen.has(key))return false;seen.add(key);return true});next[month]=merged.slice(-120)}localStorage.setItem(KEYS.articleHistory,JSON.stringify(next))}
+  function rememberArticleSource(date,source){const normalized=normalizeArticleSource(source);if(!normalized)return;const month=String(date||"").slice(0,7),records=loadRecord(KEYS.articleHistory),existing=allArticleHistory(date);if(existing.some(item=>item.url===normalized.url||item.titleKey&&normalized.titleKey&&item.titleKey===normalized.titleKey))return;records[month]=[...articleHistoryFor(date),normalized].slice(-120);localStorage.setItem(KEYS.articleHistory,JSON.stringify(records))}
+  function pageOneReference(topic){const titleEn=String(topic?.titleEn||topic?.page1?.title?.en||topic?.topicPlan?.titleEn||topic?.title?.en||"").trim(),titleKo=String(topic?.titleKo||topic?.page1?.title?.ko||topic?.topicPlan?.titleKo||topic?.title?.ko||"").trim(),premise=String(topic?.premise||topic?.topicPlan?.page1Premise||topic?.page1?.story?.en||(topic?.page1?.randomQuestions||[]).join(" ")||"").trim();return titleEn?{date:String(topic?.date||""),titleEn:titleEn.slice(0,180),titleKo:titleKo.slice(0,180),premise:premise.slice(0,500)}:null}
+  function allPageOneHistory(date){const target=String(date||"").slice(0,7),records=loadRecord(KEYS.pageOneHistory),entries=Object.entries(records).filter(([month])=>/^\d{4}-\d{2}$/.test(month)&&(!target||month<=target)).sort(([left],[right])=>right.localeCompare(left)).flatMap(([,items])=>Array.isArray(items)?items:[]).map(pageOneReference).filter(Boolean),seen=new Set;return entries.filter(item=>{const key=item.titleEn.toLowerCase();if(seen.has(key))return false;seen.add(key);return true}).slice(0,240)}
+  function mergePageOneHistory(incoming){if(!incoming||typeof incoming!=="object"||Array.isArray(incoming))return;const current=loadRecord(KEYS.pageOneHistory),next={...current};for(const [month,items] of Object.entries(incoming)){if(!/^\d{4}-\d{2}$/.test(month)||!Array.isArray(items))continue;const seen=new Set,merged=[...(Array.isArray(current[month])?current[month]:[]),...items].map(pageOneReference).filter(Boolean).filter(item=>{const key=item.titleEn.toLowerCase();if(seen.has(key))return false;seen.add(key);return true});next[month]=merged.slice(-120)}localStorage.setItem(KEYS.pageOneHistory,JSON.stringify(next))}
+  function rememberPageOneTitle(topic){const normalized=pageOneReference(topic);if(!normalized)return;const month=normalized.date.slice(0,7),records=loadRecord(KEYS.pageOneHistory),existing=allPageOneHistory(normalized.date);if(existing.some(item=>item.titleEn.toLowerCase()===normalized.titleEn.toLowerCase()))return;records[month]=[...(Array.isArray(records[month])?records[month]:[]),normalized].slice(-120);localStorage.setItem(KEYS.pageOneHistory,JSON.stringify(records))}
   function preserveVersion(topic){
     const versions=loadRecord(KEYS.versions),list=versions[topic.id]||[];
     versions[topic.id]=[{savedAt:new Date().toISOString(),topic:clone(topic)},...list].slice(0,5);
@@ -77,7 +120,9 @@
   function monthPrefix(){return `${cursor.getFullYear()}-${String(cursor.getMonth()+1).padStart(2,"0")}`}
   function monthFile(kind="json"){return `thebox-talkflow-${monthPrefix()}${kind==="viewer"?"-viewer.html":".json"}`}
   function current(){return topics[activeDate]}
-function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].includes(topic.operatorStatus?.generationStatus))return false;return!topic.generatedConversation||topic.generationEngine===TopicV4.VERSION&&TopicV4.evaluate(topic).ready||topic.generationEngine===Simple.VERSION&&Simple.evaluate(topic,Object.values(topics)).ready||topic.generationEngine===Generation.VERSION&&Generation.evaluate(topic,Object.values(topics)).ready}
+  function hasV43HandoutShape(topic){return topic?.topicVersion==="topic-v4.3"&&topic?.page1&&topic?.page2?.template==="ARTICLE"&&typeof topic.page1.title?.en==="string"&&typeof topic.page2.title==="string"}
+  function isApprovedHistoricalV43Topic(topic){return hasV43HandoutShape(topic)&&topic?.quality?.status==="approved"&&!["running","failed","interrupted"].includes(topic.operatorStatus?.generationStatus)}
+function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].includes(topic.operatorStatus?.generationStatus))return false;return isApprovedHistoricalV43Topic(topic)||!topic.generatedConversation||topic.generationEngine===TopicV4.VERSION&&TopicV4.evaluate(topic).ready||topic.generationEngine===Simple.VERSION&&Simple.evaluate(topic,Object.values(topics)).ready||topic.generationEngine===Generation.VERSION&&Generation.evaluate(topic,Object.values(topics)).ready}
   function operationConfig(){
     const knownHolidays=["2026-08-15","2026-08-17","2026-09-24","2026-09-25","2026-09-26","2026-10-03","2026-10-05","2026-10-09"];
     return{weekdays:settings.operatingWeekdays||[1,4],included:settings.additionalDates||[],excluded:[...(settings.excludedDates||[]),...(settings.excludePublicHolidays?knownHolidays:[])]}
@@ -88,7 +133,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
     if(!topic)return{key:"empty",label:"미작성",action:"토픽 만들기"};
     if(topic.operatorStatus?.generationStatus==="failed")return{key:"generation-failed",label:"생성 실패",action:"실패 확인"};
     if(topic.operatorStatus?.generationStatus==="interrupted")return{key:"generation-failed",label:"생성 중단",action:"복구하기"};
-    if(![TopicV4.VERSION,Simple.VERSION].includes(topic.generationEngine)&&Generation.isLegacyOrInvalidDraft(topic))return{key:"invalid",label:"이전 형식",action:"내용 보기"};
+    if(!isApprovedHistoricalV43Topic(topic)&&![TopicV4.VERSION,Simple.VERSION].includes(topic.generationEngine)&&Generation.isLegacyOrInvalidDraft(topic))return{key:"invalid",label:"이전 형식",action:"내용 보기"};
     if(topic.operatorStatus?.generationStatus==="running")return{key:"draft",label:"생성 중",action:"진행 보기"};
     if(topic.quality?.status==="approved")return{key:"approved",label:"승인 완료",action:"미리보기"};
     if(canPreviewTopic(topic))return{key:"print-ready",label:"승인 가능",action:"검수하기"};
@@ -147,22 +192,29 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
   function validateAll(){Object.values(topics).forEach(t=>{const result=validateTopic(t);t.quality={status:result.status==="approved"?"approved":"review",score:result.score,issues:result.issues}});saveTopics("월간 품질검사를 완료했습니다.")}
 
   function render(){
+    if(aiServerState.authenticated&&topicViewsMonth!==monthPrefix())void loadManagerTopicViews();
+    document.body.classList.toggle("drawer-open",Boolean(drawerDate));
     $("#month-label").textContent=new Intl.DateTimeFormat("ko-KR",{year:"numeric",month:"long"}).format(cursor);
     renderList();
-    $(".app-shell").classList.toggle("wide-mode",view==="prepare"||view==="print");
+    $(".app-shell").classList.toggle("wide-mode",view==="prepare"||view==="print"||view==="poster");
     $("#calendar-view").innerHTML=view==="prepare"?renderPreparationWorkspace():"";
     $("#topic-view").innerHTML=view==="topic"?renderTopicView(current()):"";
     $("#admin-view").innerHTML=view==="admin"?renderAdmin(current()):"";
     $("#print-view").innerHTML=view==="print"?renderPrintCollection():"";
+    $("#poster-view").innerHTML=view==="poster"?renderMonthlyPoster():"";
     $("#calendar-view").hidden=view!=="prepare";
     $("#topic-view").hidden=view!=="topic";$("#admin-view").hidden=view!=="admin";
     $("#print-view").hidden=view!=="print";
+    $("#poster-view").hidden=view!=="poster";
+    syncPosterPrintPage();
     document.querySelectorAll(".tab").forEach(button=>{const active=button.dataset.view==="prepare"&&view==="prepare";button.classList.toggle("is-active",active);button.setAttribute("aria-current",active?"page":"false")});
     updateDocumentTitle();
     bindDynamic();
+    if(view==="poster")requestAnimationFrame(()=>{setPosterGridRows();fitPosterPhrases()});
   }
   function monthValue(){return monthPrefix()}
   function routeFromState(){
+    if(view==="poster")return{section:"poster",month:monthValue()};
     if(view==="print")return{section:"print",date:activeDate};
     if($("#settings-dialog")?.open)return{section:"settings",panel:settingsPanel};
     const route={section:"topics",view:prepareMode,month:monthValue()};
@@ -171,8 +223,9 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
     return route;
   }
   function normalizeRoute(input){
-    const nowMonth=monthValue(),route={section:["topics","print","settings"].includes(input.section)?input.section:"topics"};
-    if(route.section==="print"){if(input.date&&topics[input.date]){route.date=input.date;return route}return{section:"topics",view:"tasks",month:nowMonth}}
+    const nowMonth=monthValue(),route={section:["topics","print","poster","settings"].includes(input.section)?input.section:"topics"};
+    if(route.section==="print"){if(/^\d{4}-\d{2}-\d{2}$/.test(input.date||"")&&(topics[input.date]||input.published)){route.date=input.date;route.published=Boolean(input.published);route.copies=printCopies(input.copies);return route}return{section:"topics",view:"tasks",month:nowMonth}}
+    if(route.section==="poster"){route.month=/^\d{4}-\d{2}$/.test(input.month||"")?input.month:nowMonth;return route}
     if(route.section==="settings"){route.panel=["ai","gist","schedule","print","data"].includes(input.panel)?input.panel:"ai";return route}
     const legacyView={prepare:"tasks",admin:"month",student:"month",leader:"month"}[input.view],validMonth=/^\d{4}-\d{2}$/.test(input.month||"")?input.month:nowMonth;
     route.view=["tasks","month","calendar"].includes(input.view)?input.view:legacyView||"tasks";route.month=validMonth;
@@ -180,8 +233,8 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
     if(validDate){route.date=input.date;route.tab=input.tab==="review"?"review":"topic";if(route.tab==="topic")route.page=["1","2"].includes(String(input.page))?String(input.page):"1"}
     return route;
   }
-  function parseRouteFromUrl(){const params=new URLSearchParams(location.search),legacy=params.get("view");return normalizeRoute({section:params.get("section")||(legacy==="batch"||legacy==="print"?"print":"topics"),view:legacy||"tasks",month:params.get("month"),date:params.get("date"),tab:params.get("tab")||({admin:"review",student:"student",leader:"leader"}[legacy]),page:params.get("page"),panel:params.get("panel"),role:params.get("role")})}
-  function routeUrl(route){const url=new URL(location.pathname,location.origin),params=url.searchParams;params.set("section",route.section);if(route.section==="topics"){params.set("view",route.view);params.set("month",route.month);if(route.date){params.set("date",route.date);params.set("tab",route.tab);if(route.page)params.set("page",route.page)}}else if(route.section==="settings")params.set("panel",route.panel);else if(route.date)params.set("date",route.date);return url}
+  function parseRouteFromUrl(){const params=new URLSearchParams(location.search),legacy=params.get("view");return normalizeRoute({section:params.get("section")||(legacy==="batch"||legacy==="print"?"print":"topics"),view:legacy||"tasks",month:params.get("month"),date:params.get("date"),tab:params.get("tab")||({admin:"review",student:"student",leader:"leader"}[legacy]),page:params.get("page"),panel:params.get("panel"),role:params.get("role"),published:params.get("published")==="1",copies:params.get("copies")})}
+  function routeUrl(route){const url=new URL(location.pathname,location.origin),params=url.searchParams;params.set("section",route.section);if(route.section==="topics"){params.set("view",route.view);params.set("month",route.month);if(route.date){params.set("date",route.date);params.set("tab",route.tab);if(route.page)params.set("page",route.page)}}else if(route.section==="poster")params.set("month",route.month);else if(route.section==="settings")params.set("panel",route.panel);else if(route.date){params.set("date",route.date);if(route.published){params.set("published","1");params.set("copies",String(printCopies(route.copies)))}}return url}
   function applyRoute(route){
     const normalized=normalizeRoute(route),previousDrawerDate=drawerDate;isRestoringRoute=true;
     if(normalized.section!=="settings"&&$("#settings-dialog")?.open)$("#settings-dialog").close();
@@ -189,7 +242,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
       cursor=new Date(`${normalized.month}-01T12:00:00`);prepareMode=normalized.view;prepareFilter=history.state?.ui?.filter||prepareFilter;previewZoom=history.state?.ui?.zoom||previewZoom;drawerDate="";detailTab=normalized.tab||"review";previewPage=normalized.page||"1";
       if(normalized.date){activeDate=normalized.date;if(normalized.tab==="topic")view="topic";else{view="prepare";drawerDate=normalized.date}}
       else view="prepare";
-    }else if(normalized.section==="print"){drawerDate="";activeDate=normalized.date;printDates=new Set([activeDate]);view="print"}else{settingsPanel=normalized.panel;view="prepare";drawerDate=""}
+    }else if(normalized.section==="print"){drawerDate="";activeDate=normalized.date;printDates=new Set([activeDate]);view="print"}else if(normalized.section==="poster"){cursor=new Date(`${normalized.month}-01T12:00:00`);drawerDate="";view="poster"}else{settingsPanel=normalized.panel;view="prepare";drawerDate=""}
     render();document.body.classList.toggle("drawer-open",Boolean(drawerDate));
     if(normalized.section==="settings")openSettingsDialog(false);
     requestAnimationFrame(()=>{scrollTo(0,history.state?.scrollY||0);const focusDate=!normalized.date&&(drawerReturnFocusDate||previousDrawerDate);if(focusDate){document.querySelector(`[data-drawer-date="${focusDate}"]`)?.focus();drawerReturnFocusDate=""}isRestoringRoute=false});return normalized;
@@ -201,37 +254,90 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
     if(mode==="push"){historyIndex+=1;history.pushState({talkflow:true,index:historyIndex,route,scrollY:0,ui},"",url)}else history.replaceState({...history.state,talkflow:true,index:historyIndex,route,scrollY:history.state?.scrollY||0,ui},"",url);
     applyRoute(route);notifyRoute(route);
   }
-  function notifyRoute(route){const labels={tasks:"해야 할 일",month:"전체 월",calendar:"달력",topic:"오늘의 토픽",review:"내용 검수"};notify(route.section==="print"?"토픽 인쇄":route.section==="settings"?"설정":labels[route.tab]||labels[route.view]||"토픽 준비")}
-  function updateDocumentTitle(){const topic=topics[activeDate],month=`${cursor.getMonth()+1}월`,singlePrint=view==="print"&&topic,section=new URLSearchParams(location.search).get("section"),label=section==="settings"?"설정":view==="topic"?`${topic?.title?.ko||"토픽"} · 오늘의 토픽`:singlePrint?`${topic.date}_TheBox_Topic_${topic.title?.ko||topic.title?.en||"topic"}`:drawerDate?`${topic?.title?.ko||drawerDate} · 내용 검수`:prepareMode==="month"?`${month} 전체 월`:prepareMode==="calendar"?`${month} 달력`:"관리자";document.title=`${label} · TheBox Topic`}
+  function notifyRoute(route){const labels={tasks:"해야 할 일",month:"전체 월",calendar:"달력",topic:"오늘의 토픽",review:"내용 검수"};notify(route.section==="print"?"토픽 인쇄":route.section==="poster"?"월간 게시판 포스터":route.section==="settings"?"설정":labels[route.tab]||labels[route.view]||"토픽 준비")}
+  function managerTopicTitle(topic){return String(topic?.title?.en||"Untitled topic")}
+  function updateDocumentTitle(){const topic=topics[activeDate],month=`${cursor.getMonth()+1}월`,singlePrint=view==="print"&&topic,section=new URLSearchParams(location.search).get("section"),label=section==="settings"?"설정":view==="poster"?`${month} 게시판 포스터`:view==="topic"?`${managerTopicTitle(topic)||"토픽"} · 오늘의 토픽`:singlePrint?`${topic.date}_TheBox_Topic_${managerTopicTitle(topic)}`:drawerDate?`${managerTopicTitle(topic)||drawerDate} · 내용 검수`:prepareMode==="month"?`${month} 전체 월`:prepareMode==="calendar"?`${month} 달력`:"관리자";document.title=`${label} · TheBox Topic`}
   function renderList(){
     const prefix=monthPrefix(),entries=Object.values(topics).filter(t=>t.date.startsWith(prefix)).sort((a,b)=>a.date.localeCompare(b.date));
     $("#topic-list").innerHTML=entries.length?entries.map(t=>{
       const state=lifecycleState(t);
-      return `<button class="topic-day ${t.date===activeDate?"is-active":""}" data-date="${t.date}"><time>${t.date.slice(8)}</time><span><strong>${esc(t.title.en)}</strong><small>${koTitle(t.title.ko)}</small></span><i class="status-pill ${state.key}">${state.label}</i></button>`;
+      return `<button class="topic-day ${t.date===activeDate?"is-active":""}" data-date="${t.date}"><time>${t.date.slice(8)}</time><span><strong>${esc(managerTopicTitle(t))}</strong></span><i class="status-pill ${state.key}">${state.label}</i></button>`;
     }).join(""):`<p class="ko">이 달에는 작성된 토픽이 없습니다.</p>`;
   }
   function weekday(date){return new Intl.DateTimeFormat("ko-KR",{weekday:"short",timeZone:"UTC"}).format(new Date(`${date}T12:00:00Z`))}
   function preparationDates(){return [...new Set([...operatingDates(),...Object.keys(topics).filter(date=>date.startsWith(monthPrefix()))])].sort()}
   function primaryAction(date,topic){const state=lifecycleState(topic),labels={"generation-failed":"문제 해결",review:"확인하기","print-ready":"승인하기",empty:"토픽 만들기",approved:"토픽 보기",invalid:"이전 형식 보기",draft:"진행 보기"};if(!topic)return `<button class="button primary" data-custom-date="${date}">${labels.empty}</button>`;if(topic.operatorStatus?.generationStatus==="interrupted")return `<button class="button primary" data-action="regenerate-v2">다시 생성</button><button class="button secondary" data-open="${date}:admin">초안 보기</button>`;const target=state.key==="approved"?"topic":"admin";return `<button class="button ${state.key==="approved"?"secondary":"primary"}" data-open="${date}:${target}">${labels[state.key]||"확인하기"}</button>`}
-  function preparationRow(date,className="task-row"){const topic=topics[date],state=lifecycleState(topic);return `<article class="${className} ${state.key}" data-drawer-date="${date}" tabindex="0"><time><b>${Number(date.slice(5,7))}/${Number(date.slice(8))}</b><span>${weekday(date)}</span></time><div class="preparation-topic"><strong>${topic?koTitle(topic.title?.ko||topic.title?.en):"아직 토픽이 없습니다"}</strong></div><span class="status-pill ${state.key}">${state.label}</span><div class="row-primary">${primaryAction(date,topic)}</div></article>`}
+  function preparationRow(date,className="task-row"){const topic=topics[date],state=lifecycleState(topic);return `<article class="${className} ${state.key}" data-drawer-date="${date}" tabindex="0"><time><b>${Number(date.slice(5,7))}/${Number(date.slice(8))}</b><span>${weekday(date)}</span></time><div class="preparation-topic"><strong>${topic?esc(managerTopicTitle(topic)):"아직 토픽이 없습니다"}</strong></div><span class="status-pill ${state.key}">${state.label}</span><div class="row-primary">${primaryAction(date,topic)}</div></article>`}
   function taskPriority(date){const state=lifecycleState(topics[date]),rank={"generation-failed":0,review:1,"print-ready":2,empty:4,draft:1,invalid:5,approved:9}[state.key]??8,todayTime=new Date(`${today()}T12:00:00`).getTime(),distance=Math.abs(new Date(`${date}T12:00:00`).getTime()-todayTime);return[rank,distance,date]}
   function comparePriority(a,b){const left=taskPriority(a),right=taskPriority(b);return left[0]-right[0]||left[1]-right[1]||left[2].localeCompare(right[2])}
   function weekDates(){const now=new Date(`${today()}T12:00:00`),start=new Date(now);start.setDate(now.getDate()-((now.getDay()+6)%7));const end=new Date(start);end.setDate(start.getDate()+7);return operatingDates().filter(date=>{const value=new Date(`${date}T12:00:00`);return value>=start&&value<end})}
-  function renderPrepareViews(includeHome=false){return `<nav class="workspace-views" aria-label="토픽 준비 화면">${includeHome?`<button data-prepare-mode="tasks">토픽 준비</button>`:""}<button class="${prepareMode==="month"?"is-active":""}" data-prepare-mode="month" aria-selected="${prepareMode==="month"}">전체 월 보기</button><button class="${prepareMode==="calendar"?"is-active":""}" data-prepare-mode="calendar" aria-selected="${prepareMode==="calendar"}">달력 보기</button></nav>`}
+  function renderPrepareViews(){return `<nav class="workspace-views" aria-label="토픽 준비 화면"><button class="${prepareMode==="tasks"?"is-active":""}" data-prepare-mode="tasks" aria-selected="${prepareMode==="tasks"}">토픽 준비</button><button class="${prepareMode==="month"?"is-active":""}" data-prepare-mode="month" aria-selected="${prepareMode==="month"}">전체 월 보기</button><button class="${prepareMode==="calendar"?"is-active":""}" data-prepare-mode="calendar" aria-selected="${prepareMode==="calendar"}">달력 보기</button></nav>`}
   function weekStatus(date){const state=lifecycleState(topics[date]),complete=state.key==="approved";return `<div class="week-status ${state.key}"><time>${weekday(date)}</time><span aria-hidden="true"></span><strong>${complete?"준비 완료":state.label}</strong></div>`}
-  function renderTaskHome(){const all=operatingDates(),actionable=all.filter(date=>lifecycleState(topics[date]).key!=="approved").sort(comparePriority),shown=actionable.slice(0,8),missing=all.filter(date=>!topics[date]),week=weekDates(),weekDone=week.length&&week.every(date=>lifecycleState(topics[date]).key==="approved"),published=Object.values(topics).filter(topic=>topic?.date?.startsWith(monthValue()));if(!published.length){const first=shown[0]||all[0];return `<div class="task-home manager-zero-state"><section class="manager-zero-hero"><div><p class="eyebrow">TOPIC SYSTEM · V4.1</p><h2>새 토픽 기준으로<br>이번 달을 시작하세요</h2><p>이전 토픽은 초기화되었습니다. 첫 장은 대화형 토픽, 두 번째 장은 고정 Article 형식으로 만들어집니다.</p><div class="manager-zero-actions">${first?`<button class="button primary" data-auto-date="${first}">첫 토픽 만들기</button>`:""}<button class="button secondary" data-prepare-mode="calendar">달력에서 날짜 선택</button></div></div><div class="manager-page-map" aria-label="새 토픽 구성"><article><span>01</span><b>CONVERSATION</b><strong>Story 또는 Random</strong><small>말하기 중심 첫 번째 장</small></article><article><span>02</span><b>ARTICLE</b><strong>Read &amp; Discuss</strong><small>읽기와 의견 중심 두 번째 장</small></article></div></section>${renderPrepareViews()}</div>`}return `<div class="task-home"><section class="task-section"><header><div><p class="eyebrow">ACTION</p><h2>지금 확인할 것 <span>${actionable.length}건</span></h2></div></header><div class="task-list">${shown.length?shown.map(date=>preparationRow(date)).join(""):`<p class="empty-task">지금 확인할 항목이 없습니다.</p>`}</div>${missing.length>shown.filter(date=>!topics[date]).length?`<button class="text-action" data-show-missing>미작성 ${missing.length}건 전체 월에서 보기</button>`:""}</section><section class="this-week"><header><div><p class="eyebrow">THIS WEEK</p><h2>이번 주</h2></div></header>${weekDone?`<p class="week-complete">이번 주 토픽 준비가 모두 끝났습니다.</p>`:`<div class="week-status-list">${week.length?week.map(weekStatus).join(""):`<p class="empty-task">이번 주 운영일 없음</p>`}</div>`}</section>${renderPrepareViews()}</div>`}
+  function renderTaskHome(){const all=operatingDates(),actionable=all.filter(date=>lifecycleState(topics[date]).key!=="approved").sort(comparePriority),shown=actionable.slice(0,8),missing=all.filter(date=>!topics[date]),week=weekDates(),weekDone=week.length&&week.every(date=>lifecycleState(topics[date]).key==="approved"),published=Object.values(topics).filter(topic=>topic?.date?.startsWith(monthValue()));if(!published.length){const first=shown[0]||all[0];return `<div class="task-home manager-zero-state"><section class="manager-zero-hero"><div><p class="eyebrow">TOPIC SYSTEM · V4.3</p><h2>새 토픽 기준으로<br>이번 달을 시작하세요</h2><p>이전 토픽은 초기화되었습니다. 첫 장은 대화형 토픽, 두 번째 장은 고정 Article 형식으로 만들어집니다.</p><div class="manager-zero-actions">${first?`<button class="button primary" data-auto-date="${first}">첫 토픽 만들기</button>`:""}<button class="button secondary" data-prepare-mode="calendar">달력에서 날짜 선택</button></div></div><div class="manager-page-map" aria-label="새 토픽 구성"><article><span>01</span><b>CONVERSATION</b><strong>Story 또는 Random</strong><small>말하기 중심 첫 번째 장</small></article><article><span>02</span><b>ARTICLE</b><strong>Read &amp; Discuss</strong><small>읽기와 의견 중심 두 번째 장</small></article></div></section></div>`}return `<div class="task-home"><section class="task-section"><header><div><p class="eyebrow">ACTION</p><h2>지금 확인할 것 <span>${actionable.length}건</span></h2></div></header><div class="task-list">${shown.length?shown.map(date=>preparationRow(date)).join(""):`<p class="empty-task">지금 확인할 항목이 없습니다.</p>`}</div>${missing.length>shown.filter(date=>!topics[date]).length?`<button class="text-action" data-show-missing>미작성 ${missing.length}건 전체 월에서 보기</button>`:""}</section><section class="this-week"><header><div><p class="eyebrow">THIS WEEK</p><h2>이번 주</h2></div></header>${weekDone?`<p class="week-complete">이번 주 토픽 준비가 모두 끝났습니다.</p>`:`<div class="week-status-list">${week.length?week.map(weekStatus).join(""):`<p class="empty-task">이번 주 운영일 없음</p>`}</div>`}</section></div>`}
   function weekLabel(dates){const first=Number(dates[0].slice(8)),last=Number(dates.at(-1).slice(8));return`${cursor.getMonth()+1}월 ${first}일–${last}일`}
   function renderMonthList(){const filtered=operatingDates().filter(date=>{const key=lifecycleState(topics[date]).key;if(prepareFilter==="attention")return["generation-failed","review","print-ready","draft"].includes(key);if(prepareFilter==="missing")return key==="empty";if(prepareFilter==="approved")return key==="approved";if(prepareFilter==="legacy")return key==="invalid";return true}),groups=[];filtered.forEach(date=>{const value=new Date(`${date}T12:00:00`),week=Math.floor((value.getDate()+((new Date(`${monthPrefix()}-01T12:00:00`).getDay()+6)%7)-1)/7);(groups[week]??=[]).push(date)});return `<section class="compact-month"><div class="month-filters" aria-label="월 보기 필터">${[["all","전체"],["attention","확인 필요"],["missing","미작성"],["approved","승인 완료"],["legacy","이전 형식"]].map(([key,label])=>`<button class="${prepareFilter===key?"is-active":""}" data-month-filter="${key}">${label}</button>`).join("")}</div>${groups.filter(Boolean).map(dates=>`<section class="week-group"><h2>${weekLabel(dates)}</h2><div>${dates.map(date=>preparationRow(date,"month-row")).join("")}</div></section>`).join("")||'<p class="empty-task">조건에 맞는 운영일이 없습니다.</p>'}</section>`}
-  function renderCompactCalendar(){const days=new Date(cursor.getFullYear(),cursor.getMonth()+1,0).getDate(),prefix=monthPrefix(),operation=new Set(operatingDates()),offset=(new Date(`${prefix}-01T12:00:00`).getDay()+6)%7;return `<div class="weekday-row" aria-hidden="true">${["월","화","수","목","금","토","일"].map(day=>`<span>${day}</span>`).join("")}</div><section class="simple-month-grid">${Array.from({length:offset},()=>'<span></span>').join("")}${Array.from({length:days},(_,index)=>{const date=`${prefix}-${String(index+1).padStart(2,"0")}`,topic=topics[date],state=lifecycleState(topic),available=operation.has(date),title=topic?topic.title?.ko||topic.title?.en:"미작성";return `<button class="simple-calendar-cell ${available?state.key:"off"}" ${available?`data-drawer-date="${date}" aria-label="${date} ${esc(title)} ${state.label}"`:"disabled"}><time>${index+1}</time>${available?`<i aria-hidden="true"></i><strong>${topic?koTitle(title):"＋"}</strong>`:""}</button>`}).join("")}</section>`}
-  function renderDateDrawer(){if(!drawerDate)return"";const topic=topics[drawerDate],state=lifecycleState(topic);return `<div class="drawer-backdrop" data-drawer-close></div><aside class="date-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title"><header><button class="drawer-back" data-drawer-close>← ${cursor.getMonth()+1}월 전체 월</button><button class="icon-button" data-drawer-close aria-label="닫기">×</button></header><div class="drawer-title"><span>${drawerDate} · ${weekday(drawerDate)}</span><h2 id="drawer-title">${topic?koTitle(topic.title?.ko||topic.title?.en):"아직 토픽이 없습니다"}</h2><span class="status-pill ${state.key}">${state.label}</span></div>${topic?`<nav class="drawer-tabs" aria-label="토픽 화면"><button class="is-active" data-open="${drawerDate}:admin">내용 검수</button><button data-open="${drawerDate}:topic" ${canPreviewTopic(topic)?"":"disabled"}>오늘의 토픽</button></nav><section class="drawer-summary"><h3>${topic.operatorStatus?.generationStatus==="interrupted"?"생성이 중단되었습니다.":state.key==="generation-failed"?"생성 문제를 해결해 주세요":state.key==="approved"?"멤버에게 보여줄 토픽이 준비됐습니다.":"내용을 확인해 주세요"}</h3><p>${topic.operatorStatus?.generationStatus==="interrupted"?"이전 생성 작업이 완료되지 않았습니다. 작성 중이던 상태는 보존되어 있습니다.":state.key==="generation-failed"?"실패한 부분만 다시 생성하거나 AI 설정을 확인할 수 있습니다.":state.key==="approved"?"오늘의 토픽 한 화면과 인쇄 자료가 같은 승인 데이터를 사용합니다.":"확인 항목을 검토한 뒤 승인할 수 있습니다."}</p>${primaryAction(drawerDate,topic)}</section>`:`<section class="drawer-create"><h3>토픽을 준비하세요</h3><p>최근 주제와 이번 달 구성을 보고 새로운 토픽을 자동으로 만듭니다.</p><button class="button primary" data-auto-date="${drawerDate}">자동으로 만들기</button><span>직접 원하는 주제가 있나요?</span><button class="button secondary" data-guided-date="${drawerDate}">직접 주제 지정</button></section>`}</aside>`}
-  function renderPreparationWorkspace(){const dates=operatingDates(),counts=dates.reduce((acc,date)=>{const key=lifecycleState(topics[date]).key;acc[key]=(acc[key]||0)+1;return acc},{}),attention=dates.length-(counts.approved||0)-(counts.empty||0);return `<header class="workspace-heading compact-heading"><div class="product-intro"><p class="eyebrow">THEBOX TOPIC · MANAGER</p><h1>월간 토픽을 만들고<br>멤버에게 공개하세요</h1></div><div class="month-title"><div><h2>${cursor.getFullYear()}년 ${cursor.getMonth()+1}월</h2><p>승인 ${counts.approved||0} · 확인 필요 ${attention} · 미작성 ${counts.empty||0}</p></div><div class="workspace-month"><button class="icon-button" data-action="previous-month" aria-label="이전 달">←</button><button class="text-action" data-action="today">이번 달</button><button class="icon-button" data-action="next-month" aria-label="다음 달">→</button></div></div>${prepareMode==="tasks"?"":renderPrepareViews(true)}</header>${prepareMode==="tasks"?renderTaskHome():prepareMode==="month"?renderMonthList():renderCompactCalendar()}${renderDateDrawer()}`}
+  function renderCompactCalendar(){const days=new Date(cursor.getFullYear(),cursor.getMonth()+1,0).getDate(),prefix=monthPrefix(),operation=new Set(operatingDates()),offset=(new Date(`${prefix}-01T12:00:00`).getDay()+6)%7,currentDate=today();return `<section class="calendar-workspace" aria-label="${cursor.getFullYear()}년 ${cursor.getMonth()+1}월 달력"><div class="weekday-row" aria-hidden="true">${["월","화","수","목","금","토","일"].map(day=>`<span>${day}</span>`).join("")}</div><section class="simple-month-grid">${Array.from({length:offset},()=>'<span aria-hidden="true"></span>').join("")}${Array.from({length:days},(_,index)=>{const date=`${prefix}-${String(index+1).padStart(2,"0")}`,topic=topics[date],state=lifecycleState(topic),available=operation.has(date),isEmpty=state.key==="empty",isToday=date===currentDate,isPastEmpty=isEmpty&&date<currentDate,matches=prepareFilter==="all"||(prepareFilter==="approved"&&state.key==="approved")||(prepareFilter==="attention"&&!isEmpty&&state.key!=="approved")||(prepareFilter==="missing"&&isEmpty),title=topic?managerTopicTitle(topic):"새 토픽 만들기",classes=["simple-calendar-cell",available?state.key:"off",isToday?"is-today":"",isPastEmpty?"is-past-empty":"",available&&!matches?"is-filter-muted":""].filter(Boolean).join(" ");return `<button class="${classes}" ${available?`data-drawer-date="${date}" aria-label="${date} ${esc(title)} ${state.label}"`:`disabled aria-label="${date} 휴무"`}><time>${index+1}${isToday?`<span class="calendar-today">오늘</span>`:""}</time>${available?(isEmpty?`<span class="calendar-create">+ 만들기</span>`:`<strong>${esc(title)}</strong><span class="calendar-state">${state.label}</span>`):`<span class="calendar-day-off">휴무</span>`}</button>`}).join("")}</section></section>`}
+  function posterTopicFor(date){const topic=topics[date];return topic&&!topic.hidden&&topic.quality?.status==="approved"&&topic.operatorStatus?.generationStatus!=="failed"?topic:null}
+  function posterTopicColor(topic){const category=String(topic?.page1?.category||topic?.topicPlan?.category||"").toUpperCase();return POSTER_CATEGORY_COLORS[category]||"#2F6F4F"}
+  function posterPhrase(topic){
+    const provided=String(topic?.posterPhrase||"").trim();
+    if(provided)return provided;
+    const title=String(topic?.page1?.title?.en||topic?.title?.en||"").trim();
+    if(!title)return"Today’s conversation";
+    const question=/[?]$/.test(title),words=title.replace(/[?!.,:;]+$/," ").replace(/^should\s+/i,"").split(/\s+/).filter(Boolean);
+    return `${words.slice(0,6).join(" ")}${question?"?":""}`;
+  }
+  function renderMonthlyPoster(){
+    const year=cursor.getFullYear(),month=cursor.getMonth(),firstWeekday=new Date(year,month,1).getDay(),daysInMonth=new Date(year,month+1,0).getDate(),numRows=Math.ceil((firstWeekday+daysInMonth)/7),monthName=new Intl.DateTimeFormat("en-US",{month:"long"}).format(new Date(year,month,1)),totalCells=numRows*7;
+    const calendarCells=Array.from({length:totalCells},(_,index)=>{
+      const day=index-firstWeekday+1;
+      if(day<1||day>daysInMonth)return'<div class="poster-cell poster-empty" aria-hidden="true"></div>';
+      const date=`${year}-${String(month+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`,topic=posterTopicFor(date);
+      return `<article class="poster-cell"><time datetime="${date}">${day}</time>${topic?`<div class="poster-topic-line"><i class="poster-category-dot" style="background:${posterTopicColor(topic)}" aria-hidden="true"></i><p class="poster-q">${esc(posterPhrase(topic))}</p></div>`:""}</article>`;
+    }).join("");
+    return `<section class="poster-shell" aria-label="${monthName} ${year} monthly poster"><div class="poster-toolbar"><button class="button secondary" data-action="poster-back">← 월간 토픽으로</button><span>B4 가로 · 승인 완료 토픽</span><button class="button primary" data-action="poster-print">PDF 저장 / 인쇄</button></div><div class="poster-preview-canvas"><article class="poster-page"><header class="poster-header"><h1><span>${monthName}</span> <b>${year}</b></h1><strong>THE BOX TOPIC</strong></header><div class="poster-weekdays" aria-label="weekdays">${["SUN","MON","TUE","WED","THU","FRI","SAT"].map(day=>`<span>${day}</span>`).join("")}</div><section class="poster-grid" aria-label="${monthName} ${year} calendar">${calendarCells}</section><footer class="poster-footer"><b>B</b><span>THE BOX</span></footer></article></div></section>`;
+  }
+  function setPosterGridRows(){
+    const grid=document.querySelector(".poster-grid");
+    if(!grid)return;
+    const year=cursor.getFullYear(),month=cursor.getMonth();
+    const firstWeekday=new Date(year,month,1).getDay();
+    const daysInMonth=new Date(year,month+1,0).getDate();
+    const numRows=Math.ceil((firstWeekday+daysInMonth)/7);
+    grid.style.gridTemplateRows=`repeat(${numRows}, 1fr)`;
+  }
+  function fitPosterPhrases(){
+    document.querySelectorAll(".poster-q").forEach(el=>{
+      let size=16.5;
+      const minSize=11;
+      el.style.fontSize="";
+      while(el.scrollHeight>el.clientHeight&&size>minSize){
+        size-=0.5;
+        el.style.fontSize=`${size}px`;
+      }
+    });
+  }
+  function syncPosterPrintPage(){
+    const id="poster-print-page-size",existing=document.getElementById(id);
+    if(view!=="poster"){
+      existing?.remove();
+      document.body.classList.remove("poster-print-mode");
+      return;
+    }
+    const style=existing||document.head.appendChild(document.createElement("style"));
+    style.id=id;
+    style.textContent="@page{size:364mm 257mm;margin:0}";
+    document.body.classList.add("poster-print-mode");
+  }
+  function renderDateDrawer(){if(!drawerDate)return"";const topic=topics[drawerDate],state=lifecycleState(topic);return `<div class="drawer-backdrop" data-drawer-close></div><aside class="date-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title"><header><button class="drawer-back" data-drawer-close>← ${cursor.getMonth()+1}월 전체 월</button><button class="icon-button" data-drawer-close aria-label="닫기">×</button></header><div class="drawer-title"><span>${drawerDate} · ${weekday(drawerDate)}</span><h2 id="drawer-title">${topic?esc(managerTopicTitle(topic)):"아직 토픽이 없습니다"}</h2><span class="status-pill ${state.key}">${state.label}</span></div>${topic?`<nav class="drawer-tabs" aria-label="토픽 화면"><button class="is-active" data-open="${drawerDate}:admin">내용 검수</button><button data-open="${drawerDate}:topic" ${canPreviewTopic(topic)?"":"disabled"}>오늘의 토픽</button></nav><section class="drawer-summary"><h3>${topic.operatorStatus?.generationStatus==="interrupted"?"생성이 중단되었습니다.":state.key==="generation-failed"?"생성 문제를 해결해 주세요":state.key==="approved"?"멤버에게 보여줄 토픽이 준비됐습니다.":"내용을 확인해 주세요"}</h3><p>${topic.operatorStatus?.generationStatus==="interrupted"?"이전 생성 작업이 완료되지 않았습니다. 작성 중이던 상태는 보존되어 있습니다.":state.key==="generation-failed"?"실패한 부분만 다시 생성하거나 AI 설정을 확인할 수 있습니다.":state.key==="approved"?"오늘의 토픽 한 화면과 인쇄 자료가 같은 승인 데이터를 사용합니다.":"확인 항목을 검토한 뒤 승인할 수 있습니다."}</p>${primaryAction(drawerDate,topic)}</section>`:`<section class="drawer-create"><h3>토픽을 준비하세요</h3><p>최근 주제와 이번 달 구성을 보고 새로운 토픽을 자동으로 만듭니다.</p><button class="button primary" data-auto-date="${drawerDate}">자동으로 만들기</button><span>직접 원하는 주제가 있나요?</span><button class="button secondary" data-guided-date="${drawerDate}">직접 주제 지정</button></section>`}</aside>`}
+  function renderPreparationWorkspace(){const dates=operatingDates(),counts=dates.reduce((acc,date)=>{const key=lifecycleState(topics[date]).key;acc[key]=(acc[key]||0)+1;return acc},{}),attention=dates.length-(counts.approved||0)-(counts.empty||0),filterChip=(key,label,count)=>`<button class="status-filter-chip ${prepareFilter===key?"is-active":""}" type="button" data-status-filter="${key}" data-month-filter="${prepareFilter===key?"all":key}" aria-pressed="${prepareFilter===key}"><i aria-hidden="true"></i><span>${label}</span><b>${count}</b></button>`;return `<header class="workspace-heading compact-heading"><div class="product-intro"><h1>이번 달 토픽 운영</h1></div><div class="month-title"><div class="month-navigation"><button class="button ghost icon-button" data-action="previous-month" aria-label="이전 달"><span aria-hidden="true">‹</span></button><h2>${cursor.getFullYear()}년 ${cursor.getMonth()+1}월</h2><button class="button ghost icon-button" data-action="next-month" aria-label="다음 달"><span aria-hidden="true">›</span></button><button class="button secondary" data-action="today">이번 달</button></div><div class="workspace-month"><button class="button secondary poster-launch" data-action="monthly-poster">게시판 포스터</button><button class="button primary" data-action="auto-compose-month">전체 달 토픽 만들기</button></div></div><div class="status-filters" aria-label="토픽 상태 필터">${filterChip("approved","승인 완료",counts.approved||0)}${filterChip("attention","확인 필요",attention)}${filterChip("missing","미작성",counts.empty||0)}</div>${renderPrepareViews()}</header>${prepareMode==="tasks"?renderTaskHome():prepareMode==="month"?renderMonthList():renderCompactCalendar()}${renderDateDrawer()}`}
   function closeDateDrawer(){drawerReturnFocusDate=drawerDate;if(history.state?.talkflow&&historyIndex>0){history.back();return}navigateTo({section:"topics",view:prepareMode,month:monthValue()},"replace")}
   function renderCalendar(){
     const year=cursor.getFullYear(),month=cursor.getMonth(),days=new Date(year,month+1,0).getDate(),prefix=monthPrefix();
     const monthTopics=Object.values(topics).filter(t=>t.date?.startsWith(prefix));
     const operationDays=new Set(operatingDates()),targets=[...operationDays].filter(date=>!topics[date]);
     const offset=(new Date(`${prefix}-01T12:00:00`).getDay()+6)%7;
-    return `<header class="calendar-toolbar"><button class="icon-button" data-action="previous-month" aria-label="이전 달">←</button><div><h1>${year}년 ${month+1}월</h1><p>${operationDays.size}개 운영일 · ${targets.length}개 미작성</p></div><button class="icon-button" data-action="next-month" aria-label="다음 달">→</button><div class="calendar-actions"><button class="button secondary" data-action="today">오늘로 이동</button><button class="button primary" data-action="auto-compose-month">이번 달 자동 구성</button><button class="button secondary" data-action="settings">고급 설정</button></div></header>
+    return `<header class="calendar-toolbar"><button class="icon-button" data-action="previous-month" aria-label="이전 달">←</button><div><h1>${year}년 ${month+1}월</h1><p>${operationDays.size}개 운영일 · ${targets.length}개 미작성</p></div><button class="icon-button" data-action="next-month" aria-label="다음 달">→</button><div class="calendar-actions"><button class="button secondary" data-action="today">오늘로 이동</button><button class="button primary" data-action="auto-compose-month">전체 달 토픽 만들기</button><button class="button secondary" data-action="settings">고급 설정</button></div></header>
       <div class="weekday-row" aria-hidden="true">${["월","화","수","목","금","토","일"].map(day=>`<span>${day}</span>`).join("")}</div>
       <section class="month-calendar">${Array.from({length:offset},()=>'<span class="calendar-spacer"></span>').join("")}${Array.from({length:days},(_,i)=>{
         const date=`${prefix}-${String(i+1).padStart(2,"0")}`,t=topics[date];
@@ -239,7 +345,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
         if(!isOperating&&!t)return `<article class="calendar-day is-off"><header><time>${i+1}일 · ${weekday(date)}</time></header><p>운영 없음</p></article>`;
         if(!t)return `<article class="calendar-day is-empty"><header><time>${i+1}일 · ${weekday(date)}</time><span class="status-pill">${label}</span></header><h2>토픽 미작성</h2><div class="date-actions empty-actions"><button class="button ghost" data-auto-date="${date}">자동 생성</button><button class="text-action" data-custom-date="${date}">주제 지정</button></div></article>`;
         const primaryTarget=["approved","print-ready","completed"].includes(state)?"print":"admin";
-        return `<article class="calendar-day is-complete ${t.hidden?"is-hidden":""}"><header><time>${i+1}일 · ${weekday(date)}</time><span class="status-pill ${state}">${label}</span></header><h2>${koTitle(t.title.ko||t.title.en)}</h2><div class="date-actions"><button class="button ${state==="print-ready"?"primary":"secondary"}" data-open="${date}:${primaryTarget}">${status.action}</button><details class="card-overflow"><summary aria-label="추가 작업">⋯</summary><div><button data-open="${date}:admin">수정</button>${state==="print-ready"?`<button data-used="${date}">사용 완료로 표시</button>`:""}<button data-toggle-hidden="${date}">${t.hidden?"공개":"숨김"}</button><button data-clone-from="${date}">복제</button></div></details></div></article>`;
+        return `<article class="calendar-day is-complete ${t.hidden?"is-hidden":""}"><header><time>${i+1}일 · ${weekday(date)}</time><span class="status-pill ${state}">${label}</span></header><h2>${esc(managerTopicTitle(t))}</h2><div class="date-actions"><button class="button ${state==="print-ready"?"primary":"secondary"}" data-open="${date}:${primaryTarget}">${status.action}</button><details class="card-overflow"><summary aria-label="추가 작업">⋯</summary><div><button data-open="${date}:admin">수정</button>${state==="print-ready"?`<button data-used="${date}">사용 완료로 표시</button>`:""}<button data-toggle-hidden="${date}">${t.hidden?"공개":"숨김"}</button><button data-clone-from="${date}">복제</button></div></details></div></article>`;
       }).join("")}</section><details class="quick-help"><summary>처음 사용하시나요?</summary><p>빈 날짜에서 자동 생성 → 두 페이지 확인 → 필요한 부분만 수정 → 승인 → PDF 출력 순서로 진행하세요.</p></details>`;
   }
   function nextOpenDate(){
@@ -256,6 +362,8 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
         <label>주제 또는 키워드<input id="operator-topic" placeholder="예: 온라인 리뷰, 주말 계획"></label>
         <label>피하고 싶은 소재<input id="operator-avoid" placeholder="선택 입력"></label>
         <label>분위기<select id="operator-mood"><option>가볍고 편하게</option><option selected>경험 중심</option><option>생각 확장</option><option>함께 결정하기</option></select></label>
+        <label>1부 대화 카테고리<select id="operator-page1-category">${categoryOptions("page1")}</select></label>
+        <label>2부 Article 카테고리<select id="operator-article-category">${categoryOptions("article")}</select></label>
       </div>
       <div class="operator-actions create-actions"><span><button class="button secondary" data-action="recommend-topic">추천 주제 넣기</button><small>최근 사용하지 않은 주제를 입력합니다.</small></span><span><button class="button primary" data-action="operator-create" disabled>토픽 생성하기</button><small>입력한 주제로 오늘의 토픽을 만듭니다.</small></span>${canPreviewTopic(selected)?`<span class="preview-action"><button class="button secondary" data-open="${selected.date}:print">토픽 A4 미리보기</button></span>`:""}</div>
       <div class="operator-status ${review?.status||"pending"}"><strong>${review?review.status==="ready"?"바로 사용 가능":review.status==="review"?"확인할 부분 있음":"다시 생성 권장":"날짜와 주제를 선택해 시작하세요."}</strong><span>${review?`${review.issues.length}개 확인 항목 · ${review.issues[0]||"토픽 A4 미리보기 후 승인하세요."}`:"추천 주제를 넣거나 직접 입력하면 생성 버튼이 활성화됩니다."}</span></div>
@@ -402,15 +510,47 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
     const cardSheet=self?`<section class="simple-card-sheet"><header><h2>PRIVATE CARD SHEET</h2><p>Print one copy per group. Print two for groups of 5 or more. Cut cards A-D before class.<span lang="ko">그룹당 한 부를 인쇄하세요. 5명 이상이면 두 부를 인쇄하고, 수업 전에 A-D 카드를 잘라 주세요.</span></p></header><div>${reviewMaterials.map((item,index)=>`<article><b>CARD ${String.fromCharCode(65+index)}</b><p>${esc(item.en)}</p><small>Keep this card private. Explain it in your own words.</small></article>`).join("")}</div></section>`:"";const pageOne=self?setup+story+keyWords+quickVote+easy+real+expressions:setup+story+quickVote+easy+real;const pageTwo=self?activity+result+thinkHarder+closing+final+storyTranslation+operatingHelp:legacyReset+activity+result+thinkHarder+closing+final+expressions+operatingHelp;return `<article class="a4-topic simple-handout${leader?" simple-leader-handout":""}${self?" simple-self-running":""}" data-print-topic="${esc(t.date)}" data-generation-engine="${Simple.VERSION}" data-template-version="${Simple.TEMPLATE_VERSION}">${page(1,pageOne)}${page(2,pageTwo)}${self?page(3,cardSheet,"CARDS 3 / 3"):""}</article>`;
   }
   function renderTopicV4Handout(t){
-    const one=t.page1||{},two=t.page2||{},questions=items=>`<ol class="v41-questions">${(items||[]).map(item=>`<li>${esc(item)}</li>`).join("")}</ol>`,words=items=>`<div class="v41-words">${(items||[]).map(item=>`<span><b>${esc(item.en)}</b><small>${esc(item.ko)}</small></span>`).join("")}</div>`,header=(category,color,title,subtitle="")=>`<header class="v41-header" style="--category:${esc(color)}"><div><b>THEBOX</b><span>${esc(category)}</span><time>${esc(t.date)}</time></div><h1>${esc(title)}</h1>${subtitle?`<p>${esc(subtitle)}</p>`:""}</header>`;
-    const storyPage=`${header(one.category,one.categoryColor,one.title?.en,one.title?.ko)}<section class="v41-block"><h2>TODAY'S STORY</h2><p class="v41-instruction">Closest birthday is #1. Continue clockwise. Read aloud. Vote without reasons.</p><p class="v41-ko">→ 생일이 오늘과 가장 가까운 사람이 1번, 이후 시계방향으로 돌아가며 읽고 질문에 선택해주세요.</p><p class="v41-story">${esc(one.story?.en)}</p><h3>KEY WORDS</h3>${words(one.keyWords)}<h3>QUICK VOTE</h3><b>${esc(one.quickVote?.question)}</b><div class="v41-options">${(one.quickVote?.options||[]).map(value=>`<span>□ ${esc(value)}</span>`).join("")}</div></section><div class="v41-columns"><section class="v41-block"><h2>EASY TALK</h2>${questions(one.easyTalk)}</section><section class="v41-block"><h2>REAL TALK</h2>${questions(one.realTalk)}<p class="v41-culture">CULTURE SWAP<br>In my country or workplace…</p></section></div><section class="v41-block"><h2>TODAY'S ENGLISH</h2><div class="v41-english">${(one.todayEnglish||[]).map(value=>`<p>${esc(value)}</p>`).join("")}</div></section>`;
-    const randomPage=`${header("ICEBREAKERS",one.categoryColor,one.title?.en,one.title?.ko)}<section class="v41-block"><h2>RANDOM QUESTIONS</h2><p class="v41-instruction">Closest birthday is #1. They read the question aloud — then answer clockwise, one at a time.</p><p class="v41-ko">→ 생일이 오늘과 가장 가까운 사람이 1번입니다. 질문을 소리 내어 읽고 시계방향으로 한 명씩 답하세요.</p>${questions(one.randomQuestions)}</section><section class="v41-block"><h2>BALANCE GAME</h2><p class="v41-instruction">Circle your own answer first. Then vote by show of hands and talk about it.</p><p class="v41-ko">→ 먼저 각자 답에 동그라미 한 뒤, 손을 들어 투표하고 이유를 이야기하세요.</p><div class="v41-balance">${(one.balanceGame||[]).map(item=>`<p><b>${esc(item.left)}</b><i>OR</i><b>${esc(item.right)}</b><small>${esc(item.ko)}</small></p>`).join("")}</div></section>`;
-    const pageOne=`<section class="a4-page topic-v4-page-one v41-page" style="--category:${esc(one.categoryColor)}">${one.template==="B"?randomPage:storyPage}<footer>THEBOX TALK FLOW</footer></section>`;
-    const pageTwo=`<section class="a4-page topic-v4-page-two v41-page" style="--category:${esc(two.categoryColor)}">${header(two.category,two.categoryColor,two.title)}<section class="v41-block"><h2>TODAY'S ARTICLE</h2><p class="v41-instruction">Read the article and underline one sentence you agree or disagree with.</p><p class="v41-ko">→ 글을 읽고 동의하거나 동의하지 않는 문장 하나에 밑줄을 그으세요.</p><p class="v41-article">${esc(two.article)}</p><h3>KEY WORDS</h3>${words(two.keyWords)}</section><section class="v41-block"><h2>YOUR STANCE</h2><b>${esc(two.stance?.question)}</b><div class="v41-options">${(two.stance?.options||[]).map(value=>`<span>□ ${esc(value)}</span>`).join("")}</div></section><section class="v41-block"><h2>DISCUSSION</h2>${questions(two.discussion)}</section><footer>THEBOX TALK FLOW</footer></section>`;
+    const one=t.page1||{},two=t.page2||{};
+    const pageOneOrder=TopicV4.participantOrderFor(t,"page1"),articleOrder=TopicV4.participantOrderFor(t,"article");
+    const questions=items=>`<ol class="v41-questions">${(items||[]).map(item=>`<li>${esc(item)}</li>`).join("")}</ol>`;
+    const articleDiscussion=items=>(items||[]).map(item=>{const text=String(item||""),markers=[/#\s*1\s+(?:reads?|starts?\s+reading)/i,/group\s+continues/i,/one\s+sentence\s+at\s+a\s+time/i,/votes?\s+without\s+(?:giving\s+)?reasons?/i];return markers.filter(pattern=>pattern.test(text)).length>=2?"What part of this article stands out to you most?":item});
+    const words=items=>`<div class="v41-words">${(items||[]).map(item=>`<span><b>${esc(item.en)}</b><small>${esc(item.ko)}</small></span>`).join("")}</div>`;
+    const options=items=>`<div class="v41-options">${(items||[]).map((value,index)=>`<span><i aria-hidden="true">${index+1}</i>${esc(value)}</span>`).join("")}</div>`;
+    const header=(category,color,title,subtitle="")=>`<header class="v41-header" style="--category:${esc(color)}"><div><b>THEBOX</b><span>${esc(category)}</span><time>${esc(t.date)}</time></div><h1>${esc(title)}</h1>${subtitle?`<p>${esc(subtitle)}</p>`:""}</header>`;
+    const storyPage=`${header(one.category,one.categoryColor,one.title?.en,one.title?.ko)}<section class="v41-block" data-participant-order="${esc(pageOneOrder.id)}"><h2>TODAY'S STORY</h2><p class="v41-instruction">${esc(pageOneOrder.en)} Read aloud. Vote without reasons.</p><p class="v41-ko">→ ${esc(pageOneOrder.ko)} 이야기를 읽고 질문에 선택해주세요.</p><p class="v41-story">${esc(one.story?.en)}</p><h3 class="v41-story-keywords">KEY WORDS</h3>${words(one.keyWords)}<h3>QUICK VOTE</h3><b>${esc(one.quickVote?.question)}</b>${options(one.quickVote?.options)}</section><div class="v41-columns"><section class="v41-block"><h2>EASY TALK</h2>${questions(one.easyTalk)}</section><section class="v41-block"><h2>REAL TALK</h2>${questions(one.realTalk)}<p class="v41-culture">CULTURE SWAP<br>In my country or workplace…</p></section></div><section class="v41-block v41-english-section"><h2>TODAY'S ENGLISH</h2><div class="v41-english">${(one.todayEnglish||[]).map(value=>`<p>${esc(value)}</p>`).join("")}</div></section>`;
+    const randomPage=`${header("ICEBREAKERS",one.categoryColor,one.title?.en,one.title?.ko)}<section class="v41-block" data-participant-order="${esc(pageOneOrder.id)}"><h2>RANDOM QUESTIONS</h2><p class="v41-instruction">${esc(pageOneOrder.en)} #1 reads the question aloud; everyone answers in order.</p><p class="v41-ko">→ ${esc(pageOneOrder.ko)} 1번이 질문을 읽고 순서대로 한 명씩 답하세요.</p>${questions(one.randomQuestions)}</section><section class="v41-block"><h2>BALANCE GAME</h2><p class="v41-instruction">Circle your own answer first. Then vote by show of hands and talk about it.</p><p class="v41-ko">→ 먼저 각자 답에 동그라미 한 뒤, 손을 들어 투표하고 이유를 이야기하세요.</p><div class="v41-balance">${(one.balanceGame||[]).map(item=>`<p><b>${esc(item.left)}</b><i>OR</i><b>${esc(item.right)}</b><small>${esc(item.ko)}</small></p>`).join("")}</div></section>`;
+    const pageOne=`<section class="a4-page topic-v4-page-one v41-page" style="--category:${esc(one.categoryColor)}">${one.template==="B"?randomPage:storyPage}<footer>© THEBOX</footer></section>`;
+    const pageTwo=`<section class="a4-page topic-v4-page-two v41-page" style="--category:${esc(two.categoryColor)}">${header(two.category,two.categoryColor,two.title)}<section class="v41-block" data-participant-order="${esc(articleOrder.id)}"><h2>TODAY'S ARTICLE</h2><p class="v41-instruction">${esc(articleOrder.en)} #1 starts reading — continue in that direction, one sentence at a time.</p><p class="v41-ko">→ ${esc(articleOrder.ko)} 1번부터 그 방향으로 한 문장씩 이어 읽으세요.</p><p class="v41-article">${esc(two.article)}</p><h3>KEY WORDS</h3>${words(two.keyWords)}</section><section class="v41-block"><h2>YOUR STANCE</h2><b>${esc(two.stance?.question)}</b>${options(two.stance?.options)}</section><section class="v41-block"><h2>DISCUSSION</h2>${questions(articleDiscussion(two.discussion))}</section><footer>© THEBOX</footer></section>`;
     return `<article class="a4-topic topic-v4-handout" data-print-topic="${esc(t.date)}" data-generation-engine="${TopicV4.VERSION}" data-template-version="${TopicV4.TEMPLATE_VERSION}">${pageOne}${pageTwo}</article>`;
   }
+  function renderReviewArticleSource(source){
+    const item=normalizeArticleSource(source);
+    if(!item)return "";
+    const published=new Intl.DateTimeFormat("en-CA",{timeZone:"UTC"}).format(new Date(item.publishedAt));
+    return `<aside class="review-article-source"><span>ORIGINAL SOURCE</span><a href="${esc(item.url)}" target="_blank" rel="noopener noreferrer">${esc(item.publisher)} · ${esc(item.title)} <b aria-hidden="true">↗</b></a><small>${esc(published)} · Manager review only</small></aside>`;
+  }
+  function topicViewSummary(topic){
+    if(!topic?.date)return "";
+    if(!aiServerState.authenticated)return `<p class="topic-view-summary" role="status">관리자 로그인 후 열람 수 확인</p>`;
+    if(topicViewsMonth!==String(topic.date).slice(0,7))return `<p class="topic-view-summary" role="status">멤버 열람 수 불러오는 중</p>`;
+    return `<p class="topic-view-summary" aria-label="멤버 고유 열람 인원">멤버 열람 ${Number(topicViewsByDate[topic.date]||0)}명</p>`;
+  }
+  function renderV43ReviewCard(topic){
+    const card=topic.reviewCard||TopicV4.reviewCard(topic),final=card.final||{};
+    const rows=[
+      ["이 토픽의 핵심 상황",card.coreSituation],
+      ["Page 1 질문이 실제로 묻는 것",card.pageOneQuestion],
+      ["Page 2 기사 요지와 원문 링크",`${card.article||""}${card.sourceLink?` · <a href="${esc(card.sourceLink)}" target="_blank" rel="noopener noreferrer">원문 열기 ↗</a>`:""}`],
+      ["토론이 한쪽 답으로 유도되는가",card.leading],
+      ["20~60대가 자기 경험으로 답할 수 있는가",card.allAges],
+      ["영어 난이도·어색한 문장 여부",card.english],
+      ["1페이지·2페이지 소재가 실제로 겹치는가",card.overlap],
+      ["최종 판단",`${final.status||"수정 필요"} · ${final.reason||"검수 정보가 없습니다."}`]
+    ];
+    return `<section class="v43-review-card ${final.status==="공개 가능"?"is-ready":"needs-edit"}"><header><p class="eyebrow">OWNER REVIEW · NOT FOR PRINT</p><h2>원장 검수 카드</h2><strong>${esc(final.status||"수정 필요")}</strong></header>${topicViewSummary(topic)}<ol>${rows.map(([label,value],index)=>`<li><b>${index+1}</b><div><h3>${esc(label)}</h3><p>${value}</p></div></li>`).join("")}</ol></section>`;
+  }
   function renderHandout(t,leader=false){
-    if(t.generationEngine===TopicV4.VERSION)return renderTopicV4Handout(t);
+    if(t.generationEngine===TopicV4.VERSION||hasV43HandoutShape(t))return renderTopicV4Handout(t);
     if(t.generationEngine===Simple.VERSION)return renderSimpleHandout(t,leader);
     if(t.generationEngine===Generation.VERSION)return renderGeneratedHandout(t,leader);
     if(t.conversationFlow)return renderConversationHandout(t,leader);
@@ -492,15 +632,17 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
     </article>`;
   }
   function renderPrintCollection(){
+    if(isPublishedPrintRoute()&&publishedPrint.loading)return `<div class="generation-blocked"><p class="eyebrow">THEBOX TOPIC</p><h1>승인된 오늘의 토픽을 불러오는 중입니다.</h1><p>잠시만 기다려 주세요.</p></div>`;
+    if(isPublishedPrintRoute()&&publishedPrint.error)return `<div class="generation-blocked"><p class="eyebrow">THEBOX TOPIC</p><h1>승인된 토픽을 불러오지 못했습니다.</h1><p>${esc(publishedPrint.error)}</p></div>`;
     const items=[topics[activeDate]].filter(Boolean);
     if(!items.length)return empty();
-    const blocked=items.filter(topic=>!canPreviewTopic(topic));
+    const published=isPublishedPrintRoute(),blocked=published?[]:items.filter(topic=>!canPreviewTopic(topic));
     if(blocked.length)return `<div class="generation-blocked"><p class="eyebrow">PRINT BLOCKED</p><h1>완성되지 않은 토픽은 PDF로 출력할 수 없습니다.</h1><p>${blocked.map(topic=>`${esc(topic.date)} · ${esc(lifecycleState(topic).label)}`).join("<br>")}</p><button class="button secondary" data-action="calendar">월 목록으로 돌아가기</button></div>`;
-    document.title=`${items[0].date}_TheBox_Topic_${safeFilename(items[0].title.ko)}`;
-    const canConfirm=items[0].quality?.status==="approved"&&!["checked","printed"].includes(items[0].operatorStatus?.printStatus);
-    const pagesPerTopic=2,roleLabel="오늘의 토픽";
-    const pages=items.map(topic=>renderHandout(topic,false)).join("");
-    return `<div class="print-toolbar"><button class="button secondary" data-action="calendar">← 월 목록으로</button><span>${roleLabel} · ${pagesPerTopic}페이지</span>${canConfirm?`<button class="button secondary" data-action="confirm-print">A4 확인 완료</button>`:""}<button class="button primary" data-action="print-now">PDF 저장 / 인쇄</button></div><div class="paper-stack">${pages}</div>`;
+    document.title=`${items[0].date}_TheBox_Topic_${safeFilename(managerTopicTitle(items[0]))}`;
+    const canConfirm=!published&&items[0].quality?.status==="approved"&&!["checked","printed"].includes(items[0].operatorStatus?.printStatus);
+    const copies=published?publishedPrint.copies:1,pagesPerTopic=2,roleLabel=published?"승인된 원본 토픽":"오늘의 토픽";
+    const pages=items.flatMap(topic=>Array.from({length:copies},()=>renderHandout(topic,false))).join("");
+    return `<div class="print-toolbar">${published?"":`<button class="button secondary" data-action="calendar">← 월 목록으로</button>`}<span>${roleLabel} · ${copies}부 · ${pagesPerTopic*copies}페이지</span>${canConfirm?`<button class="button secondary" data-action="confirm-print">A4 확인 완료</button>`:""}<button class="button primary" data-action="print-now">PDF 저장 / 인쇄</button></div><div class="paper-stack">${pages}</div>`;
   }
   function safeFilename(value){return String(value||"topic").replace(/[\\/:*?"<>|]/g,"").replace(/\s+/g,"_")}
   function empty(){return `<div class="empty-state"><p class="eyebrow">OPEN A DATE</p><h1>선택한 날짜에 토픽이 없습니다.</h1><p>관리 화면에서 새 토픽을 만들거나 JSON을 가져와 시작하세요.</p><button class="button primary" data-action="create">새 토픽 만들기</button></div>`}
@@ -526,7 +668,8 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
     const issueList=incompleteFailure?`<p class="approval-warning">본문 생성이 중간에 끝났습니다.</p>`:refusalFailure?`<p class="approval-warning">이 주제로는 내용을 생성할 수 없습니다.</p>`:structuralFailure?`<p class="approval-warning">생성된 내용의 형식을 확인해야 합니다.</p>`:bilingualFailure?`<p class="approval-warning">영어와 한국어 Story의 핵심 정보가 일치하지 않아 저장하지 않았습니다.</p>`:participationFailure?`<p class="approval-warning">활동 진행에 필요한 참여 단계가 빠졌습니다.</p>`:issues.length?`<ul class="issue-list">${issues.map(item=>`<li class="critical"><strong>${esc(item.location||section)}</strong><span>${esc(item.message||String(item))}</span></li>`).join("")}</ul>`:`<p class="approval-warning">${esc(failure.message||"생성 응답을 받지 못했습니다.")}</p>`;
     const error=failure.error||{},details=failed?`<dl class="failure-meta"><div><dt>실패 단계</dt><dd>${esc(error.stage||failure.stage||section)}</dd></div><div><dt>오류 유형</dt><dd>${esc(error.type||"generation_error")}</dd></div>${error.stopReason||failure.stopReason?`<div><dt>종료 상태</dt><dd>${esc(error.stopReason||failure.stopReason)}</dd></div>`:""}${error.schemaValidationType||failure.schemaValidationType?`<div><dt>형식 검증</dt><dd>${esc(error.schemaValidationType||failure.schemaValidationType)}</dd></div>`:""}${structuralFailure?`<div><dt>형식 오류 필드</dt><dd>${esc(malformedField||"-")}</dd></div><div><dt>예상 형식</dt><dd>${esc(error.expectedType||failure.expectedType||"object")}</dd></div><div><dt>받은 형식</dt><dd>${esc(error.receivedType||failure.receivedType||(malformedField?"string":"-"))}</dd></div>`:""}<div><dt>사용 모델</dt><dd>${esc(error.modelId||failure.modelId||"선택 안 됨")}</dd></div><div><dt>HTTP 상태</dt><dd>${esc(error.httpStatus||"-")}</dd></div><div><dt>마지막 시도</dt><dd>${esc(error.lastAttemptAt||t.updatedAt||"-")}</dd></div></dl>`:"";
     const failedGenerationEngine=t.generationEngine===TopicV4.VERSION?TopicV4:Simple;
-    const canRetryContent=(failure.stage==="content"||failure.error?.stage==="content")&&failure.plan&&failedGenerationEngine.validatePlan(failure.plan,t.generationRequest||{}).ok;
+    const separationFailure=issues.some(item=>String(item.location||"")==="content.separation");
+    const canRetryContent=!separationFailure&&(failure.stage==="content"||failure.error?.stage==="content")&&failure.plan&&failedGenerationEngine.validatePlan(failure.plan,t.generationRequest||{}).ok;
     const actions=interrupted?`<button class="button primary" data-action="regenerate-v2">다시 생성</button><details><summary class="button secondary">초안 보기</summary><pre>${esc(JSON.stringify(source,null,2))}</pre></details>`:failed?bilingualFailure?`<button class="button primary" data-action="regenerate-v2">전체 다시 생성</button><button class="button secondary" data-action="settings">모델 설정 확인</button>`:canRetryContent?`<button class="button primary" data-failed-regenerate="content">본문 다시 생성</button><button class="button secondary" data-action="regenerate-v2">전체 다시 생성</button><button class="button secondary" data-action="settings">모델 설정 확인</button>`:section==="content"?`<button class="button primary" data-action="regenerate-v2">전체 다시 생성</button><button class="button secondary" data-action="settings">모델 설정 확인</button>`:`<button class="button primary" data-failed-regenerate="${esc(section)}">${esc(section)} 섹션만 다시 생성</button><button class="button secondary" data-action="regenerate-v2">전체 다시 생성</button><button class="button secondary" data-action="settings">모델 설정 확인</button>`:`<button class="button primary" data-action="regenerate-v2">새 Conversation-First 구조로 다시 생성</button><button class="button danger" data-action="delete">기존 초안 삭제</button>`;
     return `<section class="generation-blocked"><p class="eyebrow">${displayTitle}</p><h1>${incompleteFailure?"본문 생성이 중간에 끝났습니다.":refusalFailure?"이 주제로는 내용을 생성할 수 없습니다.":structuralFailure?"생성된 내용의 형식을 확인해야 합니다.":interrupted?"생성이 중단되었습니다.":failed?"토픽 내용을 완성하지 못했습니다.":"구형 또는 불완전한 자동 생성 초안입니다."}</h1><p>${interrupted?"이전 생성 작업이 완료되지 않았습니다.<br>작성 중이던 상태는 보존되어 있습니다.":failed?incompleteFailure||refusalFailure||structuralFailure?"성공한 Topic Plan이 보존된 경우 본문만 한 번 다시 생성할 수 있습니다.":bilingualFailure?`실패한 섹션: <b>${esc(section)}</b>`:`실패한 섹션: <b>${esc(section)}</b><br>작성된 초안은 보존했습니다.`:"이 초안은 자동 승인·미리보기·PDF 대상이 아닙니다."}</p>${details}${failed&&!interrupted?issueList:""}<div class="button-row">${actions}</div>${interrupted?"":`<details><summary>${failed?"실패 이유와 생성 진단 보기":"원문 보기"}</summary><pre>${esc(JSON.stringify(failed?safeDiagnostics(error):source,null,2))}</pre></details>`}</section>`;
   }
@@ -539,7 +682,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
   function renderTopicView(t){
     if(!t)return empty();
     if(!canPreviewTopic(t))return dailyNav(t,"topic")+generationBlocked(t);
-    if([TopicV4.VERSION,Simple.VERSION].includes(t.generationEngine))return dailyNav(t,"topic")+renderSimpleScreen(t);
+    if([TopicV4.VERSION,Simple.VERSION].includes(t.generationEngine)||hasV43HandoutShape(t))return dailyNav(t,"topic")+renderSimpleScreen(t);
     if(t.generationEngine===Generation.VERSION)return dailyNav(t,"topic")+renderGeneratedScreen(t);
     if(t.conversationFlow)return dailyNav(t,"topic")+renderConversationScreen(t);
     return dailyNav(t,"topic")+hero(t)+progress()+
@@ -589,7 +732,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
     if(["failed","interrupted"].includes(t.operatorStatus?.generationStatus)||t.generatedConversation&&![TopicV4.VERSION,Simple.VERSION,Generation.VERSION].includes(t.generationEngine))return dailyNav(t,"admin")+generationBlocked(t,true);
     if(t.generationEngine===TopicV4.VERSION){
       const evaluation=TopicV4.evaluate(t),state=evaluation.ready?"사용 가능":"확인 필요",issues=evaluation.issues.map(item=>`<li class="${item.severity}"><strong>${esc(item.location)}</strong><span>${esc(item.message)}</span></li>`).join("");
-      return `${dailyNav(t,"admin")}<section class="simple-review-status ${evaluation.ready?"is-ready":"has-errors"}"><p class="eyebrow">THEBOX TOPIC V4.1</p><h2>${state}</h2>${issues?`<ul class="issue-list">${issues}</ul>`:"<p>v4.1 콘텐츠와 고정 비주얼 계약을 통과했습니다.</p>"}</section><section class="operator-review simple-operator-review"><div class="review-heading"><div><p class="eyebrow">승인 전 확인</p><h2>A4 첫 장 + Article</h2></div></div><button class="review-preview-grid" data-preview-modal aria-label="오늘의 토픽 A4 두 페이지 크게 보기">${renderTopicV4Handout(t)}</button></section><section class="review-actions simple-review-actions"><button class="button secondary" data-v41-regenerate="page1">첫 장 다시 생성</button><button class="button secondary" data-v41-regenerate="page2">Article 다시 생성</button><button class="button secondary" data-action="regenerate-v2">전체 다시 생성</button><button class="button secondary" data-open="${t.date}:print" ${evaluation.ready?"":"disabled"}>미리보기</button><button class="button primary approve-button" data-action="approve-save" ${evaluation.ready?"":"disabled aria-disabled=\"true\""}>승인하고 저장</button>${t.quality?.status==="approved"?`<button class="button primary" data-publish-topic="${t.date}">멤버에게 공개</button>`:""}</section><dialog class="a4-preview-dialog"><button class="dialog-close" data-preview-close>닫기</button><div>${renderTopicV4Handout(t)}</div></dialog><details class="advanced-editor"><summary>생성 데이터</summary><pre>${esc(JSON.stringify(t,null,2))}</pre></details>`;
+      return `${dailyNav(t,"admin")}<section class="simple-review-status ${evaluation.ready?"is-ready":"has-errors"}"><p class="eyebrow">THE BOX TOPIC V4.3</p><h2>${state}</h2>${issues?`<ul class="issue-list">${issues}</ul>`:"<p>v4.3 콘텐츠·소재 분리·인쇄 계약을 통과했습니다.</p>"}</section>${renderV43ReviewCard(t)}<section class="operator-review simple-operator-review"><div class="review-heading"><div><p class="eyebrow">승인 전 확인</p><h2>A4 첫 장 + Article</h2></div></div>${renderReviewArticleSource(t.page2?.source)}<button class="review-preview-grid" data-preview-modal aria-label="오늘의 토픽 A4 두 페이지 크게 보기">${renderTopicV4Handout(t)}</button></section><section class="review-actions simple-review-actions"><button class="button secondary" data-v41-regenerate="page1">첫 장 다시 생성</button><button class="button secondary" data-v41-regenerate="page2">Article 다시 생성</button><button class="button secondary" data-action="regenerate-v2">전체 다시 생성</button><button class="button secondary" data-open="${t.date}:print" ${evaluation.ready?"":"disabled"}>미리보기</button><button class="button primary approve-button" data-action="approve-save" ${evaluation.ready?"":"disabled aria-disabled=\"true\""}>승인하고 저장</button>${t.quality?.status==="approved"?`<button class="button primary" data-publish-topic="${t.date}">멤버에게 공개</button>`:""}<button class="button danger" data-action="delete">삭제</button></section><dialog class="a4-preview-dialog"><button class="dialog-close" data-preview-close>닫기</button><div>${renderTopicV4Handout(t)}</div></dialog><details class="advanced-editor"><summary>생성 데이터</summary><pre>${esc(JSON.stringify(t,null,2))}</pre></details>`;
     }
     if(t.generationEngine===Simple.VERSION){
       const evaluation=Simple.evaluate(t,Object.values(topics)),state=evaluation.blockers.length?"생성 실패":evaluation.issues.length?"확인 필요":"사용 가능";
@@ -692,12 +835,15 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
   function handleAction(action){
     if(action==="save")saveTopics();
     if(action==="validate"){const r=validateTopic(current());current().quality={status:r.status==="approved"?"approved":"review",score:r.score,issues:r.issues};dirty=true;saveTopics("품질검사를 완료하고 저장했습니다.")}
-    if(action==="delete"){if(confirm("이 TheBox Topic 토픽을 삭제할까요?")){delete topics[activeDate];activeDate=Object.keys(topics).sort()[0]||today();saveTopics("삭제했습니다.")}}
+    if(action==="delete")deleteTopic();
     if(action==="create")createTopic(activeDate);
     if(action==="export")exportMonth();
     if(action==="import")$("#json-import").click();
     if(action==="viewer")openViewer();
     if(action==="print")window.print();
+    if(action==="monthly-poster")navigateTo({section:"poster",month:monthValue()});
+    if(action==="poster-back")navigateTo({section:"topics",view:prepareMode,month:monthValue()});
+    if(action==="poster-print")window.print();
     if(action==="timer-start")toggleTimer();
     if(action==="timer-reset"){timerSeconds=0;clearInterval(timerHandle);timerHandle=null;render()}
     if(action==="generate-all")regenerate("all");
@@ -737,53 +883,106 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
     const base=clone(Object.values(window.TALKFLOW_SAMPLE_TOPICS)[0]);base.id=`talkflow-${date}-${crypto.randomUUID()}`;base.date=date;base.title={en:"New Conversation Flow",ko:"새 대화 흐름"};base.quality={status:"draft",score:0,issues:["내용을 작성하고 품질검사를 실행하세요."]};base.createdAt=base.updatedAt=new Date().toISOString();topics[date]=base;activeDate=date;dirty=true;navigateTo({section:"topics",view:"month",month:date.slice(0,7),date,tab:"review"});view="admin";drawerDate="";render();
   }
   async function createConversationTopic(){
-    const date=$("#operator-date").value,keyword=$("#operator-topic").value.trim(),mood=$("#operator-mood").value;
+    const date=$("#operator-date").value,keyword=$("#operator-topic").value.trim(),mood=$("#operator-mood").value,page1Category=categoryPreference($("#operator-page1-category")?.value),articleCategory=articleCategoryPreference($("#operator-article-category")?.value);
     if(!date||!keyword){notify("날짜와 주제를 입력해 주세요.",true);return}
     if(topics[date]){notify("선택한 날짜에 토픽이 있습니다. 기존 토픽을 열거나 다른 날짜를 선택하세요.",true);return}
-    await generateAndStore({date,generationMode:"guided",topicHint:keyword,conversationDirection:mood,avoid:$("#operator-avoid")?.value.trim()||""});
+    if(hasCategoryConflict(page1Category,articleCategory)){notify("1부와 2부는 서로 다른 카테고리를 선택해 주세요.",true);return}
+    await generateAndStore({date,generationMode:"guided",topicHint:keyword,conversationDirection:mood,page1Category,articleCategory,avoid:$("#operator-avoid")?.value.trim()||""});
   }
-  function normalizeGenerationRequest(input={}){const topicHint=String(input.topicHint??input.keyword??"").trim(),generationMode=input.generationMode==="auto"?"auto":input.generationMode==="guided"?"guided":topicHint?"guided":"auto";return{date:String(input.date||""),generationMode,topicHint:generationMode==="guided"?topicHint:"",conversationDirection:String(input.conversationDirection??input.mood??"auto"),source:String(input.source||""),avoid:String(input.avoid||""),repairSection:String(input.repairSection||"")}}
+  function normalizeArticleSource(value){if(!value||typeof value!=="object")return null;try{const url=new URL(String(value.url||""));if(url.protocol!=="https:"||!String(value.publisher||"").trim()||!String(value.title||"").trim()||!String(value.excerpt||"").trim()||!Number.isFinite(Date.parse(value.publishedAt)))return null;return{publisher:String(value.publisher).trim().slice(0,120),category:TopicV4.canonicalArticleCategory(value.category),title:String(value.title).trim().slice(0,240),titleKey:String(value.titleKey||"").trim().slice(0,240),subjectKey:String(value.subjectKey||"").trim().slice(0,320),url:url.href.slice(0,2048),excerpt:String(value.excerpt).trim().slice(0,500),popularityScore:Math.max(0,Number(value.popularityScore)||0),publishedAt:new Date(value.publishedAt).toISOString()}}catch{return null}}
+  function articleTokens(source){return[...new Set(String(source?.subjectKey||source?.titleKey||source?.title||"").toLowerCase().match(/[a-z0-9][a-z0-9'-]*/g)||[])].filter(token=>token.length>2)}
+  function repeatsKnownArticle(candidate,knownSources){const normalized=normalizeArticleSource(candidate);if(!normalized)return true;return(knownSources||[]).some(previous=>{if(previous.url===normalized.url||previous.titleKey&&normalized.titleKey&&previous.titleKey===normalized.titleKey)return true;const left=articleTokens(previous),right=articleTokens(normalized),shared=right.filter(token=>left.includes(token)).length,smaller=Math.min(left.length,right.length);return shared>=3||smaller>=3&&shared/smaller>=.8})}
+  function usedArticleSources(date){const month=String(date||"").slice(0,7),active=Object.values(topics).filter(item=>item?.date?.startsWith(month)).map(item=>({source:normalizeArticleSource(item?.page2?.source||item?.generationRequest?.articleSource),category:String(item?.page2?.category||"").trim()})).filter(item=>item.source),monthlySources=[...active,...articleHistoryFor(date).map(source=>({source,category:source.category}))],sources=[...new Map([...active,...allArticleHistory(date).map(source=>({source,category:source.category}))].map(item=>[item.source.url,item])).values()],categoryCounts=monthlySources.reduce((counts,item)=>{const category=item.source.category||item.category;if(category)counts[category]=(counts[category]||0)+1;return counts},{}),publisherCounts=monthlySources.reduce((counts,item)=>{const publisher=item.source.publisher;if(publisher)counts[publisher]=(counts[publisher]||0)+1;return counts},{}),subject=value=>String(value||"").split(/\s+/).filter(Boolean).slice(0,12).join(" ");return{excludeUrls:sources.slice(0,40).map(item=>item.source.url),excludeTitles:sources.slice(0,40).map(item=>item.source.title),excludeSubjects:sources.slice(0,40).map(item=>subject(item.source.subjectKey||item.source.titleKey||item.source.title)),usedCategories:Object.keys(categoryCounts),categoryCounts,publisherCounts,knownSources:sources.map(item=>item.source)}}
+  async function ensureArticleSource(request){
+    const normalized=normalizeGenerationRequest(request);
+    if(normalized.articleSource)return normalized;
+    const options=usedArticleSources(normalized.date),known=[...options.knownSources];delete options.knownSources;
+    if(normalized.page1Category!=="auto")options.excludedCategories=[normalized.page1Category];
+    if(normalized.articleCategory!=="auto")options.preferredCategories=[normalized.articleCategory];
+    for(let attempt=0;attempt<8;attempt++){
+      const articleSource=normalizeArticleSource(await AiClient.articleSource(options));
+      if(articleSource&&!repeatsKnownArticle(articleSource,known)){rememberArticleSource(normalized.date,articleSource);return {...normalized,articleSource}}
+      if(articleSource){options.excludeUrls=[articleSource.url,...options.excludeUrls].slice(0,40);options.excludeTitles=[articleSource.title,...options.excludeTitles].slice(0,40);options.excludeSubjects=[articleSource.subjectKey||articleSource.titleKey||articleSource.title,...options.excludeSubjects].slice(0,40)}
+    }
+    throw Object.assign(new Error("duplicate RSS article"),{type:"rss_duplicate_exhausted"});
+  }
+  function normalizeGenerationRequest(input={}){const topicHint=String(input.topicHint??input.keyword??"").trim(),generationMode=input.generationMode==="auto"?"auto":input.generationMode==="guided"?"guided":topicHint?"guided":"auto",page1Category=categoryPreference(input.page1Category),articleCategory=articleCategoryPreference(input.articleCategory),requestedTemplate=input.page1Template==="B"?"B":input.page1Template==="A"?"A":TopicV4.chooseTemplate(),page1Template=page1Category==="ICEBREAKERS"?"B":page1Category!=="auto"?"A":requestedTemplate,planVariant=Math.max(0,Math.floor(Number(input.planVariant)||0));return{date:String(input.date||""),generationMode,topicHint:generationMode==="guided"?topicHint:"",conversationDirection:String(input.conversationDirection??input.mood??"auto"),source:String(input.source||""),articleSource:normalizeArticleSource(input.articleSource),avoid:String(input.avoid||""),repairSection:String(input.repairSection||""),page1Category,articleCategory,page1Template,planVariant}}
   function recentTopicContext(date){const target=new Date(`${date}T12:00:00`);return Object.values(topics).filter(item=>item?.date&&item.date!==date&&Math.abs(target-new Date(`${item.date}T12:00:00`))<=60*86400000).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,20).map(item=>({date:item.date,title:String(item.title?.ko||item.title?.en||""),category:String(item.category?.ko||item.category?.en||""),activityType:String(item.session2?.activity?.name||item.midGame?.name||"")}))}
+  function recentPageOneContext(date){const versions=Object.values(loadRecord(KEYS.versions)).flatMap(list=>Array.isArray(list)?list.map(entry=>entry?.topic):[]),snapshots=[...Object.values(topics),...versions].map(pageOneReference).filter(Boolean),seen=new Set;return[...snapshots,...allPageOneHistory(date)].filter(item=>{const key=item.titleEn.toLowerCase();if(seen.has(key))return false;seen.add(key);return true}).slice(0,240)}
+  function recentStars(date){return Object.values(topics).filter(item=>item?.date?.startsWith(date.slice(0,7))&&item.date!==date).map(item=>TopicV4.canonicalStar(item?.page1?.story?.star)).filter(star=>TopicV4.STARS.includes(star))}
+  function selectedStar(date){return TopicV4.selectStarForDate(date,recentStars(date))}
   function categoryCounts(date){return Object.values(topics).filter(item=>item?.date?.startsWith(date.slice(0,7))).reduce((counts,item)=>{const category=String(item.category?.ko||item.category?.en||"기타");counts[category]=(counts[category]||0)+1;return counts},{})}
   function pendingGeneration(request,originalDraft=null){
     const createdAt=new Date().toISOString();
     return{id:`topic-${request.date}-${crypto.randomUUID()}`,date:request.date,weekday:weekday(request.date),category:{en:"",ko:request.conversationDirection||"auto"},title:{en:"",ko:request.topicHint},generatedConversation:true,generationEngine:TopicV4.VERSION,generationRequest:clone(request),originalDraft:originalDraft?clone(originalDraft):undefined,quality:{status:"draft",score:0,issues:[]},operatorStatus:{generationStatus:"running",reviewStatus:"review",printStatus:"unchecked",used:false},hidden:false,createdAt,updatedAt:createdAt};
   }
-  function generationMessages(stage,request,plan=null,issues=[],previousCandidate=null){
-    const topic={date:request.date,weekday:weekday(request.date),generationMode:request.generationMode,topicHint:request.topicHint,conversationDirection:request.conversationDirection,source:request.source,avoid:request.avoid,repairSection:request.repairSection,recentTopics:recentTopicContext(request.date),categoryCounts:categoryCounts(request.date)};
-    return [{role:"user",content:JSON.stringify(TopicV4.buildPromptPayload({stage,topic,approvedPlan:plan,previousValidationIssues:issues,previousCandidate}))}];
+  function generationTopic(request){return{date:request.date,weekday:weekday(request.date),generationMode:request.generationMode,topicHint:request.topicHint,conversationDirection:request.conversationDirection,source:request.source,articleSource:request.articleSource,avoid:request.avoid,repairSection:request.repairSection,page1Category:request.page1Category,articleCategory:request.articleCategory,page1Template:request.page1Template,planVariant:request.planVariant,recentTopics:recentTopicContext(request.date),recentPageOnes:recentPageOneContext(request.date),recentStars:recentStars(request.date),selectedStar:TopicV4.STARS.includes(request.retainedStar)?request.retainedStar:TopicV4.selectStarForDate(request.date,recentStars(request.date),request.planVariant),categoryCounts:categoryCounts(request.date)}}
+  function planForGeneration(plan,request){return plan?{...plan,star:generationTopic(request).selectedStar}:null}
+  function stablePlanForRequest(request){
+    const plan=TopicV4.buildStablePlan(generationTopic(request));
+    if(!plan||!TopicV4.validatePlan(plan,generationTopic(request)).ok)throw Object.assign(new Error("자동 생성용 로컬 Topic Plan을 만들지 못했습니다."),{stage:"plan",type:"generation_error"});
+    return plan
   }
-  async function requestGenerationStage(stage,request,plan=null,modelId){
-    const tool=stage==="plan"?TopicV4.PLAN_TOOL:TopicV4.CONTENT_TOOL,normalize=clone,validate=stage==="plan"?value=>TopicV4.validatePlan(value,request):value=>{
+  function retainedPageOnePlan(previous,candidatePlan,request){
+    const retained=planForGeneration(previous?.topicPlan,request),pageOne=previous?.page1||{},story=pageOne.story||{};
+    const fallbackPremise=[pageOne.title?.en,story.en,...(pageOne.randomQuestions||[])].filter(Boolean).join(" ").trim();
+    return {...candidatePlan,titleEn:String(pageOne.title?.en||retained?.titleEn||candidatePlan?.titleEn||"").trim(),titleKo:String(pageOne.title?.ko||retained?.titleKo||candidatePlan?.titleKo||"").trim(),category:String(pageOne.category||retained?.category||candidatePlan?.category||"").trim(),page1Template:pageOne.template==="B"?"B":"A",page1Premise:String(retained?.page1Premise||fallbackPremise||candidatePlan?.page1Premise||"").trim()}
+  }
+  async function articlePlanForRetainedPage(previous,request,modelId){
+    let candidate=request,lastValidation=null;
+    for(let attempt=0;attempt<2;attempt++){
+      candidate=await ensureArticleSource({...candidate,articleSource:null});
+      // Page 1 is kept as-is, so the plan must keep its star instead of the date's next one.
+      const retainedStar=TopicV4.canonicalStar(previous?.page1?.story?.star);if(previous?.page1?.template!=="B"&&TopicV4.STARS.includes(retainedStar))candidate={...candidate,retainedStar};
+      const generatedPlan=stablePlanForRequest(candidate),plan=retainedPageOnePlan(previous,generatedPlan,candidate),validation=TopicV4.validatePlan(plan,generationTopic(candidate));
+      if(validation.ok)return{request:candidate,plan};
+      lastValidation=validation;
+    }
+    const error=new Error("기존 첫 장과 겹치지 않는 Article을 찾지 못했습니다. 잠시 후 다시 시도해 주세요.");error.stage="plan";error.type="generation_error";error.issues=lastValidation?.issues||[];throw error;
+  }
+  function generationMessages(stage,request,plan=null,issues=[]){
+    const topic=generationTopic(request);
+    return [{role:"user",content:JSON.stringify(TopicV4.buildPromptPayload({stage,topic,approvedPlan:plan,repairIssues:issues}))}];
+  }
+  function generationTokenBudget(stage){return stage==="plan"?900:2800}
+  async function requestGenerationStage(stage,request,plan=null,modelId,repairIssues=[]){
+    const tool=stage==="plan"?TopicV4.PLAN_TOOL:TopicV4.CONTENT_TOOL,normalize=stage==="plan"?value=>({...clone(value),articleCategory:request.articleSource?.category||value?.articleCategory}):clone,validate=stage==="plan"?value=>TopicV4.validatePlan(value,generationTopic(request)):value=>{
       const result=TopicV4.validateContent(value,plan);
       if(value?.date===request.date)return result;
       const mismatch={severity:"blocker",id:"B1",group:"structure",location:"date",message:"요청 날짜와 생성 날짜가 일치하지 않습니다."};
       return{...result,ok:false,issues:[...result.issues,mismatch],blockers:[...result.blockers,mismatch]};
     };
-    let lastError=null,lastIssues=[],lastRaw=null,lastNormalized=null,lastFactMismatch=null,lastProviderMeta=null;
+    let lastRaw=null,lastNormalized=null,lastProviderMeta=null;
     try{
-      const payload=await AiClient.generate({model:modelId,max_tokens:6000,messages:generationMessages(stage,request,plan),tools:[tool],tool_choice:{type:"tool",name:tool.name}});
+      const payload=await AiClient.generate({model:modelId,max_tokens:generationTokenBudget(stage),messages:generationMessages(stage,request,plan,repairIssues),tools:[tool],tool_choice:{type:"tool",name:tool.name}});
       lastProviderMeta=safeProviderMeta(payload.provider_meta);
       const output=stage==="content"?TopicV4.adaptStructuredContentTransport(TopicV4.parseStructuredContentResponse(payload),plan,{...request,weekday:weekday(request.date)}):payload.content?.find(item=>item.type==="tool_use"&&item.name===tool.name)?.input;
       if(!output)throw new Error(`${tool.name} result is missing.`);
       lastRaw=clone(output);lastNormalized=normalize(lastRaw);
       const result=validate(lastNormalized);
       if(result.ok)return lastNormalized;
-      lastIssues=result.issues.map(item=>clone(item));const factMismatch=result.quality?.signals?.storyFactMismatch;lastFactMismatch=factMismatch&&(factMismatch.missingInEn?.length||factMismatch.missingInKo?.length)?factMismatch:null;lastError=new Error(lastIssues.map(item=>`${item.location}: ${item.message}`).join(" "));
-    }catch(error){lastError=error}
-    const error=new Error(`${stage==="plan"?"Topic Plan":"Content Fill"} failed: ${lastError?.message||"unknown error"}`);
-    error.stage=stage;error.issues=lastIssues;error.diagnostics={raw:lastRaw,normalized:lastNormalized};error.httpStatus=lastError?.httpStatus||lastProviderMeta?.httpStatus||null;error.type=lastError?.type||"generation_error";error.requestId=lastError?.requestId||lastProviderMeta?.requestId||"";error.modelId=modelId;error.payload=lastError?.payload;error.factMismatch=lastFactMismatch;error.malformedField=lastError?.malformedField||"";error.expectedType=lastError?.expectedType||"";error.receivedType=lastError?.receivedType||"";error.stopReason=lastError?.stopReason||lastProviderMeta?.stopReason||"";error.schemaValidationType=lastError?.schemaValidationType||"";error.providerMeta=lastProviderMeta||safeProviderMeta(lastError?.providerMeta);throw error;
+      const error=new Error(result.issues.map(item=>`${item.location}: ${item.message}`).join(" "));error.issues=result.issues.map(item=>clone(item));const factMismatch=result.quality?.signals?.storyFactMismatch;error.factMismatch=factMismatch&&(factMismatch.missingInEn?.length||factMismatch.missingInKo?.length)?factMismatch:null;throw error;
+    }catch(cause){
+      const error=new Error(`${stage==="plan"?"Topic Plan":"Content Fill"} failed: ${cause?.message||"unknown error"}`);
+      error.stage=stage;error.issues=cause?.issues||[];error.diagnostics={raw:lastRaw,normalized:lastNormalized};error.httpStatus=cause?.httpStatus||lastProviderMeta?.httpStatus||null;error.type=cause?.type||"generation_error";error.requestId=cause?.requestId||lastProviderMeta?.requestId||"";error.modelId=modelId;error.payload=cause?.payload;error.factMismatch=cause?.factMismatch||null;error.malformedField=cause?.malformedField||"";error.expectedType=cause?.expectedType||"";error.receivedType=cause?.receivedType||"";error.stopReason=cause?.stopReason||lastProviderMeta?.stopReason||"";error.schemaValidationType=cause?.schemaValidationType||"";error.providerMeta=lastProviderMeta||safeProviderMeta(cause?.providerMeta);throw error;
+    }
+  }
+  function hasRepairableGenerationIssues(error,stage){return error?.type==="generation_error"&&Array.isArray(error.issues)&&error.issues.length>0&&!(stage==="content"&&error.issues.some(item=>String(item?.location||"")==="content.separation"))}
+  async function requestValidatedGenerationStage(stage,request,plan=null,modelId){
+    try{return await requestGenerationStage(stage,request,plan,modelId)}catch(error){
+      if(!hasRepairableGenerationIssues(error,stage))throw error;
+      try{return await requestGenerationStage(stage,request,plan,modelId,error.issues)}catch(repairError){repairError.repairAttempted=true;throw repairError}
+    }
   }
   function buildTopicFromPlan(request,plan,content,modelId){
-    let topic;try{topic=TopicV4.buildTopic({...request,weekday:weekday(request.date)},plan,content)}catch(error){error.stage="content";error.diagnostics={raw:content,normalized:TopicV4.normalizeContent(content)};error.approvedPlan=clone(plan);throw error}
+    let topic;try{topic=TopicV4.buildTopic(generationTopic(request),plan,content,Object.values(topics))}catch(error){error.stage="content";error.diagnostics={raw:content,normalized:TopicV4.normalizeContent(content)};error.approvedPlan=clone(plan);throw error}
     topic.generationRequest=clone(request);topic.anthropicModel=modelId;return topic;
   }
   async function generateV2Topic(request){
     const modelId=await preflightModel();
-    const plan=await requestGenerationStage("plan",request,null,modelId);
+    const plan=stablePlanForRequest(request);
     if(!plan)throw Object.assign(new Error("Topic Plan 결과가 없습니다."),{stage:"plan",type:"response_format_error",modelId});
-    try{return buildTopicFromPlan(request,plan,await requestGenerationStage("content",request,plan,modelId),modelId)}
-    catch(error){error.approvedPlan=clone(plan);throw error}
+    try{return buildTopicFromPlan(request,plan,await requestValidatedGenerationStage("content",request,plan,modelId),modelId)}catch(error){error.approvedPlan=clone(plan);throw error}
   }
   function applyGenerationFailure(pending,request,error,plan=null){
     const publicFailure=AnthropicModels.publicError(error,error.stage||"plan",error.modelId||settings.anthropicModel||""),candidate=error.diagnostics?.normalized??error.diagnostics?.raw;
@@ -791,46 +990,57 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
     pending.status="generation_failed";pending.failedSection=error.stage||"plan";pending.requestedTopic=request.topicHint;pending.lastAttemptAt=publicFailure.lastAttemptAt;pending.operatorStatus.generationStatus="failed";
     pending.generationFailure={stage:publicFailure.stage,section:failedSection(error),message:publicFailure.message,modelId:publicFailure.modelId,issues:error.issues||[],candidate:candidate===null||candidate===undefined?undefined:clone(candidate),plan:plan?clone(plan):error.approvedPlan?clone(error.approvedPlan):undefined,factMismatch:error.factMismatch?clone(error.factMismatch):undefined,malformedField:error.malformedField||"",expectedType:error.expectedType||"",receivedType:error.receivedType||"",stopReason:error.stopReason||"",schemaValidationType:error.schemaValidationType||"",providerMeta:safeProviderMeta(error.providerMeta),error:publicFailure};
     pending.quality={status:"review",score:0,issues:[publicFailure.message]};pending.updatedAt=publicFailure.lastAttemptAt;topics[request.date]=pending;dirty=true;
-    const participationFailure=(error.issues||[]).some(item=>String(item.location||"")==="session2.activity.participationKo"),storyFailure=(error.issues||[]).some(item=>item.id==="Q7"&&String(item.location||"").includes("session1.story"));
-    const message=error.type==="incomplete_response"?"본문 생성이 중간에 끝났습니다.":error.type==="refusal"?"이 주제로는 내용을 생성할 수 없습니다.":error.type==="structured_content_error"?"생성된 내용의 형식을 확인해야 합니다.":participationFailure?"활동 진행에 필요한 참여 단계가 빠졌습니다.":storyFailure?"Story 영어와 한국어의 핵심 정보가 일치하지 않아 저장하지 않았습니다.":"토픽 내용을 완성하지 못했습니다. 작성된 초안은 보존했습니다. 실패 이유를 확인하거나 해당 섹션만 다시 생성하세요.";
+    const participationFailure=(error.issues||[]).some(item=>String(item.location||"")==="session2.activity.participationKo"),storyFailure=(error.issues||[]).some(item=>item.id==="Q7"&&String(item.location||"").includes("session1.story")),separationFailure=(error.issues||[]).some(item=>String(item.location||"")==="content.separation");
+    const message=error.type==="incomplete_response"?"본문 생성이 중간에 끝났습니다.":error.type==="refusal"?"이 주제로는 내용을 생성할 수 없습니다.":error.type==="structured_content_error"?"생성된 내용의 형식을 확인해야 합니다.":separationFailure&&error.repairAttempted?"1페이지와 Article 소재를 분리하도록 자동 보정을 한 번 시도했지만 완료하지 못했습니다. 전체 다시 생성에서 새 Article로 다시 시도해 주세요.":separationFailure?"1페이지와 Article 소재가 겹쳐 새 Article가 필요합니다. 전체 다시 생성에서 다시 시도해 주세요.":participationFailure?"활동 진행에 필요한 참여 단계가 빠졌습니다.":storyFailure?"Story 영어와 한국어의 핵심 정보가 일치하지 않아 저장하지 않았습니다.":"토픽 내용을 완성하지 못했습니다. 작성된 초안은 보존했습니다. 실패 이유를 확인하거나 해당 섹션만 다시 생성하세요.";
     saveTopics(message);
   }
   async function generateAndStore(request,originalDraft=null){
-    request=normalizeGenerationRequest(request);if(generationsInFlight.has(request.date)){notify("이 날짜의 토픽을 이미 생성하고 있습니다.",true);return null}generationsInFlight.add(request.date);const pending=pendingGeneration(request,originalDraft);topics[request.date]=pending;activeDate=request.date;dirty=true;navigateTo({section:"topics",view:"month",month:request.date.slice(0,7),date:request.date,tab:"review"});view="admin";drawerDate="";saveTopics("Topic Plan 생성을 시작했습니다.");
+    request=normalizeGenerationRequest(request);if(hasCategoryConflict(request.page1Category,request.articleCategory)){notify("1부와 2부는 서로 다른 카테고리를 선택해 주세요.",true);return null}if(generationsInFlight.has(request.date)){notify("이 날짜의 토픽을 이미 생성하고 있습니다.",true);return null}generationsInFlight.add(request.date);
     try{
+      if(originalDraft){rememberArticleSource(originalDraft.date,originalDraft.page2?.source||originalDraft.generationRequest?.articleSource);rememberPageOneTitle(originalDraft)}request=await ensureArticleSource(request);const pending=pendingGeneration(request,originalDraft);topics[request.date]=pending;activeDate=request.date;dirty=true;navigateTo({section:"topics",view:"month",month:request.date.slice(0,7),date:request.date,tab:"review"});view="admin";drawerDate="";saveTopics("최신 RSS 기사를 선택하고 Topic Plan 생성을 시작했습니다.");
       const topic=await generateV2Topic(request);topics[request.date]=topic;dirty=true;saveTopics("새 TheBox Topic 생성과 승인 게이트 검사를 완료했습니다.");return topic;
     }catch(error){
-      applyGenerationFailure(pending,request,error);return null;
+      if(!topics[request.date]||topics[request.date]?.operatorStatus?.generationStatus!=="running"){notify(error?.type==="rate_limited"||error?.httpStatus===429?"Article 후보 요청이 잠시 몰렸습니다. 잠시 후 다시 시도해 주세요.":error?.type==="rss_category_unavailable"?"선택한 카테고리에서 사용할 수 있는 새 기사를 찾지 못했습니다. 다른 카테고리를 선택하거나 잠시 후 다시 시도해 주세요.":error?.type==="rss_duplicate_exhausted"?"이미 사용한 기사와 겹치지 않는 새 RSS 후보를 찾지 못했습니다. 잠시 뒤 다시 시도해 주세요.":"최신 RSS 기사를 가져오지 못했습니다. 잠시 후 다시 시도해 주세요.",true);return null}applyGenerationFailure(topics[request.date],request,error);return null;
     }finally{generationsInFlight.delete(request.date)}
   }
   async function regenerateV2(){
     const previous=current(),request=previous.generationRequest||{date:previous.date,keyword:previous.title?.ko||previous.title?.en||"새 대화 주제",mood:previous.category?.ko||previous.category||"경험 중심"};
     preserveVersion(previous);
-    await generateAndStore({...request,date:previous.date},previous);
+    await generateAndStore({...request,date:previous.date,articleSource:previous.generationEngine===TopicV4.VERSION?null:request.articleSource,planVariant:(Number(request.planVariant)||0)+1},previous);
   }
   async function regenerateFailedSection(section){
     const previous=current();if(previous?.operatorStatus?.generationStatus!=="failed")return;
-    const request=normalizeGenerationRequest(previous.generationRequest||{date:previous.date,keyword:previous.title?.ko||"새 대화 주제",mood:previous.category?.ko||"경험 중심"}),plan=previous.generationFailure?.plan;
-    if(section!=="content"){preserveVersion(previous);await generateAndStore({...request,date:previous.date,repairSection:section},previous);return}
+    const request=normalizeGenerationRequest({...previous.generationRequest,date:previous.date,articleSource:previous.generationRequest?.articleSource||previous.page2?.source,keyword:previous.generationRequest?.keyword||previous.title?.ko||"새 대화 주제",mood:previous.generationRequest?.mood||previous.category?.ko||"경험 중심"}),plan=planForGeneration(previous.generationFailure?.plan,request);
+    const separationFailure=(previous.generationFailure?.issues||[]).some(item=>String(item?.location||"")==="content.separation");
+    if(section!=="content"||separationFailure){preserveVersion(previous);await generateAndStore({...request,date:previous.date,repairSection:separationFailure?"plan":section},previous);return}
+    if(!request.articleSource){preserveVersion(previous);await generateAndStore({...request,date:previous.date},previous);return}
     if(!plan||!TopicV4.validatePlan(plan,request).ok){notify("재사용할 수 있는 성공한 Topic Plan이 없습니다. 전체 다시 생성을 사용해 주세요.",true);return}
     if(generationsInFlight.has(request.date)){notify("이 날짜의 토픽을 이미 생성하고 있습니다.",true);return}
     preserveVersion(previous);generationsInFlight.add(request.date);const pending=clone(previous);pending.operatorStatus={...pending.operatorStatus,generationStatus:"running"};pending.updatedAt=new Date().toISOString();topics[request.date]=pending;dirty=true;saveTopics("성공한 Topic Plan을 유지하고 Content Fill만 다시 생성합니다.");
     try{
-      const modelId=previous.generationFailure.modelId||previous.anthropicModel||settings.anthropicModel,content=await requestGenerationStage("content",request,plan,modelId),topic=buildTopicFromPlan(request,plan,content,modelId);
+      const modelId=previous.generationFailure.modelId||previous.anthropicModel||settings.anthropicModel,content=await requestValidatedGenerationStage("content",request,plan,modelId),topic=buildTopicFromPlan(request,plan,content,modelId);
       topics[request.date]=topic;dirty=true;saveTopics("기존 Topic Plan으로 본문 생성과 승인 게이트 검사를 완료했습니다.");
     }catch(error){applyGenerationFailure(pending,request,error,plan)}
     finally{generationsInFlight.delete(request.date)}
   }
   async function regenerateV41Page(page){
-    const previous=current(),request=normalizeGenerationRequest(previous.generationRequest||{date:previous.date}),plan=previous.topicPlan;
-    if(previous.generationEngine!==TopicV4.VERSION||!plan||!TopicV4.validatePlan(plan,request).ok){notify("재사용할 수 있는 v4.1 Topic Plan이 없습니다.",true);return}
-    if(generationsInFlight.has(request.date)){notify("이 날짜의 토픽을 이미 생성하고 있습니다.",true);return}
-    generationsInFlight.add(request.date);notify(`${page==="page1"?"첫 장":"Article"}을 다시 생성하고 있습니다.`);
+    const previous=current();
+    if(previous.generationEngine!==TopicV4.VERSION){notify("v4.3 토픽에서만 부분 재생성할 수 있습니다.",true);return}
+    if(generationsInFlight.has(previous.date)){notify("이 날짜의 토픽을 이미 생성하고 있습니다.",true);return}
+    generationsInFlight.add(previous.date);notify(`${page==="page1"?"첫 장":"Article"}을 다시 생성하고 있습니다.`);
     try{
-      const modelId=previous.anthropicModel||settings.anthropicModel,content=await requestGenerationStage("content",request,plan,modelId),fresh=buildTopicFromPlan(request,plan,content,modelId),next=clone(previous);
-      next[page]=clone(fresh[page]);next.title=clone(next.page1.title);next.category={en:next.page1.category,ko:"",color:next.page1.categoryColor};next.quality={status:"review",score:100,issues:[]};next.operatorStatus={...next.operatorStatus,reviewStatus:"review",printStatus:"unchecked"};next.updatedAt=new Date().toISOString();
-      const result=TopicV4.evaluate(next);if(!result.ready)throw Object.assign(new Error("부분 재생성 후 v4.1 전체 검사를 통과하지 못했습니다."),{issues:result.issues});topics[activeDate]=next;dirty=true;saveTopics(`${page==="page1"?"첫 장":"Article"}만 다시 생성했습니다.`)
-    }catch(error){notify(`부분 재생성 실패: ${error.message}`,true)}finally{generationsInFlight.delete(request.date)}
+      let request=normalizeGenerationRequest({...previous.generationRequest,date:previous.date,articleSource:previous.generationRequest?.articleSource||previous.page2?.source,planVariant:(Number(previous.generationRequest?.planVariant)||0)+(page==="page1"?1:0)}),plan=planForGeneration(previous.topicPlan,request),modelId=previous.anthropicModel||settings.anthropicModel;
+      if(page==="page1")plan=stablePlanForRequest(request);
+      if(page==="page2"){
+        rememberArticleSource(previous.date,previous.page2?.source||previous.generationRequest?.articleSource);
+        const articlePlan=await articlePlanForRetainedPage(previous,request,modelId);request=articlePlan.request;plan=articlePlan.plan;
+      }
+      if(!request.articleSource){preserveVersion(previous);await generateAndStore({...request,date:previous.date},previous);return}
+      if(!plan||!TopicV4.validatePlan(plan,generationTopic(request)).ok)throw new Error("재사용할 수 있는 v4.3 Topic Plan이 없습니다.");
+      const content=await requestValidatedGenerationStage("content",request,plan,modelId),fresh=buildTopicFromPlan(request,plan,content,modelId),next=clone(previous);
+      next[page]=clone(fresh[page]);next.topicPlan=page==="page2"?{...previous.topicPlan,articleTitle:plan.articleTitle,articleCategory:plan.articleCategory,page2Premise:plan.page2Premise}:clone(plan);next.generationRequest=page==="page2"?clone(request):next.generationRequest;next.title=clone(next.page1.title);next.category={en:next.page1.category,ko:"",color:next.page1.categoryColor};next.quality={status:"review",score:100,issues:[]};next.operatorStatus={...next.operatorStatus,reviewStatus:"review",printStatus:"unchecked"};next.updatedAt=new Date().toISOString();next.reviewCard=TopicV4.reviewCard(next);
+      const result=TopicV4.evaluate(next);if(!result.ready)throw Object.assign(new Error("부분 재생성 후 v4.3 전체 검사를 통과하지 못했습니다."),{issues:result.issues});preserveVersion(previous);topics[activeDate]=next;dirty=true;saveTopics(`${page==="page1"?"첫 장":"Article"}만 다시 생성했습니다.`)
+    }catch(error){notify(`${page==="page1"?"첫 장":"Article"} 다시 생성 실패: ${error.message||"알 수 없는 오류"}`,true)}finally{generationsInFlight.delete(previous.date)}
   }
   async function regenerateSimpleSection(section){
     const previous=current();if(previous.generationEngine!==Simple.VERSION)return;
@@ -849,7 +1059,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
   }
   function setTopicCreateMode(guided=false){const autoPanel=$(".topic-create-default"),panel=$("#guided-topic-fields"),button=$("#show-guided-topic"),error=$("#custom-keyword-error");autoPanel.hidden=guided;panel.hidden=!guided;button.setAttribute("aria-expanded",String(guided));error.hidden=true;$("#custom-keyword").removeAttribute("aria-invalid");if(guided)$("#custom-keyword").focus()}
   function openCustomTopic(date,guided=false){
-    $("#custom-date").value=date;$("#custom-keyword").value="";$("#custom-source").value="";$("#custom-avoid").value="";$("#custom-mood").value="auto";$("#topic-create-options").open=false;setTopicCreateMode(guided);$("#custom-topic-dialog").showModal();
+    $("#custom-date").value=date;$("#custom-keyword").value="";$("#custom-source").value="";$("#custom-avoid").value="";$("#custom-mood").value="auto";$("#custom-page1-category").value="auto";$("#custom-article-category").value="auto";$("#topic-create-options").open=false;setTopicCreateMode(guided);$("#custom-topic-dialog").showModal();
   }
   async function autoComposeMonth(){
     const targets=operatingDates().filter(date=>!topics[date]);
@@ -872,7 +1082,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
     if(topic.generationEngine===TopicV4.VERSION){
       const evaluation=TopicV4.evaluate(topic);
       if(evaluation.blockers.length){notify(`BLOCKER ${evaluation.blockers.length}개를 해결해야 승인할 수 있습니다.`,true);return}
-      topic.quality={status:"approved",score:100,issues:[]};topic.operatorStatus={...topic.operatorStatus,reviewStatus:"approved"};saveTopics("토픽을 이 컴퓨터에 승인 저장했습니다. Gist는 변경하지 않았습니다.");return;
+      topic.quality={status:"approved",score:100,issues:[]};topic.operatorStatus={...topic.operatorStatus,reviewStatus:"approved"};saveTopics("토픽을 이 컴퓨터에 승인 저장했습니다. Gist는 변경하지 않았습니다.");await publishTopic(topic.date);return;
     }
     if(topic.generationEngine===Simple.VERSION){
       const evaluation=Simple.evaluate(topic,Object.values(topics));
@@ -900,13 +1110,34 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
     topic.operatorStatus={...topic.operatorStatus,reviewStatus:"approved"};
     saveTopics("토픽을 이 컴퓨터에 승인 저장했습니다. Gist는 변경하지 않았습니다.");
   }
-  async function publishTopic(date){
+  async function publishTopic(date,{announce=true}={}){
     const topic=topics[date];
-    if(!topic||topic.quality?.status!=="approved"){notify("승인된 토픽만 멤버에게 공개할 수 있습니다.",true);return}
-    const response=await fetch("/api/talkflow/published-topics",{method:"PUT",credentials:"same-origin",headers:{"content-type":"application/json","x-talkflow-request":"app"},body:JSON.stringify({topic})});
-    const payload=await response.json().catch(()=>({}));
-    if(!response.ok){notify(payload.error?.message||"공유 토픽 저장에 실패했습니다.",true);return}
-    topic.publishedAt=payload.publishedAt;saveTopics("멤버 화면에 오늘의 토픽을 공개했습니다.");
+    if(!topic||topic.quality?.status!=="approved"){if(announce)notify("승인된 토픽만 멤버에게 공개할 수 있습니다.",true);return false}
+    let response,payload;
+    try{response=await timedFetch("/api/talkflow/published-topics",{method:"PUT",credentials:"same-origin",headers:{"content-type":"application/json","x-talkflow-request":"app"},body:JSON.stringify({topic})});payload=await response.json().catch(()=>({}))}
+    catch{if(announce)notify("공유 저장소 응답이 없어 동기화하지 못했습니다. 잠시 후 다시 시도해 주세요.",true);return false}
+    if(!response.ok){if(announce)notify(payload.error?.message||"공유 토픽 저장에 실패했습니다.",true);return false}
+    topic.publishedAt=payload.publishedAt;if(announce)saveTopics("캘린더 승인 토픽을 멤버·인쇄 화면에 동기화했습니다.");return true;
+  }
+
+  async function syncApprovedTopicsForCurrentMonth(){
+    if(!aiServerState.authenticated)return;
+    const dates=Object.values(topics).filter(topic=>topic?.topicVersion==="topic-v4.3"&&topic.quality?.status==="approved"&&topic.date?.startsWith(monthPrefix())).map(topic=>topic.date);
+    if(!dates.length)return;
+    const results=await Promise.all(dates.map(date=>publishTopic(date,{announce:false})));
+    if(results.some(Boolean))saveTopics(`${results.filter(Boolean).length}개의 승인 토픽을 멤버·인쇄 화면에 동기화했습니다.`);
+    if(results.some(result=>!result))notify("일부 승인 토픽을 공용 인쇄 데이터에 동기화하지 못했습니다.",true);
+  }
+  async function deleteTopic(){
+    const topic=current();
+    if(!topic||!confirm("이 토픽을 삭제할까요? 이미 멤버에게 공개됐다면 멤버 화면에서도 함께 사라집니다."))return;
+    rememberArticleSource(topic.date,topic.page2?.source||topic.generationRequest?.articleSource);rememberPageOneTitle(topic);
+    let response,payload;
+    try{response=await timedFetch("/api/talkflow/published-topics",{method:"DELETE",credentials:"same-origin",headers:{"content-type":"application/json","x-talkflow-request":"app"},body:JSON.stringify({date:topic.date})});payload=await response.json().catch(()=>({}))}
+    catch{notify("공유 저장소 응답이 없어 토픽을 삭제하지 않았습니다. 잠시 후 다시 시도해 주세요.",true);return}
+    const sharedStoreUnavailable=payload.error?.type==="shared_topic_store_not_configured";
+    if(!response.ok&&!sharedStoreUnavailable){notify(payload.error?.message||"공개 토픽 삭제에 실패했습니다.",true);return}
+    delete topics[activeDate];activeDate=Object.keys(topics).sort()[0]||today();saveTopics(response.ok?"토픽을 삭제했습니다. 멤버 공개 데이터도 함께 삭제했습니다.":"생성한 토픽을 삭제했습니다.");
   }
   function cloneTopicFrom(sourceDate){
     if(!topics[sourceDate]){notify("복제할 토픽을 찾을 수 없습니다.",true);return}
@@ -942,12 +1173,13 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
 
   function exportMonth(){
     const data=Object.fromEntries(Object.entries(topics).filter(([date])=>date.startsWith(monthPrefix())));
-    download(monthFile(),JSON.stringify({schema:"thebox-talkflow-v1",month:monthPrefix(),topics:data},null,2),"application/json");
+    download(monthFile(),JSON.stringify({schema:"thebox-talkflow-v1",month:monthPrefix(),topics:data,articleHistory:loadRecord(KEYS.articleHistory)},null,2),"application/json");
     notify("월간 JSON을 내보냈습니다.");
   }
   function isRecoverableFailedTopic(topic){
     if(![TopicV4.VERSION,Simple.VERSION].includes(topic?.generationEngine)||topic?.operatorStatus?.generationStatus!=="failed"||topic?.generationFailure?.stage!=="content")return false;
     const request=normalizeGenerationRequest(topic.generationRequest||{date:topic.date,generationMode:"auto",topicHint:""});
+    if((topic.generationFailure?.issues||[]).some(item=>String(item?.location||"")==="content.separation"))return false;
     const engine=topic.generationEngine===TopicV4.VERSION?TopicV4:Simple;return request.date===topic.date&&engine.validatePlan(topic.generationFailure.plan,request).ok;
   }
   function mergeIncomingTopics(incoming){
@@ -958,7 +1190,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
     const reader=new FileReader();reader.onload=()=>{
       try{
         const parsed=JSON.parse(reader.result),incoming=parsed.topics||parsed,next=mergeIncomingTopics(incoming);
-        topics=next;activeDate=Object.keys(incoming).sort()[0]||activeDate;saveTopics(`${Object.keys(incoming).length}개 토픽을 가져왔습니다.`);
+        mergeArticleHistory(parsed.articleHistory);mergePageOneHistory(parsed.pageOneHistory);topics=next;activeDate=Object.keys(incoming).sort()[0]||activeDate;saveTopics(`${Object.keys(incoming).length}개 토픽을 가져왔습니다.`);
       }catch(error){notify(`JSON 가져오기 실패: ${error.message}`,true)}
     };reader.onerror=()=>notify("파일을 읽을 수 없습니다.",true);reader.readAsText(file);
   }
@@ -974,22 +1206,34 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
   }
   function download(name,content,type){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([content],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 
+  function gistCredentialsFromForm(){
+    const enteredToken=$("#gist-token")?.value.trim()||"",enteredId=$("#gist-id")?.value.trim()||"",gistToken=enteredToken||settings.gistToken||"",gistId=enteredId||settings.gistId||"";
+    if(enteredToken||enteredId){settings={...settings,gistToken,gistId};saveSettings()}
+    return{gistToken,gistId};
+  }
   async function gistPush(){
-    if(!settings.gistToken){notify("Gist 토큰을 입력하세요.",true);return}
-    const files={[monthFile()]:{content:JSON.stringify({schema:"thebox-talkflow-v1",topics:Object.fromEntries(Object.entries(topics).filter(([d])=>d.startsWith(monthPrefix())))},null,2)},[monthFile("viewer")]:{content:viewerHtml(approvedMonth())}};
+    const {gistToken,gistId}=gistCredentialsFromForm();
+    if(!gistToken){notify("Gist 토큰을 입력하세요.",true);return}
+    const files={[monthFile()]:{content:JSON.stringify({schema:"thebox-talkflow-v1",topics:Object.fromEntries(Object.entries(topics).filter(([d])=>d.startsWith(monthPrefix()))),articleHistory:loadRecord(KEYS.articleHistory),pageOneHistory:loadRecord(KEYS.pageOneHistory)},null,2)},[monthFile("viewer")]:{content:viewerHtml(approvedMonth())}};
     try{
-      const url=settings.gistId?`https://api.github.com/gists/${settings.gistId}`:"https://api.github.com/gists",response=await fetch(url,{method:settings.gistId?"PATCH":"POST",headers:{Authorization:`Bearer ${settings.gistToken}`,"Content-Type":"application/json","X-GitHub-Api-Version":"2022-11-28"},body:JSON.stringify({description:`TheBox Topic ${monthPrefix()}`,public:false,files})});
+      const url=gistId?`https://api.github.com/gists/${gistId}`:"https://api.github.com/gists",response=await timedFetch(url,{method:gistId?"PATCH":"POST",headers:{Authorization:`Bearer ${gistToken}`,"Content-Type":"application/json","X-GitHub-Api-Version":"2022-11-28"},body:JSON.stringify({description:`TheBox Topic ${monthPrefix()}`,public:false,files})});
       const payload=await response.json();if(!response.ok)throw new Error(payload.message||`HTTP ${response.status}`);settings.gistId=payload.id;settings.lastShareUrl=`https://gist.githack.com/${payload.owner?.login||"anonymous"}/${payload.id}/raw/${monthFile("viewer")}`;saveSettings();navigator.clipboard?.writeText(settings.lastShareUrl).catch(()=>{});notify("TheBox Topic 전용 Gist 저장 및 공개 링크 복사를 완료했습니다.");
     }catch(error){notify(`Gist 저장 실패: ${error.message}`,true)}
   }
+  async function parseGistTopicFile(id,gistToken){
+    const response=await timedFetch("/api/talkflow/login/",{method:"POST",headers:{"Content-Type":"application/json","x-talkflow-request":"app"},body:JSON.stringify({operation:"gist_file",gistId:id,filename:monthFile(),token:gistToken})}),payload=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(payload?.error?.message||`HTTP ${response.status}`);
+    const parsed=JSON.parse(String(payload.content||""));
+    if(!parsed||typeof parsed!=="object"||Array.isArray(parsed)||!parsed.topics||typeof parsed.topics!=="object"||Array.isArray(parsed.topics))throw new Error("토픽 데이터 형식이 올바르지 않습니다.");
+    return parsed;
+  }
   async function gistPull(){
-    const id=$("#gist-id").value.trim()||settings.gistId;if(!id){notify("Gist ID를 입력하세요.",true);return}
+    const {gistToken,gistId:id}=gistCredentialsFromForm();if(!id){notify("Gist ID를 입력하세요.",true);return}if(!gistToken){notify("비공개 Gist를 불러오려면 이 컴퓨터에서 Gist 토큰을 입력하세요.",true);return}
     try{
-      const response=await fetch(`https://api.github.com/gists/${id}`,{headers:settings.gistToken?{Authorization:`Bearer ${settings.gistToken}`}:{}}),payload=await response.json();if(!response.ok)throw new Error(payload.message||`HTTP ${response.status}`);
-      const file=payload.files?.[monthFile()];if(!file)throw new Error(`${monthFile()} 파일이 없습니다.`);const parsed=JSON.parse(file.content);topics=mergeIncomingTopics(parsed.topics);settings.gistId=id;saveSettings();saveTopics("TheBox Topic 전용 Gist에서 불러왔습니다.");
+      const parsed=await parseGistTopicFile(id,gistToken);mergeArticleHistory(parsed.articleHistory);mergePageOneHistory(parsed.pageOneHistory);topics=Object.fromEntries(Object.entries(mergeIncomingTopics(parsed.topics)).map(([date,topic])=>[date,TopicV4.migrateLegacyRmTopic(topic)]));settings.gistId=id;saveSettings();saveTopics("TheBox Topic 전용 Gist에서 불러왔습니다.");
     }catch(error){notify(`Gist 불러오기 실패: ${error.message}`,true)}
   }
-  function saveSettings(){const persisted={...settings};delete persisted.apiKey;localStorage.setItem(KEYS.settings,JSON.stringify(persisted))}
+  function saveSettings(){const persisted={...settings};delete persisted.apiKey;delete persisted.gistToken;localStorage.setItem(KEYS.settings,JSON.stringify(persisted));if(settings.gistToken)sessionStorage.setItem(KEYS.gistToken,settings.gistToken);else sessionStorage.removeItem(KEYS.gistToken)}
   function renderModelControls(){
     const select=$("#anthropic-model"),models=settings.availableModels||[],selected=settings.anthropicModel||"";
     select.innerHTML=models.length?models.map(model=>`<option value="${esc(model.id)}" ${model.id===selected?"selected":""}>${esc(model.displayName)} · ${esc(model.id)}</option>`).join(""):`<option value="">모델 목록을 새로고침하세요</option>`;select.disabled=!models.length;
@@ -1024,7 +1268,36 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
     login.hidden=!aiServerState.checked||!aiServerState.configured||aiServerState.authenticated;logout.hidden=!aiServerState.authenticated;
     $("#legacy-key-migration").hidden=!legacyApiKeyPresent;$("#refresh-models").disabled=!aiReady();$("#test-ai-connection").disabled=!aiReady();
   }
-  async function refreshServerStatus(){try{aiServerState={checked:true,...await AiClient.status()}}catch{aiServerState={checked:true,configured:false,authenticated:false,model:"Claude Sonnet 4.6"}}renderServerControls();render()}
+  async function resetPublishedTopicsOnce(){
+    if(localStorage.getItem(KEYS.publishedReset)===TopicV4.TEMPLATE_VERSION||!aiServerState.authenticated)return;
+    try{
+      const response=await timedFetch("/api/talkflow/published-topics",{method:"DELETE",credentials:"same-origin",headers:{"content-type":"application/json","x-talkflow-request":"app"},body:JSON.stringify({legacy:true,confirm:"DELETE_LEGACY_PUBLISHED_TOPICS"})});
+      if(!response.ok)return;
+      localStorage.setItem(KEYS.publishedReset,TopicV4.TEMPLATE_VERSION);
+      notify("이전 버전의 멤버 공개 토픽을 정리했습니다. v4.3 토픽은 그대로 유지됩니다.");
+    }catch{}
+  }
+  async function loadPublishedPrintTopic(date){
+    const response=await timedFetch(`/api/talkflow/board-topic?date=${encodeURIComponent(date)}`,{credentials:"same-origin"});
+    const payload=await response.json().catch(()=>null);
+    if(!response.ok)throw new Error(payload?.error?.message||"발행된 토픽을 불러오지 못했습니다.");
+    const topic=payload?.topic;
+    if(!topic||topic.topicVersion!=="topic-v4.3"||topic.date!==date||!topic.page1||!topic.page2)throw new Error("발행된 토픽 형식이 올바르지 않습니다.");
+    topics={...topics,[date]:topic};
+  }
+  async function loadManagerTopicViews(){
+    const month=monthPrefix();
+    if(!aiServerState.authenticated||topicViewsMonth===month)return;
+    topicViewsMonth=month;topicViewsByDate={};
+    try{
+      const response=await timedFetch(`/api/talkflow/published-topics?month=${encodeURIComponent(month)}`,{credentials:"same-origin"});
+      const payload=await response.json().catch(()=>({}));
+      if(!response.ok||month!==monthPrefix())return;
+      topicViewsByDate=payload.views&&typeof payload.views==="object"?payload.views:{};
+      render();
+    }catch{}
+  }
+  async function refreshServerStatus(){try{aiServerState={checked:true,...await AiClient.status()}}catch{aiServerState={checked:true,configured:false,authenticated:false,model:"Claude Sonnet 4.6"}}await resetPublishedTopicsOnce();await syncApprovedTopicsForCurrentMonth();await loadManagerTopicViews();renderServerControls();render()}
 
   document.querySelectorAll(".tab[data-view]").forEach(button=>button.onclick=()=>{if(!confirmDirty())return;navigateTo({section:"topics",view:"tasks",month:monthValue()})});
   $("#prev-month").onclick=()=>{cursor=new Date(cursor.getFullYear(),cursor.getMonth()-1,1,12);render()};
@@ -1033,7 +1306,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
   $("#new-topic").onclick=()=>{const date=prompt("새 토픽 날짜 (YYYY-MM-DD)",`${monthPrefix()}-01`);if(date&&/^\d{4}-\d{2}-\d{2}$/.test(date)){activeDate=date;createTopic(date)}};
   function openSettingsDialog(push=true){
     if(push){navigateTo({section:"settings",panel:settingsPanel});return}
-    renderServerControls();$("#admin-password").value="";$("#gist-token").value="";$("#gist-token").placeholder=settings.gistToken?"Gist token이 저장되어 있습니다.":"gist 권한 토큰";$("#gist-id").value="";$("#gist-id").placeholder=settings.gistId?"Gist ID가 저장되어 있습니다.":"gist 파일 ID";$("#print-backgrounds").checked=settings.printBackgrounds!==false;
+    renderServerControls();$("#admin-password").value="";$("#gist-token").value="";$("#gist-token").placeholder=settings.gistToken?"이 탭에서만 Gist token이 유지됩니다.":"gist 권한 토큰";$("#gist-id").value="";$("#gist-id").placeholder=settings.gistId?"Gist ID가 저장되어 있습니다.":"gist 파일 ID";$("#print-backgrounds").checked=settings.printBackgrounds!==false;
     const weekdays=settings.operatingWeekdays||[1,4];
     document.querySelectorAll("[name='operating-day']").forEach(input=>input.checked=weekdays.includes(Number(input.value)));
     $("#excluded-dates").value=(settings.excludedDates||[]).join(", ");
@@ -1053,7 +1326,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
     saveSettings();notify("TheBox Topic 설정을 저장했습니다.");render()
   });
   $("#admin-login").onclick=async()=>{const password=$("#admin-password").value,button=$("#admin-login");if(!password)return;button.disabled=true;try{await AiClient.login(password);$("#admin-password").value="";await refreshServerStatus();notify("관리자 로그인이 완료됐습니다.")}catch(error){showAuthenticationError(error)}finally{button.disabled=false}};
-  $("#admin-logout").onclick=async()=>{try{await AiClient.logout()}finally{settings={...settings,connectionStatus:"unchecked"};saveSettings();await refreshServerStatus()}};
+  $("#admin-logout").onclick=async()=>{try{await AiClient.logout()}finally{settings={...settings,gistToken:"",connectionStatus:"unchecked"};saveSettings();await refreshServerStatus()}};
   $("#remove-legacy-api-key").onclick=()=>{try{const value=JSON.parse(localStorage.getItem(KEYS.settings)||"{}");delete value.apiKey;localStorage.setItem(KEYS.settings,JSON.stringify(value));legacyApiKeyPresent=false;renderServerControls();notify("이전 브라우저 API 키를 삭제했습니다.")}catch{notify("이전 API 키를 삭제하지 못했습니다.",true)}};
   $("#refresh-models").onclick=startModelsRefresh;$("#test-ai-connection").onclick=startConnectionTest;$("#anthropic-model").onchange=event=>{settings={...settings,anthropicModel:event.target.value,modelFallback:null,connectionStatus:"unchecked"};saveSettings();renderModelControls()};
   document.querySelectorAll("[data-settings-section]").forEach(button=>button.onclick=()=>{settingsPanel=button.dataset.settingsSection;navigateTo({section:"settings",panel:settingsPanel})});
@@ -1068,11 +1341,12 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
   $("#custom-topic-form").addEventListener("submit",async event=>{
     if(event.submitter?.value==="cancel")return;
     event.preventDefault();
-    const date=$("#custom-date").value,generationMode=event.submitter?.value==="guided"?"guided":"auto",topicHint=$("#custom-keyword").value.trim(),source=$("#custom-source").value.trim(),conversationDirection=$("#custom-mood").value;
+    const date=$("#custom-date").value,generationMode=event.submitter?.value==="guided"?"guided":"auto",topicHint=$("#custom-keyword").value.trim(),source=$("#custom-source").value.trim(),conversationDirection=$("#custom-mood").value,page1Category=categoryPreference($("#custom-page1-category").value),articleCategory=articleCategoryPreference($("#custom-article-category").value);
     if(!date){notify("날짜를 확인해 주세요.",true);return}
     if(generationMode==="guided"&&!topicHint){const error=$("#custom-keyword-error"),input=$("#custom-keyword");error.hidden=false;input.setAttribute("aria-invalid","true");input.focus();return}
+    if(hasCategoryConflict(page1Category,articleCategory)){notify("1부와 2부는 서로 다른 카테고리를 선택해 주세요.",true);return}
     if(topics[date]){notify("선택한 날짜에 토픽이 있습니다.",true);return}
-    const submitter=event.submitter;submitter.disabled=true;try{await generateAndStore({date,generationMode,topicHint:generationMode==="guided"?topicHint:"",conversationDirection,source,avoid:$("#custom-avoid").value.trim()});$("#custom-topic-dialog").close()}finally{submitter.disabled=false}
+    const submitter=event.submitter;submitter.disabled=true;try{await generateAndStore({date,generationMode,topicHint:generationMode==="guided"?topicHint:"",conversationDirection,source,page1Category,articleCategory,avoid:$("#custom-avoid").value.trim()});$("#custom-topic-dialog").close()}finally{submitter.disabled=false}
   });
   $("#gist-push").onclick=gistPush;$("#gist-pull").onclick=gistPull;$("#settings-export").onclick=()=>handleAction("export");$("#settings-import").onclick=()=>$("#json-import").click();
   $("#json-import").onchange=event=>{const file=event.target.files?.[0];if(file)importJson(file);event.target.value=""};
@@ -1081,6 +1355,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
   $("#settings-dialog").addEventListener("close",()=>{if(isRestoringRoute||parseRouteFromUrl().section!=="settings")return;if(history.state?.talkflow&&historyIndex>0)history.back();else navigateTo({section:"topics",view:"tasks",month:monthValue()},"replace")});
   document.addEventListener("keydown",event=>{if(!drawerDate)return;if(event.key==="Escape"){closeDateDrawer();return}if(event.key==="Tab"){const drawer=document.querySelector(".date-drawer"),focusable=[...drawer.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')];if(!focusable.length)return;const first=focusable[0],last=focusable.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus()}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus()}}});
   window.addEventListener("popstate",event=>{if(dirty&&!confirmDirty()){history.go(1);return}historyIndex=Number(event.state?.index||0);applyRoute(parseRouteFromUrl())});
-  const initialRoute=parseRouteFromUrl();historyIndex=Number(history.state?.index||0);history.replaceState({...history.state,talkflow:true,index:historyIndex,route:initialRoute,scrollY:history.state?.scrollY||0,ui:history.state?.ui||{filter:prepareFilter,zoom:previewZoom}},"",routeUrl(initialRoute));applyRoute(initialRoute);refreshServerStatus();
+  const initialRoute=parseRouteFromUrl();historyIndex=Number(history.state?.index||0);history.replaceState({...history.state,talkflow:true,index:historyIndex,route:initialRoute,scrollY:history.state?.scrollY||0,ui:history.state?.ui||{filter:prepareFilter,zoom:previewZoom}},"",routeUrl(initialRoute));
+  if(initialRoute.section==="print"&&initialRoute.published){publishedPrint={active:true,loading:true,error:"",copies:initialRoute.copies};applyRoute(initialRoute);loadPublishedPrintTopic(initialRoute.date).then(()=>{publishedPrint.loading=false;applyRoute(initialRoute)}).catch(error=>{publishedPrint.loading=false;publishedPrint.error=error.message||"발행된 토픽을 불러오지 못했습니다.";applyRoute(initialRoute)});}else{applyRoute(initialRoute);refreshServerStatus();}
   window.TalkFlow={KEYS,STANDARD,validateTopic,validateAll,validatePrint,evaluateRenderedPrint,getTopics:()=>clone(topics),approvedMonth,monthFile,viewerHtml,lifecycle:topic=>clone(lifecycleState(topic)),conversation:window.TalkFlowConversation,sessions:window.TalkFlowSessions,generation:TopicV4,legacyGeneration:Generation,generateForTest:request=>generateV2Topic(request),renderForTest:topic=>renderHandout(topic,false),canPreviewTopic,getVersions:()=>loadRecord(KEYS.versions),getFeedback:()=>loadRecord(KEYS.feedback)};
 })();
