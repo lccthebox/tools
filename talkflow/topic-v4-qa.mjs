@@ -21,6 +21,7 @@ assert.match(app,/articlePlanForRetainedPage/,"Article regeneration must validat
 assert.match(app,/ensureArticleSource\(\{\.\.\.candidate,articleSource:null\}\)/,"Article regeneration must replace its RSS source instead of reusing the old one");
 assert.doesNotMatch(app,/In my country/,"the Page 1 prompt line must not invite comparing countries");
 assert.match(app,/MY TURN<br>In my life or at work/);
+assert.ok(app.includes("otherMonths=Object.values(topics).filter(item=>item?.date&&!item.date.startsWith(month))"),"Article picks must also avoid sources already used in other months");
 const cacheVersion=file=>Number(index.match(new RegExp(`${file.replace(".","\\.")}\\?v=(\\d{8})-`))?.[1]||0);
 assert.ok(cacheVersion("topic-v4-generation.js")>=20261013,"prompt-contract changes must publish a fresh client generation module");
 assert.ok(cacheVersion("app.js")>=20261013,"Article regeneration behavior must publish a fresh application module");
