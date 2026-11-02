@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import {createRequire} from "node:module";
-import {readFile} from "node:fs/promises";
+import {readdir,readFile} from "node:fs/promises";
 import {Readable} from "node:stream";
 
 const require=createRequire(import.meta.url);
 Object.assign(process.env,{SUPABASE_URL:"https://example.supabase.co",SUPABASE_ANON_KEY:"anon",SUPABASE_SERVICE_ROLE_KEY:"service",TALKFLOW_SESSION_SECRET:"qa-session-secret"});
 const Security=require("../server/talkflow/security.js");
 const Topics=require("../server/talkflow/topics-store.js");
-const handler=require("../api/talkflow/admin-topics.js");
+const handler=require("../api/talkflow/published-topics.js");
 
 const calls=[];
 globalThis.fetch=async(url,init)=>{calls.push({url:String(url),method:init.method,body:init.body?JSON.parse(init.body):undefined,headers:init.headers});return new Response(init.method==="GET"?JSON.stringify([{date:"2026-11-03",topic:{date:"2026-11-03",updatedAt:"2026-11-02T00:00:00Z"},updated_at:"2026-11-02T00:00:01Z"},{date:"bad",topic:{}}]):"",{status:200,headers:{"content-type":"application/json"}})};
@@ -34,7 +34,7 @@ assert.equal(calls.length,0,"an empty delete never reaches the table");
 function request(method,{body,cookie,appHeader=true}={}){
   const raw=body===undefined?"":JSON.stringify(body);
   const req=Readable.from(raw?[Buffer.from(raw)]:[]);
-  req.method=method;req.query={};req.headers={host:"thebox-talkflow.vercel.app","content-length":String(Buffer.byteLength(raw)),...(cookie?{cookie}:{}),...(appHeader?{"x-talkflow-request":"app"}:{})};
+  req.method=method;req.query={backups:"1"};req.headers={host:"thebox-talkflow.vercel.app","content-length":String(Buffer.byteLength(raw)),...(cookie?{cookie}:{}),...(appHeader?{"x-talkflow-request":"app"}:{})};
   req.socket={remoteAddress:"127.0.0.1"};
   return req;
 }
@@ -61,6 +61,12 @@ const write=await call("PUT",{cookie,body:{upserts:[{date:"2026-11-03",topic:{da
 assert.equal(write.status,200);
 assert.deepEqual(write.json,{saved:1,deleted:1});
 assert.deepEqual(calls.map(item=>item.method),["POST","DELETE"]);
+
+// Vercel Hobby allows 12 functions: the backup API rides on published-topics through a rewrite.
+const apiFiles=(await readdir(new URL("../api/talkflow/",import.meta.url))).filter(name=>name.endsWith(".js"));
+assert.ok(apiFiles.length<=12,`api/talkflow has ${apiFiles.length} functions; the Hobby plan deploy fails above 12`);
+const vercel=JSON.parse(await readFile(new URL("../vercel.json",import.meta.url),"utf8"));
+assert.ok(vercel.rewrites?.some(rule=>rule.source==="/api/talkflow/admin-topics/"&&rule.destination==="/api/talkflow/published-topics/?backups=1"),"vercel.json must route the backup URL to published-topics");
 
 // App: saves push changed dates, login restores missing topics before publishing sync.
 const app=await readFile(new URL("./app.js",import.meta.url),"utf8");
