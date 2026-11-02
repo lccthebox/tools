@@ -1,4 +1,5 @@
 "use strict";
+const {withAppEvents}=require("../../server/talkflow/app-events");
 
 const { json, rateLimit, requireSession, verifySameOrigin } = require("../../server/talkflow/security");
 const { latestArticle, safeUrl } = require("../../server/talkflow/rss-source");
@@ -45,3 +46,4 @@ module.exports = async (request, response) => {
     json(response, 503, { error: { type: "rss_unavailable", message: "최신 RSS 기사를 가져오지 못했습니다. 잠시 후 다시 시도해 주세요." } });
   }
 };
+module.exports=withAppEvents("article.source",module.exports);
