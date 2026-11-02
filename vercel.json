@@ -8,6 +8,9 @@
       "functionFailoverRegions": ["sin1"]
     }
   },
+  "rewrites": [
+    { "source": "/api/talkflow/admin-topics/", "destination": "/api/talkflow/published-topics/?backups=1" }
+  ],
   "headers": [
     {
       "source": "/talkflow/(.*)",
