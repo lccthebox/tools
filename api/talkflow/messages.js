@@ -1,4 +1,5 @@
 "use strict";
+const {withAppEvents}=require("../../server/talkflow/app-events");
 const { anthropicErrorLogLine, anthropicRequestStage, json, messageBodyForUpstream, rateLimit, readJson, requireSession, upstreamError, verifySameOrigin } = require("../../server/talkflow/security");
 module.exports = async (request, response) => {
   if (request.method !== "POST") return json(response, 405, { error: { type: "method_not_allowed", message: "지원하지 않는 요청입니다." } }, { allow: "POST" });
@@ -26,3 +27,4 @@ module.exports = async (request, response) => {
     json(response, 502, { error: { type: "network_error", message: "AI 서버에 연결할 수 없습니다." } });
   }
 };
+module.exports=withAppEvents("ai.messages",module.exports);

@@ -1,4 +1,5 @@
 "use strict";
+const {withAppEvents}=require("../../server/talkflow/app-events");
 const {json,rateLimit}=require("../../server/talkflow/security");
 const Topics=require("../../server/talkflow/topics-store");
 const {isPublicTopicDate}=require("../../server/talkflow/public-window");
@@ -11,3 +12,4 @@ module.exports=async function handler(request,response){
   if(!token||!/^\d{4}-\d{2}$/.test(month)){json(response,400,{error:{type:"invalid_request",message:"토픽 조회 정보를 확인해 주세요."}});return}
   try{const result=await Topics.memberTopics(token,month);if(result?.expired){json(response,401,{error:{type:"member_session_expired",message:"멤버 확인 시간이 만료되었습니다."}});return}const topics=Array.isArray(result?.topics)?result.topics.filter(topic=>isPublicTopicDate(topic?.date)&&topic?.topicVersion==="topic-v4.3"):[];json(response,200,{topics})}catch(error){Topics.recordFailure("member-topics",error);json(response,502,{error:{type:"member_service_unavailable",message:"토픽을 불러오지 못했습니다."}})}
 };
+module.exports=withAppEvents("member.topics",module.exports);

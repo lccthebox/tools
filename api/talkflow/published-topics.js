@@ -1,4 +1,5 @@
 "use strict";
+const {withAppEvents}=require("../../server/talkflow/app-events");
 const {json,rateLimit,readJson,requireSession,verifySameOrigin}=require("../../server/talkflow/security");
 const Topics=require("../../server/talkflow/topics-store");
 const {PUBLIC_START_DATE,isPublicTopicDate}=require("../../server/talkflow/public-window");
@@ -37,3 +38,4 @@ module.exports=async function handler(request,response){
   if(!isPublicTopicDate(topic.date)){json(response,400,{error:{type:"publication_not_open",message:`멤버 공개는 ${PUBLIC_START_DATE}부터 가능합니다.`}});return}
   try{json(response,200,await Topics.publishTopic(topic))}catch(error){Topics.recordFailure("publish-topic",error);json(response,502,{error:{type:"shared_topic_store_failed",message:"공유 토픽 저장에 실패했습니다."}})}
 };
+module.exports=withAppEvents("admin.published_topics",module.exports);

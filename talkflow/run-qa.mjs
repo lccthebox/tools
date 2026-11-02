@@ -37,7 +37,7 @@ const scripts=(await readdir(root)).filter(name=>/(?:-qa|^qa)\.mjs$|\.test\.mjs$
 
 function run(name){
   return new Promise(resolve=>{
-    const started=Date.now(),child=spawn(process.execPath,[join(root,name)],{cwd:join(root,".."),stdio:["ignore","pipe","pipe"]});
+    const started=Date.now(),child=spawn(process.execPath,[join(root,name)],{cwd:join(root,".."),env:{...process.env,TALKFLOW_APP_EVENTS:process.env.TALKFLOW_APP_EVENTS||"off"},stdio:["ignore","pipe","pipe"]});
     let output="";child.stdout.on("data",chunk=>output+=chunk);child.stderr.on("data",chunk=>output+=chunk);
     const timer=setTimeout(()=>{output+="\n[run-qa] timed out after 180s";child.kill()},180000);
     child.on("close",code=>{clearTimeout(timer);resolve({name,ok:code===0,seconds:((Date.now()-started)/1000).toFixed(1),output})});
