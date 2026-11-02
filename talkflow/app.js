@@ -100,8 +100,57 @@
   function saveTopics(message="저장했습니다."){
     // When storage is full, the one-time reset backup is the first thing given up for current topics.
     const write=()=>localStorage.setItem(KEYS.data,JSON.stringify(topics));
-    try{try{write()}catch(error){if(!localStorage.getItem(KEYS.resetBackup))throw error;localStorage.removeItem(KEYS.resetBackup);write()}dirty=false;localStorage.removeItem(KEYS.drafts);notify(message);render()}
+    try{try{write()}catch(error){if(!localStorage.getItem(KEYS.resetBackup))throw error;localStorage.removeItem(KEYS.resetBackup);write()}dirty=false;localStorage.removeItem(KEYS.drafts);notify(message);render();scheduleServerBackup()}
     catch(error){notify(`저장 실패: ${error.message}`,true)}
+  }
+  // Server copy of the working topics. localStorage stays the editing store; after login the server copy
+  // restores topics a cleared or new browser is missing, and every save pushes the changed dates back.
+  let backupSnapshot=null,backupTimer=0,backupRunning=false,backupFailureShown=false;
+  const backupFingerprint=topic=>JSON.stringify(topic);
+  function scheduleServerBackup(){if(backupSnapshot===null||!aiServerState.authenticated)return;clearTimeout(backupTimer);backupTimer=setTimeout(pushServerBackup,1500)}
+  function backupBatches(upserts,deletes,fingerprints){
+    const batches=[];let batch={upserts:[],deletes:[]},bytes=0;
+    const flush=()=>{if(batch.upserts.length||batch.deletes.length)batches.push(batch);batch={upserts:[],deletes:[]};bytes=0};
+    for(const date of deletes){if(batch.deletes.length>=60)flush();batch.deletes.push(date)}
+    for(const item of upserts){const size=fingerprints[item.date].length;if(batch.upserts.length+batch.deletes.length>=60||bytes&&bytes+size>3000000)flush();batch.upserts.push(item);bytes+=size}
+    flush();return batches;
+  }
+  async function pushServerBackup(){
+    if(backupSnapshot===null||!aiServerState.authenticated)return;
+    if(backupRunning){scheduleServerBackup();return}
+    backupRunning=true;
+    try{
+      const fingerprints=Object.fromEntries(Object.entries(topics).map(([date,topic])=>[date,backupFingerprint(topic)]));
+      const upserts=Object.keys(fingerprints).filter(date=>backupSnapshot[date]!==fingerprints[date]).map(date=>({date,topic:topics[date]}));
+      const deletes=Object.keys(backupSnapshot).filter(date=>!(date in fingerprints));
+      for(const body of backupBatches(upserts,deletes,fingerprints)){
+        const response=await timedFetch("/api/talkflow/admin-topics/",{method:"PUT",credentials:"same-origin",headers:{"content-type":"application/json","x-talkflow-request":"app"},body:JSON.stringify(body)});
+        if(!response.ok)throw new Error(`HTTP ${response.status}`);
+        for(const item of body.upserts)backupSnapshot[item.date]=fingerprints[item.date];
+        for(const date of body.deletes)delete backupSnapshot[date];
+      }
+      backupFailureShown=false;
+    }catch{
+      if(!backupFailureShown){backupFailureShown=true;notify("서버 백업에 실패했습니다. 이 컴퓨터에는 저장되어 있고, 다음 저장 때 다시 시도합니다.",true)}
+    }finally{backupRunning=false}
+  }
+  async function restoreServerBackup(){
+    if(!aiServerState.authenticated){backupSnapshot=null;return}
+    if(backupSnapshot!==null)return;
+    try{
+      const response=await timedFetch("/api/talkflow/admin-topics/",{credentials:"same-origin",headers:{"x-talkflow-request":"app"}});
+      if(!response.ok)return;
+      const payload=await response.json().catch(()=>null),rows=Array.isArray(payload?.topics)?payload.topics:[],snapshot={},restored=[];
+      for(const row of rows){
+        if(!row?.topic||typeof row.topic!=="object"||row.topic.date!==row.date)continue;
+        snapshot[row.date]=backupFingerprint(row.topic);
+        const local=topics[row.date];
+        if(!local||String(row.topic.updatedAt||"")>String(local.updatedAt||"")){topics[row.date]=row.topic;restored.push(row.date)}
+      }
+      backupSnapshot=snapshot;
+      if(restored.length){topics=migrateTopicMap(topics);if(!topics[activeDate])activeDate=Object.keys(topics).sort()[0]||today();saveTopics(`서버 백업에서 ${restored.length}개 토픽을 불러왔습니다.`)}
+      else scheduleServerBackup();
+    }catch{}
   }
   function saveDraft(){if(!dirty)return;try{localStorage.setItem(KEYS.drafts,JSON.stringify({activeDate,topic:topics[activeDate],savedAt:new Date().toISOString()}))}catch{}}
   function loadRecord(key){try{return JSON.parse(localStorage.getItem(key)||"{}")}catch{return{}}}
@@ -1299,7 +1348,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
       render();
     }catch{}
   }
-  async function refreshServerStatus(){try{aiServerState={checked:true,...await AiClient.status()}}catch{aiServerState={checked:true,configured:false,authenticated:false,model:"Claude Sonnet 4.6"}}await resetPublishedTopicsOnce();await syncApprovedTopicsForCurrentMonth();await loadManagerTopicViews();renderServerControls();render()}
+  async function refreshServerStatus(){try{aiServerState={checked:true,...await AiClient.status()}}catch{aiServerState={checked:true,configured:false,authenticated:false,model:"Claude Sonnet 4.6"}}await resetPublishedTopicsOnce();await restoreServerBackup();await syncApprovedTopicsForCurrentMonth();await loadManagerTopicViews();renderServerControls();render()}
 
   document.querySelectorAll(".tab[data-view]").forEach(button=>button.onclick=()=>{if(!confirmDirty())return;navigateTo({section:"topics",view:"tasks",month:monthValue()})});
   $("#prev-month").onclick=()=>{cursor=new Date(cursor.getFullYear(),cursor.getMonth()-1,1,12);render()};

@@ -13,7 +13,7 @@ assert.match(source, /async function publishTopic\(date,\{announce=true\}=\{\}\)
 assert.match(source, /\/api\/talkflow\/published-topics/, '공유 저장소는 Talkflow 공개 토픽 API여야 합니다.');
 assert.match(source, /async function syncApprovedTopicsForCurrentMonth\(\)/, '기존에 캘린더에서 승인한 토픽도 자동 동기화되어야 합니다.');
 assert.match(source, /topic\?\.topicVersion==="topic-v4\.3"&&topic\.quality\?\.status==="approved"&&topic\.date\?\.startsWith\(monthPrefix\(\)\)/, '현재 캘린더 월의 승인된 v4.3 토픽만 인쇄 데이터로 동기화해야 합니다.');
-assert.match(source, /await resetPublishedTopicsOnce\(\);await syncApprovedTopicsForCurrentMonth\(\);(?:await loadManagerTopicViews\(\);)?renderServerControls\(\);render\(\)/, '관리자 로그인 뒤에는 캘린더 승인본을 먼저 공용 인쇄 데이터와 맞춰야 합니다.');
+assert.match(source, /await resetPublishedTopicsOnce\(\);(?:await restoreServerBackup\(\);)?await syncApprovedTopicsForCurrentMonth\(\);(?:await loadManagerTopicViews\(\);)?renderServerControls\(\);render\(\)/, '관리자 로그인 뒤에는 캘린더 승인본을 먼저 공용 인쇄 데이터와 맞춰야 합니다.');
 assert.match(source, /params\.get\("published"\)===\"1\"/, '관리자 반편성에서 여는 인쇄 링크는 발행된 토픽 원본을 명시해야 합니다.');
 assert.match(source, /async function loadPublishedPrintTopic\(date\)/, '발행된 토픽을 Topic 화면에서 직접 불러오는 인쇄 로더가 있어야 합니다.');
 assert.match(source, /\/api\/talkflow\/board-topic\?date=/, '원본 Topic 화면은 날짜별 발행 토픽 API를 사용해야 합니다.');
