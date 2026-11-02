@@ -67,6 +67,23 @@ async function deleteLegacyPublishedTopics(){
   await supabaseRequest(`talkflow_published_topics?or=${filter}`,{key:serviceKey,method:"DELETE"});
 }
 
+// Admin working copies (drafts included) so a cleared browser can restore them after login.
+async function listAdminTopicBackups(){
+  const {serviceKey}=configuration();
+  const rows=await supabaseRequest("talkflow_admin_topic_backups?select=date%2Ctopic%2Cupdated_at&order=date.asc",{key:serviceKey,method:"GET",retries:1});
+  return(Array.isArray(rows)?rows:[]).filter(row=>row&&row.topic&&/^\d{4}-\d{2}-\d{2}$/.test(String(row.date))).map(row=>({date:String(row.date),topic:row.topic,updatedAt:row.updated_at||null}));
+}
+async function saveAdminTopicBackups(items){
+  if(!items.length)return;
+  const {serviceKey}=configuration(),updatedAt=new Date().toISOString();
+  await supabaseRequest("talkflow_admin_topic_backups?on_conflict=date",{key:serviceKey,method:"POST",prefer:"resolution=merge-duplicates,return=minimal",body:items.map(item=>({date:item.date,topic:item.topic,updated_at:updatedAt})),retries:1});
+}
+async function deleteAdminTopicBackups(dates){
+  if(!dates.length)return;
+  const {serviceKey}=configuration(),list=dates.map(date=>encodeURIComponent(date)).join(",");
+  await supabaseRequest(`talkflow_admin_topic_backups?date=in.(${list})`,{key:serviceKey,method:"DELETE",prefer:"return=minimal",retries:1});
+}
+
 // Print reads the whole month, like the member list, so star names match the member screen.
 async function boardTopic(date){
   const {serviceKey}=configuration(),[year,month]=String(date).split("-").map(Number),next=new Date(Date.UTC(year,month,1)).toISOString().slice(0,10);
@@ -77,4 +94,4 @@ async function boardTopic(date){
   return JSON.parse(JSON.stringify(topic));
 }
 
-module.exports={configuration,memberLogin,memberHandoff,memberTopics,memberProgress,memberTopicView,managerTopicViews,publishableTopic,publishTopic,deletePublishedTopic,deleteLegacyPublishedTopics,boardTopic,recordFailure,__test:{supabaseRequest,recordFailure}};
+module.exports={configuration,listAdminTopicBackups,saveAdminTopicBackups,deleteAdminTopicBackups,memberLogin,memberHandoff,memberTopics,memberProgress,memberTopicView,managerTopicViews,publishableTopic,publishTopic,deletePublishedTopic,deleteLegacyPublishedTopics,boardTopic,recordFailure,__test:{supabaseRequest,recordFailure}};
