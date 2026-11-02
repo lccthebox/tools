@@ -2,8 +2,10 @@
 const {json,rateLimit,readJson,requireSession,verifySameOrigin}=require("../../server/talkflow/security");
 const Topics=require("../../server/talkflow/topics-store");
 const {PUBLIC_START_DATE,isPublicTopicDate}=require("../../server/talkflow/public-window");
+const adminTopicBackups=require("../../server/talkflow/admin-topics-handler");
 
 module.exports=async function handler(request,response){
+  if(String(request.query?.backups||"")==="1"){await adminTopicBackups(request,response);return}
   if(!["GET","PUT","DELETE"].includes(request.method)){json(response,405,{error:{type:"method_not_allowed",message:"허용되지 않은 요청입니다."}},{allow:"GET, PUT, DELETE"});return}
   if(request.method==="GET"){
     if(!requireSession(request,response)||!rateLimit(request,response,"manager-topic-views",60,60*1000))return;

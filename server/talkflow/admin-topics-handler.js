@@ -1,10 +1,12 @@
 "use strict";
-const {json,rateLimit,readJson,requireSession,verifySameOrigin}=require("../../server/talkflow/security");
-const Topics=require("../../server/talkflow/topics-store");
+const {json,rateLimit,readJson,requireSession,verifySameOrigin}=require("./security");
+const Topics=require("./topics-store");
 
 const DATE=/^\d{4}-\d{2}-\d{2}$/;
 const MAX_ITEMS=62;
 
+// Server backup of the admin's working topics, served at /api/talkflow/admin-topics/ through a vercel.json
+// rewrite into published-topics.js (the Hobby plan allows 12 functions and api/talkflow already has 12).
 // Server backup of the admin's working topics. The admin app still edits topics in localStorage;
 // it pushes changed dates here after each save and restores missing ones after login.
 module.exports=async function handler(request,response){
