@@ -18,7 +18,7 @@ assert.match(css,/--brand-red:#a9302e/);
 assert.match(app,/첫 장 다시 생성/);
 assert.match(app,/Article 다시 생성/);
 assert.match(app,/articlePlanForRetainedPage/,"Article regeneration must validate a replacement source against the retained first page");
-assert.match(app,/ensureArticleSource\(\{\.\.\.candidate,articleSource:null\}\)/,"Article regeneration must replace its RSS source instead of reusing the old one");
+assert.match(app,/ensureArticleSource\(\{\.\.\.candidate,articleSource:null,page1Category:previous\?\.page1\?\.category\|\|candidate\.page1Category\}\)/,"Article regeneration must replace its RSS source and skip the kept Page 1 category");
 {
   // 12/6 and 12/10 regeneration failed with "로컬 Topic Plan을 만들지 못했습니다": it required an unused Page 1 lane although Page 1 is kept.
   const retained=app.slice(app.indexOf("async function articlePlanForRetainedPage"),app.indexOf("function generationMessages"));

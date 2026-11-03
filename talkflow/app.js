@@ -987,7 +987,8 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
   async function articlePlanForRetainedPage(previous,request,modelId){
     let candidate=request,lastValidation=null;
     for(let attempt=0;attempt<2;attempt++){
-      candidate=await ensureArticleSource({...candidate,articleSource:null});
+      // The kept Page 1 category is excluded so the new Article cannot land in the same category.
+      candidate=await ensureArticleSource({...candidate,articleSource:null,page1Category:previous?.page1?.category||candidate.page1Category});
       // Page 1 is kept as-is, so the plan must keep its star instead of the date's next one.
       const retainedStar=TopicV4.canonicalStar(previous?.page1?.story?.star);if(previous?.page1?.template!=="B"&&TopicV4.STARS.includes(retainedStar))candidate={...candidate,retainedStar};
       const generatedPlan=articleOnlyPlan(candidate),plan=retainedPageOnePlan(previous,generatedPlan,candidate),validation=TopicV4.validatePlan(plan,generationTopic(candidate));
