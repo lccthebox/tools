@@ -112,6 +112,7 @@ Talk Flow is an operational tool for a non-technical study coordinator, a discus
 ## 5. Reusable primitives and states
 
 - `button`: primary, secondary, danger, disabled, focus-visible.
+- `certificate-attendance-picker`: the certificate request calendar keeps ISO-date selections while the user moves between months, exposes each day as a pressed/unpressed button, summarizes the number of selected months and class dates, and submits chronologically sorted full dates so multi-month attendance remains unambiguous.
 - `member-entry`: desktop two-column and mobile single-column states, browser-autofilled input state, validation error, submitting, and authenticated handoff.
 - `workflow-step`: pending, current, complete.
 - `operator-panel`: date/topic input, generation progress, review result, final actions.

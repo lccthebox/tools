@@ -1,4 +1,5 @@
 "use strict";
+const {withAppEvents}=require("../../server/talkflow/app-events");
 const {json,rateLimit,readJson,verifySameOrigin}=require("../../server/talkflow/security");
 const Topics=require("../../server/talkflow/topics-store");
 const {isPublicTopicDate}=require("../../server/talkflow/public-window");
@@ -25,3 +26,4 @@ module.exports=async function handler(request,response){
     json(response,200,action==="view"?{recorded:true}:action==="list"?{progress}:{progress});
   }catch(error){Topics.recordFailure("member-progress",error);json(response,502,{error:{type:"member_service_unavailable",message:"읽음 기록을 처리하지 못했습니다."}})}
 };
+module.exports=withAppEvents("member.progress",module.exports);

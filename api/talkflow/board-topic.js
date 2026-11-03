@@ -1,4 +1,5 @@
 "use strict";
+const {withAppEvents}=require("../../server/talkflow/app-events");
 
 const {json,rateLimit}=require("../../server/talkflow/security");
 const Topics=require("../../server/talkflow/topics-store");
@@ -30,3 +31,4 @@ module.exports=async function handler(request,response){
     json(response,200,{topic});
   }catch(error){Topics.recordFailure("board-topic",error);json(response,502,{error:{type:"topic_store_unavailable",message:"Talkflow 토픽을 불러오지 못했습니다."}})}
 };
+module.exports=withAppEvents("board.topic",module.exports);

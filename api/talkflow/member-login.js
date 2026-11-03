@@ -1,4 +1,5 @@
 "use strict";
+const {withAppEvents}=require("../../server/talkflow/app-events");
 const {json,rateLimit,readJson,verifySameOrigin}=require("../../server/talkflow/security");
 const Topics=require("../../server/talkflow/topics-store");
 
@@ -11,3 +12,4 @@ module.exports=async function handler(request,response){
   if(!credentials.name||credentials.phone.length<10||credentials.birth.length!==8){json(response,400,{error:{type:"invalid_member_credentials",message:"등록 정보를 다시 확인해 주세요."}});return}
   try{const result=await Topics.memberLogin(credentials);if(!result?.token){json(response,401,{error:{type:"member_not_found",message:result?.error||"등록 정보를 확인해 주세요."}});return}json(response,200,{token:result.token,expiresAt:result.expiresAt||null})}catch(error){Topics.recordFailure("member-login",error);json(response,502,{error:{type:"member_service_unavailable",message:"멤버 확인 서비스를 잠시 사용할 수 없습니다."}})}
 };
+module.exports=withAppEvents("member.login",module.exports);

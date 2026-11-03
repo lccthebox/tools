@@ -1,4 +1,5 @@
 "use strict";
+const {withAppEvents}=require("../../server/talkflow/app-events");
 const { createSession, json, rateLimit, readJson, serverConfigured, sessionCookie, verifyPassword, verifySameOrigin } = require("../../server/talkflow/security");
 function validGistId(value) { return /^[a-f0-9]{5,64}$/i.test(String(value || "")); }
 function validFilename(value) { return /^thebox-talkflow-\d{4}-\d{2}\.json$/.test(String(value || "")); }
@@ -46,3 +47,4 @@ module.exports = async (request, response) => {
   response.setHeader("set-cookie", sessionCookie(createSession()));
   json(response, 200, { authenticated: true });
 };
+module.exports=withAppEvents("admin.login",module.exports);

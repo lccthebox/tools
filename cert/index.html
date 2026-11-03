@@ -110,11 +110,16 @@
   .xblock .xhead{font-size:12.5px;font-weight:700;color:var(--accent-deep);margin:14px 0 2px}
 
   .daywrap{margin-top:8px}
-  .daygrid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:8px}
+  .daygrid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-top:8px}
   .daygrid .dh{font-size:10.5px;color:var(--muted);text-align:center;font-weight:700;padding:2px 0}
   .daygrid button{
-    border:1px solid var(--line-strong);background:var(--card);border-radius:8px;
-    padding:0;height:34px;font-size:13px;font-family:inherit;cursor:pointer;color:var(--ink);transition:.1s;
+    position:relative;border:1px solid var(--line-strong);background:var(--card);border-radius:8px;
+    padding:0;height:44px;font-size:13px;font-family:inherit;cursor:pointer;color:var(--ink);transition:.1s;
+  }
+  @media(max-width:520px){
+    .daygrid{grid-template-columns:repeat(7,minmax(0,1fr));width:100%;margin-left:0;transform:none}
+    .daygrid button:not(.blank)::before{content:"";position:absolute;inset-block:-4px;inset-inline:-4px}
+    textarea{min-height:112px}
   }
   .daygrid button.blank{border:0;background:transparent;cursor:default}
   .daygrid button.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
@@ -369,7 +374,7 @@ function renderExtra(){
   });
 }
 
-/* 출석확인서: 월 + 출석일 달력 다중선택 */
+/* 출석확인서: 여러 월을 오가며 출석일 다중선택 */
 let attendSel=new Set();
 function buildAttend(){
   attendSel=new Set();
@@ -383,12 +388,12 @@ function buildAttend(){
     opts+=`<option value="${v}">${d.getFullYear()}년 ${d.getMonth()+1}월</option>`;
   }
   grp.innerHTML=`<div class="xhead">출석확인서 정보</div>
-    <label>출석한 월 <span class="req">*</span></label>
+    <label>달력 월 <span class="req">*</span> <span class="opt">(월을 바꿔도 선택한 날짜가 유지됩니다)</span></label>
     <select id="att_month" onchange="renderDays()">${opts}</select>
     <div class="daywrap">
-      <label>출석한 날짜 선택 <span class="req">*</span> <span class="opt">(여러 날 선택)</span></label>
+      <label>출석한 날짜 선택 <span class="req">*</span> <span class="opt">(여러 달·여러 날 선택)</span></label>
       <div class="daygrid" id="daygrid"></div>
-      <div class="daycount" id="daycount"></div>
+      <div class="daycount" id="daycount" aria-live="polite"></div>
     </div>
     <label>총 수업 횟수 <span class="req">*</span> <span class="opt">(출석률 계산용)</span></label>
     <input id="att_total" type="number" min="1" placeholder="예) 12" oninput="updateCount()">`;
@@ -398,7 +403,6 @@ function buildAttend(){
 function renderDays(){
   const mv=document.getElementById('att_month').value;
   if(!mv)return;
-  attendSel=new Set();
   const [y,m]=mv.split('-').map(Number);
   const first=new Date(y,m-1,1).getDay();
   const days=new Date(y,m,0).getDate();
@@ -406,21 +410,30 @@ function renderDays(){
   const wd=['일','월','화','수','목','금','토'];
   let html=wd.map(d=>`<div class="dh">${d}</div>`).join('');
   for(let i=0;i<first;i++)html+=`<button class="blank" disabled></button>`;
-  for(let d=1;d<=days;d++)html+=`<button type="button" data-d="${d}" onclick="toggleDay(this,${d})">${d}</button>`;
+  for(let d=1;d<=days;d++){
+    const dateKey=`${mv}-${String(d).padStart(2,'0')}`;
+    const selected=attendSel.has(dateKey);
+    html+=`<button type="button" class="${selected?'on':''}" data-date="${dateKey}" aria-pressed="${selected}" aria-label="${y}년 ${m}월 ${d}일" onclick="toggleDay(this,'${dateKey}')">${d}</button>`;
+  }
   grid.innerHTML=html;
   updateCount();
 }
-function toggleDay(btn,d){
-  if(attendSel.has(d)){attendSel.delete(d);btn.classList.remove('on');}
-  else{attendSel.add(d);btn.classList.add('on');}
+function toggleDay(btn,dateKey){
+  if(attendSel.has(dateKey))attendSel.delete(dateKey);
+  else attendSel.add(dateKey);
+  const selected=attendSel.has(dateKey);
+  btn.classList.toggle('on',selected);
+  btn.setAttribute('aria-pressed',String(selected));
   updateCount();
 }
 function updateCount(){
   const total=Number(document.getElementById('att_total')?.value||0);
   const cnt=attendSel.size;
+  const months=new Set([...attendSel].map(date=>date.slice(0,7))).size;
   let rate='';
   if(total>0)rate=` · 출석률 <b>${Math.round(cnt/total*100)}%</b>`;
-  document.getElementById('daycount').innerHTML=`출석 <b>${cnt}</b>일 선택됨${rate}`;
+  const monthCount=months?`<b>${months}</b>개월 · `:'';
+  document.getElementById('daycount').innerHTML=`${monthCount}출석 <b>${cnt}</b>일 선택됨${rate}`;
 }
 
 /* 홀딩신청서: 시작일·종료일(최대 3개월) + 안내문구 + 서명(이름 타이핑) */
@@ -536,11 +549,10 @@ function submitReq(){
   let attendBad=false, holdBad=false;
   sel.forEach(k=>{
     if(DOCS[k].special==="attend"){
-      const mv=document.getElementById('att_month').value;
       const total=Number(document.getElementById('att_total').value||0);
-      const dl=[...attendSel].sort((a,b)=>a-b);
+      const dl=[...attendSel].sort();
       if(!dl.length||!total){attendBad=true;return;}
-      details['attend.month']=mv;
+      details['attend.month']=[...new Set(dl.map(date=>date.slice(0,7)))].join(',');
       details['attend.days']=dl.join(',');
       details['attend.count']=dl.length;
       details['attend.total']=total;
@@ -687,7 +699,14 @@ function renderDetail(row){
     fields.forEach(f=>{
       let v=det[f];
       if(f==='hold.sign'){html+=`<div class="dt-row"><span>서명</span><img src="${v}" class="dt-sign"></div>`;return;}
-      if(f==='attend.days')v=String(v).split(',').map(d=>d+'일').join(', ');
+      if(f==='attend.month')v=String(v).split(',').map(month=>{
+        const [year,value]=month.split('-');
+        return value?`${year}년 ${Number(value)}월`:month;
+      }).join(', ');
+      if(f==='attend.days')v=String(v).split(',').map(date=>{
+        const parts=date.split('-');
+        return parts.length===3?`${parts[0]}. ${Number(parts[1])}. ${Number(parts[2])}.`:`${date}일`;
+      }).join(', ');
       if(f==='attend.rate')v=v+'%';
       html+=`<div class="dt-row"><span>${FIELD_LABELS[f]||f.split('.')[1]}</span><b>${esc(v)}</b></div>`;
     });
