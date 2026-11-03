@@ -27,6 +27,23 @@ assert.doesNotMatch(`${migratedMixedIdentity.page1.story.en} ${migratedMixedIden
 for(const field of ["keyWords","easyTalk","realTalk","todayEnglish"])assert.ok(Array.isArray(migratedMixedIdentity.page1[field]),`legacy name migration must keep page1.${field} as an array so print and member views can render it`);
 assert.ok(Array.isArray(migratedMixedIdentity.page1.quickVote.options),"legacy name migration must keep Quick Vote options as an array");
 {
+  // Published 11/4 story: the friend Taehyung was renamed to the main star, printing "His friend Jimin".
+  const story="Taehyung opened the fridge and found one last piece of his favorite strawberry cake. His friend Jimin was coming over soon. Taehyung cut it in half and waited. When Jimin arrived, he laughed and said he had already eaten cake. Taehyung smiled and ate both pieces himself.";
+  const twoStars={...topic,date:"2026-11-04",topicPlan:{...plan,star:"Taehyung"},page1:{...topic.page1,story:{...topic.page1.story,star:"Taehyung",en:story}}};
+  for(const usedStars of [[],["Taehyung"]]){
+    const repaired=TopicV4.migrateLegacyRmTopic(twoStars,{usedStars}),star=repaired.page1.story.star,text=repaired.page1.story.en;
+    assert.doesNotMatch(text,new RegExp(`friend,?\\s+${star}\\b`),`the friend must not take the main star's name (${star})`);
+    const friend=text.match(/His friend (\w+) was coming over/)?.[1];
+    assert.ok(friend&&friend!==star&&!TopicV4.STARS.includes(friend),`the friend gets an ordinary name different from the main star (${friend})`);
+    assert.match(text,new RegExp(`When ${friend} arrived`),"every mention of the friend uses the same new name");
+    assert.equal(TopicV4.validateContent(repaired,{...plan,star}).issues.filter(item=>item.location==="page1.starConsistency").length,0,"the friend's new name passes the one-star rule");
+    assert.ok(text.startsWith(`${star} opened the fridge`)&&text.endsWith(`${star} smiled and ate both pieces himself.`),"the main character keeps one star name");
+  }
+  const collapsed={...twoStars,topicPlan:{...plan,star:"Jimin"},page1:{...twoStars.page1,story:{...twoStars.page1.story,star:"Jimin",en:story.replace(/Taehyung/g,"Jimin")}}};
+  const collapsedValidation=TopicV4.validateContent(collapsed,{...plan,star:"Jimin"});
+  assert.ok(collapsedValidation.issues.some(item=>item.location==="page1.story.en"&&/다른 인물/.test(item.message)),"a story calling the friend by the main star's name must be blocked");
+}
+{
   // Real published story that mixed three names on Page 1.
   const story="Donghae keeps the desk beside him clear every single day. New colleagues assume it belongs to someone important. One afternoon, Ji-yeon finally asks him directly. Donghae pauses. Ji-yeon stares at the desk, then nods slowly.";
   const mixed={...topic,date:"2026-10-20",topicPlan:{...plan,star:"RM"},page1:{...topic.page1,title:{en:"The Extra Seat",ko:"빈자리"},story:{...topic.page1.story,star:"RM",en:story},quickVote:{...topic.page1.quickVote,question:"What do you think RM's empty desk is really about?"},easyTalk:["What brings you joy at work?",...topic.page1.easyTalk.slice(1)]}};
