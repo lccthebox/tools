@@ -979,13 +979,19 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
     const fallbackPremise=[pageOne.title?.en,story.en,...(pageOne.randomQuestions||[])].filter(Boolean).join(" ").trim();
     return {...candidatePlan,titleEn:String(pageOne.title?.en||retained?.titleEn||candidatePlan?.titleEn||"").trim(),titleKo:String(pageOne.title?.ko||retained?.titleKo||candidatePlan?.titleKo||"").trim(),category:String(pageOne.category||retained?.category||candidatePlan?.category||"").trim(),page1Template:pageOne.template==="B"?"B":"A",page1Premise:String(retained?.page1Premise||fallbackPremise||candidatePlan?.page1Premise||"").trim()}
   }
+  // Page 1 is kept, so the plan only needs the new Article half; asking for a fresh Page 1 lane failed once most lanes were used.
+  function articleOnlyPlan(request){
+    const source=TopicV4.sourceReference(request.articleSource);if(!source)throw Object.assign(new Error("Article 원문을 찾지 못했습니다."),{stage:"plan",type:"generation_error"});
+    return{star:generationTopic(request).selectedStar,articleTitle:String(source.title||"").trim(),articleCategory:String(source.category||"").trim(),page2Premise:`A balanced everyday conversation about ${String(source.subjectKey||source.titleKey||source.title||"").trim()}.`}
+  }
   async function articlePlanForRetainedPage(previous,request,modelId){
     let candidate=request,lastValidation=null;
     for(let attempt=0;attempt<2;attempt++){
-      candidate=await ensureArticleSource({...candidate,articleSource:null});
+      // The kept Page 1 category is excluded so the new Article cannot land in the same category.
+      candidate=await ensureArticleSource({...candidate,articleSource:null,page1Category:previous?.page1?.category||candidate.page1Category});
       // Page 1 is kept as-is, so the plan must keep its star instead of the date's next one.
       const retainedStar=TopicV4.canonicalStar(previous?.page1?.story?.star);if(previous?.page1?.template!=="B"&&TopicV4.STARS.includes(retainedStar))candidate={...candidate,retainedStar};
-      const generatedPlan=stablePlanForRequest(candidate),plan=retainedPageOnePlan(previous,generatedPlan,candidate),validation=TopicV4.validatePlan(plan,generationTopic(candidate));
+      const generatedPlan=articleOnlyPlan(candidate),plan=retainedPageOnePlan(previous,generatedPlan,candidate),validation=TopicV4.validatePlan(plan,generationTopic(candidate));
       if(validation.ok)return{request:candidate,plan};
       lastValidation=validation;
     }
