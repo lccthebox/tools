@@ -44,6 +44,12 @@ assert.ok(Array.isArray(migratedMixedIdentity.page1.quickVote.options),"legacy n
   assert.ok(collapsedValidation.issues.some(item=>item.location==="page1.story.en"&&/다른 인물/.test(item.message)),"a story calling the friend by the main star's name must be blocked");
 }
 {
+  // Published November quizzes asked for a place, a number or a show name instead of the main idea.
+  const quizIssue=question=>TopicV4.validateContent({...topic,page2:{...topic.page2,quiz:{...topic.page2.quiz,question}}},plan).issues.some(item=>item.location==="page2.quiz.question");
+  for(const question of ["Where was the AI-generated show Castle Walls produced?","How long did the driver stop in the red zone at Leeds Bradford Airport?","According to the article, how many Microsoft workers were offered a buyout?","What is the name of the new campaign for trains mentioned in the article?","Which TV show is mentioned as helping bring the British heritage fashion look back into style?"])assert.ok(quizIssue(question),`a detail-recall quiz must be blocked: ${question}`);
+  for(const question of ["Why are many reviewers unhappy with Castle Walls?","What does the new train campaign ask passengers to do?","According to the article, why can rail travel be as fast as flying?"])assert.ok(!quizIssue(question),`a main-idea quiz must pass: ${question}`);
+}
+{
   // Real published story that mixed three names on Page 1.
   const story="Donghae keeps the desk beside him clear every single day. New colleagues assume it belongs to someone important. One afternoon, Ji-yeon finally asks him directly. Donghae pauses. Ji-yeon stares at the desk, then nods slowly.";
   const mixed={...topic,date:"2026-10-20",topicPlan:{...plan,star:"RM"},page1:{...topic.page1,title:{en:"The Extra Seat",ko:"빈자리"},story:{...topic.page1.story,star:"RM",en:story},quickVote:{...topic.page1.quickVote,question:"What do you think RM's empty desk is really about?"},easyTalk:["What brings you joy at work?",...topic.page1.easyTalk.slice(1)]}};
