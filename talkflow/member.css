@@ -224,3 +224,10 @@ main{width:min(1000px,calc(100% - 72px));margin:0 auto}
   .topic-view.calendar-collapsed .member-view-tabs,.topic-view.calendar-collapsed .member-browser{display:none}
   .member-balance p{grid-template-columns:1fr 26px 1fr;align-items:start}.member-balance p b,.member-balance p b:last-of-type{text-align:center}.member-balance p i{align-self:center}.member-balance p small{text-align:center}
 }
+/* 2026-11-11 mobile spacing: the flex gap plus each control's own margin left 32-42px holes when the calendar was open. */
+@media(max-width:640px){
+  .topic-view{gap:0}.member-calendar-toggle{margin:14px 0 20px}.topic-view:not(.calendar-collapsed) .member-calendar-toggle{margin-bottom:8px}
+  .member-view-tabs{margin:0 0 8px}.member-view-tabs button{min-height:40px;padding:0 4px}.member-browser{margin:0 0 22px}#member-history{margin-top:18px}
+}
+/* 2026-11-11 members copy words to look them up, so every reading area (titles inside <summary> too) stays selectable on phones. */
+.topic-document,.topic-document *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}

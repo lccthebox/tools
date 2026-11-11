@@ -137,6 +137,11 @@ try{
   if(await page.locator(".member-day-nav").count()!==1)throw new Error("the topic needs previous/next day navigation");
   await page.locator("#member-calendar-toggle").click();
   if(!await page.locator("#member-browser").isVisible()||await page.locator("#member-calendar-toggle").getAttribute("aria-expanded")!=="true")throw new Error("calendar toggle must open the calendar");
+  // The open calendar once left 32-42px holes between its controls, and the view tabs were 17px tall.
+  const openLayout=await page.evaluate(()=>{const box=selector=>document.querySelector(selector).getBoundingClientRect();return{toggleToTabs:box(".member-view-tabs").top-box("#member-calendar-toggle").bottom,tabsToCalendar:box("#member-browser").top-box(".member-view-tabs").bottom,tabHeight:box("#member-calendar-tab").height}});
+  if(openLayout.toggleToTabs>16||openLayout.tabsToCalendar>16||openLayout.tabHeight<40)throw new Error(`open phone calendar spacing: ${JSON.stringify(openLayout)}`);
+  // Members copy words to look them up, including the topic titles inside <summary>.
+  if(JSON.stringify(await page.evaluate(()=>[".topic-accordions summary span",".member-questions li",".member-words b"].map(selector=>getComputedStyle(document.querySelector(selector)).userSelect)))!=='["text","text","text"]')throw new Error("topic text must stay selectable for copying");
   await page.locator(".member-calendar button.selected").click();
   if(await page.locator("#member-browser").isVisible())throw new Error("picking a day must close the phone calendar");
   const topicTop=await page.locator("#topic").evaluate(node=>node.getBoundingClientRect().top+scrollY),historyTop=await page.locator("#member-history").evaluate(node=>node.getBoundingClientRect().top+scrollY);
