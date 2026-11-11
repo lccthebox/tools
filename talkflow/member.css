@@ -215,3 +215,12 @@ main{width:min(1000px,calc(100% - 72px));margin:0 auto}
 @media(max-width:640px){.member-story,.member-article{font-size:16px;line-height:1.7}.member-prompt{font-size:16px}.member-options span,.member-questions li{font-size:15px;line-height:1.6}.member-english p{font-size:14px}.member-page h3{font-size:12.5px}.member-words b{font-size:14px}.member-words small{font-size:12px}.topic-accordions summary b{font-size:11.5px}.topic-accordions summary span{font-size:16px}.member-calendar button{font-size:14px}.member-topic-heading h2{font-size:19px}.member-topic-heading time{font-size:13px}}
 .member-balance p b{font-size:16px}.member-balance p small{color:var(--gray);font-size:13px}.member-balance i{font-size:11px}
 @media(max-width:640px){.member-balance p b{font-size:15px}.member-balance p small{font-size:12.5px}}
+/* 2026-11-11 mobile: most members read on phones, so the topic comes first and the calendar opens on demand. */
+.member-calendar-toggle{display:none}
+.member-day-nav{display:flex;justify-content:space-between;gap:10px;margin:0 0 14px}.member-day-nav button{min-height:44px;padding:0 14px;border:1px solid var(--line);border-radius:999px;background:var(--paper);color:var(--ink);font:600 14px/1 inherit;cursor:pointer}.member-day-nav button:focus-visible{outline:2px solid var(--brand-red);outline-offset:2px}
+@media(max-width:640px){
+  .topic-view{display:flex;flex-direction:column}.topic-toolbar{order:0}.member-calendar-toggle{order:1}.member-view-tabs{order:2}.member-browser{order:3}#topic{order:4}#member-history{order:5;margin-top:18px}
+  .member-calendar-toggle{display:flex;align-items:center;justify-content:center;width:100%;min-height:44px;margin:10px 0 16px;border:1px solid var(--line);border-radius:12px;background:var(--paper);color:var(--ink);font:600 14px/1 inherit;cursor:pointer}
+  .topic-view.calendar-collapsed .member-view-tabs,.topic-view.calendar-collapsed .member-browser{display:none}
+  .member-balance p{grid-template-columns:1fr 26px 1fr;align-items:start}.member-balance p b,.member-balance p b:last-of-type{text-align:center}.member-balance p i{align-self:center}.member-balance p small{text-align:center}
+}

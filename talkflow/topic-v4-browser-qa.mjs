@@ -132,6 +132,15 @@ try{
   if(await page.evaluate(()=>window.TalkFlowMember.startMonth())!==(seoulMonth<"2026-10"?"2026-10":seoulMonth))throw new Error("member page must start on the current Korean month");
   if(!await page.locator(".member-topic-heading time").isVisible())throw new Error("the open topic must show its date");
   if(await page.locator(".member-calendar button.selected[aria-pressed=true]").count()!==1)throw new Error("the open topic's day must be marked on the calendar");
+  // Phones show the topic first; the calendar opens on demand and closes again after a day is picked.
+  if(await page.locator("#member-browser").isVisible())throw new Error("phone calendar must start collapsed so the topic is on the first screen");
+  if(await page.locator(".member-day-nav").count()!==1)throw new Error("the topic needs previous/next day navigation");
+  await page.locator("#member-calendar-toggle").click();
+  if(!await page.locator("#member-browser").isVisible()||await page.locator("#member-calendar-toggle").getAttribute("aria-expanded")!=="true")throw new Error("calendar toggle must open the calendar");
+  await page.locator(".member-calendar button.selected").click();
+  if(await page.locator("#member-browser").isVisible())throw new Error("picking a day must close the phone calendar");
+  const topicTop=await page.locator("#topic").evaluate(node=>node.getBoundingClientRect().top+scrollY),historyTop=await page.locator("#member-history").evaluate(node=>node.getBoundingClientRect().top+scrollY);
+  if(!(historyTop>topicTop))throw new Error("reading history belongs below the topic on phones");
   const readable=await page.evaluate(()=>({story:parseFloat(getComputedStyle(document.querySelector(".member-story")).fontSize),meaning:parseFloat(getComputedStyle(document.querySelector(".member-words small")).fontSize)}));
   if(readable.story<16||readable.meaning<12)throw new Error(`member reading text too small: ${JSON.stringify(readable)}`);
   const historyPanel=page.locator(".history-panel");
