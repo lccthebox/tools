@@ -126,7 +126,14 @@ try{
   if(!await page.locator("#member-prev-month").isDisabled())throw new Error("pre-October member navigation must be disabled");
   if(await page.locator("#member-calendar-tab").innerText()!=="달력으로 보기"||await page.locator("#member-list-tab").innerText()!=="리스트로 보기")throw new Error("member view labels must use calendar and list language");
   if(await page.locator(".topic-accordions>details").count()!==2)throw new Error("two topic accordions required");
-  if(await page.locator(".topic-accordions>details").evaluateAll(nodes=>nodes.some(node=>node.open)))throw new Error("topic accordions must be collapsed by default");
+  if(JSON.stringify(await page.locator(".topic-accordions>details").evaluateAll(nodes=>nodes.map(node=>node.open)))!=="[true,false]")throw new Error("the conversation page opens first and the Article stays collapsed");
+  // Members complained the page always opened on October and hid which date they were reading.
+  const seoulMonth=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Seoul",year:"numeric",month:"2-digit"}).format(new Date()).slice(0,7);
+  if(await page.evaluate(()=>window.TalkFlowMember.startMonth())!==(seoulMonth<"2026-10"?"2026-10":seoulMonth))throw new Error("member page must start on the current Korean month");
+  if(!await page.locator(".member-topic-heading time").isVisible())throw new Error("the open topic must show its date");
+  if(await page.locator(".member-calendar button.selected[aria-pressed=true]").count()!==1)throw new Error("the open topic's day must be marked on the calendar");
+  const readable=await page.evaluate(()=>({story:parseFloat(getComputedStyle(document.querySelector(".member-story")).fontSize),meaning:parseFloat(getComputedStyle(document.querySelector(".member-words small")).fontSize)}));
+  if(readable.story<16||readable.meaning<12)throw new Error(`member reading text too small: ${JSON.stringify(readable)}`);
   const historyPanel=page.locator(".history-panel");
   if(await historyPanel.count()!==1||await historyPanel.getAttribute("open")!==null)throw new Error("personal reading history must be a closed disclosure");
   if(!await historyPanel.getByText("아직 읽은 토픽이 없어요.",{exact:true}).count())throw new Error("empty personal reading history is missing");

@@ -204,3 +204,14 @@ main{width:min(1000px,calc(100% - 72px));margin:0 auto}
 .history-list button small{margin:4px 0 0 64px;color:var(--gray-soft);font-size:10.5px}
 @media(max-width:640px){.history-panel{margin-bottom:20px}.history-panel summary{min-height:48px;padding:12px 14px;font-size:12px}.history-list{padding-inline:14px}.history-list button b{min-width:42px}.history-list button small{margin-left:56px}}
 
+/* 2026-11-11 readability: members read English text here, so body copy is 16px+ and small labels keep 4.5:1 contrast. */
+.member-topic-heading{display:flex;align-items:baseline;gap:10px;width:100%;margin:0 0 14px}.member-topic-heading h2{margin:0;font-size:22px}.member-topic-heading time{color:var(--gray);font-size:14px;font-weight:600}
+.member-calendar button.has-topic i{width:6px;height:6px;background:var(--brand-red)}.member-calendar button.today b{color:var(--brand-red);font-weight:700}
+.member-calendar button.selected{border-radius:10px;background:var(--brand-red);color:#fff}.member-calendar button.selected b{color:#fff;font-weight:700}.member-calendar button.selected i{background:#fff}
+@media(min-width:641px){.member-calendar button,.member-calendar>span{aspect-ratio:2.2/1}.member-calendar button{font-size:14px}}
+.member-story,.member-article{font-size:17px;line-height:1.75}.member-prompt{font-size:17px;line-height:1.5}.member-options span,.member-questions li{font-size:16px;line-height:1.6}.member-english p{font-size:15px;line-height:1.55}
+.member-page h3{color:var(--category);font-size:13px}.member-page h4,.member-words small,.history-list button small,.member-month-list time{color:var(--gray)}.member-page h4{font-size:12px}
+.member-words b{font-size:15px}.member-words small{font-size:13px}.topic-accordions summary b{font-size:12px}.topic-accordions summary span{font-size:18px}
+@media(max-width:640px){.member-story,.member-article{font-size:16px;line-height:1.7}.member-prompt{font-size:16px}.member-options span,.member-questions li{font-size:15px;line-height:1.6}.member-english p{font-size:14px}.member-page h3{font-size:12.5px}.member-words b{font-size:14px}.member-words small{font-size:12px}.topic-accordions summary b{font-size:11.5px}.topic-accordions summary span{font-size:16px}.member-calendar button{font-size:14px}.member-topic-heading h2{font-size:19px}.member-topic-heading time{font-size:13px}}
+.member-balance p b{font-size:16px}.member-balance p small{color:var(--gray);font-size:13px}.member-balance i{font-size:11px}
+@media(max-width:640px){.member-balance p b{font-size:15px}.member-balance p small{font-size:12.5px}}
