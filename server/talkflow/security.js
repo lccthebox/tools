@@ -8,7 +8,7 @@ const LegacyRepairPrompt = require("../../talkflow/legacy-repair-prompt");
 const SESSION_COOKIE = "__Host-talkflow_session";
 const SESSION_TTL_SECONDS = 8 * 60 * 60;
 const ALLOWED_MODELS = new Set(["claude-sonnet-4-6"]);
-const CANONICAL_TOOLS = new Map([[PLAN_TOOL.name, PLAN_TOOL], [CONTENT_TOOL.name, CONTENT_TOOL], [TopicV4.PLAN_TOOL.name, TopicV4.PLAN_TOOL], [TopicV4.CONTENT_TOOL.name, TopicV4.CONTENT_TOOL]]);
+const CANONICAL_TOOLS = new Map([[PLAN_TOOL.name, PLAN_TOOL], [CONTENT_TOOL.name, CONTENT_TOOL], [TopicV4.PLAN_TOOL.name, TopicV4.PLAN_TOOL], [TopicV4.CONTENT_TOOL.name, TopicV4.CONTENT_TOOL], [TopicV4.REVIEW_TOOL.name, TopicV4.REVIEW_TOOL]]);
 const LEGACY_CONTEXT_KEYS = new Set(["activity", "activitySupport", "assignedOpposition", "axis", "category", "commonErrors", "conversationFlow", "conversationMaterial", "createdAt", "date", "deeperFollowUp", "demoKo", "easyEntry", "emergency", "en", "estimatedMinutes", "example", "exampleFollowUp", "final", "finalClose", "finalQuestion", "finalRound", "followUp", "goal", "groupResult", "hidden", "hook", "id", "instruction", "instructionEn", "instructionKo", "issues", "ko", "leader", "leaderNotes", "longKo", "mainActivity", "mainDiscussion", "material", "materials", "mechanism", "midGame", "minutes", "name", "openEndedDecision", "operatorStatus", "options", "optionsText", "output", "page", "participantOutput", "phrases", "prompt", "promptAxes", "quality", "question", "questionEn", "questionKo", "quickActivity", "quietKo", "reasonPrompt", "recommendedSkip", "reset", "roles", "score", "sensitiveWarning", "session1", "session2", "sessionOne", "sessionTwo", "smallTalk", "sourceRef", "speakingMechanisms", "starter", "status", "steps", "stepsKo", "target", "thinkHarder", "timeCutKo", "timedTurn", "title", "titleEn", "titleKo", "topicMode", "translation", "type", "updatedAt", "usage", "usefulPhrases", "whenConversationStops"]);
 const buckets = globalThis.__talkflowRateBuckets || (globalThis.__talkflowRateBuckets = new Map());
 
@@ -154,12 +154,13 @@ function messageBodyForUpstream(body) {
   const canonical = tool && CANONICAL_TOOLS.get(tool.name);
   // Topic V4 tools are always replaced by the server's own definition below, so an admin page opened before a deploy
   // (older tool schema) is accepted and upgraded instead of failing with "요청 형식이 올바르지 않습니다".
-  const topicV4Tool = tool && (tool.name === TopicV4.PLAN_TOOL.name || tool.name === TopicV4.CONTENT_TOOL.name) && tool.input_schema && typeof tool.input_schema === "object";
+  const topicV4Tool = tool && (tool.name === TopicV4.PLAN_TOOL.name || tool.name === TopicV4.CONTENT_TOOL.name || tool.name === TopicV4.REVIEW_TOOL.name) && tool.input_schema && typeof tool.input_schema === "object";
   if (!canonical || (!topicV4Tool && JSON.stringify(tool) !== JSON.stringify(canonical))) return false;
   if (body.messages.length !== 1 || body.messages[0].role !== "user" || !validGenerationPrompt(body.messages[0].content, tool.name)) return false;
   if(body.tool_choice?.type!=="tool"||body.tool_choice?.name!==tool.name||!Object.keys(body.tool_choice).every(key=>["type","name"].includes(key)))return null;
   const canonicalTopicV4Prompt = canonicalTopicV4PromptForUpstream(body.messages[0].content, tool.name);
   const messages = canonicalTopicV4Prompt ? [{ role: "user", content: JSON.stringify(canonicalTopicV4Prompt) }] : body.messages;
+  if(tool.name===TopicV4.REVIEW_TOOL.name)return{model:body.model,max_tokens:body.max_tokens,messages:[{role:"user",content:JSON.stringify(canonicalReviewPayload(JSON.parse(body.messages[0].content)))}],output_config:{format:{type:"json_schema",schema:TopicV4.REVIEW_TOOL.input_schema}}};
   if(tool.name===TopicV4.CONTENT_TOOL.name)return{model:body.model,max_tokens:body.max_tokens,messages,output_config:{format:{type:"json_schema",schema:TopicV4.CONTENT_TOOL.input_schema}}};
   if(tool.name===TopicV4.PLAN_TOOL.name){const strictPlanTool=structuredClone(TopicV4.PLAN_TOOL);strictPlanTool.strict=true;return{...body,messages,tools:[strictPlanTool]}}
   if(tool.name===CONTENT_TOOL.name){assertContentFillSchemaComplexity();return{model:body.model,max_tokens:body.max_tokens,messages:body.messages,output_config:{format:{type:"json_schema",schema:CONTENT_OUTPUT_SCHEMA}}}}
@@ -177,6 +178,7 @@ function validGenerationPrompt(content, toolName) {
   let payload;
   try { payload = JSON.parse(content); } catch { return false; }
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) return false;
+  if (toolName === TopicV4.REVIEW_TOOL.name) return Boolean(canonicalReviewPayload(payload));
   if (toolName === TopicV4.PLAN_TOOL.name || toolName === TopicV4.CONTENT_TOOL.name) return validTopicV4Prompt(payload, toolName);
   const keys = ["stage", "contract", "fixedDesign", "languageExposure", "autoTopicSelection", "generationRules", "topic", "monthlyDiversity", "approvedPlan", "previousValidationIssues", "previousCandidate", "retryRule"];
   if (Object.keys(payload).some(key => !keys.includes(key))) return false;
@@ -193,6 +195,17 @@ function validGenerationPrompt(content, toolName) {
   if (payload.previousCandidate !== null && !matchesSchemaShape(payload.previousCandidate, candidateSchema, true)) return false;
   const rebuilt = buildPromptPayload({ stage: payload.stage, topic: payload.topic, monthlyDiversity: payload.monthlyDiversity, approvedPlan: payload.approvedPlan, previousValidationIssues: payload.previousValidationIssues, previousCandidate: payload.previousCandidate });
   return JSON.stringify(payload) === JSON.stringify(rebuilt);
+}
+
+// Self-review (2026-11-12): only the draft is taken from the browser; contract and rules are always the server's own,
+// so a stale admin page still works and a page cannot send its own reviewer instructions.
+function canonicalReviewPayload(payload) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+  if (Object.keys(payload).some(key => !["contract", "stage", "draft", "rules"].includes(key))) return null;
+  if (payload.stage !== "review" || !payload.draft || typeof payload.draft !== "object") return null;
+  const isPage = value => value && typeof value === "object" && !Array.isArray(value);
+  if (!isPage(payload.draft.page1) || !isPage(payload.draft.page2)) return null;
+  return TopicV4.buildReviewPayload({ draft: payload.draft });
 }
 
 function validTopicV4Prompt(payload, toolName) {
@@ -356,6 +369,7 @@ function anthropicRequestStage(body) {
   const toolName = body?.tools?.[0]?.name;
   if (toolName === PLAN_TOOL.name || toolName === TopicV4.PLAN_TOOL.name) return "plan";
   if (toolName === CONTENT_TOOL.name || toolName === TopicV4.CONTENT_TOOL.name) return "content";
+  if (toolName === TopicV4.REVIEW_TOOL.name) return "review";
   return "connection_test";
 }
 
