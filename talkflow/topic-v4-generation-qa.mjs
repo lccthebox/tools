@@ -245,6 +245,16 @@ assert.equal(TopicV4.validateContent(proseCollision,proseCollisionPlan).ready,tr
   // Self-review (2026-11-12): first drafts scored 84/74 even with every rule in the prompt, so the model now scores
   // its own draft like the editor and rewrites below 96.
   assert.equal(TopicV4.REVIEW_PASS_SCORE,96,"the self-review uses the editor's pass line");
+  // 11/12 live test: rewrites started from scratch and stayed at 91/88-94; a review rewrite now edits the previous draft.
+  const editIssues=[{location:"page1.realTalk",message:"Editor review: replace question 1."}];
+  const edit=TopicV4.buildPromptPayload({stage:"content",topic:{date:"2026-12-19",page1Template:"A"},approvedPlan:null,repairIssues:editIssues,repairDraft:{...topic,generationRequest:{topicHint:"secret hint"}}});
+  assert.deepEqual(Object.keys(edit.repair),["issues","previousDraft"],"the rewrite carries the previous draft");
+  assert.equal(edit.repair.previousDraft.page1.story.en,topic.page1.story.en);
+  assert.ok(!JSON.stringify(edit).includes("secret hint"),"only the printed pages are sent as the previous draft");
+  assert.ok(edit.rules.some(rule=>rule.startsWith("EDIT MODE")),"the model is told to change only what the issues name");
+  const fresh=TopicV4.buildPromptPayload({stage:"content",topic:{date:"2026-12-19",page1Template:"A"},approvedPlan:null,repairDraft:topic});
+  assert.equal(fresh.repair,null,"without issues a draft is ignored");
+  assert.ok(!fresh.rules.some(rule=>rule.startsWith("EDIT MODE")));
   // 11/12 live test: the review schema had maxItems, which structured output rejects (400), so every review was skipped.
   // Structured-output schemas use only the keywords the working Content schema uses.
   const schemaKeywords=(schema,found=new Set())=>{if(schema&&typeof schema==="object"&&!Array.isArray(schema))for(const [key,value] of Object.entries(schema)){if(key==="properties"){Object.values(value).forEach(child=>schemaKeywords(child,found));continue}found.add(key);if(key==="items")schemaKeywords(value,found)}return found};

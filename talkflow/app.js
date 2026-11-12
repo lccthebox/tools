@@ -1033,12 +1033,12 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
     }
     const error=new Error("기존 첫 장과 겹치지 않는 Article을 찾지 못했습니다. 잠시 후 다시 시도해 주세요.");error.stage="plan";error.type="generation_error";error.issues=lastValidation?.issues||[];throw error;
   }
-  function generationMessages(stage,request,plan=null,issues=[]){
+  function generationMessages(stage,request,plan=null,issues=[],draft=null){
     const topic=generationTopic(request);
-    return [{role:"user",content:JSON.stringify(TopicV4.buildPromptPayload({stage,topic,approvedPlan:plan,repairIssues:issues}))}];
+    return [{role:"user",content:JSON.stringify(TopicV4.buildPromptPayload({stage,topic,approvedPlan:plan,repairIssues:issues,repairDraft:draft}))}];
   }
   function generationTokenBudget(stage){return stage==="plan"?900:2800}
-  async function requestGenerationStage(stage,request,plan=null,modelId,repairIssues=[]){
+  async function requestGenerationStage(stage,request,plan=null,modelId,repairIssues=[],repairDraft=null){
     const tool=stage==="plan"?TopicV4.PLAN_TOOL:TopicV4.CONTENT_TOOL,normalize=stage==="plan"?value=>({...clone(value),articleCategory:request.articleSource?.category||value?.articleCategory}):clone,validate=stage==="plan"?value=>TopicV4.validatePlan(value,generationTopic(request)):value=>{
       const result=TopicV4.validateContent(value,plan);
       if(value?.date===request.date)return result;
@@ -1047,7 +1047,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
     };
     let lastRaw=null,lastNormalized=null,lastProviderMeta=null;
     try{
-      const payload=await AiClient.generate({model:modelId,max_tokens:generationTokenBudget(stage),messages:generationMessages(stage,request,plan,repairIssues),tools:[tool],tool_choice:{type:"tool",name:tool.name}});
+      const payload=await AiClient.generate({model:modelId,max_tokens:generationTokenBudget(stage),messages:generationMessages(stage,request,plan,repairIssues,repairDraft),tools:[tool],tool_choice:{type:"tool",name:tool.name}});
       lastProviderMeta=safeProviderMeta(payload.provider_meta);
       const output=stage==="content"?TopicV4.adaptStructuredContentTransport(TopicV4.parseStructuredContentResponse(payload),plan,{...request,weekday:weekday(request.date)}):payload.content?.find(item=>item.type==="tool_use"&&item.name===tool.name)?.input;
       if(!output)throw new Error(`${tool.name} result is missing.`);
@@ -1061,14 +1061,14 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
     }
   }
   function hasRepairableGenerationIssues(error,stage){return error?.type==="generation_error"&&Array.isArray(error.issues)&&error.issues.length>0&&!(stage==="content"&&error.issues.some(item=>String(item?.location||"")==="content.separation"))}
-  async function requestValidatedGenerationStage(stage,request,plan=null,modelId,initialIssues=[]){
+  async function requestValidatedGenerationStage(stage,request,plan=null,modelId,initialIssues=[],repairDraft=null){
     // The topic criteria checks (2026-11-12) catch more on the first draft, so the model gets up to two repairs,
     // each told only the issues still left.
     let lastError;
-    try{return await requestGenerationStage(stage,request,plan,modelId,initialIssues)}catch(error){lastError=error}
+    try{return await requestGenerationStage(stage,request,plan,modelId,initialIssues,repairDraft)}catch(error){lastError=error}
     for(let repair=0;repair<2;repair++){
       if(!hasRepairableGenerationIssues(lastError,stage))throw lastError;
-      try{return await requestGenerationStage(stage,request,plan,modelId,lastError.issues)}catch(repairError){repairError.repairAttempted=true;lastError=repairError}
+      try{return await requestGenerationStage(stage,request,plan,modelId,lastError.issues,repairDraft)}catch(repairError){repairError.repairAttempted=true;lastError=repairError}
     }
     throw lastError;
   }
@@ -1090,7 +1090,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
       const issues=selfReviewIssues(best.review,focus);if(!issues.length)break;
       notify(`자체 검수 ${selfReviewScore(best.review,focus)}점: 지적 ${issues.length}개를 반영해 고쳐 쓰고 있습니다 (${round+1}/${SELF_REVIEW_ROUNDS}).`);
       try{
-        const rewritten=await requestValidatedGenerationStage("content",request,plan,modelId,issues),review=await requestSelfReview(draftFor(rewritten),modelId);
+        const rewritten=await requestValidatedGenerationStage("content",request,plan,modelId,issues,draftFor(best.content)),review=await requestSelfReview(draftFor(rewritten),modelId);
         history.push({scorePage1:review.scorePage1,scorePage2:review.scorePage2});
         if(selfReviewScore(review,focus)>selfReviewScore(best.review,focus))best={content:rewritten,review};
       }catch(error){console.warn("Self-review rewrite skipped",error?.message||error);break}

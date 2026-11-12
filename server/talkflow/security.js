@@ -229,7 +229,7 @@ function canonicalTopicV4PromptForUpstream(content, toolName) {
 }
 
 function canonicalTopicV4PromptPayload(payload, expectedStage) {
-  const rebuilt = TopicV4.buildPromptPayload({ stage: expectedStage, topic: payload.topic, approvedPlan: payload.approvedPlan, repairIssues: payload.repair?.issues || [] });
+  const rebuilt = TopicV4.buildPromptPayload({ stage: expectedStage, topic: payload.topic, approvedPlan: payload.approvedPlan, repairIssues: payload.repair?.issues || [], repairDraft: payload.repair?.previousDraft || null });
   if (JSON.stringify(payload) === JSON.stringify(rebuilt)) return rebuilt;
   // An admin page opened before a deploy still sends the older rule list. Everything else must match exactly;
   // the rules always come from the server, so the request is upgraded to the current rules (12/1 regeneration
@@ -241,7 +241,10 @@ function canonicalTopicV4PromptPayload(payload, expectedStage) {
 
 function validTopicV4Repair(repair) {
   if (repair === null) return true;
-  if (!repair || typeof repair !== "object" || Array.isArray(repair) || Object.keys(repair).length !== 1 || !Array.isArray(repair.issues) || repair.issues.length < 1 || repair.issues.length > 20) return false;
+  // A self-review rewrite also carries the previous printed draft; it is rebuilt by the generator, so only its size and shape are checked here.
+  const draft = repair?.previousDraft, isPage = value => value && typeof value === "object" && !Array.isArray(value);
+  if (draft !== undefined && (!isPage(draft) || !isPage(draft.page1) || !isPage(draft.page2) || Object.keys(draft).some(key => !["page1", "page2"].includes(key)) || JSON.stringify(draft).length > 40000)) return false;
+  if (!repair || typeof repair !== "object" || Array.isArray(repair) || Object.keys(repair).some(key => !["issues", "previousDraft"].includes(key)) || !Array.isArray(repair.issues) || repair.issues.length < 1 || repair.issues.length > 20) return false;
   return repair.issues.every(item => item && typeof item === "object" && !Array.isArray(item) && Object.keys(item).length === 2 && typeof item.location === "string" && item.location.length > 0 && item.location.length <= 4000 && typeof item.message === "string" && item.message.length > 0 && item.message.length <= 4000);
 }
 
