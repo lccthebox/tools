@@ -617,6 +617,21 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
     const issues=(review.issues||[]).map(item=>`<li><b>${esc(item.location)}</b> ${esc(item.message)}</li>`).join("");
     return`<section class="self-review"><p class="eyebrow">AI 자체 검수 · 통과 기준 ${esc(pass)}점</p><div class="self-review-scores">${score("1부",review.scorePage1)}${score("2부",review.scorePage2)}</div>${history?`<p class="self-review-history">검수 기록(1부/2부): ${esc(history)}</p>`:""}${issues?`<ul>${issues}</ul>`:"<p>남은 지적이 없습니다.</p>"}<p class="self-review-note">AI가 원장님 평가 기준으로 매긴 참고 점수입니다. 최종 판단은 직접 확인해 주세요.</p></section>`;
   }
+  // Editing (2026-11-12): fix only some parts of a generated topic instead of regenerating whole pages.
+  function v43Field(path,label,value,multiline=false){const id=`v43-${path.replace(/\./g,"-")}`;return`<label for="${id}">${esc(label)}<textarea id="${id}" data-v43-path="${path}" rows="${multiline?6:2}">${esc(value)}</textarea></label>`}
+  function v43EditFields(topic){
+    const one=topic.page1||{},two=topic.page2||{},list=(path,label,items,count)=>Array.from({length:count},(_,index)=>v43Field(`${path}.${index}`,`${label} ${index+1}`,items?.[index]||"")).join("");
+    const pageOne=one.template==="B"
+      ?`${list("page1.randomQuestions","Random question",one.randomQuestions,6)}${Array.from({length:6},(_,index)=>`${v43Field(`page1.balanceGame.${index}.left`,`Balance ${index+1} · 왼쪽`,one.balanceGame?.[index]?.left||"")}${v43Field(`page1.balanceGame.${index}.right`,`Balance ${index+1} · 오른쪽`,one.balanceGame?.[index]?.right||"")}`).join("")}`
+      :`${v43Field("page1.title.en","제목 · 영어",one.title?.en)}${v43Field("page1.title.ko","제목 · 한국어",one.title?.ko)}${v43Field("page1.point.situation","오늘의 포인트 · 상황",one.point?.situation)}${v43Field("page1.point.talk","오늘의 포인트 · 이야기할 것",one.point?.talk)}${v43Field("page1.story.en","Story · 영어",one.story?.en,true)}${v43Field("page1.story.ko","Story · 한국어",one.story?.ko,true)}${v43Field("page1.quickVote.question","Quick Vote 질문",one.quickVote?.question)}${list("page1.quickVote.options","Quick Vote 선택지",one.quickVote?.options,3)}${list("page1.easyTalk","EASY TALK",one.easyTalk,3)}${list("page1.realTalk","REAL TALK",one.realTalk,3)}`;
+    const pageTwo=`${v43Field("page2.title","2부 제목",two.title)}${v43Field("page2.article","Article",two.article,true)}${v43Field("page2.stance.question","Stance 질문",two.stance?.question)}${list("page2.stance.options","Stance 선택지",two.stance?.options,3)}${list("page2.discussion","Discussion",two.discussion,5)}${v43Field("page2.quiz.question","Quiz 질문",two.quiz?.question)}${list("page2.quiz.options","Quiz 선택지",two.quiz?.options,3)}`;
+    return`<fieldset><legend>1부</legend>${pageOne}</fieldset><fieldset><legend>2부</legend>${pageTwo}</fieldset>`;
+  }
+  function renderV43Editor(topic){
+    if(topic.generationEngine!==TopicV4.VERSION||!topic.page1||!topic.page2)return"";
+    const approved=topic.quality?.status==="approved";
+    return`<section class="v43-editor" aria-labelledby="v43-editor-title"><p class="eyebrow">고치기</p><h2 id="v43-editor-title">원하는 부분만 고치기</h2>${approved?`<p class="v43-editor-note">승인된 토픽을 고치면 다시 승인해야 멤버 화면에 반영됩니다.</p>`:""}<div class="v43-edit-request"><label for="v43-edit-request">AI에게 수정 요청</label><textarea id="v43-edit-request" rows="3" maxlength="1000" placeholder="예: REAL TALK 2번을 경험을 묻는 질문으로 바꿔줘. 투표 3번 선택지는 덜 뻔하게."></textarea><div class="v43-editor-actions"><button class="button primary" data-v43-edit-request>요청한 부분만 고치기</button><span>적은 부분만 고치고 나머지(직접 고친 내용 포함)는 그대로 둡니다. 1~2분 걸립니다.</span></div></div><details class="v43-direct-edit"><summary>직접 수정</summary><div class="v43-edit-fields">${v43EditFields(topic)}</div><div class="v43-editor-actions"><button class="button primary" data-v43-save>수정 내용 저장</button><span>저장하면 미리보기와 검사가 새로 반영됩니다.</span></div></details></section>`;
+  }
   function renderTopicCriteria(topic,evaluation){
     const findings=[...(evaluation.issues||[]),...(evaluation.warnings||[])],template=topic.page1?.template;
     const rows=TOPIC_CRITERIA.filter(([, , , , only])=>!only||only===template).map(([id,name,question,auto])=>{const hit=auto?findings.find(auto):null,status=!auto?"직접 확인":hit?"확인 필요":"자동 확인 통과";return`<li class="${!auto?"manual":hit?"warn":"pass"}"><b>${esc(id)}</b><span><strong>${esc(name)}</strong>${esc(question)}${hit?`<em>${esc(hit.message)}</em>`:""}</span><i>${status}</i></li>`}).join("");
@@ -819,7 +834,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
     if(["failed","interrupted"].includes(t.operatorStatus?.generationStatus)||t.generatedConversation&&![TopicV4.VERSION,Simple.VERSION,Generation.VERSION].includes(t.generationEngine))return dailyNav(t,"admin")+generationBlocked(t,true);
     if(t.generationEngine===TopicV4.VERSION){
       const evaluation=TopicV4.evaluate(t),state=evaluation.ready?"사용 가능":"확인 필요",issues=evaluation.issues.map(item=>`<li class="${item.severity}"><strong>${esc(item.location)}</strong><span>${esc(item.message)}</span></li>`).join("");
-      return `${dailyNav(t,"admin")}<section class="simple-review-status ${evaluation.ready?"is-ready":"has-errors"}"><p class="eyebrow">THE BOX TOPIC V4.3</p><h2>${state}</h2>${issues?`<ul class="issue-list">${issues}</ul>`:"<p>v4.3 콘텐츠·소재 분리·인쇄 계약을 통과했습니다.</p>"}</section>${renderSelfReview(t)}${renderTopicCriteria(t,evaluation)}${renderV43ReviewCard(t)}<section class="operator-review simple-operator-review"><div class="review-heading"><div><p class="eyebrow">승인 전 확인</p><h2>A4 첫 장 + Article</h2></div></div>${renderReviewArticleSource(t.page2?.source)}<button class="review-preview-grid" data-preview-modal aria-label="오늘의 토픽 A4 두 페이지 크게 보기">${renderTopicV4Handout(t)}</button></section><section class="review-actions simple-review-actions"><button class="button secondary" data-v41-regenerate="page1">첫 장 다시 생성</button><button class="button secondary" data-v41-regenerate="page2">Article 다시 생성</button><button class="button secondary" data-action="regenerate-v2">전체 다시 생성</button><button class="button secondary" data-open="${t.date}:print" ${evaluation.ready?"":"disabled"}>미리보기</button><button class="button primary approve-button" data-action="approve-save" ${evaluation.ready?"":"disabled aria-disabled=\"true\""}>승인하고 저장</button>${t.quality?.status==="approved"?`<button class="button primary" data-publish-topic="${t.date}">멤버에게 공개</button>`:""}<button class="button danger" data-action="delete">삭제</button></section><dialog class="a4-preview-dialog"><button class="dialog-close" data-preview-close>닫기</button><div>${renderTopicV4Handout(t)}</div></dialog><details class="advanced-editor"><summary>생성 데이터</summary><pre>${esc(JSON.stringify(t,null,2))}</pre></details>`;
+      return `${dailyNav(t,"admin")}<section class="simple-review-status ${evaluation.ready?"is-ready":"has-errors"}"><p class="eyebrow">THE BOX TOPIC V4.3</p><h2>${state}</h2>${issues?`<ul class="issue-list">${issues}</ul>`:"<p>v4.3 콘텐츠·소재 분리·인쇄 계약을 통과했습니다.</p>"}</section>${renderSelfReview(t)}${renderTopicCriteria(t,evaluation)}${renderV43ReviewCard(t)}<section class="operator-review simple-operator-review"><div class="review-heading"><div><p class="eyebrow">승인 전 확인</p><h2>A4 첫 장 + Article</h2></div></div>${renderReviewArticleSource(t.page2?.source)}<button class="review-preview-grid" data-preview-modal aria-label="오늘의 토픽 A4 두 페이지 크게 보기">${renderTopicV4Handout(t)}</button></section>${renderV43Editor(t)}<section class="review-actions simple-review-actions"><button class="button secondary" data-v41-regenerate="page1">첫 장 다시 생성</button><button class="button secondary" data-v41-regenerate="page2">Article 다시 생성</button><button class="button secondary" data-action="regenerate-v2">전체 다시 생성</button><button class="button secondary" data-open="${t.date}:print" ${evaluation.ready?"":"disabled"}>미리보기</button><button class="button primary approve-button" data-action="approve-save" ${evaluation.ready?"":"disabled aria-disabled=\"true\""}>승인하고 저장</button>${t.quality?.status==="approved"?`<button class="button primary" data-publish-topic="${t.date}">멤버에게 공개</button>`:""}<button class="button danger" data-action="delete">삭제</button></section><dialog class="a4-preview-dialog"><button class="dialog-close" data-preview-close>닫기</button><div>${renderTopicV4Handout(t)}</div></dialog><details class="advanced-editor"><summary>생성 데이터</summary><pre>${esc(JSON.stringify(t,null,2))}</pre></details>`;
     }
     if(t.generationEngine===Simple.VERSION){
       const evaluation=Simple.evaluate(t,Object.values(topics)),state=evaluation.blockers.length?"생성 실패":evaluation.issues.length?"확인 필요":"사용 가능";
@@ -910,6 +925,9 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
     document.querySelectorAll("[data-regenerate]").forEach(b=>{b.disabled=!aiReady();b.onclick=()=>regenerate(b.dataset.regenerate)});
     document.querySelectorAll("[data-simple-regenerate]").forEach(b=>{b.disabled=!aiReady();b.onclick=()=>regenerateSimpleSection(b.dataset.simpleRegenerate)});
     document.querySelectorAll("[data-v41-regenerate]").forEach(b=>{b.disabled=!aiReady();b.onclick=()=>regenerateV41Page(b.dataset.v41Regenerate)});
+    document.querySelectorAll("[data-v43-path]").forEach(input=>input.oninput=()=>{setPath(current(),input.dataset.v43Path,input.value);current().updatedAt=new Date().toISOString();dirty=true;saveDraft()});
+    document.querySelectorAll("[data-v43-save]").forEach(b=>b.onclick=()=>saveV43DirectEdit());
+    document.querySelectorAll("[data-v43-edit-request]").forEach(b=>{b.disabled=!aiReady();b.onclick=()=>requestV43Edit()});
     document.querySelectorAll("[data-failed-regenerate]").forEach(b=>{b.disabled=b.disabled||!aiReady();b.onclick=()=>regenerateFailedSection(b.dataset.failedRegenerate)});
     document.querySelectorAll("[data-feedback-form]").forEach(form=>form.onsubmit=event=>{
       event.preventDefault();
@@ -1158,6 +1176,28 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
       topics[request.date]=topic;dirty=true;saveTopics("기존 Topic Plan으로 본문 생성과 승인 게이트 검사를 완료했습니다.");
     }catch(error){applyGenerationFailure(pending,request,error,plan)}
     finally{generationsInFlight.delete(request.date)}
+  }
+  function reopenAfterEdit(topic){if(topic.quality?.status==="approved"){topic.quality={...topic.quality,status:"review"};topic.operatorStatus={...topic.operatorStatus,reviewStatus:"review",printStatus:"unchecked"};return true}return false}
+  function saveV43DirectEdit(){
+    const topic=current();if(!topic)return;const reopened=reopenAfterEdit(topic);topic.reviewCard=TopicV4.reviewCard(topic);topic.updatedAt=new Date().toISOString();dirty=true;
+    saveTopics(reopened?"직접 수정을 저장했습니다. 다시 승인해 주세요.":"직접 수정을 저장했습니다.");render();
+  }
+  async function requestV43Edit(){
+    const previous=current(),text=String(document.querySelector("#v43-edit-request")?.value||"").trim().slice(0,1000);
+    if(!text){notify("고치고 싶은 내용을 적어 주세요.",true);return}
+    if(previous.generationEngine!==TopicV4.VERSION){notify("v4.3 토픽에서만 수정 요청을 할 수 있습니다.",true);return}
+    if(generationsInFlight.has(previous.date)){notify("이 날짜의 토픽을 이미 생성하고 있습니다.",true);return}
+    generationsInFlight.add(previous.date);notify("요청한 부분만 고치고 있습니다. 1~2분 걸립니다.");
+    try{
+      const retainedStar=TopicV4.canonicalStar(previous.page1?.story?.star),request={...normalizeGenerationRequest({...previous.generationRequest,date:previous.date,articleSource:previous.generationRequest?.articleSource||previous.page2?.source,page1Template:previous.page1?.template==="B"?"B":"A"}),...(previous.page1?.template!=="B"&&TopicV4.STARS.includes(retainedStar)?{retainedStar}:{})},plan=planForGeneration(previous.topicPlan,request),modelId=previous.anthropicModel||settings.anthropicModel;
+      if(!plan||!TopicV4.validatePlan(plan,generationTopic(request)).ok)throw new Error("이 토픽의 계획을 다시 쓸 수 없습니다. 전체 다시 생성을 사용해 주세요.");
+      const content=await requestValidatedGenerationStage("content",request,plan,modelId,[{location:"editor request",message:`Editor request (change only this, keep everything else): ${text}`}],previous),fresh=buildTopicFromPlan(request,plan,content,modelId),next=clone(previous);
+      next.page1={...clone(fresh.page1),title:clone(previous.page1.title)};next.page2={...clone(fresh.page2),source:clone(previous.page2.source)};next.title=clone(next.page1.title);
+      reopenAfterEdit(next);next.quality={...next.quality,score:100,issues:[]};next.updatedAt=new Date().toISOString();next.reviewCard=TopicV4.reviewCard(next);
+      try{const review=await requestSelfReview(next,modelId);next.selfReview={passScore:TopicV4.REVIEW_PASS_SCORE,focus:"all",scorePage1:review.scorePage1,scorePage2:review.scorePage2,issues:clone(review.issues),history:[...(previous.selfReview?.history||[]),{scorePage1:review.scorePage1,scorePage2:review.scorePage2}],reviewedAt:new Date().toISOString()}}catch(error){console.warn("Self-review skipped",error?.message||error)}
+      const result=TopicV4.evaluate(next);if(!result.ready)throw Object.assign(new Error("고친 뒤 v4.3 검사를 통과하지 못했습니다."),{issues:result.issues});
+      preserveVersion(previous);topics[previous.date]=next;dirty=true;saveTopics("요청한 부분만 고쳤습니다. 미리보기를 확인해 주세요.");
+    }catch(error){notify(`수정 요청 실패: ${error.message||"알 수 없는 오류"}`,true)}finally{generationsInFlight.delete(previous.date)}
   }
   async function regenerateV41Page(page){
     const previous=current();
