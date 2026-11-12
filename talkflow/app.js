@@ -1051,13 +1051,22 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
     const message=error.type==="incomplete_response"?"본문 생성이 중간에 끝났습니다.":error.type==="refusal"?"이 주제로는 내용을 생성할 수 없습니다.":error.type==="structured_content_error"?"생성된 내용의 형식을 확인해야 합니다.":separationFailure&&error.repairAttempted?"1페이지와 Article 소재를 분리하도록 자동 보정을 한 번 시도했지만 완료하지 못했습니다. 전체 다시 생성에서 새 Article로 다시 시도해 주세요.":separationFailure?"1페이지와 Article 소재가 겹쳐 새 Article가 필요합니다. 전체 다시 생성에서 다시 시도해 주세요.":participationFailure?"활동 진행에 필요한 참여 단계가 빠졌습니다.":storyFailure?"Story 영어와 한국어의 핵심 정보가 일치하지 않아 저장하지 않았습니다.":"토픽 내용을 완성하지 못했습니다. 작성된 초안은 보존했습니다. 실패 이유를 확인하거나 해당 섹션만 다시 생성하세요.";
     saveTopics(message);
   }
+  // Some Articles leave no unused Page 1 lane (12/13 failed on a fuel-price story), so an auto pick tries the next Article.
+  async function articleSourceWithPlan(request){
+    const fixed=Boolean(normalizeGenerationRequest(request).articleSource);let lastError=null;
+    for(let attempt=0;attempt<(fixed?1:4);attempt++){
+      const candidate=await ensureArticleSource(attempt?{...request,articleSource:null}:request);
+      try{stablePlanForRequest(candidate);return candidate}catch(error){if(error?.stage!=="plan")throw error;lastError=error}
+    }
+    throw lastError;
+  }
   async function generateAndStore(request,originalDraft=null){
     request=normalizeGenerationRequest(request);if(hasCategoryConflict(request.page1Category,request.articleCategory)){notify("1부와 2부는 서로 다른 카테고리를 선택해 주세요.",true);return null}if(generationsInFlight.has(request.date)){notify("이 날짜의 토픽을 이미 생성하고 있습니다.",true);return null}generationsInFlight.add(request.date);
     try{
-      if(originalDraft){rememberArticleSource(originalDraft.date,originalDraft.page2?.source||originalDraft.generationRequest?.articleSource);rememberPageOneTitle(originalDraft)}request=await ensureArticleSource(request);const pending=pendingGeneration(request,originalDraft);topics[request.date]=pending;activeDate=request.date;dirty=true;navigateTo({section:"topics",view:"month",month:request.date.slice(0,7),date:request.date,tab:"review"});view="admin";drawerDate="";saveTopics("최신 RSS 기사를 선택하고 Topic Plan 생성을 시작했습니다.");
+      if(originalDraft){rememberArticleSource(originalDraft.date,originalDraft.page2?.source||originalDraft.generationRequest?.articleSource);rememberPageOneTitle(originalDraft)}request=await articleSourceWithPlan(request);const pending=pendingGeneration(request,originalDraft);topics[request.date]=pending;activeDate=request.date;dirty=true;navigateTo({section:"topics",view:"month",month:request.date.slice(0,7),date:request.date,tab:"review"});view="admin";drawerDate="";saveTopics("최신 RSS 기사를 선택하고 Topic Plan 생성을 시작했습니다.");
       const topic=await generateV2Topic(request);topics[request.date]=topic;dirty=true;saveTopics("새 TheBox Topic 생성과 승인 게이트 검사를 완료했습니다.");return topic;
     }catch(error){
-      if(!topics[request.date]||topics[request.date]?.operatorStatus?.generationStatus!=="running"){notify(error?.type==="rate_limited"||error?.httpStatus===429?"Article 후보 요청이 잠시 몰렸습니다. 잠시 후 다시 시도해 주세요.":error?.type==="rss_category_unavailable"?"선택한 카테고리에서 사용할 수 있는 새 기사를 찾지 못했습니다. 다른 카테고리를 선택하거나 잠시 후 다시 시도해 주세요.":error?.type==="rss_duplicate_exhausted"?"이미 사용한 기사와 겹치지 않는 새 RSS 후보를 찾지 못했습니다. 잠시 뒤 다시 시도해 주세요.":"최신 RSS 기사를 가져오지 못했습니다. 잠시 후 다시 시도해 주세요.",true);return null}applyGenerationFailure(topics[request.date],request,error);return null;
+      if(!topics[request.date]||topics[request.date]?.operatorStatus?.generationStatus!=="running"){notify(error?.type==="rate_limited"||error?.httpStatus===429?"Article 후보 요청이 잠시 몰렸습니다. 잠시 후 다시 시도해 주세요.":error?.type==="rss_category_unavailable"?"선택한 카테고리에서 사용할 수 있는 새 기사를 찾지 못했습니다. 다른 카테고리를 선택하거나 잠시 후 다시 시도해 주세요.":error?.type==="rss_duplicate_exhausted"?"이미 사용한 기사와 겹치지 않는 새 RSS 후보를 찾지 못했습니다. 잠시 뒤 다시 시도해 주세요.":error?.stage==="plan"?"기사 4개를 시도했지만 1부와 겹치지 않는 계획을 만들지 못했습니다. 잠시 뒤 다시 시도해 주세요.":"최신 RSS 기사를 가져오지 못했습니다. 잠시 후 다시 시도해 주세요.",true);return null}applyGenerationFailure(topics[request.date],request,error);return null;
     }finally{generationsInFlight.delete(request.date)}
   }
   async function regenerateV2(){

@@ -25,6 +25,14 @@ assert.match(app,/ensureArticleSource\(\{\.\.\.candidate,articleSource:null,page
   assert.match(retained,/articleOnlyPlan\(candidate\)/,"Article-only regeneration builds its plan from the new Article alone");
   assert.doesNotMatch(retained,/stablePlanForRequest\(/,"Article-only regeneration must not need a fresh Page 1 lane");
 }
+{
+  // 12/13 failed outright because its fuel-price Article left no unused Page 1 lane; a new topic now tries the next Article.
+  const store=app.slice(app.indexOf("async function generateAndStore"),app.indexOf("async function regenerateV2"));
+  assert.match(store,/request=await articleSourceWithPlan\(request\)/,"new topics must pick an Article that leaves a usable Page 1 plan");
+  const retry=app.slice(app.indexOf("async function articleSourceWithPlan"),app.indexOf("async function generateAndStore"));
+  assert.match(retry,/attempt<\(fixed\?1:4\)/,"an automatic Article pick retries up to four Articles");
+  assert.match(retry,/error\?\.stage!=="plan"\)throw error/,"only plan failures move on to the next Article");
+}
 assert.doesNotMatch(app,/In my country/,"the Page 1 prompt line must not invite comparing countries");
 assert.match(app,/MY TURN<br>In my life or at work/);
 assert.ok(app.includes("otherMonths=Object.values(topics).filter(item=>item?.date&&!item.date.startsWith(month))"),"Article picks must also avoid sources already used in other months");
