@@ -212,6 +212,10 @@ assert.equal(TopicV4.validateContent(proseCollision,proseCollisionPlan).ready,tr
   // 12/3 review: "Do you have a drawer like this?" stops anyone who answers no; "When did you last clean it?" ends in one fact.
   assert.ok(locations({page1:{easyTalk:["Do you have a drawer like Hoseok's?",...easy.slice(1)]}}).includes("criteria.gate"),"a first question that gates on owning something must be widened");
   assert.ok(!locations({page1:{easyTalk:["Where do small things pile up for you — a drawer, a bag, or your phone?",...easy.slice(1)]}}).includes("criteria.gate"),"a widened first question passes");
+  // 12/1 re-review: "What would Hanni leave behind?" asks for a prediction about the character, not the member's own choice.
+  const star=topic.page1.story.star.split(" ")[0];
+  assert.ok(locations({page1:{quickVote:{...topic.page1.quickVote,question:`What would ${star} leave behind?`}}}).includes("criteria.voteSelf"),"the vote must ask the member, not predict the character");
+  assert.ok(!locations({page1:{quickVote:{...topic.page1.quickVote,question:"What would you leave behind?"}}}).includes("criteria.voteSelf"),"a vote that asks the member passes");
   // 12/10 review: judging a relative and loneliness are disclosures; a neutral seat preference is fine.
   for(const question of ["Who is the trickiest person to seat at your family table?","Have you ever felt like an outsider in a group? How did you handle it?"])assert.ok(locations({page1:{easyTalk:[question,...easy.slice(1)]}}).includes("criteria.privacy"),`must not be asked: ${question}`);
   assert.ok(!locations({page1:{easyTalk:["Where do you like to sit in a café, and why?",...easy.slice(1)]}}).includes("criteria.privacy"),"a seat preference is not private");
@@ -227,7 +231,7 @@ assert.equal(TopicV4.validateContent(proseCollision,proseCollisionPlan).ready,tr
   // 12/4 review: password habits are private security details.
   assert.ok(locations({page1:{easyTalk:["Do you use the same password for many things?",...easy.slice(1)]}}).includes("criteria.privacy"),"password habits must not be asked");
   assert.ok(locations({page1:{easyTalk:["When did you last clean your drawer?","When was the last time you tidied up?","Do you tidy often?"]}}).includes("criteria.openQuestions"),"one-fact when-did-you-last questions count as closed");
-  for(const phrase of ["TOPIC CRITERIA","TEMPLATE A CRITERIA","NO MODEL ANSWER","ARTICLE CRITERIA","12/2 REVIEW","12/3 REVIEW","12/4 REVIEW","12/6 REVIEW","12/7 REVIEW","12/8 REVIEW","12/10 REVIEW"])assert.ok(rules.includes(phrase),`the prompt carries ${phrase}`);
+  for(const phrase of ["TOPIC CRITERIA","TEMPLATE A CRITERIA","NO MODEL ANSWER","ARTICLE CRITERIA","12/2 REVIEW","12/3 REVIEW","12/4 REVIEW","12/6 REVIEW","12/7 REVIEW","12/8 REVIEW","12/10 REVIEW","12/1 RE-REVIEW"])assert.ok(rules.includes(phrase),`the prompt carries ${phrase}`);
   assert.ok(TopicV4.CONTENT_TOOL.input_schema.required.includes("articleTitleEn"),"the model returns a short Article title");
 }
 // A personal routine can mention the same broad technology words as an Article without
