@@ -40,7 +40,8 @@ const topic = {
   updatedAt: new Date().toISOString()
 };
 const directEdit = "What is one thing you always pack for a day out?";
-const requestText = "Make REAL TALK 2 ask about a real experience.";
+// 11/12: the manager could not fit a full prompt (3 rows, 1000 characters); a long request must reach the model whole.
+const requestText = `Make REAL TALK 2 ask about a real experience. ${"Keep the tone light and casual for adults of all ages. ".repeat(60)}End of request.`;
 const aiRewrite = "Tell us about a time a small change of plan made your day better.";
 const contentFrom = draft => ({
   pointSituationKo: draft.page1.point.situation, pointTalkKo: draft.page1.point.talk,
@@ -78,6 +79,7 @@ try {
     assert.ok(await page.locator(".v43-editor-note").isVisible(), "an approved topic warns that edits need approval again");
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `no horizontal scroll at ${width}px`);
     await page.locator(".v43-editor").screenshot({ path: join(root, "artifacts", `topic-edit-${width}.png`) });
+    assert.ok(await page.locator("#v43-edit-request").evaluate(element => element.getBoundingClientRect().height >= 200 && element.maxLength >= 3800), "the request box is large and takes a long prompt");
     await page.locator(".v43-direct-edit summary").click();
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `the open edit form fits at ${width}px`);
     await page.locator(".v43-direct-edit").screenshot({ path: join(root, "artifacts", `topic-edit-open-${width}.png`) });
