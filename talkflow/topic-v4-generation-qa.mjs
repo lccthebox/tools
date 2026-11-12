@@ -209,10 +209,22 @@ assert.equal(TopicV4.validateContent(proseCollision,proseCollisionPlan).ready,tr
   // 12/3 review: "Do you have a drawer like this?" stops anyone who answers no; "When did you last clean it?" ends in one fact.
   assert.ok(locations({page1:{easyTalk:["Do you have a drawer like Hoseok's?",...easy.slice(1)]}}).includes("criteria.gate"),"a first question that gates on owning something must be widened");
   assert.ok(!locations({page1:{easyTalk:["Where do small things pile up for you — a drawer, a bag, or your phone?",...easy.slice(1)]}}).includes("criteria.gate"),"a widened first question passes");
+  // 12/10 review: judging a relative and loneliness are disclosures; a neutral seat preference is fine.
+  for(const question of ["Who is the trickiest person to seat at your family table?","Have you ever felt like an outsider in a group? How did you handle it?"])assert.ok(locations({page1:{easyTalk:[question,...easy.slice(1)]}}).includes("criteria.privacy"),`must not be asked: ${question}`);
+  assert.ok(!locations({page1:{easyTalk:["Where do you like to sit in a café, and why?",...easy.slice(1)]}}).includes("criteria.privacy"),"a seat preference is not private");
+  // 12/8 review: "Person who had coffee today" can match several people; every order rule needs a tie-breaker,
+  // and rules that assume a job or reveal phone numbers or family details are gone.
+  for(const rule of TopicV4.PARTICIPANT_ORDER_RULES.filter(item=>item.id!=="rock-paper-scissors"))assert.ok(rule.en.includes("If tied, play rock-paper-scissors.")&&rule.ko.includes("같으면 가위바위보로 정하고"),`order rule needs a tie-breaker: ${rule.id}`);
+  for(const id of ["longest-current-job","highest-phone-ending","most-siblings","nearby-relatives"])assert.ok(!TopicV4.PARTICIPANT_ORDER_RULES.some(item=>item.id===id),`order rule clashes with the criteria: ${id}`);
+  // 12/7 review: asking about an embarrassing home is a disclosure; asking how to get back into an account is not.
+  assert.ok(locations({page2:{discussion:[...topic.page2.discussion.slice(0,4),"Have you ever felt embarrassed to let someone see your kitchen or home? What happened?"]}}).includes("criteria.privacy"),"embarrassing home experiences must not be asked");
+  assert.ok(!locations({page1:{easyTalk:["What do you usually do when you forget your password?",...easy.slice(1)]}}).includes("criteria.privacy"),"asking how people get back in is not a security disclosure");
+  // 12/6 review: the first Article question gated on owning houseplants.
+  assert.ok(locations({page2:{discussion:["Do you have any houseplants at home? How do you look after them?",...topic.page2.discussion.slice(1)]}}).includes("criteria.gate"),"a first discussion question that gates on a possession must be widened");
   // 12/4 review: password habits are private security details.
   assert.ok(locations({page1:{easyTalk:["Do you use the same password for many things?",...easy.slice(1)]}}).includes("criteria.privacy"),"password habits must not be asked");
   assert.ok(locations({page1:{easyTalk:["When did you last clean your drawer?","When was the last time you tidied up?","Do you tidy often?"]}}).includes("criteria.openQuestions"),"one-fact when-did-you-last questions count as closed");
-  for(const phrase of ["TOPIC CRITERIA","TEMPLATE A CRITERIA","NO MODEL ANSWER","ARTICLE CRITERIA","12/2 REVIEW"])assert.ok(rules.includes(phrase),`the prompt carries ${phrase}`);
+  for(const phrase of ["TOPIC CRITERIA","TEMPLATE A CRITERIA","NO MODEL ANSWER","ARTICLE CRITERIA","12/2 REVIEW","12/3 REVIEW","12/4 REVIEW","12/6 REVIEW","12/7 REVIEW","12/8 REVIEW","12/10 REVIEW"])assert.ok(rules.includes(phrase),`the prompt carries ${phrase}`);
   assert.ok(TopicV4.CONTENT_TOOL.input_schema.required.includes("articleTitleEn"),"the model returns a short Article title");
 }
 // A personal routine can mention the same broad technology words as an Article without
