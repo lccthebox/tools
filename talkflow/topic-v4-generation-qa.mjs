@@ -271,6 +271,13 @@ assert.equal(TopicV4.validateContent(proseCollision,proseCollisionPlan).ready,tr
   const asTool=TopicV4.parseReviewResponse({content:[{type:"tool_use",name:TopicV4.REVIEW_TOOL.name,input:{scorePage1:97,scorePage2:74,issues:[]}}]});
   assert.equal(asTool.scorePage2,74);
   assert.throws(()=>TopicV4.parseReviewResponse({content:[{type:"text",text:"not json"}]}),/Self-review result is missing/);
+  // 11/12 live test after #57: told the editor scored "between 72 and 91", the reviewer gave 91/88 three times and no
+  // rewrite could pass. Scores now come from per-issue deductions, and the instructions name no past score range.
+  const byDeduction=TopicV4.parseReviewResponse({content:[{type:"text",text:JSON.stringify({issues:[{location:"page1.realTalk",message:"Replace question 3.",deduction:4},{location:"page2.stance",message:"Soften option 3.",deduction:5},{location:"page2.article",message:"Give both views equal space.",deduction:7}]})}]});
+  assert.deepEqual([byDeduction.scorePage1,byDeduction.scorePage2],[96,88],"each page loses only its own deductions");
+  assert.deepEqual(TopicV4.parseReviewResponse({content:[{type:"text",text:JSON.stringify({issues:[]})}]}).scorePage1,100,"no issues means a full score");
+  assert.deepEqual(TopicV4.REVIEW_TOOL.input_schema.required,["issues"],"the reviewer no longer writes whole-page scores");
+  assert.ok(!/\b(7[0-9]|8[0-9]|9[0-5])\b/.test(TopicV4.buildReviewPayload({draft:topic}).rules.slice(0,3).join(" ")),"the reviewer instructions do not anchor on a past score");
 }
 {
   assert.ok(TopicV4.CONTENT_TOOL.input_schema.required.includes("articleTitleEn"),"the model returns a short Article title");
