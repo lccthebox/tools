@@ -135,6 +135,7 @@ const reviewScores = [];
 let resolveNextSourceRequest = null;
 let nextInvalidContentMode = "";
 const contentRepairIssues = [];
+const contentRepairDrafts = [];
 const contentPlanPremises = [];
 const generationTokenBudgets = [];
 const contentRules = [];
@@ -164,7 +165,7 @@ try {
     const prompt = JSON.parse(body.messages?.[0]?.content || "{}");
     generationTokenBudgets.push(body.max_tokens);
     if (tool === "submit_topic_v43_content") { contentPlanPremises.push(approvedPlan?.page1Premise); contentRules.push(prompt.rules || []); }
-    if (tool === "submit_topic_v43_content" && repair?.issues?.length) contentRepairIssues.push(repair.issues);
+    if (tool === "submit_topic_v43_content" && repair?.issues?.length) { contentRepairIssues.push(repair.issues); contentRepairDrafts.push(repair.previousDraft || null); }
     const invalidContentMode = tool === "submit_topic_v43_content" ? nextInvalidContentMode : "";
     if (invalidContentMode) nextInvalidContentMode = "";
     const input = tool === "submit_topic_v43_plan" ? plan : invalidContentMode === "separation" ? overlappingContent : invalidContentMode === "short" ? shortArticleContent : content;
@@ -242,6 +243,7 @@ try {
   assert.equal(generationRequests - beforeReviewRewrite, 3, "a draft below 96 gets two rewrites");
   assert.ok(contentRepairIssues.slice(repairsBeforeReview).length === 2 && contentRepairIssues.slice(repairsBeforeReview).every(issues => issues.some(issue => issue.message.startsWith("Editor review: Make the limit realistic"))), "each rewrite is told the reviewer notes");
   assert.deepEqual([reviewed.scorePage1, reviewed.history.map(item => item.scorePage1)], [90, [80, 90, 85]], "the best-scoring version is kept");
+  assert.ok(contentRepairDrafts.slice(repairsBeforeReview).every(draft => draft?.page1?.story?.en && draft?.page2?.article), "each rewrite edits the previous printed draft");
   const beforeGuidedFullRequests = generationRequests;
   const guidedFull = await page.evaluate(async request => {
     const next = await TalkFlow.generateForTest(request);

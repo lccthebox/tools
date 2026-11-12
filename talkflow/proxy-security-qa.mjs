@@ -119,6 +119,20 @@ assert.equal(preArticleLengthProjection.messages[0].content, JSON.stringify(v4Ic
   assert.equal(security.anthropicRequestStage(reviewBody), "review");
   for (const bad of [{ ...canonicalReview, stage: "content" }, { ...canonicalReview, extra: true }, { ...canonicalReview, draft: { page1: draft.page1 } }]) assert.ok(!security.messageBodyForUpstream({ ...reviewBody, messages: [{ role: "user", content: JSON.stringify(bad) }] }), "a malformed review request is rejected");
 }
+{
+  // 11/12: a self-review rewrite sends the previous printed draft so only the named parts change.
+  const fixtureTopic = JSON.parse(require("node:fs").readFileSync(new URL("./fixtures/member-topic.json", import.meta.url), "utf8"));
+  const editPrompt = topicV4.buildPromptPayload({ stage: "content", topic: v4IcebreakerTopic, approvedPlan: v4IcebreakerPlan, repairIssues: [{ location: "page1.realTalk", message: "Editor review: replace question 1." }], repairDraft: fixtureTopic });
+  const editBody = { ...v4IcebreakerBody, messages: [{ role: "user", content: JSON.stringify(editPrompt) }] };
+  const editUpstream = security.messageBodyForUpstream(editBody);
+  assert.ok(editUpstream, "a rewrite with the previous draft is accepted");
+  assert.equal(editUpstream.messages[0].content, JSON.stringify(editPrompt), "the previous draft reaches the model unchanged");
+  assert.ok(JSON.stringify(editBody).length < 120000, "the rewrite request stays under the request size limit");
+  const extraDraft = structuredClone(editPrompt); extraDraft.repair.previousDraft.secret = "x";
+  assert.ok(!security.messageBodyForUpstream({ ...editBody, messages: [{ role: "user", content: JSON.stringify(extraDraft) }] }), "a draft with other fields is rejected");
+  const extraRepair = structuredClone(editPrompt); extraRepair.repair.note = "x";
+  assert.ok(!security.messageBodyForUpstream({ ...editBody, messages: [{ role: "user", content: JSON.stringify(extraRepair) }] }), "a repair with other fields is rejected");
+}
 upstreamFailure = { type: "error", error: { type: "invalid_request_error", message: "Your credit balance is too low to access the Anthropic API." }, request_id: "req_low_credit" };
 const lowCreditLogs = []; console.error = (...items) => lowCreditLogs.push(items.join(" "));
 try { result = await call(messages, mockRequest("POST", v4Body, sessionHeader)); } finally { console.error = originalConsoleError; upstreamFailure = null; }

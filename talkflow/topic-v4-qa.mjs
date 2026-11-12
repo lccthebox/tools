@@ -44,7 +44,7 @@ assert.match(app,/ensureArticleSource\(\{\.\.\.candidate,articleSource:null,page
   const review=app.slice(app.indexOf("const SELF_REVIEW_ROUNDS"),app.indexOf("function buildTopicFromPlan"));
   assert.match(review,/SELF_REVIEW_ROUNDS=2/,"at most two rewrites");
   assert.match(review,/<TopicV4\.REVIEW_PASS_SCORE/,"rewrites only below the pass line");
-  assert.match(review,/requestValidatedGenerationStage\("content",request,plan,modelId,issues\)/,"a rewrite still passes every automatic check");
+  assert.match(review,/requestValidatedGenerationStage\("content",request,plan,modelId,issues,draftFor\(best\.content\)\)/,"a rewrite edits the best draft and still passes every automatic check");
   assert.match(review,/selfReviewScore\(review,focus\)>selfReviewScore\(best\.review,focus\)/,"the best-scoring version is kept");
   assert.match(review,/catch\(error\)\{console\.warn\("Self-review skipped"[^}]*return\{content,selfReview:null\}/,"a failed review never fails the generation");
   const generate=app.slice(app.indexOf("async function generateV2Topic"),app.indexOf("function applyGenerationFailure"));
