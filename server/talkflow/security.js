@@ -152,7 +152,10 @@ function messageBodyForUpstream(body) {
   if (!Array.isArray(body.tools) || body.tools.length !== 1) return false;
   const tool = body.tools[0];
   const canonical = tool && CANONICAL_TOOLS.get(tool.name);
-  if (!canonical || JSON.stringify(tool) !== JSON.stringify(canonical)) return false;
+  // Topic V4 tools are always replaced by the server's own definition below, so an admin page opened before a deploy
+  // (older tool schema) is accepted and upgraded instead of failing with "요청 형식이 올바르지 않습니다".
+  const topicV4Tool = tool && (tool.name === TopicV4.PLAN_TOOL.name || tool.name === TopicV4.CONTENT_TOOL.name) && tool.input_schema && typeof tool.input_schema === "object";
+  if (!canonical || (!topicV4Tool && JSON.stringify(tool) !== JSON.stringify(canonical))) return false;
   if (body.messages.length !== 1 || body.messages[0].role !== "user" || !validGenerationPrompt(body.messages[0].content, tool.name)) return false;
   if(body.tool_choice?.type!=="tool"||body.tool_choice?.name!==tool.name||!Object.keys(body.tool_choice).every(key=>["type","name"].includes(key)))return null;
   const canonicalTopicV4Prompt = canonicalTopicV4PromptForUpstream(body.messages[0].content, tool.name);
@@ -215,10 +218,12 @@ function canonicalTopicV4PromptForUpstream(content, toolName) {
 function canonicalTopicV4PromptPayload(payload, expectedStage) {
   const rebuilt = TopicV4.buildPromptPayload({ stage: expectedStage, topic: payload.topic, approvedPlan: payload.approvedPlan, repairIssues: payload.repair?.issues || [] });
   if (JSON.stringify(payload) === JSON.stringify(rebuilt)) return rebuilt;
-  const previousArticleLengthRule = "Story English is 55-85 words. Article is an original balanced five-to-six sentence CEFR A2-B1 discussion text, based only on articleSource title and excerpt. Use short, direct sentences and familiar daily vocabulary. Replace difficult academic, legal, policy, and technical wording with plain English; do not copy or quote source prose, and end on the central issue.";
-  const priorContract = structuredClone(rebuilt);
-  priorContract.rules = priorContract.rules.map(rule => rule.startsWith("Story English is 55-85 words.") ? previousArticleLengthRule : rule);
-  return JSON.stringify(payload) === JSON.stringify(priorContract) ? rebuilt : null;
+  // An admin page opened before a deploy still sends the older rule list. Everything else must match exactly;
+  // the rules always come from the server, so the request is upgraded to the current rules (12/1 regeneration
+  // failed with 400 after the 12/6-12/10 rules were deployed while the page stayed open).
+  if (!Array.isArray(payload?.rules) || !payload.rules.every(rule => typeof rule === "string" && rule.length <= 4000) || payload.rules.length > 60) return null;
+  const withoutRules = value => JSON.stringify({ ...value, rules: null });
+  return withoutRules(payload) === withoutRules(rebuilt) ? rebuilt : null;
 }
 
 function validTopicV4Repair(repair) {
