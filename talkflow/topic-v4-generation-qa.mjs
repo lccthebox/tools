@@ -8,9 +8,19 @@ const plan={titleEn:topic.page1.title.en,titleKo:topic.page1.title.ko,star:topic
 assert.equal(TopicV4.TEMPLATE_VERSION,"topic-v4.3");
 assert.ok(Array.isArray(TopicV4.PARTICIPANT_ORDER_RULES),"participant-order rules must be available to the generator");
 assert.ok(TopicV4.PARTICIPANT_ORDER_RULES.length>=20,"the generator needs a varied set of participant-order rules");
-assert.equal(TopicV4.selectStarForDate("2026-10-01",[]),"Namjoon","the first day uses the requested display name, not RM");
-assert.equal(TopicV4.selectStarForDate("2026-10-02",[]),"Yoongi","different calendar days rotate through distinct stars even before generated topics are saved");
-assert.equal(TopicV4.selectStarForDate("2026-10-01",["Namjoon"]),"Yoongi","a star already used this month is skipped");
+{
+  // Stars were taken in list order, so every month's first week was all BTS. Each date now draws from the whole list.
+  const first=TopicV4.selectStarForDate("2026-10-01",[]);
+  assert.ok(TopicV4.STARS.includes(first)&&first!=="RM","a date picks a listed display name, not RM");
+  assert.equal(TopicV4.selectStarForDate("2026-10-01",[]),first,"the same date and variant keep the same star so a plan is stable");
+  assert.notEqual(TopicV4.selectStarForDate("2026-10-01",[first]),first,"a star already used this month is skipped");
+  const BTS=new Set(["Namjoon","Yoongi","Hoseok","Seokjin","Jimin","Taehyung","Jungkook"]);
+  for(const month of ["2026-10","2026-11","2026-12","2027-01"]){
+    const used=[];for(let day=1;day<=7;day++){used.push(TopicV4.selectStarForDate(`${month}-0${day}`,used))}
+    assert.equal(new Set(used).size,7,`${month} first week has seven different stars`);
+    assert.ok(used.filter(star=>BTS.has(star)).length<=3,`${month} first week must not be mostly BTS: ${used.join(", ")}`);
+  }
+}
 const legacyRmTopic={...topic,date:"2026-10-02",topicPlan:{...plan,star:"RM"},page1:{...topic.page1,story:{...topic.page1.story,star:"RM",en:"Imagine RM has a free afternoon and must choose one small plan.",ko:"RM이 여유로운 오후에 작은 계획 하나를 골라야 한다고 상상해 보세요."}}};
 const migratedRmTopic=TopicV4.migrateLegacyRmTopic(legacyRmTopic);
 assert.equal(migratedRmTopic.page1.story.star,"Yoongi","published RM-only legacy stories rotate to the date's selected star");

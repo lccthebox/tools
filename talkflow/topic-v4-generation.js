@@ -71,7 +71,9 @@ const isFactRecallQuiz=question=>FACT_RECALL_QUIZ.test(clean(question).replace(/
 function articleSafetyText(topic){const two=topic?.page2||{},source=two.source||{};return [two.title,source.title,source.excerpt,source.subjectKey,two.article,keywordText(two.keyWords),two.stance?.question,...(two.stance?.options||[]),...(two.discussion||[]),two.quiz?.question,...(two.quiz?.options||[])].map(clean).join(" ")}
 function isSafeArticleSource(source){return !!source&&typeof source==="object"&&!ARTICLE_SAFETY_PATTERN.test([source.title,source.excerpt,source.subjectKey].map(clean).join(" "))}
 function hasUnsafeArticleContent(topic){return ARTICLE_SAFETY_PATTERN.test(articleSafetyText(topic))}
-function selectStarForDate(date,recentStars=[],variant=0){const day=Math.max(1,Math.min(31,Number(String(date||"").slice(-2))||1)),shift=Math.max(0,Math.floor(Number(variant)||0)),used=new Set((Array.isArray(recentStars)?recentStars:[]).map(canonicalStar)),ordered=STARS.map((_,offset)=>STARS[(day-1+shift+offset)%STARS.length]);return ordered.find(star=>!used.has(star))||ordered[0]}
+// Walking STARS in list order gave every month's first week to BTS; each date now shuffles the whole list (stable per date and variant).
+const starRank=(seed,star)=>{let hash=2166136261;for(const char of `${seed}|${star}`){hash^=char.charCodeAt(0);hash=Math.imul(hash,16777619)>>>0}return hash};
+function selectStarForDate(date,recentStars=[],variant=0){const shift=Math.max(0,Math.floor(Number(variant)||0)),seed=`${clean(date)}|${shift}`,used=new Set((Array.isArray(recentStars)?recentStars:[]).map(canonicalStar)),ordered=[...STARS].sort((left,right)=>starRank(seed,left)-starRank(seed,right));return ordered.find(star=>!used.has(star))||ordered[0]}
 // Only hyphenated words built from Korean romanized syllables ("Ji-yeon", "Heung-min") count as names;
 // English compounds such as "Screen-Free" or "Long-term" do not.
 const KOREAN_SYLLABLE=/^(?:[bcdghjkmnprstwy]{0,3})(?:yae|yeo|wae|ae|eo|eu|oe|ui|ya|ye|yo|yu|wa|we|wo|wi|a|e|i|o|u)(?:ng|k|n|l|m|p|t)?$/i;
