@@ -610,6 +610,13 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
     ["A4","가볍지만 충분한 이야기 거리","취향 확인을 넘어 이유·경험·선택의 차이로 이어지는가?",null,"A"],
     ["A5","본문과 질문의 연결성","본문에서 자연스럽게 질문이 이어지는가?",null,"A"]
   ]);
+  function renderSelfReview(topic){
+    const review=topic.selfReview;if(!review||!Number.isInteger(review.scorePage1))return"";
+    const pass=Number(review.passScore)||96,score=(label,value)=>`<span class="${value>=pass?"pass":"warn"}"><b>${esc(label)}</b>${esc(value)}점</span>`;
+    const history=(review.history||[]).map(item=>`${item.scorePage1}/${item.scorePage2}`).join(" → ");
+    const issues=(review.issues||[]).map(item=>`<li><b>${esc(item.location)}</b> ${esc(item.message)}</li>`).join("");
+    return`<section class="self-review"><p class="eyebrow">AI 자체 검수 · 통과 기준 ${esc(pass)}점</p><div class="self-review-scores">${score("1부",review.scorePage1)}${score("2부",review.scorePage2)}</div>${history?`<p class="self-review-history">검수 기록(1부/2부): ${esc(history)}</p>`:""}${issues?`<ul>${issues}</ul>`:"<p>남은 지적이 없습니다.</p>"}<p class="self-review-note">AI가 원장님 평가 기준으로 매긴 참고 점수입니다. 최종 판단은 직접 확인해 주세요.</p></section>`;
+  }
   function renderTopicCriteria(topic,evaluation){
     const findings=[...(evaluation.issues||[]),...(evaluation.warnings||[])],template=topic.page1?.template;
     const rows=TOPIC_CRITERIA.filter(([, , , , only])=>!only||only===template).map(([id,name,question,auto])=>{const hit=auto?findings.find(auto):null,status=!auto?"직접 확인":hit?"확인 필요":"자동 확인 통과";return`<li class="${!auto?"manual":hit?"warn":"pass"}"><b>${esc(id)}</b><span><strong>${esc(name)}</strong>${esc(question)}${hit?`<em>${esc(hit.message)}</em>`:""}</span><i>${status}</i></li>`}).join("");
@@ -812,7 +819,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
     if(["failed","interrupted"].includes(t.operatorStatus?.generationStatus)||t.generatedConversation&&![TopicV4.VERSION,Simple.VERSION,Generation.VERSION].includes(t.generationEngine))return dailyNav(t,"admin")+generationBlocked(t,true);
     if(t.generationEngine===TopicV4.VERSION){
       const evaluation=TopicV4.evaluate(t),state=evaluation.ready?"사용 가능":"확인 필요",issues=evaluation.issues.map(item=>`<li class="${item.severity}"><strong>${esc(item.location)}</strong><span>${esc(item.message)}</span></li>`).join("");
-      return `${dailyNav(t,"admin")}<section class="simple-review-status ${evaluation.ready?"is-ready":"has-errors"}"><p class="eyebrow">THE BOX TOPIC V4.3</p><h2>${state}</h2>${issues?`<ul class="issue-list">${issues}</ul>`:"<p>v4.3 콘텐츠·소재 분리·인쇄 계약을 통과했습니다.</p>"}</section>${renderTopicCriteria(t,evaluation)}${renderV43ReviewCard(t)}<section class="operator-review simple-operator-review"><div class="review-heading"><div><p class="eyebrow">승인 전 확인</p><h2>A4 첫 장 + Article</h2></div></div>${renderReviewArticleSource(t.page2?.source)}<button class="review-preview-grid" data-preview-modal aria-label="오늘의 토픽 A4 두 페이지 크게 보기">${renderTopicV4Handout(t)}</button></section><section class="review-actions simple-review-actions"><button class="button secondary" data-v41-regenerate="page1">첫 장 다시 생성</button><button class="button secondary" data-v41-regenerate="page2">Article 다시 생성</button><button class="button secondary" data-action="regenerate-v2">전체 다시 생성</button><button class="button secondary" data-open="${t.date}:print" ${evaluation.ready?"":"disabled"}>미리보기</button><button class="button primary approve-button" data-action="approve-save" ${evaluation.ready?"":"disabled aria-disabled=\"true\""}>승인하고 저장</button>${t.quality?.status==="approved"?`<button class="button primary" data-publish-topic="${t.date}">멤버에게 공개</button>`:""}<button class="button danger" data-action="delete">삭제</button></section><dialog class="a4-preview-dialog"><button class="dialog-close" data-preview-close>닫기</button><div>${renderTopicV4Handout(t)}</div></dialog><details class="advanced-editor"><summary>생성 데이터</summary><pre>${esc(JSON.stringify(t,null,2))}</pre></details>`;
+      return `${dailyNav(t,"admin")}<section class="simple-review-status ${evaluation.ready?"is-ready":"has-errors"}"><p class="eyebrow">THE BOX TOPIC V4.3</p><h2>${state}</h2>${issues?`<ul class="issue-list">${issues}</ul>`:"<p>v4.3 콘텐츠·소재 분리·인쇄 계약을 통과했습니다.</p>"}</section>${renderSelfReview(t)}${renderTopicCriteria(t,evaluation)}${renderV43ReviewCard(t)}<section class="operator-review simple-operator-review"><div class="review-heading"><div><p class="eyebrow">승인 전 확인</p><h2>A4 첫 장 + Article</h2></div></div>${renderReviewArticleSource(t.page2?.source)}<button class="review-preview-grid" data-preview-modal aria-label="오늘의 토픽 A4 두 페이지 크게 보기">${renderTopicV4Handout(t)}</button></section><section class="review-actions simple-review-actions"><button class="button secondary" data-v41-regenerate="page1">첫 장 다시 생성</button><button class="button secondary" data-v41-regenerate="page2">Article 다시 생성</button><button class="button secondary" data-action="regenerate-v2">전체 다시 생성</button><button class="button secondary" data-open="${t.date}:print" ${evaluation.ready?"":"disabled"}>미리보기</button><button class="button primary approve-button" data-action="approve-save" ${evaluation.ready?"":"disabled aria-disabled=\"true\""}>승인하고 저장</button>${t.quality?.status==="approved"?`<button class="button primary" data-publish-topic="${t.date}">멤버에게 공개</button>`:""}<button class="button danger" data-action="delete">삭제</button></section><dialog class="a4-preview-dialog"><button class="dialog-close" data-preview-close>닫기</button><div>${renderTopicV4Handout(t)}</div></dialog><details class="advanced-editor"><summary>생성 데이터</summary><pre>${esc(JSON.stringify(t,null,2))}</pre></details>`;
     }
     if(t.generationEngine===Simple.VERSION){
       const evaluation=Simple.evaluate(t,Object.values(topics)),state=evaluation.blockers.length?"생성 실패":evaluation.issues.length?"확인 필요":"사용 가능";
@@ -1054,16 +1061,45 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
     }
   }
   function hasRepairableGenerationIssues(error,stage){return error?.type==="generation_error"&&Array.isArray(error.issues)&&error.issues.length>0&&!(stage==="content"&&error.issues.some(item=>String(item?.location||"")==="content.separation"))}
-  async function requestValidatedGenerationStage(stage,request,plan=null,modelId){
+  async function requestValidatedGenerationStage(stage,request,plan=null,modelId,initialIssues=[]){
     // The topic criteria checks (2026-11-12) catch more on the first draft, so the model gets up to two repairs,
     // each told only the issues still left.
     let lastError;
-    try{return await requestGenerationStage(stage,request,plan,modelId)}catch(error){lastError=error}
+    try{return await requestGenerationStage(stage,request,plan,modelId,initialIssues)}catch(error){lastError=error}
     for(let repair=0;repair<2;repair++){
       if(!hasRepairableGenerationIssues(lastError,stage))throw lastError;
       try{return await requestGenerationStage(stage,request,plan,modelId,lastError.issues)}catch(repairError){repairError.repairAttempted=true;lastError=repairError}
     }
     throw lastError;
+  }
+  // Self-review (2026-11-12): rules alone took the editor's scores to 84-91, not the 96 pass line. After a draft passes
+  // the automatic checks, the model scores it like the editor; below 96 it is rewritten with the reviewer's notes
+  // (at most twice) and the best-scoring version is kept. A failed review or rewrite keeps the draft already made.
+  const SELF_REVIEW_ROUNDS=2;
+  async function requestSelfReview(draft,modelId){
+    const payload=await AiClient.generate({model:modelId,max_tokens:1500,messages:[{role:"user",content:JSON.stringify(TopicV4.buildReviewPayload({draft}))}],tools:[TopicV4.REVIEW_TOOL],tool_choice:{type:"tool",name:TopicV4.REVIEW_TOOL.name}});
+    return TopicV4.parseReviewResponse(payload);
+  }
+  function selfReviewScore(review,focus){return focus==="page1"?review.scorePage1:focus==="page2"?review.scorePage2:Math.min(review.scorePage1,review.scorePage2)}
+  function selfReviewIssues(review,focus){return review.issues.filter(item=>!focus||String(item.location).startsWith(focus)||!/^page[12]/.test(String(item.location))).map(item=>({location:item.location,message:`Editor review: ${item.message}`}))}
+  async function selfReviewedContent(request,plan,content,modelId,{focus="",compose=topic=>topic}={}){
+    const draftFor=value=>compose(buildTopicFromPlan(request,plan,value,modelId));
+    let best=null;const history=[];
+    try{const review=await requestSelfReview(draftFor(content),modelId);best={content,review};history.push({scorePage1:review.scorePage1,scorePage2:review.scorePage2})}catch(error){console.warn("Self-review skipped",error?.message||error);return{content,selfReview:null}}
+    for(let round=0;round<SELF_REVIEW_ROUNDS&&selfReviewScore(best.review,focus)<TopicV4.REVIEW_PASS_SCORE;round++){
+      const issues=selfReviewIssues(best.review,focus);if(!issues.length)break;
+      notify(`자체 검수 ${selfReviewScore(best.review,focus)}점: 지적 ${issues.length}개를 반영해 고쳐 쓰고 있습니다 (${round+1}/${SELF_REVIEW_ROUNDS}).`);
+      try{
+        const rewritten=await requestValidatedGenerationStage("content",request,plan,modelId,issues),review=await requestSelfReview(draftFor(rewritten),modelId);
+        history.push({scorePage1:review.scorePage1,scorePage2:review.scorePage2});
+        if(selfReviewScore(review,focus)>selfReviewScore(best.review,focus))best={content:rewritten,review};
+      }catch(error){console.warn("Self-review rewrite skipped",error?.message||error);break}
+    }
+    return{content:best.content,selfReview:{passScore:TopicV4.REVIEW_PASS_SCORE,focus:focus||"all",scorePage1:best.review.scorePage1,scorePage2:best.review.scorePage2,issues:clone(best.review.issues),history,reviewedAt:new Date().toISOString()}};
+  }
+  async function reviewedTopicFromPlan(request,plan,content,modelId){
+    const reviewed=await selfReviewedContent(request,plan,content,modelId),topic=buildTopicFromPlan(request,plan,reviewed.content,modelId);
+    if(reviewed.selfReview)topic.selfReview=reviewed.selfReview;return topic;
   }
   function buildTopicFromPlan(request,plan,content,modelId){
     let topic;try{topic=TopicV4.buildTopic(generationTopic(request),plan,content,Object.values(topics))}catch(error){error.stage="content";error.diagnostics={raw:content,normalized:TopicV4.normalizeContent(content)};error.approvedPlan=clone(plan);throw error}
@@ -1073,7 +1109,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
     const modelId=await preflightModel();
     const plan=stablePlanForRequest(request);
     if(!plan)throw Object.assign(new Error("Topic Plan 결과가 없습니다."),{stage:"plan",type:"response_format_error",modelId});
-    try{return buildTopicFromPlan(request,plan,await requestValidatedGenerationStage("content",request,plan,modelId),modelId)}catch(error){error.approvedPlan=clone(plan);throw error}
+    try{return await reviewedTopicFromPlan(request,plan,await requestValidatedGenerationStage("content",request,plan,modelId),modelId)}catch(error){error.approvedPlan=clone(plan);throw error}
   }
   function applyGenerationFailure(pending,request,error,plan=null){
     const publicFailure=AnthropicModels.publicError(error,error.stage||"plan",error.modelId||settings.anthropicModel||""),candidate=error.diagnostics?.normalized??error.diagnostics?.raw;
@@ -1118,7 +1154,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
     if(generationsInFlight.has(request.date)){notify("이 날짜의 토픽을 이미 생성하고 있습니다.",true);return}
     preserveVersion(previous);generationsInFlight.add(request.date);const pending=clone(previous);pending.operatorStatus={...pending.operatorStatus,generationStatus:"running"};pending.updatedAt=new Date().toISOString();topics[request.date]=pending;dirty=true;saveTopics("성공한 Topic Plan을 유지하고 Content Fill만 다시 생성합니다.");
     try{
-      const modelId=previous.generationFailure.modelId||previous.anthropicModel||settings.anthropicModel,content=await requestValidatedGenerationStage("content",request,plan,modelId),topic=buildTopicFromPlan(request,plan,content,modelId);
+      const modelId=previous.generationFailure.modelId||previous.anthropicModel||settings.anthropicModel,content=await requestValidatedGenerationStage("content",request,plan,modelId),topic=await reviewedTopicFromPlan(request,plan,content,modelId);
       topics[request.date]=topic;dirty=true;saveTopics("기존 Topic Plan으로 본문 생성과 승인 게이트 검사를 완료했습니다.");
     }catch(error){applyGenerationFailure(pending,request,error,plan)}
     finally{generationsInFlight.delete(request.date)}
@@ -1137,8 +1173,10 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
       }
       if(!request.articleSource){preserveVersion(previous);await generateAndStore({...request,date:previous.date},previous);return}
       if(!plan||!TopicV4.validatePlan(plan,generationTopic(request)).ok)throw new Error("재사용할 수 있는 v4.3 Topic Plan이 없습니다.");
-      const content=await requestValidatedGenerationStage("content",request,plan,modelId),fresh=buildTopicFromPlan(request,plan,content,modelId),next=clone(previous);
-      next[page]=clone(fresh[page]);next.topicPlan=page==="page2"?{...previous.topicPlan,articleTitle:plan.articleTitle,articleCategory:plan.articleCategory,page2Premise:plan.page2Premise}:clone(plan);next.generationRequest=page==="page2"?clone(request):next.generationRequest;next.title=clone(next.page1.title);next.category={en:next.page1.category,ko:"",color:next.page1.categoryColor};next.quality={status:"review",score:100,issues:[]};next.operatorStatus={...next.operatorStatus,reviewStatus:"review",printStatus:"unchecked"};next.updatedAt=new Date().toISOString();next.reviewCard=TopicV4.reviewCard(next);
+      const merge=fresh=>{const merged=clone(previous);merged[page]=clone(fresh[page]);return merged};
+      const reviewed=await selfReviewedContent(request,plan,await requestValidatedGenerationStage("content",request,plan,modelId),modelId,{focus:page,compose:merge});
+      const fresh=buildTopicFromPlan(request,plan,reviewed.content,modelId),next=clone(previous);
+      next[page]=clone(fresh[page]);if(reviewed.selfReview)next.selfReview=reviewed.selfReview;else delete next.selfReview;next.topicPlan=page==="page2"?{...previous.topicPlan,articleTitle:plan.articleTitle,articleCategory:plan.articleCategory,page2Premise:plan.page2Premise}:clone(plan);next.generationRequest=page==="page2"?clone(request):next.generationRequest;next.title=clone(next.page1.title);next.category={en:next.page1.category,ko:"",color:next.page1.categoryColor};next.quality={status:"review",score:100,issues:[]};next.operatorStatus={...next.operatorStatus,reviewStatus:"review",printStatus:"unchecked"};next.updatedAt=new Date().toISOString();next.reviewCard=TopicV4.reviewCard(next);
       const result=TopicV4.evaluate(next);if(!result.ready)throw Object.assign(new Error("부분 재생성 후 v4.3 전체 검사를 통과하지 못했습니다."),{issues:result.issues});preserveVersion(previous);topics[activeDate]=next;dirty=true;saveTopics(`${page==="page1"?"첫 장":"Article"}만 다시 생성했습니다.`)
     }catch(error){notify(`${page==="page1"?"첫 장":"Article"} 다시 생성 실패: ${error.message||"알 수 없는 오류"}`,true)}finally{generationsInFlight.delete(previous.date)}
   }

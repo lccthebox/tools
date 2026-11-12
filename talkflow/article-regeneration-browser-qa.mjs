@@ -130,6 +130,8 @@ const browser = await playwright.chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
 let sourceRequests = 0;
 let generationRequests = 0;
+let reviewRequests = 0;
+const reviewScores = [];
 let resolveNextSourceRequest = null;
 let nextInvalidContentMode = "";
 const contentRepairIssues = [];
@@ -152,8 +154,10 @@ try {
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ article }) });
   });
   await page.route("**/api/talkflow/messages/**", async route => {
-    generationRequests += 1;
     const body = route.request().postDataJSON();
+    // Self-review (2026-11-12): the reviewer passes this draft, so no rewrite follows.
+    if (body.tools?.[0]?.name === "submit_topic_v43_review") { reviewRequests += 1; const score = reviewScores.length ? reviewScores.shift() : 97; const issues = score < 96 ? [{ location: "page1.story", message: `Make the limit realistic (${score}).` }] : []; await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ stop_reason: "end_turn", content: [{ type: "text", text: JSON.stringify({ scorePage1: score, scorePage2: score, issues }) }] }) }); return; }
+    generationRequests += 1;
     const tool = body.tools?.[0]?.name;
     const repair = JSON.parse(body.messages?.[0]?.content || "{}").repair;
     const approvedPlan = JSON.parse(body.messages?.[0]?.content || "{}").approvedPlan;
@@ -188,11 +192,13 @@ try {
   await page.waitForFunction(expected => JSON.parse(localStorage.getItem("tb_talkflow_v1") || "{}")[expected.date]?.page2?.source?.url === expected.url, { date: topic.date, url: source.url });
   assert.equal(sourceRequests, 1, "double-clicking Article regeneration must create one RSS selection request");
   assert.equal(generationRequests, 1, "automatic Article regeneration must use a local plan and one Content Fill request");
+  assert.equal(reviewRequests, 1, "the regenerated Article is self-reviewed once when it already passes");
   assert.deepEqual(generationTokenBudgets.slice(0, 1), [2800], "automatic Article regeneration must use the bounded Content Fill token budget");
   assert.equal(contentPlanPremises[0], topic.topicPlan.page1Premise, "Article-only Content Fill must be planned against the retained Page 1, not a temporary replacement plan");
   assert.ok(contentRules[0].some(rule => rule.includes("CONTENT SEPARATION CHECK")), "Content Fill must receive an explicit preflight rule that keeps Page 1 and Article subjects apart");
   const saved = await page.evaluate(date => JSON.parse(localStorage.getItem("tb_talkflow_v1") || "{}")[date], topic.date);
   assert.equal(saved.page1.title.en, fixture.page1.title.en, "Article-only regeneration must preserve Page 1");
+  assert.deepEqual([saved.selfReview?.focus, saved.selfReview?.scorePage2], ["page2", 97], "the self-review score of the regenerated Article is saved");
   assert.equal(saved.page2.source.url, source.url, "Article-only regeneration must save the new source");
   assert.equal(saved.reviewCard.sourceLink, source.url, "Article-only regeneration must refresh the manager review source");
   const versions = await page.evaluate(() => JSON.parse(localStorage.getItem("tb_talkflow_versions_v1") || "{}"));
@@ -229,6 +235,13 @@ try {
     return { title: next.page1.title.en, category: next.page1.category };
   }, { date: repeatedDate, generationMode: "auto", page1Template: "A", articleSource: source });
   assert.notEqual(regenerated.title, "The Shared Plan", "full regeneration must skip the active date's prior Page 1 title");
+  // Self-review (2026-11-12): below 96 the draft is rewritten with the reviewer notes, at most twice, and the best version is kept.
+  reviewScores.push(80, 90, 85);
+  const beforeReviewRewrite = generationRequests, repairsBeforeReview = contentRepairIssues.length;
+  const reviewed = await page.evaluate(async request => (await TalkFlow.generateForTest(request)).selfReview, { date: "2026-11-14", generationMode: "auto", page1Template: "A", articleSource: source });
+  assert.equal(generationRequests - beforeReviewRewrite, 3, "a draft below 96 gets two rewrites");
+  assert.ok(contentRepairIssues.slice(repairsBeforeReview).length === 2 && contentRepairIssues.slice(repairsBeforeReview).every(issues => issues.some(issue => issue.message.startsWith("Editor review: Make the limit realistic"))), "each rewrite is told the reviewer notes");
+  assert.deepEqual([reviewed.scorePage1, reviewed.history.map(item => item.scorePage1)], [90, [80, 90, 85]], "the best-scoring version is kept");
   const beforeGuidedFullRequests = generationRequests;
   const guidedFull = await page.evaluate(async request => {
     const next = await TalkFlow.generateForTest(request);

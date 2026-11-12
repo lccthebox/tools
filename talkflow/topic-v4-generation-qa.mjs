@@ -231,7 +231,26 @@ assert.equal(TopicV4.validateContent(proseCollision,proseCollisionPlan).ready,tr
   // 12/4 review: password habits are private security details.
   assert.ok(locations({page1:{easyTalk:["Do you use the same password for many things?",...easy.slice(1)]}}).includes("criteria.privacy"),"password habits must not be asked");
   assert.ok(locations({page1:{easyTalk:["When did you last clean your drawer?","When was the last time you tidied up?","Do you tidy often?"]}}).includes("criteria.openQuestions"),"one-fact when-did-you-last questions count as closed");
-  for(const phrase of ["TOPIC CRITERIA","TEMPLATE A CRITERIA","NO MODEL ANSWER","ARTICLE CRITERIA","12/2 REVIEW","12/3 REVIEW","12/4 REVIEW","12/6 REVIEW","12/7 REVIEW","12/8 REVIEW","12/10 REVIEW","12/1 RE-REVIEW"])assert.ok(rules.includes(phrase),`the prompt carries ${phrase}`);
+  for(const phrase of ["TOPIC CRITERIA","TEMPLATE A CRITERIA","NO MODEL ANSWER","ARTICLE CRITERIA","12/2 REVIEW","12/3 REVIEW","12/4 REVIEW","12/6 REVIEW","12/7 REVIEW","12/8 REVIEW","12/10 REVIEW","12/1 RE-REVIEW","11/12 REVIEW"])assert.ok(rules.includes(phrase),`the prompt carries ${phrase}`);
+}
+{
+  // Self-review (2026-11-12): first drafts scored 84/74 even with every rule in the prompt, so the model now scores
+  // its own draft like the editor and rewrites below 96.
+  assert.equal(TopicV4.REVIEW_PASS_SCORE,96,"the self-review uses the editor's pass line");
+  const payload=TopicV4.buildReviewPayload({draft:{...topic,generationRequest:{topicHint:"secret hint"},operatorStatus:{reviewStatus:"approved"}}});
+  assert.equal(payload.stage,"review");
+  assert.deepEqual(Object.keys(payload.draft),["page1","page2"],"only the two printed pages are reviewed");
+  assert.ok(!JSON.stringify(payload).includes("secret hint"),"generation settings are not sent to the reviewer");
+  assert.equal(payload.draft.page1.story.en,topic.page1.story.en,"the reviewer reads the real story");
+  const reviewRules=payload.rules.join("\n");
+  for(const phrase of ["TOPIC CRITERIA","TEMPLATE A CRITERIA","11/12 REVIEW","12/1 RE-REVIEW","Article quiz","96 or more"])assert.ok(reviewRules.includes(phrase),`the reviewer knows ${phrase}`);
+  const asText=TopicV4.parseReviewResponse({content:[{type:"text",text:JSON.stringify({scorePage1:84,scorePage2:140,issues:[{location:"page1.story",message:"Remove the single-thumbtack limit."}]})}]});
+  assert.deepEqual([asText.scorePage1,asText.scorePage2,asText.issues[0].location],[84,100,"page1.story"],"structured output is read and scores are clamped");
+  const asTool=TopicV4.parseReviewResponse({content:[{type:"tool_use",name:TopicV4.REVIEW_TOOL.name,input:{scorePage1:97,scorePage2:74,issues:[]}}]});
+  assert.equal(asTool.scorePage2,74);
+  assert.throws(()=>TopicV4.parseReviewResponse({content:[{type:"text",text:"not json"}]}),/Self-review result is missing/);
+}
+{
   assert.ok(TopicV4.CONTENT_TOOL.input_schema.required.includes("articleTitleEn"),"the model returns a short Article title");
 }
 // A personal routine can mention the same broad technology words as an Article without

@@ -39,6 +39,22 @@ assert.match(app,/ensureArticleSource\(\{\.\.\.candidate,articleSource:null,page
   assert.match(validated,/for\(let repair=0;repair<2;repair\+\+\)/,"generation gets two repair attempts");
   assert.match(validated,/lastError\.issues/,"each repair is told only the issues still left");
 }
+{
+  // Self-review (2026-11-12): every generation path scores the draft and rewrites below 96, keeping the best version.
+  const review=app.slice(app.indexOf("const SELF_REVIEW_ROUNDS"),app.indexOf("function buildTopicFromPlan"));
+  assert.match(review,/SELF_REVIEW_ROUNDS=2/,"at most two rewrites");
+  assert.match(review,/<TopicV4\.REVIEW_PASS_SCORE/,"rewrites only below the pass line");
+  assert.match(review,/requestValidatedGenerationStage\("content",request,plan,modelId,issues\)/,"a rewrite still passes every automatic check");
+  assert.match(review,/selfReviewScore\(review,focus\)>selfReviewScore\(best\.review,focus\)/,"the best-scoring version is kept");
+  assert.match(review,/catch\(error\)\{console\.warn\("Self-review skipped"[^}]*return\{content,selfReview:null\}/,"a failed review never fails the generation");
+  const generate=app.slice(app.indexOf("async function generateV2Topic"),app.indexOf("function applyGenerationFailure"));
+  assert.match(generate,/reviewedTopicFromPlan\(/,"new topics are self-reviewed");
+  const partial=app.slice(app.indexOf("async function regenerateV41Page"),app.indexOf("async function regenerateSimpleSection"));
+  assert.match(partial,/selfReviewedContent\([^;]*\{focus:page,compose:merge\}/,"a partial regeneration is scored on the page it replaced");
+  assert.match(app,/\$\{renderSelfReview\(t\)\}\$\{renderTopicCriteria\(t,evaluation\)\}/,"the admin review shows the self-review scores");
+  // 11/12 review: the admin preview sits inside a button, which centred every line of the printed pages.
+  assert.match(await readFile(new URL("styles.css",root),"utf8"),/\.v41-page\{height:1123px;display:flex;flex-direction:column;text-align:left\}/,"printed pages are left-aligned");
+}
 assert.doesNotMatch(app,/In my country/,"the Page 1 prompt line must not invite comparing countries");
 assert.match(app,/MY TURN<br>In my life or at work/);
 assert.ok(app.includes("otherMonths=Object.values(topics).filter(item=>item?.date&&!item.date.startsWith(month))"),"Article picks must also avoid sources already used in other months");
