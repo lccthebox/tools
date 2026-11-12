@@ -192,7 +192,7 @@ assert.equal(TopicV4.validateContent(proseCollision,proseCollisionPlan).ready,tr
 }
 {
   // TheBox topic criteria 8-11, with real published questions (2026-11-12 check of 61 topics).
-  const locations=changes=>TopicV4.validateContent({...topic,page1:{...topic.page1,...changes.page1},page2:{...topic.page2,...changes.page2}},plan).issues.map(item=>item.location);
+  const criteriaResult=changes=>TopicV4.validateContent({...topic,page1:{...topic.page1,...changes.page1},page2:{...topic.page2,...changes.page2}},plan),locations=changes=>{const result=criteriaResult(changes);return[...result.issues,...result.warnings].map(item=>item.location)};
   const easy=topic.page1.easyTalk;
   for(const question of ["What is your biggest monthly expense?","How much do you spend on lunch in a week?","What is your salary like?"])assert.ok(locations({page1:{easyTalk:[question,...easy.slice(1)]}}).includes("criteria.privacy"),`private question must be blocked: ${question}`);
   assert.ok(!locations({page1:{easyTalk:["Is it easy or hard to stick to a savings goal? Why?",...easy.slice(1)]}}).includes("criteria.privacy"),"an opinion about saving is not private");
@@ -200,6 +200,8 @@ assert.equal(TopicV4.validateContent(proseCollision,proseCollisionPlan).ready,tr
   for(const question of ["Have you ever felt like that in a group or at work?","What helps you switch off after work or school?"])assert.ok(!locations({page1:{easyTalk:[question,...easy.slice(1)]}}).includes("criteria.lifestyle"),`a question with an alternative passes: ${question}`);
   const closed=["Do you like museums?","Is it fun?","Do you go often?"],open=["What do you enjoy about museums?","Why do some people stay longer?","What would you skip if time were short?"];
   assert.ok(locations({page1:{easyTalk:closed,realTalk:[closed[0],...open.slice(1)]}}).includes("criteria.openQuestions"),"mostly yes/no Easy and Real Talk must be rewritten");
+  // 11/12: a new topic failed after two repairs on this check because the message named no question; it is now a warning that lists them.
+  {const result=criteriaResult({page1:{easyTalk:closed,realTalk:[closed[0],...open.slice(1)]}}),warning=result.warnings.find(item=>item.location==="criteria.openQuestions");assert.ok(warning&&!result.issues.some(item=>item.location==="criteria.openQuestions"),"mostly yes/no questions are a warning, not a lost topic");assert.ok(warning.message.includes(`"${closed[0]}"`),"the warning names the closed questions")}
   assert.ok(!locations({page1:{easyTalk:["Have you ever stayed longer than planned? What happened?","Do you think free time alone matters? Why?",open[0]],realTalk:open}}).includes("criteria.openQuestions"),"a yes/no opener followed by why/what still counts as open");
   assert.ok(locations({page1:{realTalk:["Do you like art?","Is art important?","Can art help you relax?"]}}).includes("criteria.realTalk"),"Real Talk needs a why or what-if question");
   assert.ok(locations({page2:{title:"Mega mega mega, going back to Romford! How an outer London suburb became a metropolis for 90s dance music"}}).includes("page2.title"),"a long source headline must become a short Article title");
