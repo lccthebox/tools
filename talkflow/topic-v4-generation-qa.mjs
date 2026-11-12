@@ -245,6 +245,10 @@ assert.equal(TopicV4.validateContent(proseCollision,proseCollisionPlan).ready,tr
   // Self-review (2026-11-12): first drafts scored 84/74 even with every rule in the prompt, so the model now scores
   // its own draft like the editor and rewrites below 96.
   assert.equal(TopicV4.REVIEW_PASS_SCORE,96,"the self-review uses the editor's pass line");
+  // 11/12 live test: the review schema had maxItems, which structured output rejects (400), so every review was skipped.
+  // Structured-output schemas use only the keywords the working Content schema uses.
+  const schemaKeywords=(schema,found=new Set())=>{if(schema&&typeof schema==="object"&&!Array.isArray(schema))for(const [key,value] of Object.entries(schema)){if(key==="properties"){Object.values(value).forEach(child=>schemaKeywords(child,found));continue}found.add(key);if(key==="items")schemaKeywords(value,found)}return found};
+  for(const tool of [TopicV4.CONTENT_TOOL,TopicV4.REVIEW_TOOL])for(const key of schemaKeywords(tool.input_schema))assert.ok(["type","required","properties","items","additionalProperties","description"].includes(key),`${tool.name} schema uses unsupported keyword ${key}`);
   const payload=TopicV4.buildReviewPayload({draft:{...topic,generationRequest:{topicHint:"secret hint"},operatorStatus:{reviewStatus:"approved"}}});
   assert.equal(payload.stage,"review");
   assert.deepEqual(Object.keys(payload.draft),["page1","page2"],"only the two printed pages are reviewed");
