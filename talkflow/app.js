@@ -598,7 +598,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
     ["4","흥미와 호기심","이야기를 꺼내거나 다른 사람의 답을 듣고 싶게 만드는가?"],
     ["5","민감한 소재 배제","정치·범죄·종교 등 불편해질 수 있는 소재가 없는가?",item=>item.location==="page2.safety"],
     ["6","배경지식 없이 참여","특정 뉴스·문화를 몰라도 참여할 수 있는가?"],
-    ["7","쉬운 영어로 표현 가능","쉬운 영어로도 생각을 말할 수 있는가?"],
+    ["7","쉬운 영어로 표현 가능","쉬운 영어로도 생각을 말할 수 있는가? (선택지 10단어 이내)",item=>item.location==="criteria.options"],
     ["8","다양한 생활방식 포용","학생·직장인·자영업자, 기혼·미혼을 전제하지 않는가?",item=>item.location==="criteria.lifestyle"],
     ["9","대화 확장성","단답으로 끝나지 않고 이유·경험으로 이어지는가?",item=>item.location==="criteria.openQuestions"],
     ["10","사생활 공개 부담 방지","소득·질병·가족 갈등·연애 상처를 밝히지 않아도 답할 수 있는가?",item=>item.location==="criteria.privacy"],
@@ -1055,10 +1055,15 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
   }
   function hasRepairableGenerationIssues(error,stage){return error?.type==="generation_error"&&Array.isArray(error.issues)&&error.issues.length>0&&!(stage==="content"&&error.issues.some(item=>String(item?.location||"")==="content.separation"))}
   async function requestValidatedGenerationStage(stage,request,plan=null,modelId){
-    try{return await requestGenerationStage(stage,request,plan,modelId)}catch(error){
-      if(!hasRepairableGenerationIssues(error,stage))throw error;
-      try{return await requestGenerationStage(stage,request,plan,modelId,error.issues)}catch(repairError){repairError.repairAttempted=true;throw repairError}
+    // The topic criteria checks (2026-11-12) catch more on the first draft, so the model gets up to two repairs,
+    // each told only the issues still left.
+    let lastError;
+    try{return await requestGenerationStage(stage,request,plan,modelId)}catch(error){lastError=error}
+    for(let repair=0;repair<2;repair++){
+      if(!hasRepairableGenerationIssues(lastError,stage))throw lastError;
+      try{return await requestGenerationStage(stage,request,plan,modelId,lastError.issues)}catch(repairError){repairError.repairAttempted=true;lastError=repairError}
     }
+    throw lastError;
   }
   function buildTopicFromPlan(request,plan,content,modelId){
     let topic;try{topic=TopicV4.buildTopic(generationTopic(request),plan,content,Object.values(topics))}catch(error){error.stage="content";error.diagnostics={raw:content,normalized:TopicV4.normalizeContent(content)};error.approvedPlan=clone(plan);throw error}
