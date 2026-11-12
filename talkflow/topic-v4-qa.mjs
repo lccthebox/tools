@@ -33,6 +33,12 @@ assert.match(app,/ensureArticleSource\(\{\.\.\.candidate,articleSource:null,page
   assert.match(retry,/attempt<\(fixed\?1:4\)/,"an automatic Article pick retries up to four Articles");
   assert.match(retry,/error\?\.stage!=="plan"\)throw error/,"only plan failures move on to the next Article");
 }
+{
+  // 12/1 regeneration (2026-11-12) failed after one repair; the criteria checks now allow two repairs with the remaining issues.
+  const validated=app.slice(app.indexOf("async function requestValidatedGenerationStage"),app.indexOf("function buildTopicFromPlan"));
+  assert.match(validated,/for\(let repair=0;repair<2;repair\+\+\)/,"generation gets two repair attempts");
+  assert.match(validated,/lastError\.issues/,"each repair is told only the issues still left");
+}
 assert.doesNotMatch(app,/In my country/,"the Page 1 prompt line must not invite comparing countries");
 assert.match(app,/MY TURN<br>In my life or at work/);
 assert.ok(app.includes("otherMonths=Object.values(topics).filter(item=>item?.date&&!item.date.startsWith(month))"),"Article picks must also avoid sources already used in other months");

@@ -204,8 +204,11 @@ assert.equal(TopicV4.validateContent(proseCollision,proseCollisionPlan).ready,tr
   assert.ok(locations({page1:{realTalk:["Do you like art?","Is art important?","Can art help you relax?"]}}).includes("criteria.realTalk"),"Real Talk needs a why or what-if question");
   assert.ok(locations({page2:{title:"Mega mega mega, going back to Romford! How an outer London suburb became a metropolis for 90s dance music"}}).includes("page2.title"),"a long source headline must become a short Article title");
   const rules=TopicV4.buildPromptPayload({stage:"content",topic:{date:"2026-12-20",page1Template:"A"},approvedPlan:null}).rules.join(" ");
-  assert.ok(locations({page1:{quickVote:{...topic.page1.quickVote,options:["Ask the shopkeeper to hold them and return later","Leave","Call a friend"]}}}).includes("criteria.options"),"long vote options must become short, easy English");
-  assert.ok(!locations({page1:{quickVote:{...topic.page1.quickVote,options:["I'd miss the daylight","Sounds relaxing","Maybe for a weekend"]}}}).includes("criteria.options"),"short plain options pass");
+  // Long options are flagged for the operator but no longer discard a topic: 12/1 regeneration failed on one 9-word option.
+  const optionWarnings=options=>TopicV4.validateContent({...topic,page1:{...topic.page1,quickVote:{...topic.page1.quickVote,options}}},plan);
+  const longResult=optionWarnings(["Ask the shopkeeper to hold the books and come back later","Leave","Call a friend"]);
+  assert.ok(longResult.warnings.some(item=>item.location==="criteria.options")&&!longResult.issues.some(item=>item.location==="criteria.options"),"long options are a warning, not a blocker");
+  assert.ok(!optionWarnings(["It sounds nice but I would feel a bit shy","Sounds relaxing","Maybe for a weekend"]).warnings.some(item=>item.location==="criteria.options"),"a nine-word plain option passes");
   // 12/3 review: "Do you have a drawer like this?" stops anyone who answers no; "When did you last clean it?" ends in one fact.
   assert.ok(locations({page1:{easyTalk:["Do you have a drawer like Hoseok's?",...easy.slice(1)]}}).includes("criteria.gate"),"a first question that gates on owning something must be widened");
   assert.ok(!locations({page1:{easyTalk:["Where do small things pile up for you — a drawer, a bag, or your phone?",...easy.slice(1)]}}).includes("criteria.gate"),"a widened first question passes");
