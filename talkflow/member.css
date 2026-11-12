@@ -231,3 +231,6 @@ main{width:min(1000px,calc(100% - 72px));margin:0 auto}
 }
 /* 2026-11-11 members copy words to look them up, so every reading area (titles inside <summary> too) stays selectable on phones. */
 .topic-document,.topic-document *{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+/* 2026-11-12 Page 1 point: members asked what each story is about, so a short Korean line opens Page 1. */
+.member-point{display:grid;gap:4px;margin:20px 0 0;padding:12px 14px;border-radius:10px;background:color-mix(in srgb,var(--category) 8%,#fff);font-size:15px;line-height:1.5}.member-point b{color:var(--category);font-size:12px;letter-spacing:.04em}.member-point span{color:var(--ink);font-weight:600;word-break:keep-all}
+@media(max-width:640px){.member-point{margin-top:16px;font-size:14px}}

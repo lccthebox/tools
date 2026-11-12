@@ -8,9 +8,19 @@ const plan={titleEn:topic.page1.title.en,titleKo:topic.page1.title.ko,star:topic
 assert.equal(TopicV4.TEMPLATE_VERSION,"topic-v4.3");
 assert.ok(Array.isArray(TopicV4.PARTICIPANT_ORDER_RULES),"participant-order rules must be available to the generator");
 assert.ok(TopicV4.PARTICIPANT_ORDER_RULES.length>=20,"the generator needs a varied set of participant-order rules");
-assert.equal(TopicV4.selectStarForDate("2026-10-01",[]),"Namjoon","the first day uses the requested display name, not RM");
-assert.equal(TopicV4.selectStarForDate("2026-10-02",[]),"Yoongi","different calendar days rotate through distinct stars even before generated topics are saved");
-assert.equal(TopicV4.selectStarForDate("2026-10-01",["Namjoon"]),"Yoongi","a star already used this month is skipped");
+{
+  // Stars were taken in list order, so every month's first week was all BTS. Each date now draws from the whole list.
+  const first=TopicV4.selectStarForDate("2026-10-01",[]);
+  assert.ok(TopicV4.STARS.includes(first)&&first!=="RM","a date picks a listed display name, not RM");
+  assert.equal(TopicV4.selectStarForDate("2026-10-01",[]),first,"the same date and variant keep the same star so a plan is stable");
+  assert.notEqual(TopicV4.selectStarForDate("2026-10-01",[first]),first,"a star already used this month is skipped");
+  const BTS=new Set(["Namjoon","Yoongi","Hoseok","Seokjin","Jimin","Taehyung","Jungkook"]);
+  for(const month of ["2026-10","2026-11","2026-12","2027-01"]){
+    const used=[];for(let day=1;day<=7;day++){used.push(TopicV4.selectStarForDate(`${month}-0${day}`,used))}
+    assert.equal(new Set(used).size,7,`${month} first week has seven different stars`);
+    assert.ok(used.filter(star=>BTS.has(star)).length<=3,`${month} first week must not be mostly BTS: ${used.join(", ")}`);
+  }
+}
 const legacyRmTopic={...topic,date:"2026-10-02",topicPlan:{...plan,star:"RM"},page1:{...topic.page1,story:{...topic.page1.story,star:"RM",en:"Imagine RM has a free afternoon and must choose one small plan.",ko:"RM이 여유로운 오후에 작은 계획 하나를 골라야 한다고 상상해 보세요."}}};
 const migratedRmTopic=TopicV4.migrateLegacyRmTopic(legacyRmTopic);
 assert.equal(migratedRmTopic.page1.story.star,"Yoongi","published RM-only legacy stories rotate to the date's selected star");
@@ -164,10 +174,22 @@ assert.equal(TopicV4.validatePlan(selectedStarPlan,{date:topic.date,page1Templat
 assert.equal(TopicV4.validatePlan({...selectedStarPlan,star:"Jieun"},{date:topic.date,page1Template:"A",recentStars:["Jieun"],selectedStar:"Namjoon"}).ready,false,"a repeated or substituted star must not pass");
 const broadWordPlan={...plan,page1Premise:"A daily decision about protecting a quiet personal evening.",page2Premise:"A daily decision about redesigning city bus routes for commuters."};
 assert.equal(TopicV4.validatePlan(broadWordPlan,{date:topic.date,page1Template:"A"}).ready,true,"two broad words alone must not be mistaken for the same subject");
-const proseCollision={...topic,page1:{...topic.page1,title:{...topic.page1.title,en:"A Quiet Evening"},story:{...topic.page1.story,en:`${topic.page1.story.star} is making a daily community decision about a quiet evening at home. He considers calls, messages, and a small personal routine before sleep. The choice feels important because people often need calm time after a busy day. He listens to a friend, decides kindly, and keeps the evening simple without discussing transport or public services.`},keyWords:[{en:"quiet evening",ko:"조용한 저녁"},{en:"personal routine",ko:"개인 루틴"},{en:"calm time",ko:"휴식 시간"},{en:"kind choice",ko:"배려 있는 선택"}]},page2:{...topic.page2,title:"City Bus Routes",source:{...topic.page2.source,title:"Community bus routes change",titleKey:"community bus routes change",subjectKey:"city bus routes commuter transport"},article:"A daily community decision can change city bus routes for commuters. Riders need reliable transport for work, school, and appointments. Officials must balance cost, frequency, and neighborhood access. Some residents want more service while others prefer lower spending. The central question is how a city should plan public transport fairly.",keyWords:[{en:"bus route",ko:"버스 노선"},{en:"commuter",ko:"통근자"},{en:"transport",ko:"교통"},{en:"neighborhood access",ko:"지역 접근성"},{en:"service frequency",ko:"운행 빈도"}]}};
+const proseCollision={...topic,page1:{...topic.page1,title:{...topic.page1.title,en:"A Quiet Evening"},story:{...topic.page1.story,en:`${topic.page1.story.star} is making a daily community decision about a quiet evening at home. He considers calls, messages, and a small personal routine before sleep. The choice feels important because people often need calm time after a busy day. He listens to a friend and wonders whether to answer one more message or keep the evening simple and quiet.`},keyWords:[{en:"quiet evening",ko:"조용한 저녁"},{en:"personal routine",ko:"개인 루틴"},{en:"calm time",ko:"휴식 시간"},{en:"kind choice",ko:"배려 있는 선택"}]},page2:{...topic.page2,title:"City Bus Routes",source:{...topic.page2.source,title:"Community bus routes change",titleKey:"community bus routes change",subjectKey:"city bus routes commuter transport"},article:"A daily community decision can change city bus routes for commuters. Riders need reliable transport for work, school, and appointments. Officials must balance cost, frequency, and neighborhood access. Some residents want more service while others prefer lower spending. The central question is how a city should plan public transport fairly.",keyWords:[{en:"bus route",ko:"버스 노선"},{en:"commuter",ko:"통근자"},{en:"transport",ko:"교통"},{en:"neighborhood access",ko:"지역 접근성"},{en:"service frequency",ko:"운행 빈도"}]}};
 const proseCollisionPlan={...plan,titleEn:"A Quiet Evening",page1Premise:"A daily community decision about protecting a quiet personal evening.",articleTitle:"City Bus Routes",page2Premise:"A daily community decision about redesigning city bus routes for commuters."};
 proseCollision.page2.article+=" A clear schedule helps people plan each part of their day.";
 assert.equal(TopicV4.validateContent(proseCollision,proseCollisionPlan).ready,true,"generic prose overlap must not reject unrelated approved subjects");
+{
+  // Members could not tell what Page 1 was about: 44 of 48 published stories ended with the choice made or a moral.
+  const withEnding=last=>({...topic,page1:{...topic.page1,story:{...topic.page1.story,en:topic.page1.story.en.replace(/[^.!?]+[.!?]+$/,` ${last}`)}}});
+  const endingIssue=last=>TopicV4.validateContent(withEnding(last),plan).issues.some(item=>item.location==="page1.story.en"&&/결론 없이/.test(item.message));
+  for(const last of ["She takes a deep breath and walks toward the exhibition hall.","Nothing went to waste.","He sighs and makes a decision.","Small steps, but the skill is growing."])assert.ok(endingIssue(last),`a story that resolves itself must be rewritten: ${last}`);
+  for(const last of ["Should she stay for the exhibition or head home before it gets dark?","Yuna must decide whether to reply now, set a boundary, or wait until morning."])assert.ok(!endingIssue(last),`a story ending on the open dilemma passes: ${last}`);
+  const noPoint={...topic,page1:{...topic.page1,point:{situation:"",talk:""}}};
+  assert.ok(TopicV4.validateContent(noPoint,plan).issues.some(item=>item.location==="page1.point"),"Page 1 needs the Korean point line");
+  const approvedOld={...noPoint,generationEngine:TopicV4.VERSION,topicPlan:plan,quality:{status:"approved"},reviewCard:{final:{status:"공개 가능"}}};
+  assert.ok(!TopicV4.evaluate(approvedOld).blockers.some(item=>item.location==="page1.point"),"approved topics made before the point line keep printing");
+  assert.ok(TopicV4.CONTENT_TOOL.input_schema.required.includes("pointSituationKo")&&TopicV4.CONTENT_TOOL.input_schema.required.includes("pointTalkKo"),"the model must return the point line");
+}
 // A personal routine can mention the same broad technology words as an Article without
 // becoming the Article's concrete subject. Two shared signals are not enough evidence.
 const twoSignalTopic={...topic,page1:{...topic.page1,title:{...topic.page1.title,en:"A Digital Evening"},keyWords:[{en:"digital",ko:"디지털"},{en:"screens",ko:"화면들"},{en:"evening",ko:"저녁"},{en:"rest",ko:"휴식"}]}};
@@ -206,6 +228,8 @@ assert.equal(topic.page2.discussion.length,5);
 assert.equal(topic.page2.quiz.options.length,3);
 assert.equal(TopicV4.sourceReference(topic.page2.source).url,topic.page2.source.url);
 const transport={
+  pointSituationKo:topic.page1.point.situation,
+  pointTalkKo:topic.page1.point.talk,
   storyEn:topic.page1.story.en,
   storyKo:topic.page1.story.ko,
   keyWords:topic.page1.keyWords,

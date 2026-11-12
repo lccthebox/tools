@@ -131,6 +131,9 @@ try{
   const seoulMonth=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Seoul",year:"numeric",month:"2-digit"}).format(new Date()).slice(0,7);
   if(await page.evaluate(()=>window.TalkFlowMember.startMonth())!==(seoulMonth<"2026-10"?"2026-10":seoulMonth))throw new Error("member page must start on the current Korean month");
   if(!await page.locator(".member-topic-heading time").isVisible())throw new Error("the open topic must show its date");
+  // Members asked what each Page 1 story is about; the Korean point line opens Page 1.
+  const pointText=await page.locator(".member-point").innerText().catch(()=>"");
+  if(!pointText.includes(fixture.page1.point.situation)||!pointText.includes(fixture.page1.point.talk))throw new Error(`member Page 1 point missing: ${pointText}`);
   if(await page.locator(".member-calendar button.selected[aria-pressed=true]").count()!==1)throw new Error("the open topic's day must be marked on the calendar");
   // Phones show the topic first; the calendar opens on demand and closes again after a day is picked.
   if(await page.locator("#member-browser").isVisible())throw new Error("phone calendar must start collapsed so the topic is on the first screen");

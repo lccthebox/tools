@@ -76,6 +76,8 @@ const plan = {
   page2Premise: "A practical discussion about how digital library borrowing can fit into ordinary routines."
 };
 const content = {
+  pointSituationKo: fixture.page1.point.situation,
+  pointTalkKo: fixture.page1.point.talk,
   storyEn: fixture.page1.story.en,
   storyKo: fixture.page1.story.ko,
   keyWords: fixture.page1.keyWords,
