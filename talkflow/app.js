@@ -630,7 +630,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
   function renderV43Editor(topic){
     if(topic.generationEngine!==TopicV4.VERSION||!topic.page1||!topic.page2)return"";
     const approved=topic.quality?.status==="approved";
-    return`<section class="v43-editor" aria-labelledby="v43-editor-title"><p class="eyebrow">고치기</p><h2 id="v43-editor-title">원하는 부분만 고치기</h2>${approved?`<p class="v43-editor-note">승인된 토픽을 고치면 다시 승인해야 멤버 화면에 반영됩니다.</p>`:""}<div class="v43-edit-request"><label for="v43-edit-request">AI에게 수정 요청</label><textarea id="v43-edit-request" rows="3" maxlength="1000" placeholder="예: REAL TALK 2번을 경험을 묻는 질문으로 바꿔줘. 투표 3번 선택지는 덜 뻔하게."></textarea><div class="v43-editor-actions"><button class="button primary" data-v43-edit-request>요청한 부분만 고치기</button><span>적은 부분만 고치고 나머지(직접 고친 내용 포함)는 그대로 둡니다. 1~2분 걸립니다.</span></div></div><details class="v43-direct-edit"><summary>직접 수정</summary><div class="v43-edit-fields">${v43EditFields(topic)}</div><div class="v43-editor-actions"><button class="button primary" data-v43-save>수정 내용 저장</button><span>저장하면 미리보기와 검사가 새로 반영됩니다.</span></div></details></section>`;
+    return`<section class="v43-editor" aria-labelledby="v43-editor-title"><p class="eyebrow">고치기</p><h2 id="v43-editor-title">원하는 부분만 고치기</h2>${approved?`<p class="v43-editor-note">승인된 토픽을 고치면 다시 승인해야 멤버 화면에 반영됩니다.</p>`:""}<div class="v43-edit-request"><label for="v43-edit-request">AI에게 수정 요청</label><textarea id="v43-edit-request" rows="10" maxlength="3800" placeholder="예: REAL TALK 2번을 경험을 묻는 질문으로 바꿔줘. 투표 3번 선택지는 덜 뻔하게."></textarea><div class="v43-editor-actions"><button class="button primary" data-v43-edit-request>요청한 부분만 고치기</button><span>적은 부분만 고치고 나머지(직접 고친 내용 포함)는 그대로 둡니다. 1~2분 걸립니다. 최대 3,800자까지 쓸 수 있습니다.</span></div></div><details class="v43-direct-edit"><summary>직접 수정</summary><div class="v43-edit-fields">${v43EditFields(topic)}</div><div class="v43-editor-actions"><button class="button primary" data-v43-save>수정 내용 저장</button><span>저장하면 미리보기와 검사가 새로 반영됩니다.</span></div></details></section>`;
   }
   function renderTopicCriteria(topic,evaluation){
     const findings=[...(evaluation.issues||[]),...(evaluation.warnings||[])],template=topic.page1?.template;
@@ -1183,7 +1183,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
     saveTopics(reopened?"직접 수정을 저장했습니다. 다시 승인해 주세요.":"직접 수정을 저장했습니다.");render();
   }
   async function requestV43Edit(){
-    const previous=current(),text=String(document.querySelector("#v43-edit-request")?.value||"").trim().slice(0,1000);
+    const previous=current(),text=String(document.querySelector("#v43-edit-request")?.value||"").trim().slice(0,3800);
     if(!text){notify("고치고 싶은 내용을 적어 주세요.",true);return}
     if(previous.generationEngine!==TopicV4.VERSION){notify("v4.3 토픽에서만 수정 요청을 할 수 있습니다.",true);return}
     if(generationsInFlight.has(previous.date)){notify("이 날짜의 토픽을 이미 생성하고 있습니다.",true);return}

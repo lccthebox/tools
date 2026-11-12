@@ -128,6 +128,9 @@ assert.equal(preArticleLengthProjection.messages[0].content, JSON.stringify(v4Ic
   assert.ok(editUpstream, "a rewrite with the previous draft is accepted");
   assert.equal(editUpstream.messages[0].content, JSON.stringify(editPrompt), "the previous draft reaches the model unchanged");
   assert.ok(JSON.stringify(editBody).length < 120000, "the rewrite request stays under the request size limit");
+  // The admin edit request allows 3,800 characters plus a short prefix; the server must accept it.
+  const longPrompt = topicV4.buildPromptPayload({ stage: "content", topic: v4IcebreakerTopic, approvedPlan: v4IcebreakerPlan, repairIssues: [{ location: "editor request", message: `Editor request (change only this, keep everything else): ${"x".repeat(3800)}` }], repairDraft: fixtureTopic });
+  assert.ok(security.messageBodyForUpstream({ ...editBody, messages: [{ role: "user", content: JSON.stringify(longPrompt) }] }), "a 3,800-character edit request is accepted");
   const extraDraft = structuredClone(editPrompt); extraDraft.repair.previousDraft.secret = "x";
   assert.ok(!security.messageBodyForUpstream({ ...editBody, messages: [{ role: "user", content: JSON.stringify(extraDraft) }] }), "a draft with other fields is rejected");
   const extraRepair = structuredClone(editPrompt); extraRepair.repair.note = "x";
