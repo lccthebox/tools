@@ -190,6 +190,31 @@ assert.equal(TopicV4.validateContent(proseCollision,proseCollisionPlan).ready,tr
   assert.ok(!TopicV4.evaluate(approvedOld).blockers.some(item=>item.location==="page1.point"),"approved topics made before the point line keep printing");
   assert.ok(TopicV4.CONTENT_TOOL.input_schema.required.includes("pointSituationKo")&&TopicV4.CONTENT_TOOL.input_schema.required.includes("pointTalkKo"),"the model must return the point line");
 }
+{
+  // TheBox topic criteria 8-11, with real published questions (2026-11-12 check of 61 topics).
+  const locations=changes=>TopicV4.validateContent({...topic,page1:{...topic.page1,...changes.page1},page2:{...topic.page2,...changes.page2}},plan).issues.map(item=>item.location);
+  const easy=topic.page1.easyTalk;
+  for(const question of ["What is your biggest monthly expense?","How much do you spend on lunch in a week?","What is your salary like?"])assert.ok(locations({page1:{easyTalk:[question,...easy.slice(1)]}}).includes("criteria.privacy"),`private question must be blocked: ${question}`);
+  assert.ok(!locations({page1:{easyTalk:["Is it easy or hard to stick to a savings goal? Why?",...easy.slice(1)]}}).includes("criteria.privacy"),"an opinion about saving is not private");
+  for(const question of ["How do you usually spend your commute?","Has your team ever taken a group photo together?","How do you protect your personal time at work?"])assert.ok(locations({page1:{easyTalk:[question,...easy.slice(1)]}}).includes("criteria.lifestyle"),`a job or family assumption must be blocked: ${question}`);
+  for(const question of ["Have you ever felt like that in a group or at work?","What helps you switch off after work or school?"])assert.ok(!locations({page1:{easyTalk:[question,...easy.slice(1)]}}).includes("criteria.lifestyle"),`a question with an alternative passes: ${question}`);
+  const closed=["Do you like museums?","Is it fun?","Do you go often?"],open=["What do you enjoy about museums?","Why do some people stay longer?","What would you skip if time were short?"];
+  assert.ok(locations({page1:{easyTalk:closed,realTalk:[closed[0],...open.slice(1)]}}).includes("criteria.openQuestions"),"mostly yes/no Easy and Real Talk must be rewritten");
+  assert.ok(!locations({page1:{easyTalk:["Have you ever stayed longer than planned? What happened?","Do you think free time alone matters? Why?",open[0]],realTalk:open}}).includes("criteria.openQuestions"),"a yes/no opener followed by why/what still counts as open");
+  assert.ok(locations({page1:{realTalk:["Do you like art?","Is art important?","Can art help you relax?"]}}).includes("criteria.realTalk"),"Real Talk needs a why or what-if question");
+  assert.ok(locations({page2:{title:"Mega mega mega, going back to Romford! How an outer London suburb became a metropolis for 90s dance music"}}).includes("page2.title"),"a long source headline must become a short Article title");
+  const rules=TopicV4.buildPromptPayload({stage:"content",topic:{date:"2026-12-20",page1Template:"A"},approvedPlan:null}).rules.join(" ");
+  assert.ok(locations({page1:{quickVote:{...topic.page1.quickVote,options:["Ask the shopkeeper to hold them and return later","Leave","Call a friend"]}}}).includes("criteria.options"),"long vote options must become short, easy English");
+  assert.ok(!locations({page1:{quickVote:{...topic.page1.quickVote,options:["I'd miss the daylight","Sounds relaxing","Maybe for a weekend"]}}}).includes("criteria.options"),"short plain options pass");
+  // 12/3 review: "Do you have a drawer like this?" stops anyone who answers no; "When did you last clean it?" ends in one fact.
+  assert.ok(locations({page1:{easyTalk:["Do you have a drawer like Hoseok's?",...easy.slice(1)]}}).includes("criteria.gate"),"a first question that gates on owning something must be widened");
+  assert.ok(!locations({page1:{easyTalk:["Where do small things pile up for you — a drawer, a bag, or your phone?",...easy.slice(1)]}}).includes("criteria.gate"),"a widened first question passes");
+  // 12/4 review: password habits are private security details.
+  assert.ok(locations({page1:{easyTalk:["Do you use the same password for many things?",...easy.slice(1)]}}).includes("criteria.privacy"),"password habits must not be asked");
+  assert.ok(locations({page1:{easyTalk:["When did you last clean your drawer?","When was the last time you tidied up?","Do you tidy often?"]}}).includes("criteria.openQuestions"),"one-fact when-did-you-last questions count as closed");
+  for(const phrase of ["TOPIC CRITERIA","TEMPLATE A CRITERIA","NO MODEL ANSWER","ARTICLE CRITERIA","12/2 REVIEW"])assert.ok(rules.includes(phrase),`the prompt carries ${phrase}`);
+  assert.ok(TopicV4.CONTENT_TOOL.input_schema.required.includes("articleTitleEn"),"the model returns a short Article title");
+}
 // A personal routine can mention the same broad technology words as an Article without
 // becoming the Article's concrete subject. Two shared signals are not enough evidence.
 const twoSignalTopic={...topic,page1:{...topic.page1,title:{...topic.page1.title,en:"A Digital Evening"},keyWords:[{en:"digital",ko:"디지털"},{en:"screens",ko:"화면들"},{en:"evening",ko:"저녁"},{en:"rest",ko:"휴식"}]}};

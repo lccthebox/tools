@@ -81,6 +81,10 @@ try{
   for(const width of [375,768,1280]){
     await page.setViewportSize({width,height:900});await page.goto(`${origin}/?section=topics&view=month&month=2026-10&date=${topic.date}&tab=review`,{waitUntil:"networkidle"});
     await page.locator(`.drawer-tabs [data-open="${topic.date}:admin"]`).click();
+    // The operator's 17 topic criteria (12 common + A1-A5) sit in the review with automatic results where available.
+    const criteria=await page.locator(".topic-criteria li").evaluateAll(nodes=>nodes.map(node=>node.className));
+    if(criteria.length!==17||!criteria.includes("pass")||!criteria.includes("manual"))throw new Error(`${width}: topic criteria checklist: ${criteria.join(",")}`);
+    await page.locator(".topic-criteria").screenshot({path:join(root,"artifacts",`topic-criteria-${width}.png`)});
     await page.evaluate(()=>window.scrollTo({top:document.documentElement.scrollHeight,behavior:"instant"}));
     const reviewScroll=await page.evaluate(()=>{const root=document.scrollingElement;return{drawerOpen:document.body.classList.contains("drawer-open"),scrollY:window.scrollY,rootScrollTop:root?.scrollTop,scrollHeight:root?.scrollHeight,clientHeight:root?.clientHeight,htmlOverflow:getComputedStyle(document.documentElement).overflowY,bodyOverflow:getComputedStyle(document.body).overflowY}});
     if(reviewScroll.drawerOpen||reviewScroll.scrollHeight<=reviewScroll.clientHeight||reviewScroll.scrollY<=0)throw new Error(`${width}: review page must own document scrolling after the drawer closes: ${JSON.stringify(reviewScroll)}`);
