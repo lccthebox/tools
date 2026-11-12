@@ -216,6 +216,10 @@ assert.equal(TopicV4.validateContent(proseCollision,proseCollisionPlan).ready,tr
   const star=topic.page1.story.star.split(" ")[0];
   assert.ok(locations({page1:{quickVote:{...topic.page1.quickVote,question:`What would ${star} leave behind?`}}}).includes("criteria.voteSelf"),"the vote must ask the member, not predict the character");
   assert.ok(!locations({page1:{quickVote:{...topic.page1.quickVote,question:"What would you leave behind?"}}}).includes("criteria.voteSelf"),"a vote that asks the member passes");
+  // 11/12 live test: this vote asks the member, yet it was blocked and two repairs could not clear it.
+  assert.ok(!locations({page1:{quickVote:{...topic.page1.quickVote,question:`What would you do in ${star}'s situation?`}}}).includes("criteria.voteSelf"),"naming the character while asking the member passes");
+  const shortStory=TopicV4.validateContent({...topic,page1:{...topic.page1,story:{...topic.page1.story,en:"Too short a story."}}},plan).issues.find(item=>item.location==="page1.story.en"&&item.message.includes("55~85"));
+  assert.match(shortStory?.message||"",/지금 4단어.*add 51 or more words/,"the length issue tells the repair the current count and what to change");
   // 12/10 review: judging a relative and loneliness are disclosures; a neutral seat preference is fine.
   for(const question of ["Who is the trickiest person to seat at your family table?","Have you ever felt like an outsider in a group? How did you handle it?"])assert.ok(locations({page1:{easyTalk:[question,...easy.slice(1)]}}).includes("criteria.privacy"),`must not be asked: ${question}`);
   assert.ok(!locations({page1:{easyTalk:["Where do you like to sit in a café, and why?",...easy.slice(1)]}}).includes("criteria.privacy"),"a seat preference is not private");
