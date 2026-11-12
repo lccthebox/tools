@@ -181,7 +181,8 @@ assert.equal(TopicV4.validateContent(proseCollision,proseCollisionPlan).ready,tr
 {
   // Members could not tell what Page 1 was about: 44 of 48 published stories ended with the choice made or a moral.
   const withEnding=last=>({...topic,page1:{...topic.page1,story:{...topic.page1.story,en:topic.page1.story.en.replace(/[^.!?]+[.!?]+$/,` ${last}`)}}});
-  const endingIssue=last=>TopicV4.validateContent(withEnding(last),plan).issues.some(item=>item.location==="page1.story.en"&&/결론 없이/.test(item.message));
+  // 11/12: quality checks now warn instead of discarding the topic, so the ending check is read from the warnings.
+  const endingIssue=last=>{const result=TopicV4.validateContent(withEnding(last),plan),hit=list=>list.some(item=>item.location==="page1.story.en"&&/결론 없이/.test(item.message));assert.ok(!hit(result.issues),"an ending problem never blocks generation");return hit(result.warnings)};
   for(const last of ["She takes a deep breath and walks toward the exhibition hall.","Nothing went to waste.","He sighs and makes a decision.","Small steps, but the skill is growing."])assert.ok(endingIssue(last),`a story that resolves itself must be rewritten: ${last}`);
   for(const last of ["Should she stay for the exhibition or head home before it gets dark?","Yuna must decide whether to reply now, set a boundary, or wait until morning."])assert.ok(!endingIssue(last),`a story ending on the open dilemma passes: ${last}`);
   const noPoint={...topic,page1:{...topic.page1,point:{situation:"",talk:""}}};
@@ -218,6 +219,14 @@ assert.equal(TopicV4.validateContent(proseCollision,proseCollisionPlan).ready,tr
   const star=topic.page1.story.star.split(" ")[0];
   assert.ok(locations({page1:{quickVote:{...topic.page1.quickVote,question:`What would ${star} leave behind?`}}}).includes("criteria.voteSelf"),"the vote must ask the member, not predict the character");
   assert.ok(!locations({page1:{quickVote:{...topic.page1.quickVote,question:"What would you leave behind?"}}}).includes("criteria.voteSelf"),"a vote that asks the member passes");
+  // 11/12: one quality blocker after another discarded whole topics. Quality checks now warn; privacy still blocks.
+  {
+    const quality=criteriaResult({page1:{quickVote:{...topic.page1.quickVote,question:`What would ${star} leave behind?`},easyTalk:["Do you have a messy drawer at home?",...easy.slice(1)]}});
+    assert.ok(quality.ok,`quality findings alone never fail generation: ${quality.issues.map(item=>item.location).join(", ")}`);
+    assert.ok(["criteria.voteSelf","criteria.gate"].every(location=>quality.warnings.some(item=>item.location===location)),"quality findings stay visible as warnings");
+    const privateQuestion=criteriaResult({page1:{easyTalk:["What is your salary like?",...easy.slice(1)]}});
+    assert.ok(!privateQuestion.ok&&privateQuestion.issues.some(item=>item.location==="criteria.privacy"),"a private question still blocks");
+  }
   // 11/12 live test: this vote asks the member, yet it was blocked and two repairs could not clear it.
   assert.ok(!locations({page1:{quickVote:{...topic.page1.quickVote,question:`What would you do in ${star}'s situation?`}}}).includes("criteria.voteSelf"),"naming the character while asking the member passes");
   const shortStory=TopicV4.validateContent({...topic,page1:{...topic.page1,story:{...topic.page1.story,en:"Too short a story."}}},plan).issues.find(item=>item.location==="page1.story.en"&&item.message.includes("55~85"));
