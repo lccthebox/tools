@@ -209,12 +209,15 @@ assert.equal(TopicV4.validateContent(proseCollision,proseCollisionPlan).ready,tr
   // 12/3 review: "Do you have a drawer like this?" stops anyone who answers no; "When did you last clean it?" ends in one fact.
   assert.ok(locations({page1:{easyTalk:["Do you have a drawer like Hoseok's?",...easy.slice(1)]}}).includes("criteria.gate"),"a first question that gates on owning something must be widened");
   assert.ok(!locations({page1:{easyTalk:["Where do small things pile up for you — a drawer, a bag, or your phone?",...easy.slice(1)]}}).includes("criteria.gate"),"a widened first question passes");
+  // 12/7 review: asking about an embarrassing home is a disclosure; asking how to get back into an account is not.
+  assert.ok(locations({page2:{discussion:[...topic.page2.discussion.slice(0,4),"Have you ever felt embarrassed to let someone see your kitchen or home? What happened?"]}}).includes("criteria.privacy"),"embarrassing home experiences must not be asked");
+  assert.ok(!locations({page1:{easyTalk:["What do you usually do when you forget your password?",...easy.slice(1)]}}).includes("criteria.privacy"),"asking how people get back in is not a security disclosure");
   // 12/6 review: the first Article question gated on owning houseplants.
   assert.ok(locations({page2:{discussion:["Do you have any houseplants at home? How do you look after them?",...topic.page2.discussion.slice(1)]}}).includes("criteria.gate"),"a first discussion question that gates on a possession must be widened");
   // 12/4 review: password habits are private security details.
   assert.ok(locations({page1:{easyTalk:["Do you use the same password for many things?",...easy.slice(1)]}}).includes("criteria.privacy"),"password habits must not be asked");
   assert.ok(locations({page1:{easyTalk:["When did you last clean your drawer?","When was the last time you tidied up?","Do you tidy often?"]}}).includes("criteria.openQuestions"),"one-fact when-did-you-last questions count as closed");
-  for(const phrase of ["TOPIC CRITERIA","TEMPLATE A CRITERIA","NO MODEL ANSWER","ARTICLE CRITERIA","12/2 REVIEW","12/3 REVIEW","12/4 REVIEW","12/6 REVIEW"])assert.ok(rules.includes(phrase),`the prompt carries ${phrase}`);
+  for(const phrase of ["TOPIC CRITERIA","TEMPLATE A CRITERIA","NO MODEL ANSWER","ARTICLE CRITERIA","12/2 REVIEW","12/3 REVIEW","12/4 REVIEW","12/6 REVIEW","12/7 REVIEW"])assert.ok(rules.includes(phrase),`the prompt carries ${phrase}`);
   assert.ok(TopicV4.CONTENT_TOOL.input_schema.required.includes("articleTitleEn"),"the model returns a short Article title");
 }
 // A personal routine can mention the same broad technology words as an Article without
