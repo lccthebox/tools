@@ -38,7 +38,10 @@ function rateLimit(request, response, scope, limit, windowMs) {
 }
 
 function parseCookies(request) {
-  return Object.fromEntries(String(request.headers.cookie || "").split(";").map(part => part.trim().split(/=(.*)/s)).filter(parts => parts[0]).map(([name, value]) => [name, decodeURIComponent(value || "")]));
+  return Object.fromEntries(String(request.headers.cookie || "").split(";").map(part => part.trim().split(/=(.*)/s)).filter(parts => parts[0]).map(([name, value]) => {
+    try { return [name, decodeURIComponent(value || "")]; }
+    catch { return [name, ""]; }
+  }));
 }
 
 function safeEqual(left, right) {
