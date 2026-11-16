@@ -8,6 +8,9 @@
       "functionFailoverRegions": ["sin1"]
     }
   },
+  "redirects": [
+    { "source": "/", "destination": "/talkflow/", "permanent": false }
+  ],
   "rewrites": [
     { "source": "/api/talkflow/admin-topics/", "destination": "/api/talkflow/published-topics/?backups=1" }
   ],
