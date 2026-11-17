@@ -107,6 +107,13 @@
   // restores topics a cleared or new browser is missing, and every save pushes the changed dates back.
   let backupSnapshot=null,backupTimer=0,backupRunning=false,backupFailureShown=false;
   const backupFingerprint=topic=>JSON.stringify(topic);
+  // The server answered 401 login_required while this screen still showed "logged in" (the session lasts 8 hours).
+  // Without this the login form stayed hidden and every generation and backup kept failing until a page reload.
+  function handleSessionExpired(){
+    if(!aiServerState.authenticated)return;
+    aiServerState={...aiServerState,authenticated:false};renderServerControls();
+    notify("관리자 로그인이 만료됐습니다. 설정에서 다시 로그인해 주세요. 작성한 토픽은 이 컴퓨터에 저장되어 있습니다.",true);
+  }
   function scheduleServerBackup(){if(backupSnapshot===null||!aiServerState.authenticated)return;clearTimeout(backupTimer);backupTimer=setTimeout(pushServerBackup,1500)}
   function backupBatches(upserts,deletes,fingerprints){
     const batches=[];let batch={upserts:[],deletes:[]},bytes=0;
@@ -125,6 +132,7 @@
       const deletes=Object.keys(backupSnapshot).filter(date=>!(date in fingerprints));
       for(const body of backupBatches(upserts,deletes,fingerprints)){
         const response=await timedFetch("/api/talkflow/admin-topics/",{method:"PUT",credentials:"same-origin",headers:{"content-type":"application/json","x-talkflow-request":"app"},body:JSON.stringify(body)});
+        if(response.status===401){handleSessionExpired();return}
         if(!response.ok)throw new Error(`HTTP ${response.status}`);
         for(const item of body.upserts)backupSnapshot[item.date]=fingerprints[item.date];
         for(const date of body.deletes)delete backupSnapshot[date];
@@ -136,7 +144,8 @@
   }
   async function restoreServerBackup(){
     if(!aiServerState.authenticated){backupSnapshot=null;return}
-    if(backupSnapshot!==null)return;
+    // Logging in again on an open screen: send whatever changed while the session was expired.
+    if(backupSnapshot!==null){backupFailureShown=false;scheduleServerBackup();return}
     try{
       const response=await timedFetch("/api/talkflow/admin-topics/",{credentials:"same-origin",headers:{"x-talkflow-request":"app"}});
       if(!response.ok)return;
@@ -1504,6 +1513,7 @@ function canPreviewTopic(topic){if(!topic||["running","failed","interrupted"].in
     saveSettings();notify("TheBox Topic 설정을 저장했습니다.");render()
   });
   $("#admin-login").onclick=async()=>{const password=$("#admin-password").value,button=$("#admin-login");if(!password)return;button.disabled=true;try{await AiClient.login(password);$("#admin-password").value="";await refreshServerStatus();notify("관리자 로그인이 완료됐습니다.")}catch(error){showAuthenticationError(error)}finally{button.disabled=false}};
+  window.addEventListener("talkflow:session-expired",handleSessionExpired);
   $("#admin-logout").onclick=async()=>{try{await AiClient.logout()}finally{settings={...settings,gistToken:"",connectionStatus:"unchecked"};saveSettings();await refreshServerStatus()}};
   $("#remove-legacy-api-key").onclick=()=>{try{const value=JSON.parse(localStorage.getItem(KEYS.settings)||"{}");delete value.apiKey;localStorage.setItem(KEYS.settings,JSON.stringify(value));legacyApiKeyPresent=false;renderServerControls();notify("이전 브라우저 API 키를 삭제했습니다.")}catch{notify("이전 API 키를 삭제하지 못했습니다.",true)}};
   $("#refresh-models").onclick=startModelsRefresh;$("#test-ai-connection").onclick=startConnectionTest;$("#anthropic-model").onchange=event=>{settings={...settings,anthropicModel:event.target.value,modelFallback:null,connectionStatus:"unchecked"};saveSettings();renderModelControls()};

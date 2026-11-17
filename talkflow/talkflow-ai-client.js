@@ -14,7 +14,10 @@
       const error = new Error("AI 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요."); error.type = "network_error"; error.cause = cause; throw error;
     }
     if (!response.ok) {
-      const error = new Error(payload?.error?.message || `HTTP ${response.status}`); error.httpStatus = response.status; error.type = payload?.error?.type || "http_error"; error.requestId = payload?.error?.request_id || ""; error.stopRetry = response.status === 404 && error.type === "not_found_error"; throw error;
+      const error = new Error(payload?.error?.message || `HTTP ${response.status}`); error.httpStatus = response.status; error.type = payload?.error?.type || "http_error"; error.requestId = payload?.error?.request_id || ""; error.stopRetry = response.status === 404 && error.type === "not_found_error";
+      // The 8-hour admin session ran out while the screen stayed open: let the app show the login form again.
+      if (response.status === 401 && error.type === "login_required") global.dispatchEvent(new Event("talkflow:session-expired"));
+      throw error;
     }
     return payload;
   }
