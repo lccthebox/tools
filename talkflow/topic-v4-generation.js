@@ -199,6 +199,7 @@ const AUTO_ICEBREAKER_LANES=Object.freeze([
   {titleEn:"Learning Something New",titleKo:"새로운 배움",premise:"Light questions about things people would like to learn for fun."}
 ]);
 function stableSeed(value){return String(value||"").split("").reduce((sum,char)=>sum+char.charCodeAt(0),0)}
+function pageOneTitleUsed(plan,topic={}){const title=clean(plan?.titleEn).toLowerCase();return(Array.isArray(topic?.recentPageOnes)?topic.recentPageOnes:[]).some(item=>clean(item?.titleEn||item?.title).toLowerCase()===title)}
 function pageOneHistoryMatches(plan,topic={}){const title=clean(plan?.titleEn).toLowerCase(),premise=clean(plan?.page1Premise),template=clean(plan?.page1Template);return(Array.isArray(topic?.recentPageOnes)?topic.recentPageOnes:[]).some(item=>{const previousTitle=clean(item?.titleEn||item?.title).toLowerCase(),previousPremise=clean(item?.premise);if(previousTitle&&title===previousTitle)return true;return template!=="B"&&previousPremise&&premise&&premisesOverlap(premise,previousPremise)})}
 const PAGE_ONE_REFRESHES=Object.freeze([
   {en:"A Fresh Start",ko:"새로운 시작",premise:"A light everyday choice about beginning a familiar routine in a different way."},
@@ -214,17 +215,19 @@ const PAGE_ONE_REFRESHES=Object.freeze([
   {en:"One More Option",ko:"또 다른 선택",premise:"A light conversation about considering a new option before making a familiar decision."},
   {en:"A Good Moment",ko:"좋은 순간",premise:"A warm everyday discussion about noticing and choosing a moment that feels meaningful."}
 ]);
-function buildStablePlan(topic={}){const source=sourceReference(topic.articleSource),template=selectedTemplate(topic),variant=Math.max(0,Math.floor(Number(topic.planVariant)||0)),star=clean(topic.selectedStar)||selectStarForDate(topic.date,topic.recentStars,variant),requestedPageOneCategory=CATEGORIES[clean(topic.page1Category).toUpperCase()]?clean(topic.page1Category).toUpperCase():"";if(!source)return null;const articleTitle=clean(source.title),articleCategory=clean(source.category),page2Premise=`A balanced everyday conversation about ${clean(source.subjectKey||source.titleKey||source.title)}.`;
+function buildStablePlan(topic={}){for(const historyMode of ["strict","titles","none"]){const plan=buildStablePlanPass(topic,historyMode);if(plan)return plan}return null}
+// historyMode: strict = skip same title or similar premise, titles = skip same title only, none = ignore history.
+function buildStablePlanPass(topic,historyMode){const used=plan=>historyMode==="none"?false:historyMode==="titles"?pageOneTitleUsed(plan,topic):pageOneHistoryMatches(plan,topic);const source=sourceReference(topic.articleSource),template=selectedTemplate(topic),variant=Math.max(0,Math.floor(Number(topic.planVariant)||0)),star=clean(topic.selectedStar)||selectStarForDate(topic.date,topic.recentStars,variant),requestedPageOneCategory=CATEGORIES[clean(topic.page1Category).toUpperCase()]?clean(topic.page1Category).toUpperCase():"";if(!source)return null;const articleTitle=clean(source.title),articleCategory=clean(source.category),page2Premise=`A balanced everyday conversation about ${clean(source.subjectKey||source.titleKey||source.title)}.`;
   if(template==="B"){
     if(requestedPageOneCategory&&requestedPageOneCategory!=="ICEBREAKERS")return null;
     const start=stableSeed(`${topic.date}|${variant}|icebreakers`)%AUTO_ICEBREAKER_LANES.length;
     for(let offset=0;offset<AUTO_ICEBREAKER_LANES.length;offset++){
       const lane=AUTO_ICEBREAKER_LANES[(start+offset)%AUTO_ICEBREAKER_LANES.length],plan={titleEn:lane.titleEn,titleKo:lane.titleKo,star,category:"ICEBREAKERS",page1Template:"B",page1Premise:lane.premise,articleTitle,articleCategory,page2Premise};
-      if(!pageOneHistoryMatches(plan,topic)&&validatePlan(plan,topic).ok)return plan;
+      if(!used(plan)&&validatePlan(plan,topic).ok)return plan;
     }
     for(let offset=0;offset<PAGE_ONE_REFRESHES.length;offset++){
       const lane=AUTO_ICEBREAKER_LANES[(start+offset)%AUTO_ICEBREAKER_LANES.length],refresh=PAGE_ONE_REFRESHES[(variant+offset)%PAGE_ONE_REFRESHES.length],plan={titleEn:`${lane.titleEn}: ${refresh.en}`,titleKo:`${lane.titleKo} · ${refresh.ko}`,star,category:"ICEBREAKERS",page1Template:"B",page1Premise:refresh.premise,articleTitle,articleCategory,page2Premise};
-      if(!pageOneHistoryMatches(plan,topic)&&validatePlan(plan,topic).ok)return plan;
+      if(!used(plan)&&validatePlan(plan,topic).ok)return plan;
     }
     return null;
   }
@@ -233,11 +236,11 @@ function buildStablePlan(topic={}){const source=sourceReference(topic.articleSou
   const start=stableSeed(`${topic.date}|${variant}`)%pageOneLanes.length;
   for(let offset=0;offset<pageOneLanes.length;offset++){
     const lane=pageOneLanes[(start+offset)%pageOneLanes.length],plan={titleEn:lane.titleEn,titleKo:lane.titleKo,star,category:lane.category,page1Template:"A",page1Premise:lane.premise,articleTitle,articleCategory,page2Premise};
-    if(!pageOneHistoryMatches(plan,topic)&&validatePlan(plan,topic).ok)return plan;
+    if(!used(plan)&&validatePlan(plan,topic).ok)return plan;
   }
   for(let offset=0;offset<PAGE_ONE_REFRESHES.length;offset++){
     const lane=pageOneLanes[(start+offset)%pageOneLanes.length],refresh=PAGE_ONE_REFRESHES[(variant+offset)%PAGE_ONE_REFRESHES.length],plan={titleEn:`${lane.titleEn}: ${refresh.en}`,titleKo:`${lane.titleKo} · ${refresh.ko}`,star,category:lane.category,page1Template:"A",page1Premise:refresh.premise,articleTitle,articleCategory,page2Premise};
-    if(!pageOneHistoryMatches(plan,topic)&&validatePlan(plan,topic).ok)return plan;
+    if(!used(plan)&&validatePlan(plan,topic).ok)return plan;
   }
   return null
 }

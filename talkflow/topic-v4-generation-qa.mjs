@@ -94,6 +94,12 @@ assert.ok(Array.isArray(migratedMixedIdentity.page1.quickVote.options),"legacy n
   const icePlans=[];
   for(let day=1;day<=12;day++)icePlans.push(TopicV4.buildStablePlan({date:`2026-11-${String(day).padStart(2,"0")}`,page1Template:"B",selectedStar:"Namjoon",articleSource:topic.page2.source,recentPageOnes:icePlans.map(item=>({titleEn:item.titleEn,premise:item.page1Premise}))}));
   assert.equal(new Set(icePlans.map(item=>item.titleEn)).size,12,"12 icebreaker topics get 12 different titles");
+  // 11/24: "기사 4개를 시도했지만 1부와 겹치지 않는 계획을 만들지 못했습니다." After three months (plus saved versions) every
+  // lane counted as used. History must never stop a plan: past every lane it still returns a valid plan.
+  for(const template of ["A","B"]){
+    const used=[];
+    for(let day=0;day<120;day++){const plan=TopicV4.buildStablePlan({date:`2026-12-${String(day%28+1).padStart(2,"0")}`,planVariant:day,page1Template:template,selectedStar:"Namjoon",articleSource:topic.page2.source,recentPageOnes:used.map(item=>({titleEn:item.titleEn,premise:item.page1Premise}))});assert.ok(plan&&TopicV4.validatePlan(plan,{date:"2026-12-24",page1Template:template,articleSource:topic.page2.source}).ok,`Template ${template} still plans after ${day} used Page 1s`);used.push(plan)}
+  }
   assert.ok(TopicV4.buildPromptPayload({stage:"content",topic:{date:"2026-11-01"}}).rules.some(rule=>/quiz checks understanding of the main idea/.test(rule)&&/never ask for a number/.test(rule)),"the content prompt keeps quizzes on the main idea, not trivia");
   assert.ok(TopicV4.buildPromptPayload({stage:"content",topic:{date:"2026-12-01"}}).rules.some(rule=>/Never compare countries or nationalities/.test(rule)&&/prisons, politics, taxes/.test(rule)),"the content prompt rules out country comparisons and controversial themes");
   for(const title of ["When prison looks like a hotel","Racism in casting","Tariffs hit car makers","Gender stereotypes at work"])assert.equal(TopicV4.isSafeArticleSource({...topic.page2.source,title}),false,`"${title}" is a controversial Article source`);

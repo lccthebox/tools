@@ -55,6 +55,12 @@ assert.match(app,/ensureArticleSource\(\{\.\.\.candidate,articleSource:null,page
   // 11/12 review: the admin preview sits inside a button, which centred every line of the printed pages.
   assert.match(await readFile(new URL("styles.css",root),"utf8"),/\.v41-page\{height:1123px;display:flex;flex-direction:column;text-align:left\}/,"printed pages are left-aligned");
 }
+{
+  // 11/24: every topic since October plus saved versions counted as "recent", so no Page 1 lane was left.
+  const recent=app.slice(app.indexOf("function recentPageOneContext"),app.indexOf("function recentStars"));
+  assert.match(app,/PAGE_ONE_HISTORY_DAYS=45/,"recent Page 1s cover 45 days either side");
+  assert.match(recent,/\.filter\(item=>withinPageOneWindow\(item,date\)\)/,"older Page 1s and versions no longer block a plan");
+}
 assert.doesNotMatch(app,/In my country/,"the Page 1 prompt line must not invite comparing countries");
 assert.match(app,/MY TURN<br>In my life or at work/);
 assert.ok(app.includes("otherMonths=Object.values(topics).filter(item=>item?.date&&!item.date.startsWith(month))"),"Article picks must also avoid sources already used in other months");
