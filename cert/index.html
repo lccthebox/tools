@@ -47,10 +47,11 @@
   .lede{font-size:13.5px;color:var(--ink-soft);margin-top:7px}
 
   .tabs{display:flex;gap:4px;margin:22px 0 20px;background:#ecebe6;padding:4px;border-radius:11px}
-  .tabs button{
-    flex:1;border:0;background:transparent;padding:9px;border-radius:8px;
+  .tabs button,.tabs a{
+    flex:1;min-height:44px;box-sizing:border-box;border:0;background:transparent;padding:9px;border-radius:8px;
     font-size:13.5px;font-weight:600;color:var(--ink-soft);cursor:pointer;font-family:inherit;transition:.15s;
   }
+  .tabs a{display:flex;align-items:center;justify-content:center;text-decoration:none}
   .tabs button.on{background:var(--card);color:var(--ink);box-shadow:var(--shadow-sm)}
 
   .card{
@@ -222,7 +223,7 @@
 
   <div class="tabs">
     <button id="tab-req" class="on" onclick="show('req')">서류 신청</button>
-    <button id="tab-adm" onclick="show('adm')">관리자</button>
+    <a id="tab-adm" href="https://thebox-academy.vercel.app/academy/documents" target="_blank" rel="noopener noreferrer">관리자 앱</a>
   </div>
 
   <!-- ============ 학생 신청 ============ -->
